@@ -1,0 +1,187 @@
+submodule nokia-conf-pxc {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-services           { prefix "types-services"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-lag;
+    include nokia-conf-port;
+
+    sros-ext:sros-major-release "rel19";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure ports cross connects (PXC) on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-pxc YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2019-04-05";
+
+    grouping conf-pxc-port-xc {
+        container port-xc {
+            description "Enter the port-xc context";
+
+            list pxc {
+                key "pxc-id";
+                description "Enter the pxc context";
+
+                leaf pxc-id {
+                    type uint32 {
+                        range "1..64";
+                    }
+                    description "Unique Identifier for the PXC";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of PXC";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf port-id {
+                    type leafref {
+                        path "../../../port/port-id";
+                    }
+                    sros-ext:immutable;
+                    description "PXC port";
+                }
+
+            } // list pxc
+
+        } // container port-xc
+
+    } // grouping conf-pxc-port-xc
+
+    grouping conf-pxc-fwd-path-ext {
+        container fwd-path-ext {
+            description "Enter the fwd-path-ext context";
+
+            container sdp-id-range {
+                description "Enter the sdp-id-range context";
+
+                leaf start {
+                    type types-services:sdp-id;
+                    description "Start of range";
+                }
+
+                leaf end {
+                    type types-services:sdp-id;
+                    description "End of range";
+                }
+
+            } // container sdp-id-range
+
+            list fpe {
+                key "fpe-id";
+                description "Enter the fpe context";
+
+                leaf fpe-id {
+                    type uint32 {
+                        range "1..64";
+                    }
+                    description "FPE used to associate the application with a PXC";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                container path {
+                    description "Enter the path context";
+
+                    choice path-type {
+                        case port-xc {
+
+                            leaf pxc {
+                                type leafref {
+                                    path "../../../../port-xc/pxc/pxc-id";
+                                }
+                                description "Cross connect port identifier associated with this entry";
+                            }
+
+                        }
+                        case lag {
+
+                            leaf xc-lag-a {
+                                type leafref {
+                                    path "../../../../lag/lag-index";
+                                }
+                                description "LAG identifier A value";
+                            }
+
+                            leaf xc-lag-b {
+                                type leafref {
+                                    path "../../../../lag/lag-index";
+                                }
+                                description "LAG identifier B value";
+                            }
+
+                        }
+                    }
+                } // container path
+
+                container application {
+                    description "Enter the application context";
+
+                    leaf pw-port {
+                        type boolean;
+                        default "false";
+                        description "Use FPE to set up FPE PW cross-connect";
+                    }
+
+                    leaf sub-mgmt-extension {
+                        type boolean;
+                        default "false";
+                        description "Reserve FPE for hybrid access bonding";
+                    }
+
+                    container vxlan-termination {
+                        presence "VXLAN termination information.";
+                        description "Enter the vxlan-termination context";
+
+                        leaf router-instance {
+                            type string;
+                            default "Base";
+                            description "Routing context that provides reachability to the tunnel configured";
+                        }
+
+                    } // container vxlan-termination
+
+                } // container application
+
+            } // list fpe
+
+        } // container fwd-path-ext
+
+    } // grouping conf-pxc-fwd-path-ext
+
+}

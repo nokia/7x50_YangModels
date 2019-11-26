@@ -1,0 +1,3613 @@
+submodule nokia-conf-router {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import ietf-inet-types                { prefix "inet"; }
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-eth-cfm            { prefix "types-eth-cfm"; }
+    import nokia-types-qos                { prefix "types-qos"; }
+    import nokia-types-router             { prefix "types-router"; }
+    import nokia-types-services           { prefix "types-services"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-eth-cfm;
+    include nokia-conf-filter;
+    include nokia-conf-groups;
+    include nokia-conf-isa;
+    include nokia-conf-mcast-mgmt;
+    include nokia-conf-policy-options;
+    include nokia-conf-python;
+    include nokia-conf-qos;
+    include nokia-conf-router-bgp;
+    include nokia-conf-router-bier;
+    include nokia-conf-router-dhcp-server;
+    include nokia-conf-router-firewall;
+    include nokia-conf-router-gmpls;
+    include nokia-conf-router-gtm;
+    include nokia-conf-router-igmp;
+    include nokia-conf-router-isis;
+    include nokia-conf-router-l2tp;
+    include nokia-conf-router-ldp;
+    include nokia-conf-router-lmp;
+    include nokia-conf-router-mld;
+    include nokia-conf-router-mpls;
+    include nokia-conf-router-msdp;
+    include nokia-conf-router-nat;
+    include nokia-conf-router-origin-validation;
+    include nokia-conf-router-ospf;
+    include nokia-conf-router-ospf3;
+    include nokia-conf-router-pcep;
+    include nokia-conf-router-pim;
+    include nokia-conf-router-radius;
+    include nokia-conf-router-rib-api;
+    include nokia-conf-router-rip;
+    include nokia-conf-router-ripng;
+    include nokia-conf-router-rsvp;
+    include nokia-conf-router-segment-routing;
+    include nokia-conf-router-static-route;
+    include nokia-conf-router-twamp-light;
+    include nokia-conf-router-wpp;
+    include nokia-conf-routing-options;
+    include nokia-conf-service;
+    include nokia-conf-submgt-gtp;
+    include nokia-conf-subscriber-mgmt;
+    include nokia-conf-svc-nat;
+    include nokia-conf-system;
+    include nokia-conf-system-security;
+    include nokia-conf-vrrp;
+
+    sros-ext:sros-major-release "rel19";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure routing protocols on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-router YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2019-04-12";
+
+    grouping conf-router {
+        list router {
+            key "router-name";
+            max-elements 3;
+            description "Enter the router context";
+
+            leaf router-name {
+                type types-sros:named-item-64 {
+                    pattern ".{1,32}" {
+                        error-message "vRtrName needs to be extended to 64 to support this name";
+                    }
+                }
+                description
+                    "The administrative name for this virtual router.
+
+                     The router name must be unique among all virtual routers in the system.";
+            }
+
+            leaf description {
+                when "../router-name != 'management'";
+                type types-sros:description;
+                description "Text description";
+            }
+
+            leaf triggered-policy {
+                when "../router-name = 'Base'";
+                type boolean;
+                default "false";
+                description "Trigger route policy re-evaluation";
+            }
+
+            leaf allow-icmp-redirect {
+                when "../router-name = 'management'";
+                type boolean;
+                default "false";
+                description "Allow ICMP redirects on management interface";
+            }
+
+            leaf allow-icmp6-redirect {
+                when "../router-name = 'management'";
+                type boolean;
+                default "false";
+                description "Allow IPv6 ICMP redirects on management interface";
+            }
+
+            leaf class-forwarding {
+                when "../router-name = 'Base'";
+                type boolean;
+                default "false";
+                description "Allow class-based forwarding over IGP shortcuts";
+            }
+
+            leaf icmp-tunneling {
+                when "../router-name = 'Base'";
+                type boolean;
+                default "false";
+                description "Allow tunneling of ICMP reply packets over MPLS LSP at an LSR node";
+            }
+
+            leaf fib-telemetry {
+                when "../router-name = 'Base'";
+                type boolean;
+                default "false";
+                description "Enable/disable fib telemetry collection.";
+            }
+
+            leaf selective-fib {
+                when "../router-name = 'Base'";
+                type boolean;
+                default "true";
+                description
+                    "Enable/disable selective FIB.
+
+                     If disabled, all active routes of this routing
+                     instance are installed on all line cards.";
+            }
+
+            leaf autonomous-system {
+                type uint32 {
+                    range "1..max";
+                }
+                description "Autonomous System number that is advertised to peer";
+            }
+
+            leaf ecmp {
+                type types-router:ip-ecmp;
+                default "1";
+                description "Maximum number of equal cost routes allowed on this routing table instance";
+            }
+
+            leaf entropy-label {
+                type boolean;
+                default "false";
+                description "Use entropy label";
+            }
+
+            leaf fib-priority {
+                type enumeration {
+                    enum "standard"                     { value 1; }
+                    enum "high"                         { value 2; }
+                }
+                default "standard";
+                description "FIB (Forwarding Information Base) priority";
+            }
+
+            leaf multicast-info-policy {
+                type leafref {
+                    path "../../multicast-management/multicast-info-policy/policy-name";
+                }
+                description "Multicast policy name for virtual router";
+            }
+
+            leaf router-id {
+                type types-router:router-id;
+                description "Unique router ID for the router in the Autonomous System";
+            }
+
+            leaf weighted-ecmp {
+                type enumeration {
+                    enum "false"                        { value 0; }
+                    enum "true"                         { value 1; }
+                }
+                default "false";
+                description "Allow weighted load-balancing";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            container leak-export {
+                when "../router-name = 'Base'";
+                description "Enter the leak-export context";
+
+                leaf-list policy-name {
+                    type string {
+                        length "1..255";
+                        pattern "(.{1,64})|(.*[\\[].*)" {
+                            error-message "Policy name too long or expression not valid.";
+                        }
+                    }
+                    max-elements 5;
+                    ordered-by user;
+                    description "Attribute policy-name for leak-export.";
+                }
+
+                leaf leak-export-limit {
+                    type uint32 {
+                        range "1..10000";
+                    }
+                    default "5";
+                    description "Maximum number of routes exported due to leak-export policies.";
+                }
+
+            } // container leak-export
+
+            container gtp {
+                when "../router-name = 'Base'";
+                description "Enter the gtp context";
+
+                container s11 {
+                    description "Enter the s11 context";
+
+                    list interface {
+                        key "interface-name";
+                        description "Enter the interface context";
+
+                        leaf interface-name {
+                            type leafref {
+                                path "../../../../interface/interface-name";
+                            }
+                            description "Name for the s11 interface";
+                        }
+
+                        leaf apn-policy {
+                            type leafref {
+                                path "../../../../../subscriber-mgmt/gtp/apn-policy/name";
+                            }
+                            description "APN policy for the S11 interface";
+                        }
+
+                    } // list interface
+
+                    container peer-profile-map {
+                        description "Enter the peer-profile-map context";
+
+                        list prefix {
+                            key "peer-prefix";
+                            description "Enter the prefix context";
+
+                            leaf peer-prefix {
+                                type types-sros:ip-unicast-prefix;
+                                description "IP prefix and prefix length for the subnet";
+                            }
+
+                            leaf peer-profile {
+                                type leafref {
+                                    path "../../../../../../subscriber-mgmt/gtp/peer-profile/name";
+                                }
+                                mandatory true;
+                                description "Peer profile used for peers in this prefix";
+                            }
+
+                        } // list prefix
+
+                    } // container peer-profile-map
+
+                } // container s11
+
+                container uplink {
+                    presence "GTP uplink connectivity to a PGW or GGSN.";
+                    description "Enter the uplink context";
+
+                    leaf apn {
+                        type string {
+                            length "1..80";
+                            pattern "([a-zA-Z0-9]+-+)*([a-zA-Z0-9]+\\.([a-zA-Z0-9]+-+)*)*[a-zA-Z0-9]+" {
+                                error-message "wrong format of apn name";
+                            }
+                        }
+                        description "Network Identifier part of APN";
+                    }
+
+                    leaf pdn-type {
+                        type enumeration {
+                            enum "ipv4"                         { value 0; }
+                            enum "ipv6"                         { value 1; }
+                            enum "ipv4v6"                       { value 2; }
+                        }
+                        default "ipv4";
+                        description "Default 3GPP PDN in GTP";
+                    }
+
+                    container peer-profile-map {
+                        description "Enter the peer-profile-map context";
+
+                        list prefix {
+                            key "peer-prefix";
+                            description "Enter the prefix context";
+
+                            leaf peer-prefix {
+                                type types-sros:ip-unicast-prefix;
+                                description "IP prefix and prefix length of the subnet";
+                            }
+
+                            leaf peer-profile {
+                                type leafref {
+                                    path "../../../../../../subscriber-mgmt/gtp/peer-profile/name";
+                                }
+                                mandatory true;
+                                description "Peer profile name";
+                            }
+
+                        } // list prefix
+
+                    } // container peer-profile-map
+
+                } // container uplink
+
+            } // container gtp
+
+            container aggregates {
+                when "../router-name = 'Base'";
+                description "Enter the aggregates context";
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                list aggregate {
+                    key "ip-prefix";
+                    description "Enter the aggregate context";
+
+                    leaf ip-prefix {
+                        type types-sros:ip-unicast-prefix;
+                        description "IP address prefix to match for aggregation";
+                    }
+
+                    leaf as-set {
+                        type boolean;
+                        default "false";
+                        description "Allow aggregate route as an AS-SET option";
+                    }
+
+                    leaf-list community {
+                        type types-sros:community;
+                        max-elements 12;
+                        ordered-by user;
+                        description "Community name that is added to aggregate route";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf summary-only {
+                        type boolean;
+                        default "false";
+                        description "Advertise only the aggregate route and not the specific routes that make up the aggregate";
+                    }
+
+                    leaf local-preference {
+                        type int64 {
+                            range "0..4294967295";
+                        }
+                        description "Default local preference if aggregate route is exported and advertised to BGP peers";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    choice next-hop {
+                        case blackhole {
+
+                            container blackhole {
+                                presence "blackhole";
+                                description "Enter the blackhole context";
+
+                                leaf generate-icmp {
+                                    type boolean;
+                                    default "false";
+                                    description "Send ICMP unreachable messages when packets match an aggregate route with black-hole next-hop";
+                                }
+
+                            } // container blackhole
+
+                        }
+                        case indirect {
+
+                            leaf indirect {
+                                type types-sros:ip-unicast-address;
+                                sros-ext:immutable;
+                                description "Address of indirect next hop";
+                            }
+
+                        }
+                    }
+                    container aggregator {
+                        description "Enter the aggregator context";
+
+                        leaf as-number {
+                            type uint32 {
+                                range "1..max";
+                            }
+                            description "Aggregator Autonomous System Number (ASN)";
+                        }
+
+                        leaf address {
+                            type types-sros:ipv4-unicast-address;
+                            description "Aggregator IP address";
+                        }
+
+                    } // container aggregator
+
+                } // list aggregate
+
+            } // container aggregates
+
+            container mc-maximum-routes {
+                description "Enter the mc-maximum-routes context";
+
+                leaf value {
+                    type int32 {
+                        range "1..2147483647";
+                    }
+                    description
+                        "Maximum number of multicast routes to be configured on
+                         this virtual router";
+                }
+
+                leaf log-only {
+                    type boolean;
+                    default "false";
+                    description "Action when the maximum number of multicast routes, held within a VRF context, is reached";
+                }
+
+                leaf threshold {
+                    type uint32 {
+                        range "1..100";
+                    }
+                    units "percent";
+                    description "Mid-level water marker for the number of multicast routes which this VRF holds";
+                }
+
+            } // container mc-maximum-routes
+
+            container vrgw {
+                when "../router-name = 'Base'";
+                description "Enter the vrgw context";
+
+                container lanext {
+                    presence "lanext";
+                    description "Home LAN Extension";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of Home LAN Extension";
+                    }
+
+                    leaf vxlan-port {
+                        type uint32 {
+                            range "4789|8472";
+                        }
+                        default "4789";
+                        description "UDP port used by local/remote vxlan VTEP";
+                    }
+
+                    leaf wlan-gw-group {
+                        type leafref {
+                            path "../../../../isa/wlan-gw-group/id";
+                        }
+                        sros-ext:immutable;
+                        description "WLAN-GW group used for home lan extension";
+                    }
+
+                    container vxlan-vtep-range {
+                        description "Range of addresses used by ISAs for local VTEP";
+
+                        leaf start {
+                            type types-sros:ip-unicast-address;
+                            description "Start address of the range";
+                        }
+
+                        leaf end {
+                            type types-sros:ip-unicast-address;
+                            description "End address of the range";
+                        }
+
+                    } // container vxlan-vtep-range
+
+                } // container lanext
+
+            } // container vrgw
+
+            container wlan-gw {
+                presence "WLAN Gateway functionality for VPRN services";
+                description "Enter the wlan-gw context";
+
+                container mobility-triggered-accounting {
+                    description "Send mobility-triggered accounting interim updates";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of mobility-triggered-accounting";
+                    }
+
+                    leaf include-counters {
+                        type boolean;
+                        default "false";
+                        description "Include counters in interim updates";
+                    }
+
+                    leaf hold-down {
+                        type types-sros:time-duration {
+                            range "60..86400";
+                        }
+                        units "seconds";
+                        description "Hold additional mobility-triggered update until this timer expires";
+                    }
+
+                } // container mobility-triggered-accounting
+
+                container distributed-subscriber-mgmt {
+                    description "Enter the distributed-subscriber-mgmt context";
+
+                    leaf ipv6-tcp-mss-adjust {
+                        type uint32 {
+                            range "160..10240";
+                        }
+                        description "Insert or decrease the TCP Maximum Segment Size option to this value for upstream IPv6 SYN messages";
+                    }
+
+                } // container distributed-subscriber-mgmt
+
+                container xconnect {
+                    description "Enter the xconnect context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of the WLAN-GW cross-connect";
+                    }
+
+                    leaf tunnel-source-ip {
+                        type types-sros:ipv6-prefix;
+                        sros-ext:auto-restart-to-modify;
+                        description "IPv6 prefix from which source addresses of cross-connect tunnels will be chosen";
+                    }
+
+                    leaf wlan-gw-group {
+                        type leafref {
+                            path "../../../../isa/wlan-gw-group/id";
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        description "ISA WLAN-GW Group";
+                    }
+
+                } // container xconnect
+
+            } // container wlan-gw
+
+            container mss-adjust {
+                presence "Enables TCP Maximum Segment Size adjustment using an ISA-BB card.";
+                description "Enter the mss-adjust context";
+
+                leaf nat-group {
+                    type uint32;
+                    sros-ext:immutable;
+                    mandatory true;
+                    description "NAT group (including WLAN Gateway group) that executes the adjustment";
+                }
+
+                leaf segment-size {
+                    type uint32 {
+                        range "160..10240";
+                    }
+                    mandatory true;
+                    description "Intended value for the Maximum Segment Size (MSS) option in transmitted TCP SYN requests";
+                }
+
+            } // container mss-adjust
+
+            container reassembly {
+                presence "Reassembly of IP datagram fragments using an ISA-BB card.";
+                description "Enter the reassembly context";
+
+                leaf nat-group {
+                    type uint32;
+                    sros-ext:immutable;
+                    mandatory true;
+                    description "NAT group (including WLAN Gateway group) that executes the reassembly";
+                }
+
+            } // container reassembly
+
+            container sfm-overload {
+                presence "Enables reporting of SFM overload on this router.";
+                description "Enter the sfm-overload context";
+
+                leaf holdoff-time {
+                    type uint32 {
+                        range "1..600";
+                    }
+                    units "seconds";
+                    description
+                        "The delay between the detection of the SFM condition and
+                         the IGP entering the overload state.";
+                }
+
+            } // container sfm-overload
+
+            container confederation {
+                when "../router-name = 'Base'";
+                description "Enter the confederation context";
+
+                leaf confed-as-num {
+                    type inet:as-number {
+                        range "1..4294967295";
+                    }
+                    description "Confederation number within an autonomous system";
+                }
+
+                list members {
+                    key "as-number";
+                    max-elements 256;
+                    description "Enter the members context";
+
+                    leaf as-number {
+                        type inet:as-number {
+                            range "1..4294967295";
+                        }
+                        description "AS number to assign to members that are part of the confederation";
+                    }
+
+                } // list members
+
+            } // container confederation
+
+            list interface {
+                key "interface-name";
+                description "Enter the interface context";
+
+                leaf interface-name {
+                    type types-sros:interface-name;
+                    description "Router interface name";
+                }
+
+                leaf flavor {
+                    when "../../router-name != 'management'";
+                    type enumeration {
+                        enum "regular"                      { value 0; description "Creates a regular network interface."; }
+                        enum "control-tunnel"               { value 1; description "Creates a network interface of control-tunnel type."; }
+                        enum "pdn"                          { value 2; description "Creates a network interface of pdn type."; }
+                        enum "unnumbered-mpls-tp"           { value 3; description "Creates a network interface of unnumbered-mpls-tp type."; }
+                        enum "gmpls-loopback"               { value 4; description "Creates a network interface of gmpls-loopback type."; }
+                    }
+                    sros-ext:immutable;
+                    default "regular";
+                    description "Network interface flavor";
+                }
+
+                leaf cpu-protection {
+                    when "../../router-name = 'Base' and (../flavor != 'control-tunnel' and ../flavor != 'pdn')";
+                    type leafref {
+                        path "../../../system/security/cpu-protection/policy/policy-id";
+                    }
+                    description "CPU protection policy";
+                }
+
+                leaf description {
+                    when "../../router-name != 'management'";
+                    type types-sros:very-long-description;
+                    description "Text description";
+                }
+
+                leaf ip-mtu {
+                    when "../../router-name != 'management'";
+                    type types-router:ip-mtu;
+                    units "bytes";
+                    description "IP MTU interface";
+                }
+
+                leaf admin-state {
+                    when "../../router-name != 'management'";
+                    type types-sros:admin-state;
+                    description "Administrative state of the interface";
+                }
+
+                leaf strip-label {
+                    when "../../router-name = 'Base' and (../flavor != 'pdn' and ../flavor != 'control-tunnel' and ../flavor != 'gmpls-loopback') and ../interface-name != 'system'";
+                    type boolean;
+                    default "false";
+                    description "Strip all MPLS labels before packets are handed over for possible filter (PBR) processing";
+                }
+
+                leaf dist-cpu-protection {
+                    when "../../router-name = 'Base' and (../flavor != 'control-tunnel' and ../flavor != 'gmpls-loopback' and ../flavor != 'pdn') and ../interface-name != 'system'";
+                    type leafref {
+                        path "../../../system/security/dist-cpu-protection/policy/policy-name";
+                    }
+                    description "Distributed CPU protection policy";
+                }
+
+                leaf mac {
+                    when "../../router-name = 'Base' and (../flavor != 'control-tunnel' and ../flavor != 'pdn')";
+                    type types-sros:mac-unicast-address;
+                    description "MAC address for the interface";
+                }
+
+                leaf tos-marking-state {
+                    when "../../router-name = 'Base' and ../flavor != 'control-tunnel'";
+                    type types-router:tos-marking-state;
+                    default "trusted";
+                    description "TOS marking state";
+                }
+
+                leaf ingress-stats {
+                    when "../../router-name = 'Base' and ../flavor != 'control-tunnel'";
+                    type boolean;
+                    default "false";
+                    description "Collect ingress statistics";
+                }
+
+                leaf mac-accounting {
+                    when "../../router-name = 'Base' and (../flavor != 'control-tunnel' and ../flavor != 'pdn')";
+                    type boolean;
+                    default "false";
+                    description "MAC Accounting functionality";
+                }
+
+                leaf vas-if-type {
+                    when "../../router-name = 'Base' and ../flavor = 'regular' and ../interface-name != 'system'";
+                    type types-router:vas-if-type;
+                    description "VAS interface type";
+                }
+
+                leaf gre-termination {
+                    when "../../router-name = 'Base' and ../flavor = 'regular' and ../interface-name != 'system'";
+                    type boolean;
+                    default "false";
+                    description "GRE termination that is selected in virtual router for the primary subnet";
+                }
+
+                leaf urpf-selected-vprns {
+                    when "../../router-name = 'Base' and ../flavor = 'regular' and ../interface-name != 'system'";
+                    type boolean;
+                    default "false";
+                    description
+                        "Enable/disable per-VPRN selective URPF treatment. This
+                         applies to packets associated with a VPRN.";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                choice port-binding {
+                    case port-encap {
+
+                        leaf port {
+                            type types-router:router-port;
+                            description "Port to bind this interface";
+                        }
+
+                    }
+                    case loopback {
+
+                        leaf loopback {
+                            when "../../router-name != 'management' and ../flavor != 'unnumbered-mpls-tp' and ../interface-name != 'system'";
+                            type empty;
+                            description "Use interface as a loopback interface";
+                        }
+
+                    }
+                }
+                container egress {
+                    when "../../router-name = 'Base' and ../flavor != 'control-tunnel' and ../interface-name != 'system'";
+                    description "Enter the egress context";
+
+                    container filter {
+                        description "Enter the filter context";
+
+                        leaf ip {
+                            type leafref {
+                                path "../../../../../filter/ip-filter/filter-name";
+                            }
+                            description "IP filter";
+                        }
+
+                        leaf ipv6 {
+                            type leafref {
+                                path "../../../../../filter/ipv6-filter/filter-name";
+                            }
+                            description "IPv6 filter";
+                        }
+
+                    } // container filter
+
+                    container qos {
+                        description "QoS egress policies associated with the interface";
+
+                        container vlan-qos-policy {
+                            description "Attach an egress vlan-qos-policy.";
+
+                            leaf policy-name {
+                                type leafref {
+                                    path "../../../../../../qos/vlan-qos-policy/vlan-qos-policy-name";
+                                }
+                                description "Vlan qos policy name";
+                            }
+
+                        } // container vlan-qos-policy
+
+                        container egress-remark-policy {
+                            description "Attach an egress egress-remark-policy.";
+
+                            leaf policy-name {
+                                type leafref {
+                                    path "../../../../../../qos/egress-remark-policy/egress-remark-policy-name";
+                                }
+                                description "Egress remark policy name";
+                            }
+
+                        } // container egress-remark-policy
+
+                        container agg-rate {
+                            description "Specifies Aggregate Rate.";
+
+                            container rate {
+                                description "Specifies PIR and CIR Aggregate Rate.";
+
+                                leaf pir {
+                                    type union {
+                                        type int32 {
+                                            range "0..100000000";
+                                        }
+                                        type enumeration {
+                                            enum "max"                          { value -1; }
+                                        }
+                                    }
+                                    units "kilobps";
+                                    default "max";
+                                    description "Specifies the administrative PIR rate.";
+                                }
+
+                                leaf cir {
+                                    type union {
+                                        type int32 {
+                                            range "0..100000000";
+                                        }
+                                        type enumeration {
+                                            enum "max"                          { value -1; }
+                                        }
+                                    }
+                                    units "kilobps";
+                                    default "0";
+                                    description "Specifies the administrative CIR rate.";
+                                }
+
+                            } // container rate
+
+                        } // container agg-rate
+
+                    } // container qos
+
+                } // container egress
+
+                container ingress {
+                    when "../../router-name = 'Base' and ../flavor != 'control-tunnel' and ../interface-name != 'system'";
+                    description "Enter the ingress context";
+
+                    container filter {
+                        description "Enter the filter context";
+
+                        leaf ip {
+                            type leafref {
+                                path "../../../../../filter/ip-filter/filter-name";
+                            }
+                            description "IP filter";
+                        }
+
+                        leaf ipv6 {
+                            type leafref {
+                                path "../../../../../filter/ipv6-filter/filter-name";
+                            }
+                            description "IPv6 filter";
+                        }
+
+                    } // container filter
+
+                } // container ingress
+
+                container ldp-sync-timer {
+                    when "../../router-name = 'Base' and (../flavor != 'control-tunnel' and ../flavor != 'pdn') and ../interface-name != 'system'";
+                    description "Enter the ldp-sync-timer context";
+
+                    leaf seconds {
+                        type types-router:ldp-sync-timer;
+                        description "Value for the LDP SYNC timer";
+                    }
+
+                    leaf end-of-lib {
+                        type boolean;
+                        default "false";
+                        description "Terminate LDP sync timer";
+                    }
+
+                } // container ldp-sync-timer
+
+                container load-balancing {
+                    when "../../router-name = 'Base' and (../flavor != 'pdn' and ../flavor != 'control-tunnel') and ../interface-name != 'system'";
+                    description "Enter the load-balancing context";
+
+                    leaf lsr-load-balancing {
+                        type types-router:lsr-load-balancing;
+                        description "LSR load balancing algorithm";
+                    }
+
+                    leaf ip-load-balancing {
+                        type types-router:ip-load-balancing;
+                        default "both";
+                        description "Configure IP load balancing algorithm.";
+                    }
+
+                    leaf spi-load-balancing {
+                        type boolean;
+                        default "false";
+                        description "Allow use of SPI (Security Parameter Index) in hashing for ESP/AH encrypted IPv4/IPv6 traffic";
+                    }
+
+                    leaf teid-load-balancing {
+                        type boolean;
+                        default "false";
+                        description "Include TEID in hashing algorithm for GTP-U/C encapsulated traffic";
+                    }
+
+                } // container load-balancing
+
+                container lag {
+                    when "../../router-name = 'Base' and (../flavor != 'control-tunnel' and ../flavor != 'gmpls-loopback' and ../flavor != 'pdn') and ../interface-name != 'system'";
+                    description "Enter the lag context";
+
+                    leaf link-map-profile {
+                        type types-services:link-map-profile-id;
+                        description "LAG link map profile applied to a SAP or network interface";
+                    }
+
+                    container per-link-hash {
+                        description "Enter the per-link-hash context";
+
+                        leaf class {
+                            type types-services:sap-lag-per-link-hash-class;
+                            default "1";
+                            description "Class used on LAG egress when using weighted per-link-hash";
+                        }
+
+                        leaf weight {
+                            type types-services:sap-lag-per-link-hash-weight;
+                            default "1";
+                            description "Weight used on LAG egress when using weighted per-link-hash";
+                        }
+
+                    } // container per-link-hash
+
+                } // container lag
+
+                container cflowd-parameters {
+                    when "../../router-name = 'Base'";
+                    description "Enter the cflowd-parameters context";
+
+                    list sampling {
+                        key "sampling-type";
+                        description "Enter the sampling context";
+
+                        leaf sampling-type {
+                            type types-router:unicast-multicast;
+                            description "Cflowd sampling type for virtual router interface";
+                        }
+
+                        leaf type {
+                            type enumeration {
+                                enum "acl"                          { value 1; }
+                                enum "interface"                    { value 2; }
+                            }
+                            mandatory true;
+                            description "The type of Cflowd analysis that is applied to the given interface.";
+                        }
+
+                        leaf direction {
+                            type enumeration {
+                                enum "ingress-only"                 { value 1; }
+                                enum "egress-only"                  { value 2; }
+                                enum "both"                         { value 3; }
+                            }
+                            default "ingress-only";
+                            description
+                                "The direction of the Cflowd analysis that is applied to the given
+                                 interface.";
+                        }
+
+                        leaf sample-profile {
+                            type union {
+                                type enumeration {
+                                    enum "1"                            { value 1; }
+                                }
+                                type uint32;
+                            }
+                        }
+
+                    } // list sampling
+
+                } // container cflowd-parameters
+
+                container hold-time {
+                    when "../../router-name = 'Base' and ../flavor != 'control-tunnel'";
+                    description "Enter the hold-time context";
+
+                    container ipv4 {
+                        description "Enter the ipv4 context";
+
+                        container up {
+                            description "Enter the up context";
+
+                            leaf seconds {
+                                type types-router:hold-time-seconds;
+                                units "seconds";
+                                description "Up hold time for the IP interface";
+                            }
+
+                        } // container up
+
+                        container down {
+                            description "Enter the down context";
+
+                            leaf seconds {
+                                type types-router:hold-time-seconds;
+                                units "seconds";
+                                description "Down hold time for the IP interface";
+                            }
+
+                            leaf init-only {
+                                type boolean;
+                                default "false";
+                                description "Apply down delay only when interface is configured or after reboot";
+                            }
+
+                        } // container down
+
+                    } // container ipv4
+
+                    container ipv6 {
+                        when "../../flavor != 'pdn'";
+                        description "Enter the ipv6 context";
+
+                        container up {
+                            description "Enter the up context";
+
+                            leaf seconds {
+                                type types-router:hold-time-seconds;
+                                units "seconds";
+                                description "Up hold time for the IPv6 interface";
+                            }
+
+                        } // container up
+
+                        container down {
+                            description "Enter the down context";
+
+                            leaf seconds {
+                                type types-router:hold-time-seconds;
+                                units "seconds";
+                                description "Down hold time for the IPv6 interface";
+                            }
+
+                            leaf init-only {
+                                type boolean;
+                                default "false";
+                                description "Apply hold time only when IP interface is first configured or after system reboot";
+                            }
+
+                        } // container down
+
+                    } // container ipv6
+
+                } // container hold-time
+
+                container eth-cfm {
+                    when "../../router-name = 'Base'";
+                    description "Enter the eth-cfm context";
+
+                    list mep {
+                        key "md-admin-name ma-admin-name mep-id";
+                        max-elements 1;
+                        description "Enter the mep context";
+
+                        leaf md-admin-name {
+                            type leafref {
+                                path "../../../../../eth-cfm/domain/md-admin-name";
+                            }
+                            description "Unique domain name";
+                        }
+
+                        leaf ma-admin-name {
+                            type leafref {
+                                path "../../../../../eth-cfm/domain[md-admin-name=current()/../md-admin-name]/association/ma-admin-name";
+                            }
+                            description "Unique association name";
+                        }
+
+                        leaf mep-id {
+                            type types-eth-cfm:mep-id-type;
+                            description "Maintenance association end point identifier";
+                        }
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of the MEP";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf mac-address {
+                            type types-sros:mac-unicast-address-no-zero;
+                            description "MAC address for the MEP";
+                        }
+
+                        leaf install-mep {
+                            type boolean;
+                            default "false";
+                            description "Install MEP in the forwarding plane";
+                        }
+
+                        leaf facility-fault {
+                            type boolean;
+                            default "false";
+                            description "Allow the facility MEP to move from alarming only to network actionable function";
+                        }
+
+                        leaf ccm {
+                            type boolean;
+                            default "false";
+                            description "Generate CCM messages";
+                        }
+
+                        leaf ccm-ltm-priority {
+                            type types-eth-cfm:frame-priority;
+                            default "7";
+                            description "Priority of CCM and LTM messages transmitted by the MEP";
+                        }
+
+                        leaf ccm-padding-size {
+                            type uint32 {
+                                range "3..1500";
+                            }
+                            description "Additional octets inserted into CCM PDU for data TLV padding";
+                        }
+
+                        leaf-list ccm-tlv-ignore {
+                            type types-eth-cfm:ccm-tlv-ignore-type;
+                            max-elements 2;
+                            description "TLV to ignore on reception";
+                        }
+
+                        leaf low-priority-defect {
+                            type types-eth-cfm:lowest-alarm-priority;
+                            default "mac-rem-err-xcon";
+                            description "Lowest priority defect for MEP AIS generation";
+                        }
+
+                        leaf collect-lmm-stats {
+                            type boolean;
+                            default "false";
+                            description "Collect statistics for OAM-PM Loss Measurement Message (LMM) tests";
+                        }
+
+                        leaf lbm-svc-act-responder {
+                            type boolean;
+                            default "false";
+                            description "Process service activation streams encapsulated in ETH-CFM request Loopback Message";
+                        }
+
+                        leaf one-way-delay-threshold {
+                            type uint32 {
+                                range "0..600";
+                            }
+                            units "seconds";
+                            default "3";
+                            description "Threshold for one way delay test";
+                        }
+
+                        container alarm-notification {
+                            description "Enter the alarm-notification context";
+
+                            leaf fng-alarm-time {
+                                type int32 {
+                                    range "250|500|1000";
+                                }
+                                units "centiseconds";
+                                description "Time to expire before a Fault Notification Generation (FNG) alarm";
+                            }
+
+                            leaf fng-reset-time {
+                                type int32 {
+                                    range "250|500|1000";
+                                }
+                                units "centiseconds";
+                                description "Time to expire before a Fault Notification Generation (FNG) alarm is reset";
+                            }
+
+                        } // container alarm-notification
+
+                        container eth-test {
+                            presence "Enable/disable eth-test functionality on MEP.";
+                            description "Enter the eth-test context";
+
+                            leaf bit-error-threshold {
+                                type uint32 {
+                                    range "0..11840";
+                                }
+                                units "bit errors";
+                                default "1";
+                                description "Lowest priority defect threshold for the bit error trap to generate a fault alarm";
+                            }
+
+                            container test-pattern {
+                                description "Enter the test-pattern context";
+
+                                leaf pattern {
+                                    type enumeration {
+                                        enum "all-zeros"                    { value 0; }
+                                        enum "all-ones"                     { value 1; }
+                                    }
+                                    default "all-zeros";
+                                    description "Test pattern for eth-test frames";
+                                }
+
+                                leaf crc-tlv {
+                                    type boolean;
+                                    default "false";
+                                    description "Generate a CRC checksum";
+                                }
+
+                            } // container test-pattern
+
+                        } // container eth-test
+
+                        container collect-lmm-fc-stats {
+                            description "Enter the collect-lmm-fc-stats context";
+
+                            leaf-list fc {
+                                type types-eth-cfm:fc-type;
+                                max-elements 8;
+                                description "Forwarding class name for which to create an individual profile-unaware counter";
+                            }
+
+                            leaf-list fc-in-profile {
+                                type types-eth-cfm:fc-type;
+                                max-elements 8;
+                                description "Individual counters to create for the specified Forwarding Class";
+                            }
+
+                        } // container collect-lmm-fc-stats
+
+                        container grace {
+                            description "Enter the grace context";
+
+                            container eth-ed {
+                                description "Enter the eth-ed context";
+
+                                leaf max-rx-defect-window {
+                                    type uint32 {
+                                        range "1..86400";
+                                    }
+                                    units "seconds";
+                                    description "Value to compare to received peer value, lower is used as maximum ETH-ED expected defect window";
+                                }
+
+                                leaf priority {
+                                    type int32 {
+                                        range "0..7";
+                                    }
+                                    description "Transmission priority for ETH-ED PDUs";
+                                }
+
+                                leaf rx-eth-ed {
+                                    type boolean;
+                                    default "true";
+                                    description "Receive and process ETH-ED PDUs";
+                                }
+
+                                leaf tx-eth-ed {
+                                    type boolean;
+                                    default "false";
+                                    description "Transmit ETH-ED PDUs";
+                                }
+
+                            } // container eth-ed
+
+                            container eth-vsm-grace {
+                                description "Enter the eth-vsm-grace context";
+
+                                leaf rx-eth-vsm-grace {
+                                    type boolean;
+                                    default "true";
+                                    description "Allow the reception and processing  of the Nokia ETH-CFM Grace PDU on the MEP";
+                                }
+
+                                leaf tx-eth-vsm-grace {
+                                    type boolean;
+                                    default "true";
+                                    description "Allow the transmission of the Nokia ETH-CFM Grace PDU from the MEP";
+                                }
+
+                            } // container eth-vsm-grace
+
+                        } // container grace
+
+                    } // list mep
+
+                } // container eth-cfm
+
+                container ipv4 {
+                    when "../../router-name != 'management'";
+                    description "Enter the ipv4 context";
+
+                    leaf tcp-mss {
+                        when "../../../router-name = 'Base' and (../../flavor != 'control-tunnel' and ../../flavor != 'pdn')";
+                        type types-router:ipv4-tcp-mss;
+                        description "TCP maximum segment size for the interface";
+                    }
+
+                    leaf allow-directed-broadcasts {
+                        when "../../../router-name = 'Base' and ../../flavor != 'control-tunnel' and ../../flavor != 'pdn'";
+                        type boolean;
+                        default "false";
+                        description "Forward directed broadcasts";
+                    }
+
+                    leaf local-dhcp-server {
+                        when "../../../router-name = 'Base' and ../../flavor != 'control-tunnel' and ../../flavor != 'pdn'";
+                        type leafref {
+                            path "../../../dhcp-server/dhcpv4/name";
+                        }
+                        description "DHCP server for the interface";
+                    }
+
+                    leaf qos-route-lookup {
+                        when "../../../router-name = 'Base' and ../../flavor != 'control-tunnel' and ../../flavor != 'pdn'";
+                        type types-router:qos-route-lookup;
+                        description "Perform QoS Route lookup";
+                    }
+
+                    leaf ip-helper-address {
+                        when "../../../router-name = 'Base' and ../../flavor = 'regular' and ../../interface-name != 'system'";
+                        type types-sros:ipv4-unicast-address;
+                        description "Gateway address";
+                    }
+
+                    container icmp {
+                        when "../../../router-name = 'Base' and ../../flavor != 'control-tunnel'";
+                        description "Enter the icmp context";
+
+                        leaf mask-reply {
+                            type boolean;
+                            default "true";
+                            description "Allow responses to ICMP mask requests";
+                        }
+
+                        container redirects {
+                            description "Enter the redirects context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "enable";
+                                description "Administrative state of sending ICMP redirects";
+                            }
+
+                            leaf number {
+                                type uint16 {
+                                    range "10..1000";
+                                }
+                                default "100";
+                                description "Maximum number of ICMP redirect messages to send";
+                            }
+
+                            leaf seconds {
+                                type uint16 {
+                                    range "1..60";
+                                }
+                                units "seconds";
+                                default "10";
+                                description "Time to limit the number of ICMP redirect messages that can be issued";
+                            }
+
+                        } // container redirects
+
+                        container ttl-expired {
+                            description "Enter the ttl-expired context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "enable";
+                                description "Administrative state of sending TTL expired messages";
+                            }
+
+                            leaf number {
+                                type uint16 {
+                                    range "10..2000";
+                                }
+                                default "100";
+                                description "Maximum number of TTL expired messages to send";
+                            }
+
+                            leaf seconds {
+                                type uint16 {
+                                    range "1..60";
+                                }
+                                units "seconds";
+                                default "10";
+                                description "Time to limit the number of ICMP TTL expired messages that can be issued";
+                            }
+
+                        } // container ttl-expired
+
+                        container unreachables {
+                            description "Enter the unreachables context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "enable";
+                                description "Administrative state of sending unreachable messages";
+                            }
+
+                            leaf number {
+                                type uint16 {
+                                    range "10..2000";
+                                }
+                                default "100";
+                                description "Maximum number of unreachable messages to send";
+                            }
+
+                            leaf seconds {
+                                type uint16 {
+                                    range "1..60";
+                                }
+                                units "seconds";
+                                default "10";
+                                description "Time to limit the number of unreachable messages that can be issued";
+                            }
+
+                        } // container unreachables
+
+                        container param-problem {
+                            description "Enter the param-problem context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "enable";
+                                description "Administrative state of sending parameter-problem messages";
+                            }
+
+                            leaf number {
+                                type uint32 {
+                                    range "10..1000";
+                                }
+                                default "100";
+                                description "Number of parameter-problem ICMP messages to send in specified time interval";
+                            }
+
+                            leaf seconds {
+                                type uint32 {
+                                    range "1..60";
+                                }
+                                units "seconds";
+                                default "10";
+                                description "Time used to limit number of parameter-problem ICMP messages issued";
+                            }
+
+                        } // container param-problem
+
+                    } // container icmp
+
+                    container unnumbered {
+                        when "../../../router-name = 'Base' and ../../flavor != 'control-tunnel' and ../../interface-name != 'system'";
+                        description "Enter the unnumbered context";
+
+                        choice source {
+                            case ip-address {
+
+                                leaf ip-address {
+                                    type types-sros:ipv4-unicast-address;
+                                    description "IP address of the interface";
+                                }
+
+                            }
+                            case ip-int-name {
+
+                                leaf ip-int-name {
+                                    type types-sros:interface-name;
+                                    description "Interface name";
+                                }
+
+                            }
+                            case ip-int-system {
+
+                                leaf system {
+                                    type empty;
+                                    description "IP interface as an unnumbered interface";
+                                }
+
+                            }
+                        }
+                    } // container unnumbered
+
+                    container urpf-check {
+                        when "../../../router-name = 'Base' and (../../flavor != 'control-tunnel' and ../../flavor != 'pdn') and ../../interface-name != 'system'";
+                        presence "Configures unicast RPF check on this interface.";
+                        description "Enter the urpf-check context";
+
+                        leaf ignore-default {
+                            type boolean;
+                            default "false";
+                            description "Ignore default route when performing a uRPF check";
+                        }
+
+                        leaf mode {
+                            type types-router:urpf-check-mode;
+                            default "strict";
+                            description "Unicast RPF check mode";
+                        }
+
+                    } // container urpf-check
+
+                    container dhcp {
+                        when "../../../router-name = 'Base' and ../../interface-name != 'system' and ../../flavor != 'pdn'";
+                        description "Enter the dhcp context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administratively enable/disable DHCP.";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Add/remove a text description for DHCP.";
+                        }
+
+                        leaf python-policy {
+                            type leafref {
+                                path "../../../../../python/python-policy/name";
+                            }
+                            description "Python policy.";
+                        }
+
+                        leaf-list server {
+                            type types-sros:ipv4-unicast-address;
+                            max-elements 8;
+                            ordered-by user;
+                            description "Configure the DHCP server IP addresses.";
+                        }
+
+                        leaf trusted {
+                            type boolean;
+                            default "false";
+                            description "Enable/disable relaying of untrusted packets.";
+                        }
+
+                        leaf gi-address {
+                            type types-sros:ipv4-unicast-address;
+                            description "Configure the gateway interface address for the DHCP relay.";
+                        }
+
+                        leaf src-ip-addr {
+                            type enumeration {
+                                enum "auto"                         { value 0; }
+                                enum "gi-address"                   { value 1; }
+                            }
+                            default "auto";
+                            description "Specify what source address to use.";
+                        }
+
+                        leaf relay-plain-bootp {
+                            type boolean;
+                            default "false";
+                            description "Enable/disable relaying of plain BOOTP packets.";
+                        }
+
+                        container option-82 {
+                            description "Enter the option-82 context";
+
+                            leaf action {
+                                type enumeration {
+                                    enum "replace"                      { value 1; }
+                                    enum "drop"                         { value 2; }
+                                    enum "keep"                         { value 3; }
+                                }
+                                default "keep";
+                                description "What to do with DHCP option 82.";
+                            }
+
+                            container circuit-id {
+                                description "Enter the circuit-id context";
+
+                                choice circuit-id {
+                                    default "ascii-tuple";
+                                    case none {
+
+                                        leaf none {
+                                            type empty;
+                                            description "Do not include the circuit-id.";
+                                        }
+
+                                    }
+                                    case ifindex {
+
+                                        leaf ifindex {
+                                            type empty;
+                                            description "Use ifindex in the option.";
+                                        }
+
+                                    }
+                                    case ascii-tuple {
+
+                                        leaf ascii-tuple {
+                                            type empty;
+                                            description "Use ascii-tuple in the option.";
+                                        }
+
+                                    }
+                                    case vlan-ascii-tuple {
+
+                                        leaf vlan-ascii-tuple {
+                                            type empty;
+                                            description "Use vlan-ascii-tuple in the option.";
+                                        }
+
+                                    }
+                                    case port-id {
+
+                                        leaf port-id {
+                                            type empty;
+                                            description "Use port ID in the option.";
+                                        }
+
+                                    }
+                                    case if-name {
+
+                                        leaf if-name {
+                                            type empty;
+                                            description "Use interface name in the option.";
+                                        }
+
+                                    }
+                                }
+                            } // container circuit-id
+
+                            container remote-id {
+                                description "Enter the remote-id context";
+
+                                choice remote-id {
+                                    default "none";
+                                    case none {
+
+                                        leaf none {
+                                            type empty;
+                                            description "Do not include the remote-id.";
+                                        }
+
+                                    }
+                                    case mac {
+
+                                        leaf mac {
+                                            type empty;
+                                            description "Use MAC address in the option.";
+                                        }
+
+                                    }
+                                    case ascii-string {
+
+                                        leaf ascii-string {
+                                            type types-sros:string-not-all-spaces {
+                                                length "1..32";
+                                            }
+                                            description "Use user-defined ASCII string in the option.";
+                                        }
+
+                                    }
+                                }
+                            } // container remote-id
+
+                            container vendor-specific-option {
+                                description "Enter the vendor-specific-option context";
+
+                                leaf system-id {
+                                    type boolean;
+                                    default "false";
+                                    description "Send the system ID in the Nokia vendor specific suboption.";
+                                }
+
+                                leaf client-mac-address {
+                                    type boolean;
+                                    default "false";
+                                    description "Send the MAC address in the Nokia vendor specific suboption.";
+                                }
+
+                                leaf pool-name {
+                                    type boolean;
+                                    default "false";
+                                    description "Send the pool name in the Nokia vendor specific suboption.";
+                                }
+
+                                leaf port-id {
+                                    type boolean;
+                                    default "false";
+                                    description "Send the port ID in the Nokia vendor specific suboption.";
+                                }
+
+                                leaf service-id {
+                                    type boolean;
+                                    default "false";
+                                    description "Send the service ID in the Nokia vendor specific suboption.";
+                                }
+
+                                leaf string {
+                                    type types-sros:string-not-all-spaces {
+                                        length "1..32";
+                                    }
+                                    description "Send a user-defined string in the Nokia vendor specific suboption.";
+                                }
+
+                            } // container vendor-specific-option
+
+                        } // container option-82
+
+                    } // container dhcp
+
+                    container bfd {
+                        when "../../../router-name = 'Base'";
+                        description "Enter the bfd context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of BFD sessions established on this interface";
+                        }
+
+                        leaf transmit-interval {
+                            type uint32 {
+                                range "10..100000";
+                            }
+                            units "milliseconds";
+                            default "100";
+                            description "BFD transmit interval over this interface";
+                        }
+
+                        leaf receive {
+                            type uint32 {
+                                range "10..100000";
+                            }
+                            units "milliseconds";
+                            default "100";
+                            description "BFD receive interval over this interface";
+                        }
+
+                        leaf multiplier {
+                            type uint32 {
+                                range "3..20";
+                            }
+                            default "3";
+                            description "Number of missed consecutive BFD messages from peer before the BFD session state changes to down";
+                        }
+
+                        leaf echo-receive {
+                            type uint32 {
+                                range "100..100000";
+                            }
+                            units "milliseconds";
+                            description "BFD echo interval over this interface";
+                        }
+
+                        leaf type {
+                            type enumeration {
+                                enum "cpm-np"                       { value 1; }
+                                enum "auto"                         { value 2; }
+                            }
+                            default "auto";
+                            description "BFD session termination";
+                        }
+
+                    } // container bfd
+
+                    container primary {
+                        when "../../../router-name != 'management' and ../../flavor != 'pdn' and ../../flavor != 'unnumbered-mpls-tp'";
+                        presence "Configure primary IPv4 address for this router interface.";
+                        description "Enter the primary context";
+
+                        leaf address {
+                            type types-sros:ipv4-unicast-address;
+                            mandatory true;
+                            description "IPv4 address for a router interface";
+                        }
+
+                        leaf prefix-length {
+                            type uint32 {
+                                range "0..32";
+                            }
+                            mandatory true;
+                            description "IPv4 address prefix length";
+                        }
+
+                        leaf broadcast {
+                            when "../../../../router-name = 'Base'";
+                            type types-services:broadcast-address-format;
+                            default "host-ones";
+                            description "Broadcast address format";
+                        }
+
+                        leaf track-srrp {
+                            when "../../../../router-name = 'Base' and ../../../flavor = 'regular'";
+                            type uint32 {
+                                range "1..4294967295";
+                            }
+                            description "Track the state of the SRRP instance on this IP address";
+                        }
+
+                    } // container primary
+
+                    list secondary {
+                        when "../../../router-name = 'Base' and ../../flavor = 'regular' and ../../interface-name != 'system'";
+                        key "address";
+                        description "Enter the secondary context";
+
+                        leaf address {
+                            type types-sros:ipv4-unicast-address;
+                            description "IPv4 address for a router interface";
+                        }
+
+                        leaf prefix-length {
+                            type uint32 {
+                                range "0..32";
+                            }
+                            mandatory true;
+                            description "IPv4 address prefix length";
+                        }
+
+                        leaf igp-inhibit {
+                            type boolean;
+                            default "false";
+                            description "Secondary IP address that is not recognized as local interface by the running IGP";
+                        }
+
+                        leaf broadcast {
+                            when "../../../../router-name = 'Base'";
+                            type types-services:broadcast-address-format;
+                            default "host-ones";
+                            description "Broadcast address format";
+                        }
+
+                        leaf track-srrp {
+                            when "../../../../router-name = 'Base' and ../../../flavor = 'regular'";
+                            type uint32 {
+                                range "1..4294967295";
+                            }
+                            description "Track the state of the SRRP instance on this IP address";
+                        }
+
+                    } // list secondary
+
+                    container neighbor-discovery {
+                        when "../../interface-name != 'system' and ../../flavor != 'pdn' and ../../flavor != 'control-tunnel' and ../../flavor != 'gmpls-loopback'";
+                        description "Enter the neighbor-discovery context";
+
+                        leaf timeout {
+                            when "../../../../router-name = 'Base'";
+                            type uint32 {
+                                range "0..65535";
+                            }
+                            units "seconds";
+                            default "14400";
+                            description "Timeout for an ARP entry learned on the interface";
+                        }
+
+                        leaf retry-timer {
+                            when "../../../../router-name = 'Base'";
+                            type uint32 {
+                                range "1..300";
+                            }
+                            units "deciseconds";
+                            default "50";
+                            description "ARP retry interval";
+                        }
+
+                        leaf learn-unsolicited {
+                            when "../../../../router-name = 'Base'";
+                            type boolean;
+                            default "false";
+                            description "Allow ARP application to learn new entries based on any received ARP message";
+                        }
+
+                        leaf proactive-refresh {
+                            when "../../../../router-name = 'Base'";
+                            type boolean;
+                            default "false";
+                            description "Send a single refresh message with no retries 30 seconds prior to entry timeout";
+                        }
+
+                        leaf local-proxy-arp {
+                            when "../../../../router-name = 'Base'";
+                            type boolean;
+                            default "false";
+                            description "Enable local proxy ARP on interface";
+                        }
+
+                        leaf remote-proxy-arp {
+                            when "../../../../router-name = 'Base'";
+                            type boolean;
+                            default "false";
+                            description "Enable remote proxy ARP on interface";
+                        }
+
+                        leaf-list proxy-arp-policy {
+                            when "../../../../router-name = 'Base'";
+                            type leafref {
+                                path "../../../../../policy-options/policy-statement/name";
+                            }
+                            max-elements 5;
+                            ordered-by user;
+                            description "Proxy ARP policy name";
+                        }
+
+                        container limit {
+                            when "../../../../router-name = 'Base'";
+                            description "Enter the limit context";
+
+                            leaf max-entries {
+                                type types-router:ipv4-neighbor-limit;
+                                description "Maximum number of  entries that can be learned on an IP interface";
+                            }
+
+                            leaf log-only {
+                                type boolean;
+                                default "false";
+                                description "Log warning messages at threshold or when limit is exceeded, however entries are learned above limit";
+                            }
+
+                            leaf threshold {
+                                type uint32 {
+                                    range "1..100";
+                                }
+                                units "percent";
+                                default "90";
+                                description "Threshold value that triggers a warning message to be sent";
+                            }
+
+                        } // container limit
+
+                        container static-neighbor-unnumbered {
+                            presence "IP-to-MAC address mapping on the unnumbered interface.";
+                            description "Enter the static-neighbor-unnumbered context";
+
+                            leaf mac-address {
+                                type yang:mac-address;
+                                sros-ext:auto-restart-to-modify;
+                                mandatory true;
+                                description "Media-dependent physical address";
+                            }
+
+                        } // container static-neighbor-unnumbered
+
+                        list static-neighbor {
+                            key "ipv4-address";
+                            description "Enter the static-neighbor context";
+
+                            leaf ipv4-address {
+                                type types-sros:ipv4-address;
+                                description "IPv4 address corresponding to the media-dependent physical address";
+                            }
+
+                            leaf mac-address {
+                                type yang:mac-address;
+                                mandatory true;
+                                description "Media-dependent physical address";
+                            }
+
+                        } // list static-neighbor
+
+                    } // container neighbor-discovery
+
+                    list vrrp {
+                        when "../../../router-name = 'Base' and ../../interface-name != 'system'";
+                        key "virtual-router-id";
+                        description "Enter the vrrp context";
+
+                        leaf virtual-router-id {
+                            type int32 {
+                                range "1..255";
+                            }
+                            description "Virtual Router Identifier (VRID) for the VRRP virtual router instance";
+                        }
+
+                        leaf authentication-key {
+                            type types-sros:encrypted-leaf {
+                                length "1..38";
+                            }
+                            description "Password for simple text authentication";
+                        }
+
+                        leaf-list backup {
+                            type types-sros:ipv4-unicast-address;
+                            max-elements 16;
+                            description "Virtual router IP addresses for the interface";
+                        }
+
+                        leaf message-interval {
+                            type uint32 {
+                                range "1..2559";
+                            }
+                            units "deciseconds";
+                            default "10";
+                            description "Interval for sending VRRP Advertisement messages";
+                        }
+
+                        leaf passive {
+                            type boolean;
+                            sros-ext:immutable;
+                            default "false";
+                            description "Suppress the transmission and reception of VRRP advertisement messages";
+                        }
+
+                        leaf init-delay {
+                            type uint32 {
+                                range "1..65535";
+                            }
+                            units "seconds";
+                            description "VRRP initialization delay timer";
+                        }
+
+                        leaf mac {
+                            type types-sros:mac-unicast-address;
+                            description "MAC address used by virtual router instance overriding the VRRP default derived from the VRID";
+                        }
+
+                        leaf priority {
+                            type uint32 {
+                                range "1..255";
+                            }
+                            description "Base priority for the VRRP";
+                        }
+
+                        leaf oper-group {
+                            type leafref {
+                                path "../../../../../service/oper-group/name";
+                            }
+                            description "Operational group name associated with VRRP";
+                        }
+
+                        choice owner-type {
+                            default "non-owner";
+                            case non-owner {
+
+                                leaf admin-state {
+                                    type types-sros:admin-state;
+                                    default "enable";
+                                    description "Administrative state of VRRP";
+                                }
+
+                                leaf master-int-inherit {
+                                    type boolean;
+                                    default "false";
+                                    description "Allow the master instance to dictate the master down timer";
+                                }
+
+                                leaf ping-reply {
+                                    type boolean;
+                                    default "false";
+                                    description "Allow non-owner master to reply to ICMP echo requests";
+                                }
+
+                                leaf policy {
+                                    type leafref {
+                                        path "../../../../../vrrp/policy/policy-id";
+                                    }
+                                    description "VRRP priority control policy associated with the virtual router instance";
+                                }
+
+                                leaf preempt {
+                                    type boolean;
+                                    default "true";
+                                    description "Allow the VRRP to override an existing non-owner master";
+                                }
+
+                                leaf telnet-reply {
+                                    type boolean;
+                                    default "false";
+                                    description "Allow non-owner master to reply to Telnet requests";
+                                }
+
+                                leaf traceroute-reply {
+                                    type boolean;
+                                    default "false";
+                                    description "Allow non-owner master to reply to traceroute requests";
+                                }
+
+                                leaf standby-forwarding {
+                                    type boolean;
+                                    default "false";
+                                    description "Allow the forwarding of packets by a standby router";
+                                }
+
+                                leaf ssh-reply {
+                                    type boolean;
+                                    default "false";
+                                    description "Allow non-owner master to reply to SSH requests";
+                                }
+
+                            }
+                            case owner {
+
+                                leaf owner {
+                                    type empty;
+                                    sros-ext:immutable;
+                                    description "Designate virtual router instance as owning the virutal router IP addresses";
+                                }
+
+                            }
+                        }
+                        container bfd-liveness {
+                            presence "Enable bfd on this vrrp.";
+                            description "Enter the bfd-liveness context";
+
+                            leaf dest-ip {
+                                type types-sros:ipv4-address;
+                                sros-ext:immutable;
+                                mandatory true;
+                                description "Destination IP address to be used for BFD session";
+                            }
+
+                            leaf service-name {
+                                type types-services:service-name;
+                                sros-ext:immutable;
+                                description "Service name of interface running BFD";
+                            }
+
+                            leaf interface-name {
+                                type types-sros:interface-name;
+                                sros-ext:immutable;
+                                mandatory true;
+                                description "Name of interface running BFD";
+                            }
+
+                        } // container bfd-liveness
+
+                    } // list vrrp
+
+                } // container ipv4
+
+                container ipv6 {
+                    when "../../router-name = 'Base' and ../flavor != 'control-tunnel' and ../flavor != 'gmpls-loopback'";
+                    presence "Enables/configures IPv6 related objects for an interface";
+                    description "Enter the ipv6 context";
+
+                    leaf qos-route-lookup {
+                        when "../../../router-name = 'Base' and ../../flavor != 'control-tunnel' and ../../flavor != 'pdn'";
+                        type types-router:qos-route-lookup;
+                        description "Perform QoS Route lookup";
+                    }
+
+                    leaf forward-ipv4-packets {
+                        when "../../../router-name = 'Base' and ../../flavor = 'regular' and ../../interface-name != 'system'";
+                        type boolean;
+                        default "false";
+                        description "Forward unencapsulated IPv4 packets";
+                    }
+
+                    leaf tcp-mss {
+                        when "../../../router-name = 'Base' and (../../flavor != 'control-tunnel' and ../../flavor != 'pdn')";
+                        type types-router:ipv6-tcp-mss;
+                        description "TCP maximum segment size for the interface";
+                    }
+
+                    leaf duplicate-address-detection {
+                        when "../../../router-name = 'Base'";
+                        type boolean;
+                        default "true";
+                        description "Enable/disable Duplicate Address Detection.";
+                    }
+
+                    leaf local-dhcp-server {
+                        type leafref {
+                            path "../../../dhcp-server/dhcpv6/name";
+                        }
+                        description "DHCP server for the interface";
+                    }
+
+                    container icmp6 {
+                        description "Enter the icmp6 context";
+
+                        container packet-too-big {
+                            description "Enter the packet-too-big context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "enable";
+                                description "Administrative state of packet-too-big messages";
+                            }
+
+                            leaf number {
+                                type uint16 {
+                                    range "10..1000";
+                                }
+                                default "100";
+                                description "Number of packet-too-big messages";
+                            }
+
+                            leaf seconds {
+                                type uint16 {
+                                    range "1..60";
+                                }
+                                default "10";
+                                description "Time to limit packet-too-big messages";
+                            }
+
+                        } // container packet-too-big
+
+                        container param-problem {
+                            description "Enter the param-problem context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "enable";
+                                description "Administrative state of param-problem messages";
+                            }
+
+                            leaf number {
+                                type uint16 {
+                                    range "10..1000";
+                                }
+                                default "100";
+                                description "Number of parameter-problem messages";
+                            }
+
+                            leaf seconds {
+                                type uint16 {
+                                    range "1..60";
+                                }
+                                default "10";
+                                description "Time to limit parameter problem messages";
+                            }
+
+                        } // container param-problem
+
+                        container redirects {
+                            description "Enter the redirects context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "enable";
+                                description "Administrative state of the redirect messages";
+                            }
+
+                            leaf number {
+                                type uint16 {
+                                    range "10..1000";
+                                }
+                                default "100";
+                                description "Number of redirect messages";
+                            }
+
+                            leaf seconds {
+                                type uint16 {
+                                    range "1..60";
+                                }
+                                default "10";
+                                description "Time to limit redirect messages";
+                            }
+
+                        } // container redirects
+
+                        container time-exceeded {
+                            description "Enter the time-exceeded context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "enable";
+                                description "Administrative state of the time-exceeded messages";
+                            }
+
+                            leaf number {
+                                type uint16 {
+                                    range "10..2000";
+                                }
+                                default "100";
+                                description "Number of time-exceeded messages";
+                            }
+
+                            leaf seconds {
+                                type uint16 {
+                                    range "1..60";
+                                }
+                                default "10";
+                                description "Time to limit time-exceeded messages";
+                            }
+
+                        } // container time-exceeded
+
+                        container unreachables {
+                            description "Enter the unreachables context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "enable";
+                                description "Administrative state of the unreachable messages";
+                            }
+
+                            leaf number {
+                                type uint16 {
+                                    range "10..2000";
+                                }
+                                default "100";
+                                description "Number of unreachable messages";
+                            }
+
+                            leaf seconds {
+                                type uint16 {
+                                    range "1..60";
+                                }
+                                default "10";
+                                description "Time to limit unreachable messages";
+                            }
+
+                        } // container unreachables
+
+                    } // container icmp6
+
+                    container link-local-address {
+                        when "../../interface-name != 'system'";
+                        description "Enter the link-local-address context";
+
+                        leaf address {
+                            type types-sros:ipv6-address;
+                            description "Link-local IPv6 address of this router interface";
+                        }
+
+                        leaf duplicate-address-detection {
+                            type boolean;
+                            default "true";
+                            description "Enable/disable Duplicate Address Detection.";
+                        }
+
+                    } // container link-local-address
+
+                    container urpf-check {
+                        when "../../../router-name = 'Base' and (../../flavor != 'control-tunnel' and ../../flavor != 'pdn') and ../../interface-name != 'system'";
+                        presence "Configure uRPF information.";
+                        description "Enter the urpf-check context";
+
+                        leaf ignore-default {
+                            type boolean;
+                            default "false";
+                            description "Ignore default route when performing a uRPF check";
+                        }
+
+                        leaf mode {
+                            type types-router:urpf-check-mode;
+                            default "strict";
+                            description "Unicast RPF check mode";
+                        }
+
+                    } // container urpf-check
+
+                    container bfd {
+                        description "Enter the bfd context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of BFD sessions established on this interface";
+                        }
+
+                        leaf transmit-interval {
+                            type uint32 {
+                                range "10..100000";
+                            }
+                            units "milliseconds";
+                            default "100";
+                            description "BFD transmit interval over this interface";
+                        }
+
+                        leaf receive {
+                            type uint32 {
+                                range "10..100000";
+                            }
+                            units "milliseconds";
+                            default "100";
+                            description "BFD receive interval over this interface";
+                        }
+
+                        leaf multiplier {
+                            type uint32 {
+                                range "3..20";
+                            }
+                            default "3";
+                            description "Number of missed consecutive BFD messages from peer before the BFD session state changes to down";
+                        }
+
+                        leaf echo-receive {
+                            type uint32 {
+                                range "100..100000";
+                            }
+                            units "milliseconds";
+                            description "BFD echo interval over this interface";
+                        }
+
+                        leaf type {
+                            type enumeration {
+                                enum "cpm-np"                       { value 1; }
+                                enum "auto"                         { value 2; }
+                            }
+                            default "auto";
+                            description "BFD session termination";
+                        }
+
+                    } // container bfd
+
+                    list address {
+                        key "ipv6-address";
+                        description "Enter the address context";
+
+                        leaf ipv6-address {
+                            type types-sros:ipv6-address;
+                            description "IPv6 address for a router interface";
+                        }
+
+                        leaf prefix-length {
+                            type uint32 {
+                                range "0..128";
+                            }
+                            mandatory true;
+                            description "IPv6 address prefix length";
+                        }
+
+                        leaf eui-64 {
+                            type boolean;
+                            sros-ext:immutable;
+                            default "false";
+                            description "Form complete IPv6 address from supplied prefix and 64-bit interface identifier";
+                        }
+
+                        leaf duplicate-address-detection {
+                            type boolean;
+                            sros-ext:immutable;
+                            default "true";
+                            description "Enable/disable Duplicate Address Detection.";
+                        }
+
+                        leaf primary-preference {
+                            type uint32 {
+                                range "1..4294967295";
+                            }
+                            description "Order to enforce in which the address is used from control plane protocols and applications";
+                        }
+
+                    } // list address
+
+                    container neighbor-discovery {
+                        when "../../interface-name != 'system' and ../../flavor != 'pdn' and ../../flavor != 'control-tunnel' and ../../flavor != 'gmpls-loopback'";
+                        description "Enter the neighbor-discovery context";
+
+                        leaf reachable-time {
+                            type types-router:neighbor-discovery-reachable-time;
+                            description "Timer for neighbor reachability detection";
+                        }
+
+                        leaf stale-time {
+                            type types-router:neighbor-discovery-stale-time;
+                            description "Time during which a neighbor discovery cache entry remains stale";
+                        }
+
+                        leaf learn-unsolicited {
+                            type types-router:ipv6-address-type-selection;
+                            description "Type of entries learned from unsolicited NA messages";
+                        }
+
+                        leaf proactive-refresh {
+                            type types-router:ipv6-address-type-selection;
+                            description "Neighbor entries to be refreshed proactively";
+                        }
+
+                        leaf local-proxy-nd {
+                            type boolean;
+                            default "false";
+                            description "Enable neighbor discovery on interface";
+                        }
+
+                        leaf-list proxy-nd-policy {
+                            type leafref {
+                                path "../../../../../policy-options/policy-statement/name";
+                            }
+                            max-elements 5;
+                            ordered-by user;
+                            description "Name of the proxy Neighbor Discovery policies for the interface";
+                        }
+
+                        container secure-nd {
+                            description "Enter the secure-nd context";
+
+                            leaf allow-unsecured-msgs {
+                                type boolean;
+                                default "true";
+                                description "Accept unsecured messages";
+                            }
+
+                            leaf public-key-min-bits {
+                                type uint32 {
+                                    range "512..1024";
+                                }
+                                default "1024";
+                                description "Minimum acceptable key length for public keys";
+                            }
+
+                            leaf security-parameter {
+                                type uint32 {
+                                    range "0..1";
+                                }
+                                default "1";
+                                description "Security parameter in the generation of a cryptographical address";
+                            }
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "disable";
+                                description "Administrative state of secure neighbor discovery";
+                            }
+
+                        } // container secure-nd
+
+                        container limit {
+                            description "Enter the limit context";
+
+                            leaf max-entries {
+                                type types-router:ipv6-neighbor-limit;
+                                description "Maximum number of  entries that can be learned on an IP interface";
+                            }
+
+                            leaf log-only {
+                                type boolean;
+                                default "false";
+                                description "Log warning messages at threshold or when limit is exceeded, however entries are learned above limit";
+                            }
+
+                            leaf threshold {
+                                type uint32 {
+                                    range "1..100";
+                                }
+                                units "percent";
+                                default "90";
+                                description "Threshold value that triggers a warning message to be sent";
+                            }
+
+                        } // container limit
+
+                        list static-neighbor {
+                            key "ipv6-address";
+                            description "Enter the static-neighbor context";
+
+                            leaf ipv6-address {
+                                type types-sros:ipv6-address;
+                                description "IPv6 address corresponding to the media-dependent physical address";
+                            }
+
+                            leaf mac-address {
+                                type yang:mac-address;
+                                mandatory true;
+                                description "Media-dependent physical address";
+                            }
+
+                        } // list static-neighbor
+
+                    } // container neighbor-discovery
+
+                    list vrrp {
+                        when "../../../router-name = 'Base' and ../../interface-name != 'system'";
+                        key "virtual-router-id";
+                        max-elements 1;
+                        description "Enter the vrrp context";
+
+                        leaf virtual-router-id {
+                            type int32 {
+                                range "1..255";
+                            }
+                            description "Virtual Router Identifier (VRID) for the VRRP virtual router instance";
+                        }
+
+                        leaf-list backup {
+                            type types-sros:ipv6-address;
+                            max-elements 4;
+                            description "Virtual router IP addresses for the interface";
+                        }
+
+                        leaf message-interval {
+                            type uint32 {
+                                range "1..4095";
+                            }
+                            units "centiseconds";
+                            default "100";
+                            description "Interval for sending VRRP Advertisement messages";
+                        }
+
+                        leaf passive {
+                            type boolean;
+                            sros-ext:immutable;
+                            default "false";
+                            description "Suppress the transmission and reception of VRRP advertisement messages";
+                        }
+
+                        leaf init-delay {
+                            type uint32 {
+                                range "1..65535";
+                            }
+                            units "seconds";
+                            description "VRRP initialization delay timer";
+                        }
+
+                        leaf mac {
+                            type types-sros:mac-unicast-address;
+                            description "MAC address used by virtual router instance overriding the VRRP default derived from the VRID";
+                        }
+
+                        leaf priority {
+                            type uint32 {
+                                range "1..255";
+                            }
+                            description "Base priority for the VRRP";
+                        }
+
+                        leaf oper-group {
+                            type leafref {
+                                path "../../../../../service/oper-group/name";
+                            }
+                            description "Operational group name associated with VRRP";
+                        }
+
+                        choice owner-type {
+                            default "non-owner";
+                            case non-owner {
+
+                                leaf admin-state {
+                                    type types-sros:admin-state;
+                                    default "enable";
+                                    description "Administrative state of VRRP";
+                                }
+
+                                leaf master-int-inherit {
+                                    type boolean;
+                                    default "true";
+                                    description "Allow the master instance to dictate the master down timer";
+                                }
+
+                                leaf ping-reply {
+                                    type boolean;
+                                    default "false";
+                                    description "Allow non-owner master to reply to ICMP echo requests";
+                                }
+
+                                leaf policy {
+                                    type leafref {
+                                        path "../../../../../vrrp/policy/policy-id";
+                                    }
+                                    description "VRRP priority control policy associated with the virtual router instance";
+                                }
+
+                                leaf preempt {
+                                    type boolean;
+                                    default "true";
+                                    description "Allow the VRRP to override an existing non-owner master";
+                                }
+
+                                leaf telnet-reply {
+                                    type boolean;
+                                    default "false";
+                                    description "Allow non-owner master to reply to Telnet requests";
+                                }
+
+                                leaf traceroute-reply {
+                                    type boolean;
+                                    default "false";
+                                    description "Allow non-owner master to reply to traceroute requests";
+                                }
+
+                                leaf standby-forwarding {
+                                    type boolean;
+                                    default "false";
+                                    description "Allow the forwarding of packets by a standby router";
+                                }
+
+                            }
+                            case owner {
+
+                                leaf owner {
+                                    type empty;
+                                    sros-ext:immutable;
+                                    description "Designate virtual router instance as owning the virutal router IP addresses";
+                                }
+
+                            }
+                        }
+                        container bfd-liveness {
+                            presence "Enable bfd on this vrrp.";
+                            description "Enter the bfd-liveness context";
+
+                            leaf dest-ip {
+                                type types-sros:ipv6-address;
+                                sros-ext:immutable;
+                                mandatory true;
+                                description "ip-address.";
+                            }
+
+                            leaf service-name {
+                                type types-services:service-name;
+                                sros-ext:immutable;
+                                description "Service name of interface running BFD";
+                            }
+
+                            leaf interface-name {
+                                type types-sros:interface-name;
+                                sros-ext:immutable;
+                                mandatory true;
+                                description "Name of interface running BFD";
+                            }
+
+                        } // container bfd-liveness
+
+                    } // list vrrp
+
+                } // container ipv6
+
+                container ip-tunnel {
+                    when "../flavor = 'control-tunnel'";
+                    description "Enter the ip-tunnel context";
+
+                    leaf remote-ip {
+                        type types-sros:ipv4-unicast-address;
+                        description "IP address of the remote end of the IP tunnel";
+                    }
+
+                } // container ip-tunnel
+
+                container qos {
+                    description "Enter the qos context";
+
+                    leaf network-policy {
+                        type leafref {
+                            path "../../../../qos/network/network-policy-name";
+                        }
+                        description "Pre-existing network policy ID associated with a network interface";
+                    }
+
+                    leaf egress-port-redirect-group {
+                        type leafref {
+                            path "../../../../qos/queue-group-templates/egress/queue-group/egress-queue-group-name";
+                        }
+                        description "QoS queue group name";
+                    }
+
+                    leaf egress-instance {
+                        type types-services:qos-qgrp-instance-id;
+                        description "Instance of the port egress queue group for this interface";
+                    }
+
+                    leaf ingress-fp-redirect-group {
+                        type leafref {
+                            path "../../../../qos/queue-group-templates/ingress/queue-group/ingress-queue-group-name";
+                        }
+                        description "Forwarding-plane queue group policy for this interface";
+                    }
+
+                    leaf ingress-instance {
+                        type types-services:qos-qgrp-instance-id;
+                        description "Instance of the forwarding-plane ingress queue group for this interface";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                } // container qos
+
+                container if-attribute {
+                    when "../../router-name = 'Base' and ../flavor != 'gmpls-loopback' and ../flavor != 'control-tunnel' and ../flavor != 'unnumbered-mpls-tp'";
+                    description "Enter the if-attribute context";
+
+                    leaf-list admin-group {
+                        type leafref {
+                            path "../../../../routing-options/if-attribute/admin-group/group-name";
+                        }
+                        max-elements 32;
+                        description "Name of the Admin group membership of the interface";
+                    }
+
+                    list srlg-group {
+                        key "name";
+                        description "Enter the srlg-group context";
+
+                        leaf name {
+                            type leafref {
+                                path "../../../../../routing-options/if-attribute/srlg-group/name";
+                            }
+                            description "Shared Risk Link Group (SRLG) name";
+                        }
+
+                    } // list srlg-group
+
+                } // container if-attribute
+
+                container untrusted {
+                    when "../../router-name = 'Base' and ../flavor = 'regular' and ../interface-name != 'system'";
+                    presence "Configure the interface untrusted for Selective ILM (Incoming Label Map).";
+                    description "Enter the untrusted context";
+
+                    leaf default-forwarding {
+                        type types-router:selective-ilm-default-forwarding;
+                        default "forward";
+                        description "Configure the default action for Selective ILM (Incoming Label Map).";
+                    }
+
+                } // container untrusted
+
+                container network-domains {
+                    when "../../router-name = 'Base'";
+                    description "Enter the network-domains context";
+
+                    list network-domain {
+                        key "domain-name";
+                        max-elements 5;
+                        description "Enter the network-domain context";
+
+                        leaf domain-name {
+                            type leafref {
+                                path "../../../../network-domains/network-domain/domain-name";
+                            }
+                            description "Specifies the network-domain name.";
+                        }
+
+                    } // list network-domain
+
+                } // container network-domains
+
+            } // list interface
+
+            container ipv6 {
+                description "Enter the ipv6 context";
+
+                container neighbor-discovery {
+                    when "../../router-name = 'Base'";
+                    description "Enter the neighbor-discovery context";
+
+                    leaf reachable-time {
+                        type types-router:neighbor-discovery-reachable-time;
+                        default "30";
+                        description "Timer for neighbor reachability detection";
+                    }
+
+                    leaf stale-time {
+                        type types-router:neighbor-discovery-stale-time;
+                        default "14400";
+                        description "Time during which a neighbor discovery cache entry remains stale before removal";
+                    }
+
+                } // container neighbor-discovery
+
+                container router-advertisement {
+                    when "../../router-name = 'Base'";
+                    description "Enter the router-advertisement context";
+
+                    container dns-options {
+                        presence "Enables DNS functionality on this router.";
+                        description "Enter the dns-options context";
+
+                        leaf rdnss-lifetime {
+                            type union {
+                                type enumeration {
+                                    enum "infinite"                     { value -1; }
+                                }
+                                type int32 {
+                                    range "0|4..3600";
+                                }
+                            }
+                            units "seconds";
+                            default "infinite";
+                            description "Maximum time over which the RDNSS address is valid";
+                        }
+
+                        leaf-list server {
+                            type types-sros:ipv6-address;
+                            max-elements 4;
+                            ordered-by user;
+                            description "Router advertisements that are forwarded to servers";
+                        }
+
+                    } // container dns-options
+
+                    list interface {
+                        key "ip-int-name";
+                        description "Enter the interface context";
+
+                        leaf ip-int-name {
+                            type types-sros:interface-name;
+                            description "Router interface name";
+                        }
+
+                        leaf current-hop-limit {
+                            type uint16 {
+                                range "0..255";
+                            }
+                            default "64";
+                            description "Hop limit to advertise in ICMPv6 ND router advertisement messages";
+                        }
+
+                        leaf managed-configuration {
+                            type boolean;
+                            default "false";
+                            description "Managed address configuration flag in ICMPv6 ND router advertisement messages";
+                        }
+
+                        leaf max-advertisement-interval {
+                            type uint32 {
+                                range "4..1800";
+                            }
+                            units "seconds";
+                            default "600";
+                            description "Maximum time between sending ICMPv6 ND router advertisement messages";
+                        }
+
+                        leaf min-advertisement-interval {
+                            type uint32 {
+                                range "3..1350";
+                            }
+                            units "seconds";
+                            default "200";
+                            description "Minimum time between sending ICMPv6 ND router advertisement messages";
+                        }
+
+                        leaf mtu {
+                            type uint32 {
+                                range "1280..9212";
+                            }
+                            description "MTU for sending packets to the router";
+                        }
+
+                        leaf other-stateful-configuration {
+                            type boolean;
+                            default "false";
+                            description "Other configuration flag to assign in ICMPv6 ND router advertisement messages";
+                        }
+
+                        leaf reachable-time {
+                            type uint32 {
+                                range "0..3600000";
+                            }
+                            units "milliseconds";
+                            default "0";
+                            description "Time during which this router is considered reachable by other hosts or nodes on the subnet";
+                        }
+
+                        leaf retransmit-time {
+                            type uint32 {
+                                range "0..1800000";
+                            }
+                            units "milliseconds";
+                            default "0";
+                            description "Interval to advertise in ICMPv6 ND router advertisement messages";
+                        }
+
+                        leaf router-lifetime {
+                            type uint32 {
+                                range "0|4..9000";
+                            }
+                            units "seconds";
+                            default "1800";
+                            description "Lifetime value that the router advertises in ICMPv6 ND router advertisement messages";
+                        }
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of router advertisement on an interface";
+                        }
+
+                        leaf use-virtual-mac {
+                            type boolean;
+                            default "false";
+                            description "Router advertisement messages to send using VRRP virtual MAC address";
+                        }
+
+                        container dns-options {
+                            presence "Enables DNS functionality on this interface.";
+                            description "Enter the dns-options context";
+
+                            leaf include-rdnss {
+                                type boolean;
+                                default "true";
+                                description "Include the RDNSS option in the router advertisement sent from this interface";
+                            }
+
+                            leaf rdnss-lifetime {
+                                type union {
+                                    type int32 {
+                                        range "0|4..3600";
+                                    }
+                                    type enumeration {
+                                        enum "infinite"                     { value -1; }
+                                    }
+                                }
+                                units "seconds";
+                                description "Maximum time over which the RDNSS address 25 is valid";
+                            }
+
+                            leaf-list server {
+                                type types-sros:ipv6-address;
+                                max-elements 4;
+                                ordered-by user;
+                                description "Router advertisements that are forwarded to servers";
+                            }
+
+                        } // container dns-options
+
+                        list prefix {
+                            key "ipv6-prefix";
+                            max-elements 254;
+                            description "Enter the prefix context";
+
+                            leaf ipv6-prefix {
+                                type types-sros:ipv6-prefix;
+                                description "IPv6 address prefix";
+                            }
+
+                            leaf autonomous {
+                                type boolean;
+                                default "true";
+                                description "Autonomous flag value";
+                            }
+
+                            leaf on-link {
+                                type boolean;
+                                default "true";
+                                description "Use prefix for onlink determination";
+                            }
+
+                            leaf preferred-lifetime {
+                                type union {
+                                    type enumeration {
+                                        enum "infinite"                     { value -1; }
+                                    }
+                                    type uint32 {
+                                        range "0..4294967294";
+                                    }
+                                }
+                                units "seconds";
+                                default "604800";
+                                description "Remaining time that the prefix remains preferred";
+                            }
+
+                            leaf valid-lifetime {
+                                type union {
+                                    type enumeration {
+                                        enum "infinite"                     { value -1; }
+                                    }
+                                    type uint32 {
+                                        range "0..4294967294";
+                                    }
+                                }
+                                units "seconds";
+                                default "2592000";
+                                description "Remaining time during which the prefix continues to be valid";
+                            }
+
+                        } // list prefix
+
+                    } // list interface
+
+                } // container router-advertisement
+
+            } // container ipv6
+
+            container isa-service-chaining {
+                presence "ISA Service Chaining";
+                description "Enter the isa-service-chaining context";
+
+                list nat-group {
+                    key "id";
+                    description "Enter the nat-group context";
+
+                    leaf id {
+                        type uint32;
+                        description "ISA NAT group or ISA WLAN GW group used for the pools in EVPNs";
+                    }
+
+                } // list nat-group
+
+                container vxlan-vtep-range {
+                    presence "VXLAN Tunnel Endpoint Range";
+                    description "Enter the vxlan-vtep-range context";
+
+                    leaf start {
+                        type types-sros:ip-unicast-address;
+                        mandatory true;
+                        description "Start of the VXLAN VTEP range";
+                    }
+
+                    leaf end {
+                        type types-sros:ip-unicast-address;
+                        mandatory true;
+                        description "End of the VXLAN VTEP range";
+                    }
+
+                } // container vxlan-vtep-range
+
+            } // container isa-service-chaining
+
+            container mpls-labels {
+                description "Enter the mpls-labels context";
+
+                leaf bgp-labels-hold-timer {
+                    type uint32 {
+                        range "0..255";
+                    }
+                    default "0";
+                    description "BGP labels hold timer for the ingress router";
+                }
+
+                leaf static-label-range {
+                    type uint32 {
+                        range "0..1048544";
+                    }
+                    default "18400";
+                    description "Static label range on the ingress router";
+                }
+
+                container sr-labels {
+                    description "Enter the sr-labels context";
+
+                    leaf start {
+                        type types-sros:mpls-label;
+                        description "Start label value for the SRGB";
+                    }
+
+                    leaf end {
+                        type types-sros:mpls-label;
+                        description "End label  for the SRGB";
+                    }
+
+                } // container sr-labels
+
+                list reserved-label-block {
+                    key "label-block-name";
+                    max-elements 4;
+                    description "Enter the reserved-label-block context";
+
+                    leaf start-label {
+                        type uint32 {
+                            range "18432..1048575";
+                        }
+                        description "Start label value for the reserved label block";
+                    }
+
+                    leaf end-label {
+                        type uint32 {
+                            range "18432..1048575";
+                        }
+                        description "End label for the reserved label block";
+                    }
+
+                    leaf label-block-name {
+                        type types-sros:named-item-64;
+                        description "Name for the reserved label block";
+                    }
+
+                } // list reserved-label-block
+
+            } // container mpls-labels
+
+            container mtrace2 {
+                description "Enter the mtrace2 context";
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of UDP based multicast traceroute tests (mstat2 and mtrace2)";
+                }
+
+                leaf udp-port {
+                    type uint32 {
+                        range "1024..49151";
+                    }
+                    default "5000";
+                    description "Destination UDP port for mstat2|mtrace2 test, or unsolicited mstat2|mtrace2 packets";
+                }
+
+            } // container mtrace2
+
+            container sgt-qos {
+                description "Enter the sgt-qos context";
+
+                container dscp {
+                    description "Enter the dscp context";
+
+                    list application {
+                        key "dscp-app-name";
+                        description "Enter the application context";
+
+                        leaf dscp-app-name {
+                            type types-router:dscp-app-name;
+                            description "DSCP application identifier on the NOKIA SR OS router that generates control traffic over IP";
+                        }
+
+                        leaf dscp {
+                            type union {
+                                type types-qos:dscp-name;
+                                type int32 {
+                                    range "0..63";
+                                }
+                            }
+                            description "DSCP value to the traffic generated by this application";
+                        }
+
+                    } // list application
+
+                    list dscp-map {
+                        when "../../../router-name = 'Base'";
+                        key "dscp-name";
+                        description "Enter the dscp-map context";
+
+                        leaf dscp-name {
+                            type types-qos:dscp-name;
+                            description "DSCP name mapped to forwarding class";
+                        }
+
+                        leaf fc {
+                            type types-sros:fc-name;
+                            description "Value for the forwarding class for this mapping";
+                        }
+
+                    } // list dscp-map
+
+                } // container dscp
+
+                container dot1p {
+                    description "Enter the dot1p context";
+
+                    list application {
+                        key "dot1p-app-name";
+                        description "Enter the application context";
+
+                        leaf dot1p-app-name {
+                            type types-router:dot1p-app-name;
+                            description "Dot1p application identifier on the NOKIA SR OS router that generates control traffic over IP";
+                        }
+
+                        leaf dot1p {
+                            type union {
+                                type types-sros:fc-name;
+                                type int32 {
+                                    range "0..7";
+                                }
+                            }
+                            description "Dot1p value to the traffic generated by this application";
+                        }
+
+                    } // list application
+
+                } // container dot1p
+
+            } // container sgt-qos
+
+            container tunnel-interface {
+                when "../router-name = 'Base'";
+                description "Enter the tunnel-interface context";
+
+                list rsvp-p2mp-root {
+                    key "lsp-name";
+                    description "Enter the rsvp-p2mp-root context";
+
+                    leaf lsp-name {
+                        type types-sros:named-item;
+                        description "LSP name of the P2MP RSVP tunnel interface";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                } // list rsvp-p2mp-root
+
+                list rsvp-p2mp-leaf {
+                    key "lsp-name sender-address";
+                    description "Enter the rsvp-p2mp-leaf context";
+
+                    leaf lsp-name {
+                        type types-sros:named-item;
+                        description "LSP name of the P2MP RSVP tunnel interface";
+                    }
+
+                    leaf sender-address {
+                        type types-sros:ipv4-unicast-address;
+                        description "Address of a sender for the P2MP RSVP tunnel interface instance";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                } // list rsvp-p2mp-leaf
+
+                list ldp-p2mp-root {
+                    key "p2mp-id sender-address";
+                    description "Enter the ldp-p2mp-root context";
+
+                    leaf p2mp-id {
+                        type uint32 {
+                            range "1..8192";
+                        }
+                        description "Identifier used for signaling MLDP P2MP LSP";
+                    }
+
+                    leaf sender-address {
+                        type types-sros:ipv4-unicast-address;
+                        description "Address of an LDP sender for the P2MP RSVP tunnel interface instance";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                } // list ldp-p2mp-root
+
+                list ldp-p2mp-leaf {
+                    key "p2mp-id sender-address";
+                    description "Enter the ldp-p2mp-leaf context";
+
+                    leaf p2mp-id {
+                        type uint32;
+                        description "Identifier used for signaling MLDP P2MP LSP";
+                    }
+
+                    leaf sender-address {
+                        type types-sros:ipv4-unicast-address;
+                        description "Address of an LDP sender for the P2MP RSVP tunnel interface instance";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                } // list ldp-p2mp-leaf
+
+            } // container tunnel-interface
+
+            container lsp-bfd {
+                presence "LSP BFD configuration.";
+                description "Enter the lsp-bfd context";
+
+                leaf bfd-sessions {
+                    type uint32 {
+                        range "1..max";
+                    }
+                    mandatory true;
+                    description "Maximum number of  the dynamically created LSP BFD session tail-ends";
+                }
+
+            } // container lsp-bfd
+
+            container ttl-propagate {
+                when "../router-name = 'Base'";
+                description "Enter the ttl-propagate context";
+
+                leaf label-route-local {
+                    type types-router:ttl-propagate-type;
+                    default "none";
+                    description "TTL propagation from IP header into label stack for local packets";
+                }
+
+                leaf label-route-transit {
+                    type types-router:ttl-propagate-type;
+                    default "none";
+                    description "TTL propagation from IP header into label stack for transit packets";
+                }
+
+                leaf lsr-label-route {
+                    type types-router:ttl-propagate-type;
+                    default "none";
+                    description "TTL propagation from IP header into label stack";
+                }
+
+                leaf vprn-local {
+                    type types-router:router-vprn-ttl-propagate;
+                    default "vc-only";
+                    description "TTL propagation from IP header into label stack for VPRN local packets";
+                }
+
+                leaf vprn-transit {
+                    type types-router:router-vprn-ttl-propagate;
+                    default "vc-only";
+                    description "TTL propagation from IP header into label stack for VPRN transit packets";
+                }
+
+            } // container ttl-propagate
+
+            container flowspec {
+                when "../router-name = 'Base'";
+                description "Enter the flowspec context";
+
+                leaf ip-filter-max-size {
+                    type uint32 {
+                        range "0..262143";
+                    }
+                    default "512";
+                    description "Maximum number of entries in IP filter for flowspec rules";
+                }
+
+                leaf ipv6-filter-max-size {
+                    type uint32 {
+                        range "0..262143";
+                    }
+                    default "512";
+                    description "Maximum number of entries in IPv6 filter for flowspec rules";
+                }
+
+            } // container flowspec
+
+            container pcp {
+                when "../router-name = 'Base'";
+                description "Enter the pcp context";
+
+                list server {
+                    key "name";
+                    description "Enter the server context";
+
+                    leaf name {
+                        type types-sros:named-item;
+                        description "PCP server name";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of this PCP server";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf dual-stack-lite-address {
+                        type types-sros:ipv6-unicast-address;
+                        description "Inside Dual Stack Lite AFTR address";
+                    }
+
+                    leaf fwd-inside-router {
+                        type string;
+                        description "PCP forwarding inside virtual router instance";
+                    }
+
+                    leaf policy {
+                        type leafref {
+                            path "../../../../service/nat/pcp-server-policy/name";
+                        }
+                        description "PCP server policy";
+                    }
+
+                    list interface {
+                        key "name";
+                        max-elements 32;
+                        description "Enter the interface context";
+
+                        leaf name {
+                            type leafref {
+                                path "../../../../interface/interface-name";
+                            }
+                            description "Interface name";
+                        }
+
+                    } // list interface
+
+                } // list server
+
+            } // container pcp
+
+            container network-domains {
+                when "../router-name = 'Base'";
+                description "Enter the network-domains context";
+
+                list network-domain {
+                    key "domain-name";
+                    max-elements 5;
+                    description "Enter the network-domain context";
+
+                    leaf domain-name {
+                        type types-sros:named-item;
+                        description "Specifies the network-domain name.";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Specifies a description for the network-domain.";
+                    }
+
+                } // list network-domain
+
+            } // container network-domains
+
+            uses conf-router-bgp;
+            uses conf-router-bier;
+            uses conf-router-dhcp-server;
+            uses conf-router-firewall;
+            uses conf-router-gmpls;
+            uses conf-router-gtm;
+            uses conf-router-igmp;
+            uses conf-router-isis;
+            uses conf-router-l2tp;
+            uses conf-router-ldp;
+            uses conf-router-lmp;
+            uses conf-router-mld;
+            uses conf-router-mpls;
+            uses conf-router-msdp;
+            uses conf-router-nat;
+            uses conf-router-origin-validation;
+            uses conf-router-ospf;
+            uses conf-router-ospf3;
+            uses conf-router-pcep;
+            uses conf-router-pim;
+            uses conf-router-radius;
+            uses conf-router-rib-api;
+            uses conf-router-rip;
+            uses conf-router-ripng;
+            uses conf-router-rsvp;
+            uses conf-router-segment-routing;
+            uses conf-router-static-route-static-routes;
+            uses conf-router-twamp-light;
+            uses conf-router-wpp;
+        } // list router
+
+    } // grouping conf-router
+
+}

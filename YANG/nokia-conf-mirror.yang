@@ -1,0 +1,519 @@
+submodule nokia-conf-mirror {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-services           { prefix "types-services"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+    import nokia-types-subscriber-mgmt    { prefix "types-submgt"; }
+
+    include nokia-conf-filter;
+    include nokia-conf-lag;
+    include nokia-conf-port;
+    include nokia-conf-qos;
+
+    sros-ext:sros-major-release "rel19";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure mirror services on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-mirror YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2019-05-03";
+
+    grouping conf-mirror {
+        container mirror {
+            description "Enter the mirror context";
+
+            list mirror-dest {
+                key "service-name";
+                max-elements 255;
+                description "Enter the mirror-dest context";
+
+                leaf service-name {
+                    type types-services:service-name;
+                    description "Specify service name. Must start with a letter or be a number.";
+                }
+
+                leaf type {
+                    type types-services:mirror-type;
+                    sros-ext:immutable;
+                    default "ether";
+                    description "Mirror type information";
+                }
+
+                leaf fc {
+                    type types-sros:fc-name;
+                    default "be";
+                    description "Forwarding class for destination traffic";
+                }
+
+                leaf slice-size {
+                    type uint32 {
+                        range "128..9216";
+                    }
+                    description "Maximum size of a mirrored frame that can be transmitted to the mirror destination";
+                }
+
+                leaf include-port-id {
+                    type boolean;
+                    default "false";
+                    description "Include port ID of the system in the packet";
+                }
+
+                leaf service-id {
+                    type types-services:external-service-id;
+                    sros-ext:immutable;
+                    description "Unique service ID; cannot be used by any other service, regardless of service type";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of the mirror destination service";
+                }
+
+                list endpoint {
+                    key "name";
+                    max-elements 2;
+                    description "Enter the endpoint context";
+
+                    leaf name {
+                        type types-sros:named-item;
+                        description "Service endpoint name";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf revert-time {
+                        type types-services:revert-time;
+                        default "immediate";
+                        description "Time before reverting back to primary spoke SDP defined after failing in backup spoke SDP";
+                    }
+
+                } // list endpoint
+
+                list sap {
+                    key "sap-id";
+                    max-elements 1;
+                    description "Enter the sap context";
+
+                    leaf sap-id {
+                        type types-sros:sap;
+                        description "SAP identifier";
+                    }
+
+                    leaf endpoint {
+                        type leafref {
+                            path "../../endpoint/name";
+                        }
+                        description "Configure name of the service endpoint.";
+                    }
+
+                    container egress {
+                        description "Enter the egress context";
+
+                        container qos {
+                            description "Enter the qos context";
+
+                            container sap-egress {
+                                description "Enter the sap-egress context";
+
+                                leaf policy-name {
+                                    type leafref {
+                                        path "../../../../../../../qos/sap-egress/sap-egress-policy-name";
+                                    }
+                                    description "Policy identifier";
+                                }
+
+                                container port-redirect-group {
+                                    description "Enter the port-redirect-group context";
+
+                                    leaf group-name {
+                                        type leafref {
+                                            path "../../../../../../../../qos/queue-group-templates/egress/queue-group/egress-queue-group-name";
+                                        }
+                                        description "Port redirect queue-group policy";
+                                    }
+
+                                    leaf instance {
+                                        type types-services:qos-qgrp-instance-id;
+                                        description "Port queue-group instance";
+                                    }
+
+                                } // container port-redirect-group
+
+                            } // container sap-egress
+
+                        } // container qos
+
+                        container ip-mirror {
+                            description "Enter the ip-mirror context";
+
+                            container mac {
+                                description "Enter the mac context";
+
+                                leaf source {
+                                    type types-sros:mac-unicast-address;
+                                    description "Source MAC address.";
+                                }
+
+                                leaf destination {
+                                    type yang:mac-address;
+                                    description "Destination MAC address.";
+                                }
+
+                            } // container mac
+
+                        } // container ip-mirror
+
+                    } // container egress
+
+                } // list sap
+
+                container remote-source {
+                    presence "Enable/disable remote-source.";
+                    description "Enter the remote-source context";
+
+                    list far-end {
+                        key "far-end-addr";
+                        description "Enter the far-end context";
+
+                        leaf far-end-addr {
+                            type types-sros:ipv4-address;
+                            description "Far end IP address";
+                        }
+
+                        leaf vc-id {
+                            type uint32 {
+                                range "1..max";
+                            }
+                            mandatory true;
+                            description "Virtual circuit identifier associated with the remote source";
+                        }
+
+                        leaf icb {
+                            type boolean;
+                            default "false";
+                            description "Remote source as an inter-chassis backup";
+                        }
+
+                        choice ingress-label {
+                            default "label-signaling";
+                            case label-signaling {
+
+                                leaf label-signaling {
+                                    type enumeration {
+                                        enum "tldp"                         { value 2; }
+                                    }
+                                    default "tldp";
+                                    description "Protocol to obtain the ingress labels";
+                                }
+
+                            }
+                            case ing-vc-label {
+
+                                leaf ing-vc-label {
+                                    type uint32 {
+                                        range "32..18431";
+                                    }
+                                    description "Ingress virtual circuit label";
+                                }
+
+                            }
+                        }
+                    } // list far-end
+
+                    list spoke-sdp {
+                        key "sdp-bind-id";
+                        description "Enter the spoke-sdp context";
+
+                        leaf sdp-bind-id {
+                            type types-services:sdp-bind-id;
+                            description "SDP Binding identifier.";
+                        }
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "enable";
+                            description "Administrative state of this Service SDP binding";
+                        }
+
+                        leaf control-word {
+                            when "../../../type != 'atm-sdu'";
+                            type boolean;
+                            description "Enable the CW bit in label message";
+                        }
+
+                        container ingress {
+                            description "Enter the ingress context";
+
+                            leaf vc-label {
+                                type uint32 {
+                                    range "32..18431";
+                                }
+                                description "Static MPLS VC label used by the far end device to send packets through this SDP";
+                            }
+
+                            container l2tpv3 {
+                                description "Enter the l2tpv3 context";
+
+                                container cookie {
+                                    description "Enter the cookie context";
+
+                                    leaf cookie1 {
+                                        type types-services:cookie-value;
+                                        description "Value of cookie-1 for the tunnel";
+                                    }
+
+                                    leaf cookie2 {
+                                        type types-services:cookie-value;
+                                        description "Value of cookie-1 for the tunnel";
+                                    }
+
+                                } // container cookie
+
+                            } // container l2tpv3
+
+                        } // container ingress
+
+                        container egress {
+                            description "Enter the egress context";
+
+                            leaf vc-label {
+                                type types-services:egress-vc-label;
+                                description "Static MPLS VC label that is used to send packets to the far end device through this SDP";
+                            }
+
+                        } // container egress
+
+                        container endpoint {
+                            description "Enter the endpoint context";
+
+                            leaf name {
+                                type leafref {
+                                    path "../../../../endpoint/name";
+                                }
+                                description "Name of endpoint where this SDP bind is attached";
+                            }
+
+                            leaf icb {
+                                type boolean;
+                                default "false";
+                                description "Bind SDP as type Inter-Chassis Backup (ICB)";
+                            }
+
+                        } // container endpoint
+
+                    } // list spoke-sdp
+
+                } // container remote-source
+
+                list spoke-sdp {
+                    key "sdp-bind-id";
+                    description "Enter the spoke-sdp context";
+
+                    leaf sdp-bind-id {
+                        type types-services:sdp-bind-id;
+                        description "SDP Binding identifier.";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "enable";
+                        description "Administrative state of this Service SDP binding";
+                    }
+
+                    leaf control-word {
+                        when "../../type != 'atm-sdu'";
+                        type boolean;
+                        description "Set the CW bit in the label message";
+                    }
+
+                    container ingress {
+                        description "Enter the ingress context";
+
+                        leaf vc-label {
+                            type uint32 {
+                                range "32..18431";
+                            }
+                            sros-ext:auto-restart-to-modify;
+                            description "Static MPLS VC label used by the far end device to send packets through this SDP";
+                        }
+
+                    } // container ingress
+
+                    container egress {
+                        description "Enter the egress context";
+
+                        leaf vc-label {
+                            type types-services:egress-vc-label;
+                            sros-ext:auto-restart-to-modify;
+                            description "Static MPLS VC label that is used to send packets to the far end device through this SDP";
+                        }
+
+                        container l2tpv3 {
+                            description "Enter the l2tpv3 context";
+
+                            leaf cookie {
+                                type types-services:cookie-value;
+                                description "Cookie parameters";
+                            }
+
+                        } // container l2tpv3
+
+                    } // container egress
+
+                    container endpoint {
+                        description "Enter the endpoint context";
+
+                        leaf name {
+                            type leafref {
+                                path "../../../endpoint/name";
+                            }
+                            description "Name of endpoint where this SDP bind is attached";
+                        }
+
+                        leaf precedence {
+                            type types-services:sdp-precedence;
+                            default "4";
+                            description "Precedence of this SDP bind when there are multiple SDP binds attached to one service endpoint";
+                        }
+
+                        leaf icb {
+                            type boolean;
+                            sros-ext:auto-restart-to-modify;
+                            default "false";
+                            description "Bind SDP as type Inter-Chassis Backup (ICB)";
+                        }
+
+                    } // container endpoint
+
+                } // list spoke-sdp
+
+                container encap {
+                    description "Enter the encap context";
+
+                    container layer-3-encap {
+                        presence "Layer 3 Encapsulation creation.";
+                        description "Enter the layer-3-encap context";
+
+                        leaf header-type {
+                            type enumeration {
+                                enum "ip-udp-shim"                  { value 1; }
+                                enum "ip-gre"                       { value 2; }
+                            }
+                            sros-ext:immutable;
+                            mandatory true;
+                            description "Header for the Layer 3 encapsulation";
+                        }
+
+                        leaf direction-bit {
+                            type boolean;
+                            default "false";
+                            description "Highest bit in Interception ID of shim header to show direction of mirrored traffic flow";
+                        }
+
+                        leaf router-instance {
+                            type string;
+                            default "Base";
+                            description "Router instance to use with routed encapsulation";
+                        }
+
+                        container gateway {
+                            presence "Layer 3 Encapsulation gateway creation.";
+                            description "Enter the gateway context";
+
+                            container ip-address {
+                                description "Enter the ip-address context";
+
+                                leaf source {
+                                    type types-sros:ipv4-unicast-address;
+                                    description "IPv4 source address for the gateway";
+                                }
+
+                                leaf destination {
+                                    type types-sros:ipv4-unicast-address;
+                                    description "IPv4 destination address for the gateway";
+                                }
+
+                            } // container ip-address
+
+                            container udp-port {
+                                description "Enter the udp-port context";
+
+                                leaf source {
+                                    type types-sros:tcp-udp-port;
+                                    default "0";
+                                    description "UDP source port with this gateway";
+                                }
+
+                                leaf destination {
+                                    type types-sros:tcp-udp-port;
+                                    default "0";
+                                    description "UDP destination port to use with this gateway";
+                                }
+
+                            } // container udp-port
+
+                        } // container gateway
+
+                    } // container layer-3-encap
+
+                } // container encap
+
+                list pcap {
+                    key "session-name";
+                    max-elements 1;
+                    description "Enter the pcap context";
+
+                    leaf session-name {
+                        type types-sros:named-item;
+                        description "Packet Capture (PCAP) session name";
+                    }
+
+                    leaf file-url {
+                        type types-sros:ts-url;
+                        description "location of the file, either local or remote";
+                    }
+
+                } // list pcap
+
+            } // list mirror-dest
+
+        } // container mirror
+
+    } // grouping conf-mirror
+
+}

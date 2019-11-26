@@ -1,0 +1,725 @@
+submodule nokia-conf-ipsec {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-ipsec              { prefix "types-ipsec"; }
+    import nokia-types-security           { prefix "types-security"; }
+    import nokia-types-services           { prefix "types-services"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-aaa;
+    include nokia-conf-system;
+    include nokia-conf-system-security;
+    include nokia-conf-system-security-pki;
+
+    sros-ext:sros-major-release "rel19";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure IPsec configuration on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-ipsec YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2019-04-12";
+
+    grouping conf-ipsec {
+        container ipsec {
+            description "Enter the ipsec context";
+
+            leaf show-ipsec-keys {
+                type boolean;
+                default "false";
+                description "Show IPsec IKE and ESP keys.";
+            }
+
+            list ike-policy {
+                key "id";
+                max-elements 2048;
+                description "Enter the ike-policy context";
+
+                leaf id {
+                    type types-ipsec:ike-policy-id;
+                    description "The unique identifier of an IKE policy.";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "The IKE policy description.";
+                }
+
+                leaf ipsec-lifetime {
+                    type types-ipsec:ipsec-lifetime;
+                    default "3600";
+                    description "The Phase 1 lifetime for this IKE transform";
+                }
+
+                leaf match-peer-id-to-cert {
+                    type boolean;
+                    default "false";
+                    description
+                        "Checking whether the IKE peer's ID matches the peer's certificate
+                         when performing certificate authentication.";
+                }
+
+                leaf-list ike-transform {
+                    type leafref {
+                        path "../../ike-transform/id";
+                    }
+                    max-elements 4;
+                    description "IKE transform for this IKE policy.";
+                }
+
+                choice ike-version {
+                    default "version-1";
+                    case version-1 {
+
+                        container ike-version-1 {
+                            description "Enter the ike-version-1 context";
+
+                            leaf auth-method {
+                                type enumeration {
+                                    enum "psk"                          { value 1; }
+                                    enum "plain-psk-xauth"              { value 4; }
+                                }
+                                default "psk";
+                                description
+                                    "The authentication method used with this IKE policy
+                                     for the remote peer.";
+                            }
+
+                            leaf own-auth-method {
+                                type enumeration {
+                                    enum "symmetric"                    { value 0; }
+                                }
+                                default "symmetric";
+                                description
+                                    "The authentication method used with this IKE policy
+                                     for its own side.";
+                            }
+
+                            leaf ike-mode {
+                                type enumeration {
+                                    enum "main"                         { value 1; }
+                                    enum "aggressive"                   { value 2; }
+                                }
+                                default "main";
+                                description
+                                    "The mode of operation, which determines the number of messages
+                                     used to IKE establish the session.";
+                            }
+
+                            leaf ph1-responder-delete-notify {
+                                type boolean;
+                                default "true";
+                                description
+                                    "Sending a delete message to the peer, as a responder, when an
+                                     IKEv1 phase 1 is expired or removed";
+                            }
+
+                        } // container ike-version-1
+
+                    }
+                    case version-2 {
+
+                        container ike-version-2 {
+                            presence "IKE version 1.";
+                            description "Enter the ike-version-2 context";
+
+                            leaf auth-method {
+                                type enumeration {
+                                    enum "psk"                          { value 1; }
+                                    enum "cert"                         { value 5; }
+                                    enum "psk-radius"                   { value 6; }
+                                    enum "cert-radius"                  { value 7; }
+                                    enum "eap"                          { value 8; }
+                                    enum "auto-eap-radius"              { value 9; }
+                                    enum "auto-eap"                     { value 10; }
+                                }
+                                default "psk";
+                                description
+                                    "The authentication method used with this IKE policy
+                                     for the remote peer.";
+                            }
+
+                            leaf own-auth-method {
+                                type enumeration {
+                                    enum "symmetric"                    { value 0; }
+                                    enum "psk"                          { value 1; }
+                                    enum "cert"                         { value 5; }
+                                    enum "eap-only"                     { value 8; }
+                                }
+                                default "symmetric";
+                                description
+                                    "The authentication method used with this IKE policy
+                                     for its own side.";
+                            }
+
+                            leaf auto-eap-method {
+                                type enumeration {
+                                    enum "psk"                          { value 1; }
+                                    enum "cert"                         { value 2; }
+                                    enum "psk-or-cert"                  { value 3; }
+                                }
+                                default "cert";
+                                description
+                                    "The auto Extensible Authentication Protocol (EAP) method for
+                                     remote peer used with this IKE policy. It is only meaningful
+                                     when the auth-method equals to 'auto-eap-radius'.";
+                            }
+
+                            leaf own-auto-eap-method {
+                                type enumeration {
+                                    enum "psk"                          { value 1; }
+                                    enum "cert"                         { value 2; }
+                                }
+                                default "cert";
+                                description
+                                    "The auto Extensible Authentication Protocol (EAP) method used
+                                     with this IKE policy on its own side.";
+                            }
+
+                            leaf send-idr-after-eap-success {
+                                type boolean;
+                                default "true";
+                                description
+                                    "Add the IDr payload in the last IKE authentication response after
+                                     the EAP success.";
+                            }
+
+                            container ikev2-fragment {
+                                presence "IKEv2 fragmentation.";
+                                description "Enter the ikev2-fragment context";
+
+                                leaf mtu {
+                                    type uint32 {
+                                        range "512..9000";
+                                    }
+                                    units "octets";
+                                    default "1500";
+                                    description "The MTU size of the IKEv2 fragmentation.";
+                                }
+
+                                leaf reassembly-timeout {
+                                    type uint32 {
+                                        range "1..5";
+                                    }
+                                    units "seconds";
+                                    default "2";
+                                    description
+                                        "The maximum number of seconds to wait to receive all fragments
+                                         of an IKEv2 message for reassembly.";
+                                }
+
+                            } // container ikev2-fragment
+
+                        } // container ike-version-2
+
+                    }
+                }
+                container limit-init-exchange {
+                    when "../ike-version-2";
+                    description "Enter the limit-init-exchange context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "enable";
+                        description
+                            "Limits the number of in-progress initial IKE exchanges to one
+                             per IPsec tunnel.";
+                    }
+
+                    leaf reduced-max-exchange-timeout {
+                        type union {
+                            type uint32 {
+                                range "2..60";
+                            }
+                            type enumeration {
+                                enum "none"                         { value 0; }
+                            }
+                        }
+                        units "seconds";
+                        default "2";
+                        description
+                            "The maximum timeout for the in-progress initial IKE exchange.
+                             The value of 'disabled' means that there is no reduction of the
+                             current exchange timeout which is 120 seconds.";
+                    }
+
+                } // container limit-init-exchange
+
+                container dpd {
+                    presence "Dead Peer Detection (DPD).";
+                    description "Enter the dpd context";
+
+                    leaf reply-only {
+                        type boolean;
+                        default "false";
+                        description "Reply to DPD keep alive requests only.";
+                    }
+
+                    leaf interval {
+                        type uint32 {
+                            range "10..300";
+                        }
+                        units "seconds";
+                        default "30";
+                        description "The DPD interval.";
+                    }
+
+                    leaf max-retries {
+                        type uint32 {
+                            range "2..5";
+                        }
+                        default "3";
+                        description "The maximum number of retires before the peer is determined dead.";
+                    }
+
+                } // container dpd
+
+                container nat-traversal {
+                    presence "Network Address Translation Traversal (NAT-T).";
+                    description "Enter the nat-traversal context";
+
+                    leaf force {
+                        type boolean;
+                        default "false";
+                        description "Force NAT-T to be enabled.";
+                    }
+
+                    leaf keep-alive-interval {
+                        type uint32 {
+                            range "120..600";
+                        }
+                        units "seconds";
+                        description "The keep alive interval for NAT-T.";
+                    }
+
+                    leaf force-keep-alive {
+                        type boolean;
+                        default "true";
+                        description "Send the keep alive packets only when behind a NAT.";
+                    }
+
+                } // container nat-traversal
+
+                container lockout {
+                    presence "IPsec client lockout.";
+                    description "Enter the lockout context";
+
+                    leaf failed-attempts {
+                        type uint32 {
+                            range "1..64";
+                        }
+                        default "3";
+                        description
+                            "The maximum number of consecutive failed authentication attempts
+                             from the same remote client.";
+                    }
+
+                    leaf duration {
+                        type uint32 {
+                            range "1..60";
+                        }
+                        units "minutes";
+                        default "5";
+                        description
+                            "The maximum duration that the system can afford failed-attempts
+                             number of failed authentication attempts from the same remote
+                             client.";
+                    }
+
+                    leaf block {
+                        type union {
+                            type uint32 {
+                                range "1..1440";
+                            }
+                            type enumeration {
+                                enum "infinite"                     { value 0; }
+                            }
+                        }
+                        units "minutes";
+                        default "10";
+                        description
+                            "The maximum time period that the system drops IKE packets after
+                             the maximum number of consecutive failed authentication attempts
+                             reaches failed-attempts within duration minutes.";
+                    }
+
+                    leaf max-port-per-ip {
+                        type uint32 {
+                            range "1..32000";
+                        }
+                        default "16";
+                        description
+                            "The maximum number of port that can be lockout under the same
+                             IP address.";
+                    }
+
+                } // container lockout
+
+                container pfs {
+                    presence
+                        "Perfect Forward Secrecy (PFS) for the IPsec tunnels using
+                         this IKE policy.";
+                    description "Enter the pfs context";
+
+                    leaf dh-group {
+                        type types-ipsec:dh-group;
+                        default "group-2";
+                        description
+                            "The new Diffie-Hellman (DH) group used when each time
+                             the SA(Security Association) key is renegotiated.";
+                    }
+
+                } // container pfs
+
+                container relay-unsolicited-cfg-attribute {
+                    description "Enter the relay-unsolicited-cfg-attribute context";
+
+                    leaf internal-ip4-address {
+                        type boolean;
+                        default "false";
+                        description "IPv4 address attribute.";
+                    }
+
+                    leaf internal-ip4-netmask {
+                        type boolean;
+                        default "false";
+                        description "IPv4 netmask attribute.";
+                    }
+
+                    leaf internal-ip4-dns {
+                        type boolean;
+                        default "false";
+                        description "IPv4 DNS attribute.";
+                    }
+
+                    leaf internal-ip6-address {
+                        type boolean;
+                        default "false";
+                        description "IPv6 address attribute.";
+                    }
+
+                    leaf internal-ip6-dns {
+                        type boolean;
+                        default "false";
+                        description "IPv6 DNS attribute.";
+                    }
+
+                } // container relay-unsolicited-cfg-attribute
+
+            } // list ike-policy
+
+            list ike-transform {
+                key "id";
+                max-elements 4096;
+                description "Enter the ike-transform context";
+
+                leaf id {
+                    type types-ipsec:ike-transform-id;
+                    description "The unique identifier of an IKE transform.";
+                }
+
+                leaf dh-group {
+                    type types-ipsec:dh-group;
+                    default "group-2";
+                    description "The Diffie-Hellman (DH) group for this IKE transform.";
+                }
+
+                leaf ike-auth-algorithm {
+                    type types-ipsec:ike-auth-algorithms;
+                    default "sha-1";
+                    description "The authentication algorithm for this IKE transform.";
+                }
+
+                leaf ike-encryption-algorithm {
+                    type types-ipsec:ike-encryption-algorithms;
+                    default "aes-128";
+                    description "The encryption algorithm for this IKE transform.";
+                }
+
+                leaf ike-prf-algorithm {
+                    type types-ipsec:prf-algorithms;
+                    default "same-as-auth";
+                    description "The pseudo-random function (PRF)algorithm for this IKE transform.";
+                }
+
+                leaf isakmp-lifetime {
+                    type types-ipsec:ipsec-lifetime;
+                    default "86400";
+                    description "The Phase 1 lifetime for this IKE transform";
+                }
+
+            } // list ike-transform
+
+            list ipsec-transform {
+                key "id";
+                max-elements 2048;
+                description "Enter the ipsec-transform context";
+
+                leaf id {
+                    type uint32 {
+                        range "1..2048";
+                    }
+                    description "IPsec transform ID.";
+                }
+
+                leaf esp-auth-algorithm {
+                    type types-ipsec:auth-algorithms;
+                    default "sha-1";
+                    description "The authentication algorithm for this IPsec transform.";
+                }
+
+                leaf esp-encryption-algorithm {
+                    type types-ipsec:encryption-algorithms;
+                    default "aes-128";
+                    description "The encryption algorithm for this IPsec transform.";
+                }
+
+                leaf ipsec-lifetime {
+                    type types-ipsec:ipsec-lifetime;
+                    description "The Phase 2 lifetime for this IPsec transform.";
+                }
+
+                leaf pfs-dh-group {
+                    type enumeration {
+                        enum "none"                         { value 0; }
+                        enum "group-1"                      { value 1; }
+                        enum "group-2"                      { value 2; }
+                        enum "group-5"                      { value 5; }
+                        enum "group-14"                     { value 14; }
+                        enum "group-15"                     { value 15; }
+                        enum "group-19"                     { value 19; }
+                        enum "group-20"                     { value 20; }
+                        enum "group-21"                     { value 21; }
+                    }
+                    description "The Diffie-Hellman (DH) group for this IPsec transform.";
+                }
+
+            } // list ipsec-transform
+
+            list static-sa {
+                key "name";
+                max-elements 1000;
+                description "Static security association.";
+
+                leaf name {
+                    type types-sros:named-item;
+                    description "Static Security Association (SA) name.";
+                }
+
+                leaf description {
+                    type types-sros:named-item;
+                    description "The static SA description.";
+                }
+
+                leaf direction {
+                    type enumeration {
+                        enum "inbound"                      { value 1; }
+                        enum "outbound"                     { value 2; }
+                        enum "bidirectional"                { value 3; }
+                    }
+                    default "bidirectional";
+                    description "The direction to which this static SA can be applied.";
+                }
+
+                leaf protocol {
+                    type enumeration {
+                        enum "ah"                           { value 1; }
+                        enum "esp"                          { value 2; }
+                    }
+                    default "esp";
+                    description "The protocol used by this static SA.";
+                }
+
+                leaf spi {
+                    type uint32 {
+                        range "256..16383";
+                    }
+                    description "The Security Parameter Index (SPI) used by this static SA.";
+                }
+
+                container authentication {
+                    presence "Authentication algorithm and key for this static SA..";
+                    description "Authentication algorithm and key for this static SA.";
+
+                    leaf algorithm {
+                        type enumeration {
+                            enum "md5"                          { value 2; }
+                            enum "sha1"                         { value 3; }
+                        }
+                        mandatory true;
+                        description "Authentication algorithm.";
+                    }
+
+                    leaf key {
+                        type types-sros:encrypted-leaf {
+                            length "1..54";
+                        }
+                        mandatory true;
+                        description "The key for the authentication algorithm.";
+                    }
+
+                } // container authentication
+
+            } // list static-sa
+
+            list tunnel-template {
+                key "id";
+                max-elements 2048;
+                description "Enter the tunnel-template context";
+
+                leaf id {
+                    type types-ipsec:tunnel-template-id;
+                    description "The unique identifier of a tunnel template.";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf clear-df-bit {
+                    type boolean;
+                    default "false";
+                    description
+                        "Whether to clear Do not Fragment (DF) bit in
+                         the outgoing IPv4 packets.";
+                }
+
+                leaf encapsulated-ip-mtu {
+                    type uint32 {
+                        range "512..9000";
+                    }
+                    units "octets";
+                    description
+                        "The Maximum Transmission Unit (MTU) size for ESP and IKE
+                         packets.";
+                }
+
+                leaf ip-mtu {
+                    type uint32 {
+                        range "512..9000";
+                    }
+                    units "octets";
+                    description "The MTU size for payload packets.";
+                }
+
+                leaf private-tcp-mss-adjust {
+                    type int32 {
+                        range "512..9000";
+                    }
+                    units "octets";
+                    description
+                        "The Maximum Segment Size (MSS) adjust for the TCP traffic
+                         in a tunnel which is sent from the private network to
+                         the public network.";
+                }
+
+                leaf public-tcp-mss-adjust {
+                    type union {
+                        type uint32 {
+                            range "512..9000";
+                        }
+                        type enumeration {
+                            enum "auto"                         { value 0; }
+                        }
+                    }
+                    units "octets";
+                    description
+                        "The MSS adjust for the TCP traffic in a tunnel which is
+                         sent from the public network to the private network.";
+                }
+
+                leaf replay-window {
+                    type uint32 {
+                        range "32|64|128|256|512";
+                    }
+                    description "The size of the anti-replay window for the template.";
+                }
+
+                leaf sp-reverse-route {
+                    type enumeration {
+                        enum "none"                         { value 0; }
+                        enum "use-security-policy"          { value 1; }
+                    }
+                    default "none";
+                    description
+                        "Whether system will  use peer signaled traffic selector to
+                         create a reverse route in private service.";
+                }
+
+                leaf-list ipsec-transform {
+                    type leafref {
+                        path "../../ipsec-transform/id";
+                    }
+                    max-elements 4;
+                    description "IPsec transform for this tunnel template.";
+                }
+
+                container icmp6-generation {
+                    description "Enter the icmp6-generation context";
+
+                    container pkt-too-big {
+                        description "Enter the pkt-too-big context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "enable";
+                            description "Adminstrative state of the generation of ICMPv6 Packet Too Big messages";
+                        }
+
+                        leaf interval {
+                            type uint32 {
+                                range "1..60";
+                            }
+                            units "seconds";
+                            default "10";
+                            description
+                                "The duration of the interval used when limiting the
+                                 number of ICMPv6 Packet Too Big messages sent.";
+                        }
+
+                        leaf message-count {
+                            type uint32 {
+                                range "10..1000";
+                            }
+                            default "100";
+                            description
+                                "The maximum number of ICMPv6 messages that can be
+                                 sent during the period specified by 'interval'.";
+                        }
+
+                    } // container pkt-too-big
+
+                } // container icmp6-generation
+
+            } // list tunnel-template
+
+        } // container ipsec
+
+    } // grouping conf-ipsec
+
+}

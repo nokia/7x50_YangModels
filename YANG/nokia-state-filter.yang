@@ -1,0 +1,2585 @@
+submodule nokia-state-filter {
+
+    yang-version "1.1";
+
+    belongs-to nokia-state { prefix "state"; }
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-filter             { prefix "types-filter"; }
+    import nokia-types-services           { prefix "types-services"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-state-openflow;
+    include nokia-state-service;
+    include nokia-state-svc-vpls;
+    include nokia-state-svc-vprn;
+
+    sros-ext:sros-major-release "rel19";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model with operational state for line card ACL filters on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-state-filter YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2019-04-18";
+
+    grouping state-filter {
+        container filter {
+            description "Enter the filter context";
+
+            list redirect-policy {
+                key "redirect-policy-name";
+                description "Enter the redirect-policy context";
+
+                leaf redirect-policy-name {
+                    type types-sros:named-item;
+                    description "Redirect policy name";
+                }
+
+                leaf active-destination {
+                    type types-sros:ip-address;
+                    description
+                        "The value indicates the IP address of the active
+                         destination. A value of 0 indicates that there is currently
+                         no active destination.
+                         The value must be consistent with the IP version value of
+                         the associated act-dest-ip-address type object.";
+                }
+
+                leaf best-destination {
+                    type types-sros:ip-address;
+                    description
+                        "The value of the object indicates the IP address of available destination
+                         with the highest priority.";
+                }
+
+                leaf sticky-dest-hold-remain {
+                    type int32 {
+                        range "0..65535";
+                    }
+                    units "seconds";
+                    description "Hold-remain for stickiness to take effect.";
+                }
+
+                leaf applied {
+                    type boolean;
+                    description "Indicates whether the redirect-policy is applied.";
+                }
+
+                list destination {
+                    key "destination-address";
+                    description "Enter the destination context";
+
+                    leaf destination-address {
+                        type types-sros:ip-unicast-address;
+                        description "IP address and type of destination";
+                    }
+
+                    leaf oper-priority {
+                        type uint32 {
+                            range "0..255";
+                        }
+                        description
+                            "The value of the this object indicates the current dynamic
+                             priority of this destination.
+
+                             It is derived from the base priority indicated by the value
+                             of the object priority and results of tests assigned
+                             to the destination.
+
+                             A destination with the highest operational priority across multiple
+                             destinations in a Redirect Policy is used as the preferred
+                             destination.
+
+                             If operational state of the destination is 'out-of-service'
+                             then the value of this leaf is '0'. ";
+                    }
+
+                    leaf oper-state {
+                        type types-sros:oper-state;
+                        description
+                            "The value of the this object indicates the operational
+                             state of the destination.";
+                    }
+
+                    container ping-test {
+                        description "Enter the ping-test context";
+
+                        leaf hold-down-remain {
+                            type uint32 {
+                                range "0..86400";
+                            }
+                            units "seconds";
+                            description
+                                "The value of this object indicates the amount of time in seconds that the system
+                                 will remain in held down state before being used again.";
+                        }
+
+                        leaf last-action {
+                            type types-filter:redirect-policy-test-last-action;
+                            description
+                                "The value of this object maintains impact that the last test probe made on the
+                                 operational status of the destination as maintained in 'redirect-policy destination
+                                 shutdown'.
+
+                                 If the last action was 'disable-destination', the destination may not be used for
+                                 hold-down seconds.";
+                        }
+
+                        leaf last-action-time {
+                            type types-sros:date-time;
+                            description
+                                "The value of this object maintains the time stamp when this test received
+                                 a response for a probe sent out.";
+                        }
+
+                    } // container ping-test
+
+                    container unicast-rt-test {
+                        description "Enter the unicast-rt-test context";
+
+                        leaf last-action {
+                            type types-filter:redirect-policy-test-last-action;
+                            description
+                                "The value of this object indicates an impact that the
+                                 last message from RTM module had on the value of the
+                                 object 'redirect-policy destination oper-state'.";
+                        }
+
+                        leaf last-action-time {
+                            type types-sros:date-time;
+                            description
+                                "The value of this object indicates the time stamp
+                                 when the last update from RTM module for this
+                                 destination was received.";
+                        }
+
+                    } // container unicast-rt-test
+
+                } // list destination
+
+            } // list redirect-policy
+
+            list redirect-policy-binding {
+                key "binding-name";
+                description "Enter the redirect-policy-binding context";
+
+                leaf binding-name {
+                    type types-sros:named-item;
+                    description "The redirect-policy-binding identifier.";
+                }
+
+                leaf oper-state {
+                    type types-sros:oper-state;
+                    description
+                        "The value of the this object indicates the operational state of the redirect policy
+                         binding.";
+                }
+
+                list redirect-policy {
+                    key "redirect-policy-name";
+                    description "Enter the redirect-policy context";
+
+                    leaf redirect-policy-name {
+                        type leafref {
+                            path "../../../redirect-policy/redirect-policy-name";
+                        }
+                        description "The redirect-policy identifier.";
+                    }
+
+                    list destination {
+                        key "destination-address";
+                        description "Enter the destination context";
+
+                        leaf destination-address {
+                            type leafref {
+                                path "../../../../redirect-policy[redirect-policy-name=current()/../../redirect-policy-name]/destination/destination-address";
+                            }
+                            description "IP address and type of the destination.";
+                        }
+
+                        leaf own-oper-state {
+                            type types-sros:oper-state;
+                            description
+                                "The value of the this object indicates the operational state of the redirect policy
+                                 binding destination (based on its own tests only).";
+                        }
+
+                    } // list destination
+
+                } // list redirect-policy
+
+            } // list redirect-policy-binding
+
+            list log {
+                key "log-id";
+                description "Enter the log context";
+
+                leaf log-id {
+                    type types-filter:filter-log-id;
+                    description "Filter log identifier";
+                }
+
+                container destination {
+                    description "Enter the destination context";
+
+                    choice destination {
+                        case memory {
+
+                            container memory {
+                                description "Enter the memory context";
+
+                                leaf num-entries {
+                                    type uint32;
+                                    description "Indicates the actual number of logged entries.";
+                                }
+
+                                list entry {
+                                    key "id";
+                                    description "Entry of actual filter log.";
+
+                                    leaf id {
+                                        type int32;
+                                        description "Message identifier.";
+                                    }
+
+                                    leaf message {
+                                        type string {
+                                            length "0..661";
+                                        }
+                                        description "Message content.";
+                                    }
+
+                                } // list entry
+
+                            } // container memory
+
+                        }
+                        case syslog {
+
+                            container syslog {
+                                description "Enter the syslog context";
+
+                                container summary {
+                                    description "Enter the summary context";
+
+                                    leaf num-entries {
+                                        type uint32;
+                                        description "Indicates the number of log messages received.";
+                                    }
+
+                                    leaf num-entries-arp {
+                                        type uint32;
+                                        description "Indicates the number of only ARP frames among filter logs.";
+                                    }
+
+                                    list entry {
+                                        key "filter-type id";
+                                        description "Entry of summary filter log.";
+
+                                        leaf filter-type {
+                                            type enumeration {
+                                                enum "ip"                           { value 0; }
+                                                enum "ipv6"                         { value 1; }
+                                                enum "mac"                          { value 2; }
+                                            }
+                                            description "Filter type.";
+                                        }
+
+                                        leaf id {
+                                            type int32;
+                                            description "Entry identifier.";
+                                        }
+
+                                        leaf address {
+                                            type union {
+                                                type types-sros:ip-address;
+                                                type types-sros:ipv6-address;
+                                                type yang:mac-address;
+                                            }
+                                            description "Source or destination address.";
+                                        }
+
+                                        leaf count {
+                                            type uint32;
+                                            description "Number of logs for the source/destination address.";
+                                        }
+
+                                    } // list entry
+
+                                } // container summary
+
+                            } // container syslog
+
+                        }
+                    }
+                } // container destination
+
+            } // list log
+
+            container log-instance {
+
+                leaf max-instances {
+                    type uint32;
+                    description "Indicates the maximum allowed filter log instances on the system.";
+                }
+
+                leaf num-instances {
+                    type uint32;
+                    description "Indicates the actual number of filter log instances on the system.";
+                }
+
+            } // container log-instance
+
+            container match-list {
+                description "Enter the match-list context";
+
+                list ip-prefix-list {
+                    key "prefix-list-name";
+                    description "Enter the ip-prefix-list context";
+
+                    leaf prefix-list-name {
+                        type types-sros:named-item;
+                        description "Prefix list name that is used for this prefix list";
+                    }
+
+                    container apply-path {
+                        description "Enter the apply-path context";
+
+                        list bgp-peers {
+                            key "criterion-index";
+                            description "Enter the bgp-peers context";
+
+                            leaf criterion-index {
+                                type uint32 {
+                                    range "1..255";
+                                }
+                                description "Value of the enumerating BGP peers autogeneration configuration within list";
+                            }
+
+                            list prefix {
+                                key "prefix";
+
+                                leaf prefix {
+                                    type types-sros:ipv4-prefix;
+                                    description "prefix.";
+                                }
+
+                            } // list prefix
+
+                        } // list bgp-peers
+
+                    } // container apply-path
+
+                } // list ip-prefix-list
+
+                list ipv6-prefix-list {
+                    key "prefix-list-name";
+                    description "Enter the ipv6-prefix-list context";
+
+                    leaf prefix-list-name {
+                        type types-sros:named-item;
+                        description "Prefix list name that is used for this prefix list";
+                    }
+
+                    container apply-path {
+                        description "Enter the apply-path context";
+
+                        list bgp-peers {
+                            key "criterion-index";
+                            description "Enter the bgp-peers context";
+
+                            leaf criterion-index {
+                                type uint32 {
+                                    range "1..255";
+                                }
+                                description "Value of the enumerating BGP peers autogeneration configuration within list";
+                            }
+
+                            list prefix {
+                                key "prefix";
+
+                                leaf prefix {
+                                    type types-sros:ipv6-prefix;
+                                    description "prefix.";
+                                }
+
+                            } // list prefix
+
+                        } // list bgp-peers
+
+                    } // container apply-path
+
+                } // list ipv6-prefix-list
+
+            } // container match-list
+
+            list ip-filter {
+                key "filter-name";
+                description "Enter the ip-filter context";
+
+                leaf filter-name {
+                    type types-filter:filter-name;
+                    description "Name of the object to associate";
+                }
+
+                leaf origin {
+                    type enumeration {
+                        enum "config"                       { value 0; }
+                        enum "flowspec"                     { value 1; }
+                        enum "subscriber-mgmt"              { value 2; }
+                        enum "openflow"                     { value 4; }
+                        enum "vsd"                          { value 5; }
+                        enum "tli"                          { value 6; }
+                        enum "dynamic-services"             { value 7; }
+                    }
+                    description "The protocol or mechanism that created this filter.";
+                }
+
+                leaf oper-filter-id {
+                    type uint32;
+                    description
+                        "The value of this object uniquely identifies a filter.
+                         User-configured filters have values between (1..65535).
+                         Other values are reserved for filters that are created
+                         (auto-generated) by the system.";
+                }
+
+                leaf applied {
+                    type boolean;
+                    description "Indicates whether the filter is applied.";
+                }
+
+                leaf num-entries {
+                    type uint32;
+                    description "Number of entries in this filter.";
+                }
+
+                leaf num-sub-entries {
+                    type uint32;
+                    description "Number of sub-entries.";
+                }
+
+                container subscriber-mgmt {
+                    description "Enter the subscriber-mgmt context";
+
+                    container host-specific-entry {
+                        description "Enter the host-specific-entry context";
+
+                        container filter-rule {
+                            description "Enter the filter-rule context";
+
+                            leaf num-inserted {
+                                type uint32;
+                                description
+                                    "Indicates how many host specific filter-rule entries are
+                                     currently inserted in the filter on request of RADIUS/DIAMETER.";
+                            }
+
+                        } // container filter-rule
+
+                        container credit-control {
+                            description "Enter the credit-control context";
+
+                            leaf num-inserted {
+                                type uint32;
+                                description
+                                    "Indicates how many filter entries are currently inserted
+                                     in the filter on request of credit control.";
+                            }
+
+                        } // container credit-control
+
+                    } // container host-specific-entry
+
+                    container shared-entry {
+                        description "Enter the shared-entry context";
+
+                        leaf num-filters {
+                            type uint32;
+                            description
+                                "Indicates how many filters are currently created based on
+                                 subscriber management shared entries of this filter.";
+                        }
+
+                        container filter-rule {
+                            description "Enter the filter-rule context";
+
+                            leaf num-inserted {
+                                type uint32;
+                                description
+                                    "The value of this object indicates how many host common filter-rule entries are
+                                     currently inserted in the filter on request of RADIUS.";
+                            }
+
+                        } // container filter-rule
+
+                        container pcc-rule {
+                            description "Enter the pcc-rule context";
+
+                            leaf num-inserted {
+                                type uint32;
+                                description
+                                    "The value of this object indicates how many pcc-rule filter entries received from
+                                     DIAMETER have been inserted in this filter.";
+                            }
+
+                        } // container pcc-rule
+
+                    } // container shared-entry
+
+                } // container subscriber-mgmt
+
+                list entry {
+                    key "entry-id";
+                    description "Enter the entry context";
+
+                    leaf entry-id {
+                        type types-filter:entry-id;
+                        description "Secondary index for this entry";
+                    }
+
+                    leaf inserted-by {
+                        type enumeration {
+                            enum "fixed"                        { value 0; }
+                            enum "filter-rule"                  { value 1; }
+                            enum "credit-control"               { value 2; }
+                            enum "flowspec"                     { value 3; }
+                            enum "li"                           { value 4; }
+                            enum "embedded"                     { value 5; }
+                            enum "shared-filter-rule"           { value 6; }
+                            enum "openflow"                     { value 7; }
+                            enum "pcc"                          { value 8; }
+                            enum "vsd"                          { value 9; }
+                            enum "tli"                          { value 10; }
+                            enum "dynamic-services"             { value 11; }
+                        }
+                        description "The protocol or mechanism that inserted this entry.";
+                    }
+
+                    leaf num-sub-entries {
+                        type uint32;
+                        description "Number of sub-entries.";
+                    }
+
+                    leaf log-instantiated {
+                        type boolean;
+                        description
+                            "This object indicates if the filter log for this filter
+                             entry has been instantiated or not.";
+                    }
+
+                    leaf downloaded-action {
+                        type types-filter:filter-downloaded-action;
+                        description
+                            "The value of this object indicates the filter entry
+                             action downloaded to IOM.";
+                    }
+
+                    leaf pbr-down-action {
+                        type enumeration {
+                            enum "not-applicable"               { value 0; }
+                            enum "drop"                         { value 1; }
+                            enum "forward"                      { value 2; }
+                        }
+                        description
+                            "Estimation of action performed if PBR target is down. This takes into
+                             account configuration of PBR down action override, filter default action, and default
+                             behavior of a filter action. But does not take into account where filter is applied
+                             therefore performed action may differ at the end.";
+                    }
+
+                    leaf pbr-down-action-reason {
+                        type enumeration {
+                            enum "not-applicable"               { value 0; }
+                            enum "entry-default"                { value 1; }
+                            enum "filter-default"               { value 2; }
+                            enum "pbr-down-override"            { value 3; }
+                        }
+                        description "The source of the estimated value of PBR down action.";
+                    }
+
+                    leaf sticky-dest-hold-remain {
+                        type int32 {
+                            range "0..65535";
+                        }
+                        units "seconds";
+                        description
+                            "The value of this object indicates the remaining
+                             time in seconds, until the best action will become
+                             active and will be fixed.
+
+                             Best action is:
+                             - primary action if PBR target status of primary
+                             action is up.
+                             - secondary action if PBR target status of secondary
+                             action is up and PBR target status of primary action
+                             is down.
+                             - none if both PBR targets are down.";
+                    }
+
+                    leaf inserted-by-direction {
+                        type enumeration {
+                            enum "ingress"                      { value 0; }
+                            enum "egress"                       { value 1; }
+                        }
+                        description "The direction specified in shared filter rule causing creation of the entry.";
+                    }
+
+                    container embedding {
+                        description "Provides information about source of entries inserted by embedded mechanism.";
+
+                        leaf origin {
+                            type enumeration {
+                                enum "fixed"                        { value 0; }
+                                enum "flowspec"                     { value 3; }
+                                enum "openflow"                     { value 7; }
+                                enum "vsd"                          { value 9; }
+                            }
+                            description "Indicates the origin of the embedded filter which is the source of the entry embedded at this position.";
+                        }
+
+                        leaf filter-name {
+                            type types-filter:filter-name;
+                            description "Indicates the name of the embedded filter which is the source of the entry embedded at this position.";
+                        }
+
+                        leaf entry-id {
+                            type types-filter:entry-id;
+                            description "Indicates entry-id of embedded filter which was inserted at this position.";
+                        }
+
+                    } // container embedding
+
+                    container statistics {
+                        description "Statistics pertaining to filter entry.";
+
+                        leaf ingress-hit-pkt {
+                            type yang:zero-based-counter64;
+                            description
+                                "This object indicates the number of times an ingress packet
+                                 matched this entry.";
+                        }
+
+                        leaf ingress-hit-byte {
+                            type yang:zero-based-counter64;
+                            description
+                                "The value of this object indicates the number of bytes of
+                                 all ingress packets that matched this entry.";
+                        }
+
+                        leaf egress-hit-pkt {
+                            type yang:zero-based-counter64;
+                            description
+                                "This object indicates the number of times an egress packet
+                                 matched this entry.";
+                        }
+
+                        leaf egress-hit-byte {
+                            type yang:zero-based-counter64;
+                            description
+                                "This object indicates the number of bytes of all egress
+                                 packets that matched this entry.";
+                        }
+
+                        container ingress-rate-limiter {
+                            description "Ingress rate-limit counters.";
+
+                            leaf offered-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates how many ingress packets were subjected to rate-limiting filter
+                                     action.";
+                            }
+
+                            leaf offered-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates the number of bytes of all ingress packets that were subjected to
+                                     rate-limiting filter action.";
+                            }
+
+                            leaf forwarded-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates how many ingress packets which were subjected to rate-limiting
+                                     filter action were forwarded.";
+                            }
+
+                            leaf forwarded-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates the number of bytes of all ingress packets which were subjected
+                                     to rate-limiting filter action were forwarded.";
+                            }
+
+                            leaf dropped-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates how many ingress packets which were subjected to rate-limiting
+                                     filter action were dropped.";
+                            }
+
+                            leaf dropped-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates the number of bytes of all ingress packets which were subjected
+                                     to rate-limiting filter action were dropped.";
+                            }
+
+                        } // container ingress-rate-limiter
+
+                        container egress-rate-limiter {
+                            description "Egress rate-limit counters.";
+
+                            leaf offered-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates how many egress packets were subjected to rate-limiting filter
+                                     action.";
+                            }
+
+                            leaf offered-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates the number of bytes of all egress packets that were subjected to
+                                     rate-limiting filter action.";
+                            }
+
+                            leaf forwarded-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates how many egress packets which were subjected to rate-limiting
+                                     filter action were forwarded.";
+                            }
+
+                            leaf forwarded-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates the number of bytes of all egress packets which were subjected
+                                     to rate-limiting filter action were forwarded.";
+                            }
+
+                            leaf dropped-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates how many egress packets which were subjected to rate-limiting
+                                     filter action were dropped.";
+                            }
+
+                            leaf dropped-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates the number of bytes of all egress packets which were subjected
+                                     to rate-limiting filter action were dropped.";
+                            }
+
+                        } // container egress-rate-limiter
+
+                        list card {
+                            key "slot-number";
+                            description "Filter counters per IOM slot";
+
+                            leaf slot-number {
+                                type int32;
+                                description "Indicates IOM slot number";
+                            }
+
+                            leaf ingress-hit-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "This object indicates the number of times an ingress packet
+                                     matched this entry.";
+                            }
+
+                            leaf ingress-hit-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "The value of this object indicates the number of bytes of
+                                     all ingress packets that matched this entry.";
+                            }
+
+                            leaf egress-hit-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "This object indicates the number of times an egress packet
+                                     matched this entry.";
+                            }
+
+                            leaf egress-hit-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "This object indicates the number of bytes of all egress
+                                     packets that matched this entry.";
+                            }
+
+                            container ingress-rate-limiter {
+
+                                leaf offered-pkt {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of times an ingress packet
+                                         matched this entry.";
+                                }
+
+                                leaf offered-byte {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "The value of this object indicates the number of bytes of
+                                         all ingress packets that matched this entry.";
+                                }
+
+                                leaf forwarded-pkt {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of times an ingress packet
+                                         matched this entry.";
+                                }
+
+                                leaf forwarded-byte {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of bytes of all egress
+                                         packets that matched this entry.";
+                                }
+
+                                leaf dropped-pkt {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of times an egress packet
+                                         matched this entry.";
+                                }
+
+                                leaf dropped-byte {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of bytes of all egress
+                                         packets that matched this entry.";
+                                }
+
+                            } // container ingress-rate-limiter
+
+                            container egress-rate-limiter {
+
+                                leaf offered-pkt {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of times an egress packet
+                                         matched this entry.";
+                                }
+
+                                leaf offered-byte {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of bytes of all egress
+                                         packets that matched this entry.";
+                                }
+
+                                leaf forwarded-pkt {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of times an egress packet
+                                         matched this entry.";
+                                }
+
+                                leaf forwarded-byte {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of bytes of all egress
+                                         packets that matched this entry.";
+                                }
+
+                                leaf dropped-pkt {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of times an egress packet
+                                         matched this entry.";
+                                }
+
+                                leaf dropped-byte {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of bytes of all egress
+                                         packets that matched this entry.";
+                                }
+
+                            } // container egress-rate-limiter
+
+                        } // list card
+
+                    } // container statistics
+
+                    container action {
+                        description "Enter the action context";
+
+                        leaf pbr-target-status {
+                            type types-filter:pbr-target-status;
+                            description "Indicates the PBR target status.";
+                        }
+
+                        container secondary {
+                            description "Enter the secondary context";
+
+                            leaf pbr-target-status {
+                                type types-filter:pbr-target-status;
+                                description "Indicates the PBR target status.";
+                            }
+
+                        } // container secondary
+
+                    } // container action
+
+                } // list entry
+
+                container embed {
+                    description "Enter the embed context";
+
+                    list filter {
+                        key "name offset";
+                        description "Enter the filter context";
+
+                        leaf name {
+                            type leafref {
+                                path "../../../filter-name";
+                            }
+                            description "ID of the filter to insert";
+                        }
+
+                        leaf offset {
+                            type types-filter:embed-offset {
+                                range "0..2097150";
+                            }
+                            description "Offset of the inserted entries";
+                        }
+
+                        leaf oper-state {
+                            type types-filter:embed-oper-state;
+                            description "Indicates the operational state of this embedding.";
+                        }
+
+                        leaf num-entries {
+                            type uint32;
+                            description "Indicates the total number of entries in the embedded filter.";
+                        }
+
+                        leaf num-inserted {
+                            type uint32;
+                            description "Indicates the number of successfully embedded entries.";
+                        }
+
+                    } // list filter
+
+                    list flowspec {
+                        key "offset";
+                        description "Enter the flowspec context";
+
+                        leaf offset {
+                            type types-filter:embed-offset;
+                            description "Offset of the inserted entries";
+                        }
+
+                        leaf oper-state {
+                            type types-filter:embed-oper-state;
+                            description "Indicates the operational state of this embedding.";
+                        }
+
+                        leaf num-entries {
+                            type uint32;
+                            description "Indicates the total number of entries in the embedded filter.";
+                        }
+
+                        leaf num-inserted {
+                            type uint32;
+                            description "Indicates the number of successfully embedded entries.";
+                        }
+
+                    } // list flowspec
+
+                    list openflow {
+                        key "of-switch offset";
+                        description "Enter the openflow context";
+
+                        leaf of-switch {
+                            type leafref {
+                                path "../../../../../openflow/of-switch/name";
+                            }
+                            description
+                                "Openflow switch which contains the flowtable
+                                 to be inserted in the parent filter.";
+                        }
+
+                        leaf offset {
+                            type types-filter:embed-offset {
+                                range "0..2097150";
+                            }
+                            description "Offset of the inserted entries";
+                        }
+
+                        leaf oper-state {
+                            type types-filter:embed-oper-state;
+                            description "Indicates the operational state of this embedding.";
+                        }
+
+                        leaf num-entries {
+                            type uint32;
+                            description "Indicates the total number of entries in the embedded filter.";
+                        }
+
+                        leaf num-inserted {
+                            type uint32;
+                            description "Indicates the number of successfully embedded entries.";
+                        }
+
+                    } // list openflow
+
+                } // container embed
+
+                container association {
+                    description "Filter associations.";
+
+                    leaf active-system-filter {
+                        type boolean;
+                    }
+
+                    leaf-list card {
+                        type int32;
+                        description "Cards associated with the filter.";
+                    }
+
+                    list router {
+                        key "router-name";
+                        description "Router referencing the filter.";
+
+                        leaf router-name {
+                            type types-sros:named-item-64;
+                        }
+
+                        leaf nat-outside-upstream {
+                            type boolean;
+                            description "Indicates if filter is configured as NAT outside upstream filter.";
+                        }
+
+                        leaf nat-outside-downstream {
+                            type boolean;
+                            description "Indicates if filter is configured as NAT outside downstream filter.";
+                        }
+
+                        list interface {
+                            key "interface-name";
+                            description "Router interface referencing the filter.";
+
+                            leaf interface-name {
+                                type types-sros:interface-name;
+                                description "Filter is associated with the Router interface.";
+                            }
+
+                            leaf ingress {
+                                type boolean;
+                                description "Indicates if filter is configured on ingress.";
+                            }
+
+                            leaf egress {
+                                type boolean;
+                                description "Indicates if filter is configured on egress.";
+                            }
+
+                        } // list interface
+
+                    } // list router
+
+                    list service {
+                        key "service-name";
+                        description "Service referencing the filter.";
+
+                        leaf service-name {
+                            type types-sros:named-item-64;
+                            description "Service name.";
+                        }
+
+                        leaf service-type {
+                            type types-services:service-type;
+                            description "Service type.";
+                        }
+
+                        leaf nat-inside-downstream {
+                            type boolean;
+                            description "Indicates if filter is configured as NAT inside downstream filter.";
+                        }
+
+                        leaf nat-outside-upstream {
+                            type boolean;
+                            description "Indicates if filter is configured as NAT outside upstream filter.";
+                        }
+
+                        leaf nat-outside-downstream {
+                            type boolean;
+                            description "Indicates if filter is configured as NAT outside downstream filter.";
+                        }
+
+                        leaf network-ingress {
+                            type boolean;
+                            description "Filter is associated with network ingress";
+                        }
+
+                        list sap {
+                            key "sap-id";
+                            description "SAP referencing the filter.";
+
+                            leaf sap-id {
+                                type types-sros:sap;
+                                description "Filter is associated with the SAP ID.";
+                            }
+
+                            leaf ingress {
+                                type boolean;
+                                description "Indicates if filter is configured on ingress.";
+                            }
+
+                            leaf egress {
+                                type boolean;
+                                description "Indicates if filter is configured on egress.";
+                            }
+
+                        } // list sap
+
+                        list sdp-bind {
+                            key "sdp-bind-id";
+                            description "SDP referencing the filter.";
+
+                            leaf sdp-bind-id {
+                                type types-services:sdp-bind-id;
+                                description "Filter is associated with the SDP bind ID.";
+                            }
+
+                            leaf ingress {
+                                type boolean;
+                                description "Indicates if filter is configured on ingress.";
+                            }
+
+                            leaf egress {
+                                type boolean;
+                                description "Indicates if filter is configured on egress.";
+                            }
+
+                        } // list sdp-bind
+
+                        list router-interface {
+                            key "interface-name";
+                            description "Router interface referencing the filter.";
+
+                            leaf interface-name {
+                                type types-sros:interface-name;
+                                description "Filter is associated with the Router interface.";
+                            }
+
+                            leaf ingress {
+                                type boolean;
+                                description "Indicates if filter is configured on ingress.";
+                            }
+
+                            leaf egress {
+                                type boolean;
+                                description "Indicates if filter is configured on egress.";
+                            }
+
+                        } // list router-interface
+
+                    } // list service
+
+                    list sla-profile {
+                        key "sla-profile-name";
+                        description "SLA profile referencing the filter.";
+
+                        leaf sla-profile-name {
+                            type types-sros:named-item;
+                            description "SLA profile name.";
+                        }
+
+                        leaf ingress {
+                            type boolean;
+                            description "Indicates if filter is configured on ingress.";
+                        }
+
+                        leaf egress {
+                            type boolean;
+                            description "Indicates if filter is configured on egress.";
+                        }
+
+                        leaf one-time-http-redirect {
+                            type boolean;
+                            description "Filter is used for one-time HTTP redirect.";
+                        }
+
+                    } // list sla-profile
+
+                    list embedding {
+                        key "filter";
+                        description "Filter embeddings.";
+
+                        leaf filter {
+                            type types-filter:filter-name;
+                        }
+
+                    } // list embedding
+
+                } // container association
+
+            } // list ip-filter
+
+            list ipv6-filter {
+                key "filter-name";
+                description "Enter the ipv6-filter context";
+
+                leaf filter-name {
+                    type types-filter:filter-name;
+                    description "Name of the object to associate";
+                }
+
+                leaf origin {
+                    type enumeration {
+                        enum "config"                       { value 0; }
+                        enum "flowspec"                     { value 1; }
+                        enum "subscriber-mgmt"              { value 2; }
+                        enum "openflow"                     { value 4; }
+                        enum "vsd"                          { value 5; }
+                        enum "tli"                          { value 6; }
+                        enum "dynamic-services"             { value 7; }
+                    }
+                    description "The protocol or mechanism that created this filter.";
+                }
+
+                leaf oper-filter-id {
+                    type uint32;
+                    description
+                        "The value of this object uniquely identifies a filter.
+                         User-configured filters have values between (1..65535).
+                         Other values are reserved for filters that are created
+                         (auto-generated) by the system.";
+                }
+
+                leaf applied {
+                    type boolean;
+                    description "Indicates whether the filter is applied.";
+                }
+
+                leaf num-entries {
+                    type uint32;
+                    description "Number of entries in this filter.";
+                }
+
+                leaf num-sub-entries {
+                    type uint32;
+                    description "Number of sub-entries.";
+                }
+
+                container subscriber-mgmt {
+                    description "Enter the subscriber-mgmt context";
+
+                    container host-specific-entry {
+                        description "Enter the host-specific-entry context";
+
+                        container filter-rule {
+                            description "Enter the filter-rule context";
+
+                            leaf num-inserted {
+                                type uint32;
+                                description
+                                    "Indicates how many host specific filter-rule entries are
+                                     currently inserted in the filter on request of RADIUS/DIAMETER.";
+                            }
+
+                        } // container filter-rule
+
+                        container credit-control {
+                            description "Enter the credit-control context";
+
+                            leaf num-inserted {
+                                type uint32;
+                                description
+                                    "Indicates how many filter entries are currently inserted
+                                     in the filter on request of credit control.";
+                            }
+
+                        } // container credit-control
+
+                    } // container host-specific-entry
+
+                    container shared-entry {
+                        description "Enter the shared-entry context";
+
+                        leaf num-filters {
+                            type uint32;
+                            description
+                                "Indicates how many filters are currently created based on
+                                 subscriber management shared entries of this filter.";
+                        }
+
+                        container filter-rule {
+                            description "Enter the filter-rule context";
+
+                            leaf num-inserted {
+                                type uint32;
+                                description
+                                    "The value of this object indicates how many host common filter-rule entries are
+                                     currently inserted in the filter on request of RADIUS.";
+                            }
+
+                        } // container filter-rule
+
+                        container pcc-rule {
+                            description "Enter the pcc-rule context";
+
+                            leaf num-inserted {
+                                type uint32;
+                                description
+                                    "The value of this object indicates how many pcc-rule filter entries received from
+                                     DIAMETER have been inserted in this filter.";
+                            }
+
+                        } // container pcc-rule
+
+                    } // container shared-entry
+
+                } // container subscriber-mgmt
+
+                list entry {
+                    key "entry-id";
+                    description "Enter the entry context";
+
+                    leaf entry-id {
+                        type types-filter:entry-id;
+                        description "Secondary index for this entry";
+                    }
+
+                    leaf inserted-by {
+                        type enumeration {
+                            enum "fixed"                        { value 0; }
+                            enum "filter-rule"                  { value 1; }
+                            enum "credit-control"               { value 2; }
+                            enum "flowspec"                     { value 3; }
+                            enum "li"                           { value 4; }
+                            enum "embedded"                     { value 5; }
+                            enum "shared-filter-rule"           { value 6; }
+                            enum "openflow"                     { value 7; }
+                            enum "pcc"                          { value 8; }
+                            enum "vsd"                          { value 9; }
+                            enum "tli"                          { value 10; }
+                            enum "dynamic-services"             { value 11; }
+                        }
+                        description "The protocol or mechanism that inserted this entry.";
+                    }
+
+                    leaf num-sub-entries {
+                        type uint32;
+                        description "Number of sub-entries.";
+                    }
+
+                    leaf log-instantiated {
+                        type boolean;
+                        description
+                            "This object indicates if the filter log for this filter
+                             entry has been instantiated or not.";
+                    }
+
+                    leaf downloaded-action {
+                        type types-filter:filter-downloaded-action;
+                        description
+                            "The value of this object indicates the filter entry
+                             action downloaded to IOM.";
+                    }
+
+                    leaf pbr-down-action {
+                        type enumeration {
+                            enum "not-applicable"               { value 0; }
+                            enum "drop"                         { value 1; }
+                            enum "forward"                      { value 2; }
+                        }
+                        description
+                            "Estimation of action performed if PBR target is down. This takes into
+                             account configuration of PBR down action override, filter default action, and default
+                             behavior of a filter action. But does not take into account where filter is applied
+                             therefore performed action may differ at the end.";
+                    }
+
+                    leaf pbr-down-action-reason {
+                        type enumeration {
+                            enum "not-applicable"               { value 0; }
+                            enum "entry-default"                { value 1; }
+                            enum "filter-default"               { value 2; }
+                            enum "pbr-down-override"            { value 3; }
+                        }
+                        description "The source of the estimated value of PBR down action.";
+                    }
+
+                    leaf sticky-dest-hold-remain {
+                        type int32 {
+                            range "0..65535";
+                        }
+                        units "seconds";
+                        description
+                            "The value of this object indicates the remaining
+                             time in seconds, until the best action will become
+                             active and will be fixed.
+
+                             Best action is:
+                             - primary action if PBR target status of primary
+                             action is up.
+                             - secondary action if PBR target status of secondary
+                             action is up and PBR target status of primary action
+                             is down.
+                             - none if both PBR targets are down.";
+                    }
+
+                    leaf inserted-by-direction {
+                        type enumeration {
+                            enum "ingress"                      { value 0; }
+                            enum "egress"                       { value 1; }
+                        }
+                        description "The direction specified in shared filter rule causing creation of the entry.";
+                    }
+
+                    container embedding {
+                        description "Provides information about source of entries inserted by embedded mechanism.";
+
+                        leaf origin {
+                            type enumeration {
+                                enum "fixed"                        { value 0; }
+                                enum "flowspec"                     { value 3; }
+                                enum "openflow"                     { value 7; }
+                                enum "vsd"                          { value 9; }
+                            }
+                            description "Indicates the origin of the embedded filter which is the source of the entry embedded at this position.";
+                        }
+
+                        leaf filter-name {
+                            type types-filter:filter-name;
+                            description "Indicates the name of the embedded filter which is the source of the entry embedded at this position.";
+                        }
+
+                        leaf entry-id {
+                            type types-filter:entry-id;
+                            description "Indicates entry-id of embedded filter which was inserted at this position.";
+                        }
+
+                    } // container embedding
+
+                    container statistics {
+                        description "Statistics pertaining to filter entry.";
+
+                        leaf ingress-hit-pkt {
+                            type yang:zero-based-counter64;
+                            description
+                                "This object indicates the number of times an ingress packet
+                                 matched this entry.";
+                        }
+
+                        leaf ingress-hit-byte {
+                            type yang:zero-based-counter64;
+                            description
+                                "The value of this object indicates the number of bytes of
+                                 all ingress packets that matched this entry.";
+                        }
+
+                        leaf egress-hit-pkt {
+                            type yang:zero-based-counter64;
+                            description
+                                "This object indicates the number of times an egress packet
+                                 matched this entry.";
+                        }
+
+                        leaf egress-hit-byte {
+                            type yang:zero-based-counter64;
+                            description
+                                "This object indicates the number of bytes of all egress
+                                 packets that matched this entry.";
+                        }
+
+                        container ingress-rate-limiter {
+                            description "Ingress rate-limit counters.";
+
+                            leaf offered-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates how many ingress packets were subjected to rate-limiting filter
+                                     action.";
+                            }
+
+                            leaf offered-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates the number of bytes of all ingress packets that were subjected to
+                                     rate-limiting filter action.";
+                            }
+
+                            leaf forwarded-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates how many ingress packets which were subjected to rate-limiting
+                                     filter action were forwarded.";
+                            }
+
+                            leaf forwarded-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates the number of bytes of all ingress packets which were subjected
+                                     to rate-limiting filter action were forwarded.";
+                            }
+
+                            leaf dropped-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates how many ingress packets which were subjected to rate-limiting
+                                     filter action were dropped.";
+                            }
+
+                            leaf dropped-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates the number of bytes of all ingress packets which were subjected
+                                     to rate-limiting filter action were dropped.";
+                            }
+
+                        } // container ingress-rate-limiter
+
+                        container egress-rate-limiter {
+                            description "Egress rate-limit counters.";
+
+                            leaf offered-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates how many egress packets were subjected to rate-limiting filter
+                                     action.";
+                            }
+
+                            leaf offered-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates the number of bytes of all egress packets that were subjected to
+                                     rate-limiting filter action.";
+                            }
+
+                            leaf forwarded-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates how many egress packets which were subjected to rate-limiting
+                                     filter action were forwarded.";
+                            }
+
+                            leaf forwarded-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates the number of bytes of all egress packets which were subjected
+                                     to rate-limiting filter action were forwarded.";
+                            }
+
+                            leaf dropped-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates how many egress packets which were subjected to rate-limiting
+                                     filter action were dropped.";
+                            }
+
+                            leaf dropped-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates the number of bytes of all egress packets which were subjected
+                                     to rate-limiting filter action were dropped.";
+                            }
+
+                        } // container egress-rate-limiter
+
+                        list card {
+                            key "slot-number";
+                            description "Filter counters per IOM slot";
+
+                            leaf slot-number {
+                                type int32;
+                                description "Indicates IOM slot number";
+                            }
+
+                            leaf ingress-hit-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "This object indicates the number of times an ingress packet
+                                     matched this entry.";
+                            }
+
+                            leaf ingress-hit-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "The value of this object indicates the number of bytes of
+                                     all ingress packets that matched this entry.";
+                            }
+
+                            leaf egress-hit-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "This object indicates the number of times an egress packet
+                                     matched this entry.";
+                            }
+
+                            leaf egress-hit-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "This object indicates the number of bytes of all egress
+                                     packets that matched this entry.";
+                            }
+
+                            container ingress-rate-limiter {
+
+                                leaf offered-pkt {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of times an ingress packet
+                                         matched this entry.";
+                                }
+
+                                leaf offered-byte {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "The value of this object indicates the number of bytes of
+                                         all ingress packets that matched this entry.";
+                                }
+
+                                leaf forwarded-pkt {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of times an ingress packet
+                                         matched this entry.";
+                                }
+
+                                leaf forwarded-byte {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of bytes of all egress
+                                         packets that matched this entry.";
+                                }
+
+                                leaf dropped-pkt {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of times an egress packet
+                                         matched this entry.";
+                                }
+
+                                leaf dropped-byte {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of bytes of all egress
+                                         packets that matched this entry.";
+                                }
+
+                            } // container ingress-rate-limiter
+
+                            container egress-rate-limiter {
+
+                                leaf offered-pkt {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of times an egress packet
+                                         matched this entry.";
+                                }
+
+                                leaf offered-byte {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of bytes of all egress
+                                         packets that matched this entry.";
+                                }
+
+                                leaf forwarded-pkt {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of times an egress packet
+                                         matched this entry.";
+                                }
+
+                                leaf forwarded-byte {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of bytes of all egress
+                                         packets that matched this entry.";
+                                }
+
+                                leaf dropped-pkt {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of times an egress packet
+                                         matched this entry.";
+                                }
+
+                                leaf dropped-byte {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of bytes of all egress
+                                         packets that matched this entry.";
+                                }
+
+                            } // container egress-rate-limiter
+
+                        } // list card
+
+                    } // container statistics
+
+                    container action {
+                        description "Enter the action context";
+
+                        leaf pbr-target-status {
+                            type types-filter:pbr-target-status;
+                            description "Indicates the PBR target status.";
+                        }
+
+                        container secondary {
+                            description "Enter the secondary context";
+
+                            leaf pbr-target-status {
+                                type types-filter:pbr-target-status;
+                                description "Indicates the PBR target status.";
+                            }
+
+                        } // container secondary
+
+                    } // container action
+
+                } // list entry
+
+                container embed {
+                    description "Enter the embed context";
+
+                    list filter {
+                        key "name offset";
+                        description "Enter the filter context";
+
+                        leaf name {
+                            type leafref {
+                                path "../../../filter-name";
+                            }
+                            description "ID of the filter to insert";
+                        }
+
+                        leaf offset {
+                            type types-filter:embed-offset {
+                                range "0..2097150";
+                            }
+                            description "Offset of the inserted entries";
+                        }
+
+                        leaf oper-state {
+                            type types-filter:embed-oper-state;
+                            description "Indicates the operational state of this embedding.";
+                        }
+
+                        leaf num-entries {
+                            type uint32;
+                            description "Indicates the total number of entries in the embedded filter.";
+                        }
+
+                        leaf num-inserted {
+                            type uint32;
+                            description "Indicates the number of successfully embedded entries.";
+                        }
+
+                    } // list filter
+
+                    list flowspec {
+                        key "offset";
+                        description "Enter the flowspec context";
+
+                        leaf offset {
+                            type types-filter:embed-offset;
+                            description "Offset of the inserted entries";
+                        }
+
+                        leaf oper-state {
+                            type types-filter:embed-oper-state;
+                            description "Indicates the operational state of this embedding.";
+                        }
+
+                        leaf num-entries {
+                            type uint32;
+                            description "Indicates the total number of entries in the embedded filter.";
+                        }
+
+                        leaf num-inserted {
+                            type uint32;
+                            description "Indicates the number of successfully embedded entries.";
+                        }
+
+                    } // list flowspec
+
+                    list openflow {
+                        key "of-switch offset";
+                        description "Enter the openflow context";
+
+                        leaf of-switch {
+                            type leafref {
+                                path "../../../../../openflow/of-switch/name";
+                            }
+                            description
+                                "Openflow switch which contains the flowtable
+                                 to be inserted in the parent filter.";
+                        }
+
+                        leaf offset {
+                            type types-filter:embed-offset {
+                                range "0..2097150";
+                            }
+                            description "Offset of the inserted entries";
+                        }
+
+                        leaf oper-state {
+                            type types-filter:embed-oper-state;
+                            description "Indicates the operational state of this embedding.";
+                        }
+
+                        leaf num-entries {
+                            type uint32;
+                            description "Indicates the total number of entries in the embedded filter.";
+                        }
+
+                        leaf num-inserted {
+                            type uint32;
+                            description "Indicates the number of successfully embedded entries.";
+                        }
+
+                    } // list openflow
+
+                } // container embed
+
+                container association {
+                    description "Filter associations.";
+
+                    leaf active-system-filter {
+                        type boolean;
+                    }
+
+                    leaf-list card {
+                        type int32;
+                        description "Cards associated with the filter.";
+                    }
+
+                    list router {
+                        key "router-name";
+                        description "Router referencing the filter.";
+
+                        leaf router-name {
+                            type types-sros:named-item-64;
+                        }
+
+                        leaf nat-outside-upstream {
+                            type boolean;
+                            description "Indicates if filter is configured as NAT outside upstream filter.";
+                        }
+
+                        leaf nat-outside-downstream {
+                            type boolean;
+                            description "Indicates if filter is configured as NAT outside downstream filter.";
+                        }
+
+                        list interface {
+                            key "interface-name";
+                            description "Router interface referencing the filter.";
+
+                            leaf interface-name {
+                                type types-sros:interface-name;
+                                description "Filter is associated with the Router interface.";
+                            }
+
+                            leaf ingress {
+                                type boolean;
+                                description "Indicates if filter is configured on ingress.";
+                            }
+
+                            leaf egress {
+                                type boolean;
+                                description "Indicates if filter is configured on egress.";
+                            }
+
+                        } // list interface
+
+                    } // list router
+
+                    list service {
+                        key "service-name";
+                        description "Service referencing the filter.";
+
+                        leaf service-name {
+                            type types-sros:named-item-64;
+                            description "Service name.";
+                        }
+
+                        leaf service-type {
+                            type types-services:service-type;
+                            description "Service type.";
+                        }
+
+                        leaf nat-inside-downstream {
+                            type boolean;
+                            description "Indicates if filter is configured as NAT inside downstream filter.";
+                        }
+
+                        leaf nat-outside-upstream {
+                            type boolean;
+                            description "Indicates if filter is configured as NAT outside upstream filter.";
+                        }
+
+                        leaf nat-outside-downstream {
+                            type boolean;
+                            description "Indicates if filter is configured as NAT outside downstream filter.";
+                        }
+
+                        leaf network-ingress {
+                            type boolean;
+                            description "Filter is associated with network ingress";
+                        }
+
+                        list sap {
+                            key "sap-id";
+                            description "SAP referencing the filter.";
+
+                            leaf sap-id {
+                                type types-sros:sap;
+                                description "Filter is associated with the SAP ID.";
+                            }
+
+                            leaf ingress {
+                                type boolean;
+                                description "Indicates if filter is configured on ingress.";
+                            }
+
+                            leaf egress {
+                                type boolean;
+                                description "Indicates if filter is configured on egress.";
+                            }
+
+                        } // list sap
+
+                        list sdp-bind {
+                            key "sdp-bind-id";
+                            description "SDP referencing the filter.";
+
+                            leaf sdp-bind-id {
+                                type types-services:sdp-bind-id;
+                                description "Filter is associated with the SDP bind ID.";
+                            }
+
+                            leaf ingress {
+                                type boolean;
+                                description "Indicates if filter is configured on ingress.";
+                            }
+
+                            leaf egress {
+                                type boolean;
+                                description "Indicates if filter is configured on egress.";
+                            }
+
+                        } // list sdp-bind
+
+                        list router-interface {
+                            key "interface-name";
+                            description "Network interface referencing the filter.";
+
+                            leaf interface-name {
+                                type types-sros:interface-name;
+                                description "Filter is associated with the Router interface.";
+                            }
+
+                            leaf ingress {
+                                type boolean;
+                                description "Indicates if filter is configured on ingress.";
+                            }
+
+                            leaf egress {
+                                type boolean;
+                                description "Indicates if filter is configured on egress.";
+                            }
+
+                        } // list router-interface
+
+                    } // list service
+
+                    list sla-profile {
+                        key "sla-profile-name";
+                        description "SLA profile referencing the filter.";
+
+                        leaf sla-profile-name {
+                            type types-sros:named-item;
+                            description "SLA profile name.";
+                        }
+
+                        leaf ingress {
+                            type boolean;
+                            description "Indicates if filter is configured on ingress.";
+                        }
+
+                        leaf egress {
+                            type boolean;
+                            description "Indicates if filter is configured on egress.";
+                        }
+
+                    } // list sla-profile
+
+                    list embedding {
+                        key "filter";
+                        description "Filter embeddings.";
+
+                        leaf filter {
+                            type types-filter:filter-name;
+                        }
+
+                    } // list embedding
+
+                } // container association
+
+            } // list ipv6-filter
+
+            list mac-filter {
+                key "filter-name";
+                description "Enter the mac-filter context";
+
+                leaf filter-name {
+                    type types-filter:filter-name;
+                    description "Name of the object to associate";
+                }
+
+                leaf origin {
+                    type enumeration {
+                        enum "config"                       { value 0; }
+                        enum "flowspec"                     { value 1; }
+                        enum "subscriber-mgmt"              { value 2; }
+                        enum "openflow"                     { value 4; }
+                        enum "vsd"                          { value 5; }
+                        enum "tli"                          { value 6; }
+                        enum "dynamic-services"             { value 7; }
+                    }
+                    description "The protocol or mechanism that created this filter.";
+                }
+
+                leaf oper-filter-id {
+                    type uint32;
+                    description
+                        "The value of this object uniquely identifies a filter.
+                         User-configured filters have values between (1..65535).
+                         Other values are reserved for filters that are created
+                         (auto-generated) by the system.";
+                }
+
+                leaf applied {
+                    type boolean;
+                    description "Indicates whether the filter is applied.";
+                }
+
+                leaf num-entries {
+                    type uint32;
+                    description "Number of entries in this filter.";
+                }
+
+                leaf num-sub-entries {
+                    type uint32;
+                    description "Number of sub-entries.";
+                }
+
+                list entry {
+                    key "entry-id";
+                    description "Enter the entry context";
+
+                    leaf entry-id {
+                        type types-filter:entry-id;
+                        description "Secondary index for this entry";
+                    }
+
+                    leaf inserted-by {
+                        type enumeration {
+                            enum "fixed"                        { value 0; }
+                            enum "filter-rule"                  { value 1; }
+                            enum "credit-control"               { value 2; }
+                            enum "flowspec"                     { value 3; }
+                            enum "li"                           { value 4; }
+                            enum "embedded"                     { value 5; }
+                            enum "shared-filter-rule"           { value 6; }
+                            enum "openflow"                     { value 7; }
+                            enum "pcc"                          { value 8; }
+                            enum "vsd"                          { value 9; }
+                            enum "tli"                          { value 10; }
+                            enum "dynamic-services"             { value 11; }
+                        }
+                        description "The protocol or mechanism that inserted this entry.";
+                    }
+
+                    leaf num-sub-entries {
+                        type uint32;
+                        description "Number of sub-entries.";
+                    }
+
+                    leaf log-instantiated {
+                        type boolean;
+                        description
+                            "This object indicates if the filter log for this filter
+                             entry has been instantiated or not.";
+                    }
+
+                    leaf downloaded-action {
+                        type types-filter:filter-downloaded-action;
+                        description
+                            "The value of this object indicates the filter entry
+                             action downloaded to IOM.";
+                    }
+
+                    leaf pbr-down-action {
+                        type enumeration {
+                            enum "not-applicable"               { value 0; }
+                            enum "drop"                         { value 1; }
+                            enum "forward"                      { value 2; }
+                        }
+                        description
+                            "Estimation of action performed if PBR target is down. This takes into
+                             account configuration of PBR down action override, filter default action, and default
+                             behavior of a filter action. But does not take into account where filter is applied
+                             therefore performed action may differ at the end.";
+                    }
+
+                    leaf pbr-down-action-reason {
+                        type enumeration {
+                            enum "not-applicable"               { value 0; }
+                            enum "entry-default"                { value 1; }
+                            enum "filter-default"               { value 2; }
+                            enum "pbr-down-override"            { value 3; }
+                        }
+                        description "The source of the estimated value of PBR down action.";
+                    }
+
+                    leaf sticky-dest-hold-remain {
+                        type int32 {
+                            range "0..65535";
+                        }
+                        units "seconds";
+                        description
+                            "The value of this object indicates the remaining
+                             time in seconds, until the best action will become
+                             active and will be fixed.
+
+                             Best action is:
+                             - primary action if PBR target status of primary
+                             action is up.
+                             - secondary action if PBR target status of secondary
+                             action is up and PBR target status of primary action
+                             is down.
+                             - none if both PBR targets are down.";
+                    }
+
+                    container embedding {
+                        description "Provides information about source of entries inserted by embedded mechanism.";
+
+                        leaf origin {
+                            type enumeration {
+                                enum "fixed"                        { value 0; }
+                                enum "flowspec"                     { value 3; }
+                                enum "openflow"                     { value 7; }
+                                enum "vsd"                          { value 9; }
+                            }
+                            description "Indicates the origin of the embedded filter which is the source of the entry embedded at this position.";
+                        }
+
+                        leaf filter-name {
+                            type types-filter:filter-name;
+                            description "Indicates the name of the embedded filter which is the source of the entry embedded at this position.";
+                        }
+
+                        leaf entry-id {
+                            type types-filter:entry-id;
+                            description "Indicates entry-id of embedded filter which was inserted at this position.";
+                        }
+
+                    } // container embedding
+
+                    container statistics {
+                        description "Statistics pertaining to filter entry.";
+
+                        leaf ingress-hit-pkt {
+                            type yang:zero-based-counter64;
+                            description
+                                "This object indicates the number of times an ingress packet
+                                 matched this entry.";
+                        }
+
+                        leaf ingress-hit-byte {
+                            type yang:zero-based-counter64;
+                            description
+                                "The value of this object indicates the number of bytes of
+                                 all ingress packets that matched this entry.";
+                        }
+
+                        leaf egress-hit-pkt {
+                            type yang:zero-based-counter64;
+                            description
+                                "This object indicates the number of times an egress packet
+                                 matched this entry.";
+                        }
+
+                        leaf egress-hit-byte {
+                            type yang:zero-based-counter64;
+                            description
+                                "This object indicates the number of bytes of all egress
+                                 packets that matched this entry.";
+                        }
+
+                        container ingress-rate-limiter {
+                            description "Ingress rate-limit counters.";
+
+                            leaf offered-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates how many ingress packets were subjected to rate-limiting filter
+                                     action.";
+                            }
+
+                            leaf offered-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates the number of bytes of all ingress packets that were subjected to
+                                     rate-limiting filter action.";
+                            }
+
+                            leaf forwarded-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates how many ingress packets which were subjected to rate-limiting
+                                     filter action were forwarded.";
+                            }
+
+                            leaf forwarded-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates the number of bytes of all ingress packets which were subjected
+                                     to rate-limiting filter action were forwarded.";
+                            }
+
+                            leaf dropped-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates how many ingress packets which were subjected to rate-limiting
+                                     filter action were dropped.";
+                            }
+
+                            leaf dropped-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates the number of bytes of all ingress packets which were subjected
+                                     to rate-limiting filter action were dropped.";
+                            }
+
+                        } // container ingress-rate-limiter
+
+                        container egress-rate-limiter {
+                            description "Egress rate-limit counters.";
+
+                            leaf offered-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates how many egress packets were subjected to rate-limiting filter
+                                     action.";
+                            }
+
+                            leaf offered-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates the number of bytes of all egress packets that were subjected to
+                                     rate-limiting filter action.";
+                            }
+
+                            leaf forwarded-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates how many egress packets which were subjected to rate-limiting
+                                     filter action were forwarded.";
+                            }
+
+                            leaf forwarded-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates the number of bytes of all egress packets which were subjected
+                                     to rate-limiting filter action were forwarded.";
+                            }
+
+                            leaf dropped-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates how many egress packets which were subjected to rate-limiting
+                                     filter action were dropped.";
+                            }
+
+                            leaf dropped-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "Indicates the number of bytes of all egress packets which were subjected
+                                     to rate-limiting filter action were dropped.";
+                            }
+
+                        } // container egress-rate-limiter
+
+                        list card {
+                            key "slot-number";
+                            description "Filter counters per IOM slot";
+
+                            leaf slot-number {
+                                type int32;
+                                description "Indicates IOM slot number";
+                            }
+
+                            leaf ingress-hit-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "This object indicates the number of times an ingress packet
+                                     matched this entry.";
+                            }
+
+                            leaf ingress-hit-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "The value of this object indicates the number of bytes of
+                                     all ingress packets that matched this entry.";
+                            }
+
+                            leaf egress-hit-pkt {
+                                type yang:zero-based-counter64;
+                                description
+                                    "This object indicates the number of times an egress packet
+                                     matched this entry.";
+                            }
+
+                            leaf egress-hit-byte {
+                                type yang:zero-based-counter64;
+                                description
+                                    "This object indicates the number of bytes of all egress
+                                     packets that matched this entry.";
+                            }
+
+                            container ingress-rate-limiter {
+
+                                leaf offered-pkt {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of times an ingress packet
+                                         matched this entry.";
+                                }
+
+                                leaf offered-byte {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "The value of this object indicates the number of bytes of
+                                         all ingress packets that matched this entry.";
+                                }
+
+                                leaf forwarded-pkt {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of times an ingress packet
+                                         matched this entry.";
+                                }
+
+                                leaf forwarded-byte {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of bytes of all egress
+                                         packets that matched this entry.";
+                                }
+
+                                leaf dropped-pkt {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of times an egress packet
+                                         matched this entry.";
+                                }
+
+                                leaf dropped-byte {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of bytes of all egress
+                                         packets that matched this entry.";
+                                }
+
+                            } // container ingress-rate-limiter
+
+                            container egress-rate-limiter {
+
+                                leaf offered-pkt {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of times an egress packet
+                                         matched this entry.";
+                                }
+
+                                leaf offered-byte {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of bytes of all egress
+                                         packets that matched this entry.";
+                                }
+
+                                leaf forwarded-pkt {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of times an egress packet
+                                         matched this entry.";
+                                }
+
+                                leaf forwarded-byte {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of bytes of all egress
+                                         packets that matched this entry.";
+                                }
+
+                                leaf dropped-pkt {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of times an egress packet
+                                         matched this entry.";
+                                }
+
+                                leaf dropped-byte {
+                                    type yang:zero-based-counter64;
+                                    description
+                                        "This object indicates the number of bytes of all egress
+                                         packets that matched this entry.";
+                                }
+
+                            } // container egress-rate-limiter
+
+                        } // list card
+
+                    } // container statistics
+
+                    container action {
+                        description "Enter the action context";
+
+                        leaf pbr-target-status {
+                            type types-filter:pbr-target-status;
+                            description "Indicates the PBR target status.";
+                        }
+
+                        container secondary {
+                            description "Enter the secondary context";
+
+                            leaf pbr-target-status {
+                                type types-filter:pbr-target-status;
+                                description "Indicates the PBR target status.";
+                            }
+
+                        } // container secondary
+
+                    } // container action
+
+                } // list entry
+
+                container embed {
+                    description "Enter the embed context";
+
+                } // container embed
+
+                container association {
+                    description "Filter associations.";
+
+                    leaf-list card {
+                        type int32;
+                        description "Cards associated with the filter.";
+                    }
+
+                    list service {
+                        key "service-name";
+                        description "Service referencing the filter.";
+
+                        leaf service-name {
+                            type types-sros:named-item-64;
+                            description "Service name.";
+                        }
+
+                        leaf service-type {
+                            type types-services:service-type;
+                            description "Service type.";
+                        }
+
+                        list sap {
+                            key "sap-id";
+                            description "SAP referencing the filter.";
+
+                            leaf sap-id {
+                                type types-sros:sap;
+                                description "Filter is associated with the SAP ID.";
+                            }
+
+                            leaf ingress {
+                                type boolean;
+                                description "Indicates if filter is configured on ingress.";
+                            }
+
+                            leaf egress {
+                                type boolean;
+                                description "Indicates if filter is configured on egress.";
+                            }
+
+                        } // list sap
+
+                        list sdp-bind {
+                            key "sdp-bind-id";
+                            description "SDP referencing the filter.";
+
+                            leaf sdp-bind-id {
+                                type types-services:sdp-bind-id;
+                                description "Filter is associated with the SDP bind ID.";
+                            }
+
+                            leaf ingress {
+                                type boolean;
+                                description "Indicates if filter is configured on ingress.";
+                            }
+
+                            leaf egress {
+                                type boolean;
+                                description "Indicates if filter is configured on egress.";
+                            }
+
+                        } // list sdp-bind
+
+                    } // list service
+
+                    list embedding {
+                        key "filter";
+                        description "Filter embeddings.";
+
+                        leaf filter {
+                            type types-filter:filter-name;
+                        }
+
+                    } // list embedding
+
+                } // container association
+
+            } // list mac-filter
+
+        } // container filter
+
+    } // grouping state-filter
+
+}
