@@ -1,0 +1,372 @@
+submodule nokia-conf-submgt-vrgw {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-aaa;
+    include nokia-conf-groups;
+
+    sros-ext:sros-major-release "rel19";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure subscriber management Virtual Residential Gateway on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-submgt-vrgw YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2019-10-09";
+
+    grouping conf-submgt-vrgw {
+        container vrgw {
+            description "Enter the vrgw context";
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            container lanext {
+                description "Enter the lanext context";
+
+                leaf router-target-as-number {
+                    type uint16 {
+                        range "1..65535";
+                    }
+                    description "AS number that derives the route target and distinguisher for vRGW LAN Extension bridge domains";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+            } // container lanext
+
+            list brg-profile {
+                key "brg-profile-name";
+                max-elements 16;
+                description "Enter the brg-profile list instance";
+
+                leaf brg-profile-name {
+                    type types-sros:named-item;
+                    description "A brg profile name";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf sla-profile-string {
+                    type types-sros:named-item-or-empty;
+                    description "Default SLA profile string on BRG level, overridable via AAA";
+                }
+
+                leaf sub-profile-string {
+                    type types-sros:named-item-or-empty;
+                    description "Default subscriber profile string on BRG level, overridable via AAA";
+                }
+
+                leaf hold-time {
+                    type types-sros:time-duration {
+                        range "0|30..2592000";
+                    }
+                    units "seconds";
+                    default "0";
+                    description "The time to hold on to a BRG after it went down";
+                }
+
+                leaf initial-hold-time {
+                    type types-sros:time-duration {
+                        range "0..900";
+                    }
+                    units "seconds";
+                    default "300";
+                    description "The minimum time to hold on to a BRG after creation, even if no devices are linked to it yet";
+                }
+
+                leaf uplink-initial-wait {
+                    type types-sros:time-duration {
+                        range "10..300";
+                    }
+                    units "seconds";
+                    default "30";
+                    description "Time needed in case of a non-routed uplink to block host set-up while waiting for the uplink to become operational";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                container connectivity-verification {
+                    description "Enter the connectivity-verification context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "enable";
+                        description "Administrative state of BRG connectivity verification";
+                    }
+
+                    leaf count {
+                        when "../admin-state = 'enable'";
+                        type uint32 {
+                            range "1..5";
+                        }
+                        description "Total number of consecutive unanswered messages that should be sent before the BRG is considered disconnected";
+                    }
+
+                    leaf timeout {
+                        when "../admin-state = 'enable'";
+                        type uint32 {
+                            range "5..60";
+                        }
+                        description "Timeout after which a message is considered unanswered";
+                    }
+
+                    leaf retry-time {
+                        when "../admin-state = 'enable'";
+                        type uint32 {
+                            range "300..3600";
+                        }
+                        description "Time the system will wait after a successful connectivity check before starting a new check";
+                    }
+
+                } // container connectivity-verification
+
+                list radius-proxy-server {
+                    key "router-instance name";
+                    max-elements 4;
+                    description "Add a list entry for radius-proxy-server";
+
+                    leaf router-instance {
+                        type string;
+                        description "router-instance";
+                    }
+
+                    leaf name {
+                        type types-sros:named-item;
+                        description "server-name";
+                    }
+
+                } // list radius-proxy-server
+
+                container home-pool {
+                    description "Enter the home-pool context";
+
+                    leaf lease-time {
+                        type types-sros:time-duration {
+                            range "300..315446399";
+                        }
+                        units "seconds";
+                        default "21600";
+                        description "The lease time.";
+                    }
+
+                    leaf standby-ip-lifetime {
+                        type types-sros:time-duration {
+                            range "300..315446399";
+                        }
+                        units "seconds";
+                        default "21600";
+                        description "The lifetime of the standby IP addresses";
+                    }
+
+                    container subnet {
+                        description "Enter the subnet context";
+
+                        leaf prefix {
+                            type types-sros:ipv4-prefix-with-host-bits;
+                            default "192.168.0.1/24";
+                            description "Prefix and default-gateway to be used inside the home";
+                        }
+
+                        leaf start {
+                            type types-sros:ipv4-unicast-address;
+                            default "192.168.0.2";
+                            description "Start address of the range used for dynamic IP address allocation";
+                        }
+
+                        leaf end {
+                            type types-sros:ipv4-unicast-address;
+                            default "192.168.0.254";
+                            description "End address of the range used for dynamic IP address allocation";
+                        }
+
+                    } // container subnet
+
+                    list option {
+                        must "./number != 58 or ../lease-time >= ./duration" {
+                            error-message "lease time must be larger than renew time";
+                        }
+                        must "./number != 59 or ../lease-time >= ./duration" {
+                            error-message "lease time must be larger than rebind time";
+                        }
+                        key "number";
+                        description "Enter the option list instance";
+
+                        leaf number {
+                            type union {
+                                type uint32 {
+                                    range "1..254";
+                                }
+                                type enumeration {
+                                    enum "subnet-mask"                  { value 1; }
+                                    enum "default-router"               { value 3; }
+                                    enum "dns-server"                   { value 6; }
+                                    enum "domain-name"                  { value 15; }
+                                    enum "netbios-name-server"          { value 44; }
+                                    enum "netbios-node-type"            { value 46; }
+                                    enum "lease-time"                   { value 51; }
+                                    enum "lease-renew-time"             { value 58; }
+                                    enum "lease-rebind-time"            { value 59; }
+                                }
+                            }
+                            description "DHCP option to send identification strings to client";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        choice value {
+                            mandatory true;
+                            description "The value of the DHCP option.";
+                            case ascii-string {
+
+                                leaf ascii-string {
+                                    when "not(../number = 46) and not(../number = 51) and not(../number = 58) and not(../number = 59)";
+                                    type types-sros:string-not-all-spaces {
+                                        length "1..127";
+                                    }
+                                    description "DHCP option ASCII string.";
+                                }
+
+                            }
+                            case hex-string {
+
+                                leaf hex-string {
+                                    when "not(../number = 46) and not(../number = 51) and not(../number = 58) and not(../number = 59)";
+                                    type types-sros:hex-string {
+                                        length "1..256";
+                                    }
+                                    description "DHCP option as hexadecimal string.";
+                                }
+
+                            }
+                            case netbios-node-type {
+
+                                leaf netbios-node-type {
+                                    when "../number = 46";
+                                    type enumeration {
+                                        enum "b-node"                       { value 1; }
+                                        enum "p-node"                       { value 2; }
+                                        enum "m-node"                       { value 4; }
+                                        enum "h-node"                       { value 8; }
+                                    }
+                                    description "DHCP option as NetBIOS node type.";
+                                }
+
+                            }
+                            case duration {
+
+                                leaf duration {
+                                    when "../number = 51 or ../number = 58 or ../number = 59";
+                                    type types-sros:time-duration {
+                                        range "10..315446399";
+                                    }
+                                    units "seconds";
+                                    description "DHCP option as time duration.";
+                                }
+
+                            }
+                            case ipv4-address {
+
+                                leaf-list ipv4-address {
+                                    when "not(../number = 46) and not(../number = 51) and not(../number = 58) and not(../number = 59)";
+                                    type types-sros:ipv4-address;
+                                    max-elements 4;
+                                    description "DHCP option as a list of IPv4 addresses.";
+                                }
+
+                            }
+                            case empty {
+
+                                leaf empty {
+                                    when "not(../number = 46) and not(../number = 51) and not(../number = 58) and not(../number = 59)";
+                                    type empty;
+                                    description "Empty DHCP option.";
+                                }
+
+                            }
+                        }
+                    } // list option
+
+                } // container home-pool
+
+                container radius-authentication {
+                    description "Enter the radius-authentication context";
+
+                    leaf server-policy {
+                        type leafref {
+                            path "../../../../../aaa/radius/server-policy/name";
+                        }
+                        description "Radius servers to be used for authentication";
+                    }
+
+                    leaf password {
+                        type types-sros:encrypted-leaf {
+                            length "1..115";
+                        }
+                        description "Password used for authentication";
+                    }
+
+                } // container radius-authentication
+
+            } // list brg-profile
+
+        } // container vrgw
+
+    } // grouping conf-submgt-vrgw
+
+}

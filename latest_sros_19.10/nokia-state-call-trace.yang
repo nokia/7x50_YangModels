@@ -1,0 +1,305 @@
+submodule nokia-state-call-trace {
+
+    yang-version "1.1";
+
+    belongs-to nokia-state { prefix "state"; }
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-card               { prefix "types-card"; }
+    import nokia-types-services           { prefix "types-services"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+    import nokia-types-system             { prefix "types-system"; }
+
+
+    sros-ext:sros-major-release "rel19";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model with operational state for call-trace parameters on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-state-call-trace YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2019-10-09";
+
+    grouping state-call-trace {
+        container call-trace {
+            description "Enter the call-trace context";
+
+            list file {
+                key "job-status cpm-slot flash-id name";
+                description
+                    "Information pertaining to all call trace log files locally
+                     stored on cflash cards in the system.";
+
+                leaf job-status {
+                    type types-system:running-finished;
+                    description "The status of the call trace job that has created this log file.";
+                }
+
+                leaf cpm-slot {
+                    type types-card:cpm-card-slot;
+                    description "The CPM slot where the storage containing the log file is present";
+                }
+
+                leaf flash-id {
+                    type types-system:cpm-flash-id;
+                    description "The ID of the flash card where the log file is present.";
+                }
+
+                leaf name {
+                    type string {
+                        length "1..83";
+                    }
+                    description
+                        "The name of the log file
+                         The name is composed of following items:
+                            'mac_<mac_address>_<timestamp>[_<internal_id>].pcap'
+                            or
+                            'ipoe_<mac_address>[_<trace_name>]_<timestamp>[_<internal_id>].pcap'
+                         where
+                             <mac_address> is a MAC address of the host in form '00-11-22-33-44-55'
+                             <timestamp> is a date and time of creation of the file
+                            in form 'YYMMDD_HHMM' (24 hr format)
+                             <internal_id> is a value used for internal purposes
+                             <trace_name> is a name associated with the trace by a user.";
+                }
+
+                leaf directory {
+                    type string;
+                    description
+                        "The absolute pathname of the directory where the log file
+                         is stored on the cflash card";
+                }
+
+                leaf size {
+                    type uint32;
+                    units "bytes";
+                    description "The size of the log file in bytes";
+                }
+
+                leaf last-modification {
+                    type types-sros:date-time;
+                    description "The time of the last modification to this file.";
+                }
+
+            } // list file
+
+            list job {
+                key "id";
+                description "Information pertaining to all running or finished call trace jobs.";
+
+                leaf id {
+                    type uint32;
+                    description "The unique identifier of the call trace job";
+                }
+
+                leaf type {
+                    type enumeration {
+                        enum "ue"                           { value 1; description "A WLAN-GW UE, identified by the MAC address"; }
+                        enum "ipoe"                         { value 2; description "An IPoE session, identified by SAP, MAC, circuit-id and/or remote-id"; }
+                    }
+                    description "The type of the session this job is tracing.";
+                }
+
+                leaf destination {
+                    type enumeration {
+                        enum "cflash"                       { value 1; }
+                        enum "live-output"                  { value 2; }
+                        enum "debug-output"                 { value 3; }
+                    }
+                    description
+                        "The destination to which the logs generated by this call trace job are
+                         stored.";
+                }
+
+                leaf status {
+                    type types-system:running-finished;
+                    description "The status of the call trace job that has created this log file.";
+                }
+
+                leaf trace {
+                    type types-sros:named-item;
+                    description "The name of the trace that triggered this call trace job.";
+                }
+
+                leaf profile {
+                    type types-sros:named-item;
+                    description
+                        "The name of the call trace profile used to define job's parameters
+                         at the moment of creation of the job.";
+                }
+
+                leaf start-time {
+                    type types-sros:date-time;
+                    description "The time when this call trace job has been started";
+                }
+
+                leaf size-limit {
+                    type uint32;
+                    units "megabytes";
+                    description "The data volume limit after which a job will be stopped.";
+                }
+
+                leaf time-limit {
+                    type uint32;
+                    units "seconds";
+                    description "The time limit after which the job will be stopped";
+                }
+
+                leaf captured-message-count {
+                    type uint32;
+                    description "The number of events traced";
+                }
+
+                leaf captured-message-size {
+                    type uint32;
+                    units "bytes";
+                    description "The total size of all traced events";
+                }
+
+                container ipoe {
+                    description "Information on the ipoe session being traced";
+
+                    leaf mac-address {
+                        type yang:mac-address;
+                        description "The IEEE mac address of the session being traced.";
+                    }
+
+                    leaf sap-id {
+                        type types-sros:sap;
+                        description "The value of the SAP port ID of the session being monitored by this call trace job.";
+                    }
+
+                    leaf circuit-id {
+                        type string;
+                        description "The circuit ID of the session being monitored by this call trace job.";
+                    }
+
+                    leaf remote-id {
+                        type string;
+                        description "The remote ID of the session being monitored by this call trace job.";
+                    }
+
+                } // container ipoe
+
+                container wlan-gw {
+                    description "Information on the WLAN-GW UE being traced";
+
+                    leaf mac-address {
+                        type yang:mac-address;
+                        description "The IEEE mac address of the WLAN-GW UE being traced.";
+                    }
+
+                } // container wlan-gw
+
+                container live-output {
+
+                    leaf destination-fqdn {
+                        type string {
+                            length "1..255";
+                        }
+                        description "Fully qualified domain name of the live output destination.";
+                    }
+
+                    leaf destination-port {
+                        type types-sros:tcp-udp-port;
+                        description "The UDP port of the live output destination.";
+                    }
+
+                    leaf router-instance {
+                        type types-services:service-name;
+                        description "The router instance in which the live output is sent.";
+                    }
+
+                    leaf destination-ip-address {
+                        type types-sros:ip-address;
+                        description "IP address of the live output destination.";
+                    }
+
+                } // container live-output
+
+            } // list job
+
+            container statistics {
+                description "Information on  call trace statistics.";
+
+                container cf1 {
+                    description "location statistics for cf1";
+
+                    leaf used-space {
+                        type yang:gauge32;
+                        units "megabytes";
+                        description "The amount of used storage space in megabytes on the CF card.";
+                    }
+
+                    leaf available-space {
+                        type yang:gauge32;
+                        units "megabytes";
+                        description "The amount of available storage space in megabytes on the CF card.";
+                    }
+
+                } // container cf1
+
+                container cf2 {
+                    description "location statistics for cf2";
+
+                    leaf used-space {
+                        type yang:gauge32;
+                        units "megabytes";
+                        description "The amount of used storage space in megabytes on the CF card.";
+                    }
+
+                    leaf available-space {
+                        type yang:gauge32;
+                        units "megabytes";
+                        description "The amount of available storage space in megabytes on the CF card.";
+                    }
+
+                } // container cf2
+
+                container file {
+                    description "statistics for call trace file usage";
+
+                    leaf used-files {
+                        type yang:gauge32;
+                        description
+                            "The number of all call trace log files stored on all compact flash cards
+                             together.";
+                    }
+
+                    leaf available-files {
+                        type yang:gauge32;
+                        description
+                            "The remaining number of call trace log files available for use on all
+                             compact flash cards together.";
+                    }
+
+                } // container file
+
+            } // container statistics
+
+        } // container call-trace
+
+    } // grouping state-call-trace
+
+}

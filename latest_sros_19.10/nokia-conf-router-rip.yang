@@ -1,0 +1,504 @@
+submodule nokia-conf-router-rip {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-rip                { prefix "types-rip"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-groups;
+    include nokia-conf-policy-options;
+
+    sros-ext:sros-major-release "rel19";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure router rip protocol attributes on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-router-rip YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2019-05-06";
+
+    grouping conf-router-rip {
+        container rip {
+            must "not(./timers) or ./timers/update or ./timers/timeout or ./timers/flush" {
+                error-message "at least one of the timers must not be default";
+            }
+            must "../router-name = 'Base'" {
+                error-message "Protocol only supported in router Base";
+            }
+            presence "Enables rip functionality on this router.";
+            description "Enter the rip context";
+
+            leaf admin-state {
+                type types-sros:admin-state;
+                default "enable";
+                description "Administrative state of the RIP instance";
+            }
+
+            leaf description {
+                type types-sros:description;
+                description "Text description";
+            }
+
+            leaf authentication-key {
+                type types-sros:encrypted-leaf {
+                    length "1..51";
+                }
+                description "Authentication or hash key string.";
+            }
+
+            leaf authentication-type {
+                type types-rip:auth-type;
+                default "none";
+                description "Authentication type to be used.";
+            }
+
+            leaf bfd-liveness {
+                type boolean;
+                default "false";
+                description "Enable BFD monitoring of RIP peers.";
+            }
+
+            leaf check-zero {
+                type boolean;
+                default "false";
+                description "Check for zero values in must-be-zero fields.";
+            }
+
+            leaf-list export-policy {
+                type leafref {
+                    path "../../../policy-options/policy-statement/name";
+                }
+                max-elements 5;
+                ordered-by user;
+                description "Configure names of export policies to be used for determining which routes are exported from the routing table to this IGP.";
+            }
+
+            leaf-list import-policy {
+                type leafref {
+                    path "../../../policy-options/policy-statement/name";
+                }
+                max-elements 5;
+                ordered-by user;
+                description "Configure names of import policies to be used for determining which routes are imported from this IGP to the routing table.";
+            }
+
+            leaf message-size {
+                type types-rip:message-size;
+                default "25";
+                description "Maximum number of routes in message.";
+            }
+
+            leaf metric-in {
+                type types-rip:metric;
+                default "1";
+                description "Metric added to routes from neighbor.";
+            }
+
+            leaf metric-out {
+                type types-rip:metric;
+                default "1";
+                description "Metric added to routes exported into RIP.";
+            }
+
+            leaf preference {
+                type types-rip:preference;
+                default "100";
+                description "Route preference.";
+            }
+
+            leaf receive {
+                type types-rip:receive;
+                default "both";
+                description "Accepted version on received packets.";
+            }
+
+            leaf send {
+                type enumeration {
+                    enum "none"                         { value 1; }
+                    enum "version-1"                    { value 2; }
+                    enum "broadcast"                    { value 3; }
+                    enum "multicast"                    { value 4; }
+                }
+                default "broadcast";
+                description "RIP version and method used to send RIP updates.";
+            }
+
+            leaf split-horizon {
+                type boolean;
+                default "true";
+                description "Enable split-horizon.";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            container export-limit {
+                presence "Maximum number of routes (prefixes) that can be exported into RIP from the route table.";
+                description "Enter the export-limit context";
+
+                leaf number {
+                    type uint32 {
+                        range "1..max";
+                    }
+                    mandatory true;
+                    description "Maximum number of routes or prefixes to be exported into IGP instance from route table";
+                }
+
+                leaf log-percent {
+                    type uint32 {
+                        range "1..100";
+                    }
+                    description "Export limit at which warning a log message and SNMP notification are sent";
+                }
+
+            } // container export-limit
+
+            container timers {
+                presence "The number of seconds for each timer.";
+                description "Enter the timers context";
+
+                leaf update {
+                    type types-rip:timer-update;
+                    mandatory true;
+                    description "Controls how often updates are sent.";
+                }
+
+                leaf timeout {
+                    type types-rip:timer-timeout;
+                    mandatory true;
+                    description "Controls the amount of time before a route will be declared invalid in the routing table since the last time it was received from the peer.";
+                }
+
+                leaf flush {
+                    type types-rip:timer-flush;
+                    mandatory true;
+                    description "Controls the time a route remains in the routing table since it was declared invalid.";
+                }
+
+            } // container timers
+
+            list group {
+                key "group-name";
+                description "Enter the group list instance";
+
+                leaf group-name {
+                    type types-sros:named-item;
+                    description "RIP group name";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "enable";
+                    description "Administrative state of RIP neighbor interface group";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf-list export-policy {
+                    type leafref {
+                        path "../../../../policy-options/policy-statement/name";
+                    }
+                    max-elements 5;
+                    ordered-by user;
+                    description "Apply export policies used to determine routes advertised to group peers.";
+                }
+
+                leaf-list import-policy {
+                    type leafref {
+                        path "../../../../policy-options/policy-statement/name";
+                    }
+                    max-elements 5;
+                    ordered-by user;
+                    description "Apply import policies used to determine routes accepted from group peers.";
+                }
+
+                leaf authentication-key {
+                    type types-sros:encrypted-leaf {
+                        length "1..51";
+                    }
+                    description "Authentication or hash key string.";
+                }
+
+                leaf authentication-type {
+                    type types-rip:auth-type;
+                    description "Authentication type to be used.";
+                }
+
+                leaf bfd-liveness {
+                    must ". != 'false'" {
+                        error-message "bfd-liveness is not allowed to be set to false";
+                    }
+                    type boolean;
+                    description "Enable BFD monitoring of RIP peers.";
+                }
+
+                leaf check-zero {
+                    type boolean;
+                    description "Check for zero values in must-be-zero fields.";
+                }
+
+                leaf message-size {
+                    type types-rip:message-size;
+                    description "Maximum number of routes in message.";
+                }
+
+                leaf metric-in {
+                    type types-rip:metric;
+                    description "Metric added to routes from neighbor.";
+                }
+
+                leaf metric-out {
+                    type types-rip:metric;
+                    description "Metric added to routes exported into RIP.";
+                }
+
+                leaf preference {
+                    type types-rip:preference;
+                    description "Route preference.";
+                }
+
+                leaf receive {
+                    type types-rip:receive;
+                    description "Accepted version on received packets.";
+                }
+
+                leaf split-horizon {
+                    type boolean;
+                    description "Enable split-horizon.";
+                }
+
+                leaf send {
+                    type enumeration {
+                        enum "none"                         { value 1; }
+                        enum "version-1"                    { value 2; }
+                        enum "broadcast"                    { value 3; }
+                        enum "multicast"                    { value 4; }
+                    }
+                    description "RIP version and method used to send RIP updates.";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                container timers {
+                    presence "The number of seconds for each timer.";
+                    description "Enter the timers context";
+
+                    leaf update {
+                        type types-rip:timer-update;
+                        mandatory true;
+                        description "Controls how often updates are sent.";
+                    }
+
+                    leaf timeout {
+                        type types-rip:timer-timeout;
+                        mandatory true;
+                        description "Controls the amount of time before a route will be declared invalid in the routing table since the last time it was received from the peer.";
+                    }
+
+                    leaf flush {
+                        type types-rip:timer-flush;
+                        mandatory true;
+                        description "Controls the time a route remains in the routing table since it was declared invalid.";
+                    }
+
+                } // container timers
+
+                list neighbor {
+                    key "interface-name";
+                    description "Enter the neighbor list instance";
+
+                    leaf interface-name {
+                        must ". != 'system'" {
+                            error-message "cannot configure system interface as a neighbor.";
+                        }
+                        type types-sros:interface-name;
+                        description "Interface name.";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "enable";
+                        description "Administrative state of the RIP neighbor interface";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf-list export-policy {
+                        type leafref {
+                            path "../../../../../policy-options/policy-statement/name";
+                        }
+                        max-elements 5;
+                        ordered-by user;
+                        description "Apply export policies used to determine routes advertised to peers.";
+                    }
+
+                    leaf-list import-policy {
+                        type leafref {
+                            path "../../../../../policy-options/policy-statement/name";
+                        }
+                        max-elements 5;
+                        ordered-by user;
+                        description "Apply import policies used to determine routes accepted from peers.";
+                    }
+
+                    leaf authentication-key {
+                        type types-sros:encrypted-leaf {
+                            length "1..51";
+                        }
+                        description "Authentication or hash key string.";
+                    }
+
+                    leaf authentication-type {
+                        type types-rip:auth-type;
+                        description "Authentication type to be used.";
+                    }
+
+                    leaf bfd-liveness {
+                        must ". != 'false'" {
+                            error-message "bfd-liveness is not allowed to be set to false";
+                        }
+                        type boolean;
+                        description "Enable BFD monitoring of RIP peers.";
+                    }
+
+                    leaf check-zero {
+                        type boolean;
+                        description "Check for zero values in must-be-zero fields.";
+                    }
+
+                    leaf message-size {
+                        type types-rip:message-size;
+                        description "Maximum number of routes in message.";
+                    }
+
+                    leaf metric-in {
+                        type types-rip:metric;
+                        description "Metric added to routes from neighbor.";
+                    }
+
+                    leaf metric-out {
+                        type types-rip:metric;
+                        description "Metric added to routes exported into RIP.";
+                    }
+
+                    leaf preference {
+                        type types-rip:preference;
+                        description "Route preference.";
+                    }
+
+                    leaf receive {
+                        type types-rip:receive;
+                        description "Accepted version on received packets.";
+                    }
+
+                    leaf split-horizon {
+                        type boolean;
+                        description "Enable split-horizon.";
+                    }
+
+                    leaf send {
+                        type enumeration {
+                            enum "none"                         { value 1; }
+                            enum "version-1"                    { value 2; }
+                            enum "broadcast"                    { value 3; }
+                            enum "multicast"                    { value 4; }
+                            enum "unicast"                      { value 6; }
+                        }
+                        description "RIP version and method used to send RIP updates.";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container timers {
+                        presence "The number of seconds for each timer.";
+                        description "Enter the timers context";
+
+                        leaf update {
+                            type types-rip:timer-update;
+                            mandatory true;
+                            description "Controls how often updates are sent.";
+                        }
+
+                        leaf timeout {
+                            type types-rip:timer-timeout;
+                            mandatory true;
+                            description "Controls the amount of time before a route will be declared invalid in the routing table since the last time it was received from the peer.";
+                        }
+
+                        leaf flush {
+                            type types-rip:timer-flush;
+                            mandatory true;
+                            description "Controls the time a route remains in the routing table since it was declared invalid.";
+                        }
+
+                    } // container timers
+
+                    list unicast-address {
+                        key "address";
+                        description "Add a list entry for unicast-address";
+
+                        leaf address {
+                            type types-sros:ipv4-unicast-address;
+                            description "Create a unicast-address for the neighbor.";
+                        }
+
+                    } // list unicast-address
+
+                } // list neighbor
+
+            } // list group
+
+        } // container rip
+
+    } // grouping conf-router-rip
+
+}

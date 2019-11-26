@@ -1,0 +1,2375 @@
+submodule nokia-state-oam-pm {
+
+    yang-version "1.1";
+
+    belongs-to nokia-state { prefix "state"; }
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-oam                { prefix "types-oam"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+
+    sros-ext:sros-major-release "rel19";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model with operational state for OAM-PM configuration on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-state-oam-pm YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2019-06-03";
+
+    grouping state-oam-pm {
+        container oam-pm {
+            description "Enter the oam-pm context";
+
+            list session {
+                key "session-name";
+                description "Enter the session context";
+
+                leaf session-name {
+                    type types-sros:named-item;
+                    description "OAM-PM session name";
+                }
+
+                choice test-family-choice {
+                    mandatory true;
+                    case ethernet-case {
+
+                        container ethernet {
+                            description "Enter the ethernet context";
+
+                            container dmm {
+                                description "Enter the dmm context";
+
+                                leaf oper-state {
+                                    type enumeration {
+                                        enum "up"                           { value 1; }
+                                        enum "down"                         { value 2; }
+                                    }
+                                    description "The Operational state of OAM-PM tests for the session.";
+                                }
+
+                                leaf detected-tx-error {
+                                    type types-oam:oam-pm-session-test-detected-tx-error;
+                                    description
+                                        "Reason for the specified test's current inability (if any) to launch request frames
+
+                                         For example, 'eth-parent-admin-down(4)' could be returned for an SLM test
+                                         if the MEP to be tested is associated with a SAP which is
+                                         administratively down.
+
+                                         Not all request frame transmit failures are detected by this mechanism.
+                                         It is possible that 'none(1)' will be returned when the test is unable
+                                         to transmit frames.";
+                                }
+
+                                list delay-events {
+                                    key "bin-metric direction";
+                                    description "DMM test state information for delay-based OAM-PM Threshold Crossing Alerts (TCAs)";
+
+                                    leaf bin-metric {
+                                        type enumeration {
+                                            enum "fd"                           { value 1; }
+                                            enum "fdr"                          { value 2; }
+                                            enum "ifdv"                         { value 3; }
+                                        }
+                                        description "Frame Delay, Frame Delay Range, Inter-Frame Delay Variation";
+                                    }
+
+                                    leaf direction {
+                                        type types-oam:direction;
+                                        description "The MEF-35 traffic flow direction of an OAM-PM delay test";
+                                    }
+
+                                    leaf last-tca-time {
+                                        type yang:date-and-time;
+                                        description
+                                            "UTC date and time at the start of the measurement interval which generated the most
+                                             recent delay-based Raise or Clear TCA for the specified indices.";
+                                    }
+
+                                    leaf oper-state {
+                                        type enumeration {
+                                            enum "pending"                      { value 1; }
+                                            enum "active"                       { value 2; }
+                                            enum "not-active"                   { value 3; }
+                                        }
+                                        description
+                                            "Operational state of the Threshold Crossing Alerts (TCAs) for the specified indices.
+
+                                             The code points are as follows.  The conditions are evaluated in the
+                                             order shown.
+                                             pending
+                                                is returned if the threshold configuration for the
+                                                specified indices changed during the current measurement interval.
+                                             active
+                                                is returned if the specified indices have a default clear threshold configured,
+                                                and the current measurement interval has generated a Raise TCA.
+                                                is returned if the specified indices have a non-default clear threshold
+                                                configured, and the most recent TCA generated was a Raise.
+                                             not-active
+                                                is returned for all other conditions (e.g. thresholding is not
+                                                configured for the specified indices).";
+                                    }
+
+                                } // list delay-events
+
+                                container statistics {
+                                    description "Frame delay statistics for OAM-PM DMM tests";
+
+                                    list measurement-interval {
+                                        key "duration";
+                                        description "Set of DMM delay test statistics for OAM-PM Measurement Interval of a given duration";
+
+                                        leaf duration {
+                                            type types-oam:statistics-measurement-interval-duration;
+                                            description "The duration of the measurement interval";
+                                        }
+
+                                        leaf newest-index {
+                                            type uint32 {
+                                                range "1..max";
+                                            }
+                                            description "The interval number of the newest interval for the specified session, test type";
+                                        }
+
+                                        list number {
+                                            key "mi-number";
+                                            description "DMM delay test statistics for one OAM-PM Measurement Interval Data Set";
+
+                                            leaf mi-number {
+                                                type uint32 {
+                                                    range "1..max";
+                                                }
+                                                description "Measurement interval number (the most recent interval is newest-index)";
+                                            }
+
+                                            leaf oper-state {
+                                                type enumeration {
+                                                    enum "in-progress"                  { value 1; }
+                                                    enum "completed"                    { value 2; }
+                                                }
+                                                description "Operational state of the specified measurement interval data set";
+                                            }
+
+                                            leaf suspect {
+                                                type boolean;
+                                                description "Indicates whether or not the specified measurement interval data set contains suspect information";
+                                            }
+
+                                            leaf start-time {
+                                                type yang:date-and-time;
+                                                description "Start time (in UTC) of the specified measurement interval data set";
+                                            }
+
+                                            leaf elapsed-time {
+                                                type uint32;
+                                                units "seconds";
+                                                description "Time elapsed since data collection started for the specified measurement interval data set";
+                                            }
+
+                                            leaf frames-sent {
+                                                type uint32;
+                                                description "Number of test frames sent for the specified measurement interval data set";
+                                            }
+
+                                            leaf frames-received {
+                                                type uint32;
+                                                description "Number of test frames received for the specified measurement interval data set";
+                                            }
+
+                                            list bin-type {
+                                                key "bin-metric";
+                                                description "Per-bin-type DMM statistics for one OAM Performance Monitoring Measurement Interval Data Set";
+
+                                                leaf bin-metric {
+                                                    type enumeration {
+                                                        enum "fd"                           { value 1; }
+                                                        enum "fdr"                          { value 2; }
+                                                        enum "ifdv"                         { value 3; }
+                                                    }
+                                                    description "Frame Delay, Frame Delay Range, Inter-Frame Delay Variation";
+                                                }
+
+                                                container forward {
+                                                    description "Statistics for the forward direction";
+
+                                                    leaf minimum {
+                                                        type uint32;
+                                                        units "microseconds";
+                                                        description "Minimum delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                    }
+
+                                                    leaf maximum {
+                                                        type uint32;
+                                                        units "microseconds";
+                                                        description "Maximum delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                    }
+
+                                                    leaf average {
+                                                        type uint32;
+                                                        units "microseconds";
+                                                        description "Average delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                    }
+
+                                                } // container forward
+
+                                                container backward {
+                                                    description "Statistics for the backward direction";
+
+                                                    leaf minimum {
+                                                        type uint32;
+                                                        units "microseconds";
+                                                        description "Minimum delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                    }
+
+                                                    leaf maximum {
+                                                        type uint32;
+                                                        units "microseconds";
+                                                        description "Maximum delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                    }
+
+                                                    leaf average {
+                                                        type uint32;
+                                                        units "microseconds";
+                                                        description "Average delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                    }
+
+                                                } // container backward
+
+                                                container round-trip {
+                                                    description "Round trip statistics";
+
+                                                    leaf minimum {
+                                                        type uint32;
+                                                        units "microseconds";
+                                                        description "Minimum delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                    }
+
+                                                    leaf maximum {
+                                                        type uint32;
+                                                        units "microseconds";
+                                                        description "Maximum delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                    }
+
+                                                    leaf average {
+                                                        type uint32;
+                                                        units "microseconds";
+                                                        description "Average delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                    }
+
+                                                } // container round-trip
+
+                                                list bin {
+                                                    key "bin-number";
+                                                    description "Per-bin DMM statistics for one OAM Performance Monitoring Measurement Interval Data Set";
+
+                                                    leaf bin-number {
+                                                        type uint32 {
+                                                            range "0..9";
+                                                        }
+                                                        description "The number of the bin";
+                                                    }
+
+                                                    leaf forward-measurements {
+                                                        type uint32;
+                                                        description "Number of delay measurements in the forward direction that fall within the configured range of the specified bin";
+                                                    }
+
+                                                    leaf backward-measurements {
+                                                        type uint32;
+                                                        description "Number of frame delay measurements in the backward direction that fall within the configured range of the specified bin";
+                                                    }
+
+                                                    leaf round-trip-measurements {
+                                                        type uint32;
+                                                        description "Number of round trip frame delay measurements that fall within the configured range of the specified bin";
+                                                    }
+
+                                                } // list bin
+
+                                            } // list bin-type
+
+                                        } // list number
+
+                                    } // list measurement-interval
+
+                                } // container statistics
+
+                            } // container dmm
+
+                            container lmm {
+                                description "Enter the lmm context";
+
+                                leaf oper-state {
+                                    type enumeration {
+                                        enum "up"                           { value 1; }
+                                        enum "down"                         { value 2; }
+                                    }
+                                    description "The Operational state of OAM-PM tests for the session.";
+                                }
+
+                                leaf detected-tx-error {
+                                    type types-oam:oam-pm-session-test-detected-tx-error;
+                                    description
+                                        "Reason for the specified test's current inability (if any) to launch request frames
+
+                                         For example, 'eth-parent-admin-down(4)' could be returned for an SLM test
+                                         if the MEP to be tested is associated with a SAP which is
+                                         administratively down.
+
+                                         Not all request frame transmit failures are detected by this mechanism.
+                                         It is possible that 'none(1)' will be returned when the test is unable
+                                         to transmit frames.";
+                                }
+
+                                container loss-events {
+                                    description "Enter the loss-events context";
+
+                                    list avg-flr-event {
+                                        key "direction";
+                                        description "Enter the avg-flr-event context";
+
+                                        leaf direction {
+                                            type enumeration {
+                                                enum "forward"                      { value 1; }
+                                                enum "backward"                     { value 2; }
+                                            }
+                                            description "Traffic flow direction";
+                                        }
+
+                                        leaf last-tca-time {
+                                            type yang:date-and-time;
+                                            description
+                                                "UTC date and time at the start of the measurement interval which generated the most
+                                                 recent delay-based Raise or Clear TCA for the specified indices.";
+                                        }
+
+                                        leaf oper-state {
+                                            type enumeration {
+                                                enum "pending"                      { value 1; }
+                                                enum "active"                       { value 2; }
+                                                enum "not-active"                   { value 3; }
+                                            }
+                                            description
+                                                "Operational state of the Threshold Crossing Alerts (TCAs) for the specified indices.
+
+                                                 The code points are as follows.  The conditions are evaluated in the
+                                                 order shown.
+                                                 pending
+                                                    is returned if the threshold configuration for the
+                                                    specified indices changed during the current measurement interval.
+                                                 active
+                                                    is returned if the specified indices have a default clear threshold configured,
+                                                    and the current measurement interval has generated a Raise TCA.
+                                                    is returned if the specified indices have a non-default clear threshold
+                                                    configured, and the most recent TCA generated was a Raise.
+                                                 not-active
+                                                    is returned for all other conditions (e.g. thresholding is not
+                                                    configured for the specified indices).";
+                                        }
+
+                                    } // list avg-flr-event
+
+                                    list chli-event {
+                                        key "direction";
+                                        description "Enter the chli-event context";
+
+                                        leaf direction {
+                                            type enumeration {
+                                                enum "forward"                      { value 1; }
+                                                enum "backward"                     { value 2; }
+                                                enum "aggregate"                    { value 3; }
+                                            }
+                                            description "Traffic flow direction";
+                                        }
+
+                                        leaf last-tca-time {
+                                            type yang:date-and-time;
+                                            description
+                                                "UTC date and time at the start of the measurement interval which generated the most
+                                                 recent delay-based Raise or Clear TCA for the specified indices.";
+                                        }
+
+                                        leaf oper-state {
+                                            type enumeration {
+                                                enum "pending"                      { value 1; }
+                                                enum "active"                       { value 2; }
+                                                enum "not-active"                   { value 3; }
+                                            }
+                                            description
+                                                "Operational state of the Threshold Crossing Alerts (TCAs) for the specified indices.
+
+                                                 The code points are as follows.  The conditions are evaluated in the
+                                                 order shown.
+                                                 pending
+                                                    is returned if the threshold configuration for the
+                                                    specified indices changed during the current measurement interval.
+                                                 active
+                                                    is returned if the specified indices have a default clear threshold configured,
+                                                    and the current measurement interval has generated a Raise TCA.
+                                                    is returned if the specified indices have a non-default clear threshold
+                                                    configured, and the most recent TCA generated was a Raise.
+                                                 not-active
+                                                    is returned for all other conditions (e.g. thresholding is not
+                                                    configured for the specified indices).";
+                                        }
+
+                                    } // list chli-event
+
+                                    list hli-event {
+                                        key "direction";
+                                        description "Enter the hli-event context";
+
+                                        leaf direction {
+                                            type enumeration {
+                                                enum "forward"                      { value 1; }
+                                                enum "backward"                     { value 2; }
+                                                enum "aggregate"                    { value 3; }
+                                            }
+                                            description "Traffic flow direction";
+                                        }
+
+                                        leaf last-tca-time {
+                                            type yang:date-and-time;
+                                            description
+                                                "UTC date and time at the start of the measurement interval which generated the most
+                                                 recent delay-based Raise or Clear TCA for the specified indices.";
+                                        }
+
+                                        leaf oper-state {
+                                            type enumeration {
+                                                enum "pending"                      { value 1; }
+                                                enum "active"                       { value 2; }
+                                                enum "not-active"                   { value 3; }
+                                            }
+                                            description
+                                                "Operational state of the Threshold Crossing Alerts (TCAs) for the specified indices.
+
+                                                 The code points are as follows.  The conditions are evaluated in the
+                                                 order shown.
+                                                 pending
+                                                    is returned if the threshold configuration for the
+                                                    specified indices changed during the current measurement interval.
+                                                 active
+                                                    is returned if the specified indices have a default clear threshold configured,
+                                                    and the current measurement interval has generated a Raise TCA.
+                                                    is returned if the specified indices have a non-default clear threshold
+                                                    configured, and the most recent TCA generated was a Raise.
+                                                 not-active
+                                                    is returned for all other conditions (e.g. thresholding is not
+                                                    configured for the specified indices).";
+                                        }
+
+                                    } // list hli-event
+
+                                    list unavailability-event {
+                                        key "direction";
+                                        description "Enter the unavailability-event context";
+
+                                        leaf direction {
+                                            type enumeration {
+                                                enum "forward"                      { value 1; }
+                                                enum "backward"                     { value 2; }
+                                                enum "aggregate"                    { value 3; }
+                                            }
+                                            description "Traffic flow direction";
+                                        }
+
+                                        leaf last-tca-time {
+                                            type yang:date-and-time;
+                                            description
+                                                "UTC date and time at the start of the measurement interval which generated the most
+                                                 recent delay-based Raise or Clear TCA for the specified indices.";
+                                        }
+
+                                        leaf oper-state {
+                                            type enumeration {
+                                                enum "pending"                      { value 1; }
+                                                enum "active"                       { value 2; }
+                                                enum "not-active"                   { value 3; }
+                                            }
+                                            description
+                                                "Operational state of the Threshold Crossing Alerts (TCAs) for the specified indices.
+
+                                                 The code points are as follows.  The conditions are evaluated in the
+                                                 order shown.
+                                                 pending
+                                                    is returned if the threshold configuration for the
+                                                    specified indices changed during the current measurement interval.
+                                                 active
+                                                    is returned if the specified indices have a default clear threshold configured,
+                                                    and the current measurement interval has generated a Raise TCA.
+                                                    is returned if the specified indices have a non-default clear threshold
+                                                    configured, and the most recent TCA generated was a Raise.
+                                                 not-active
+                                                    is returned for all other conditions (e.g. thresholding is not
+                                                    configured for the specified indices).";
+                                        }
+
+                                    } // list unavailability-event
+
+                                    list undet-availability-event {
+                                        key "direction";
+                                        description "Enter the undet-availability-event context";
+
+                                        leaf direction {
+                                            type enumeration {
+                                                enum "forward"                      { value 1; }
+                                                enum "backward"                     { value 2; }
+                                                enum "aggregate"                    { value 3; }
+                                            }
+                                            description "Traffic flow direction";
+                                        }
+
+                                        leaf last-tca-time {
+                                            type yang:date-and-time;
+                                            description
+                                                "UTC date and time at the start of the measurement interval which generated the most
+                                                 recent delay-based Raise or Clear TCA for the specified indices.";
+                                        }
+
+                                        leaf oper-state {
+                                            type enumeration {
+                                                enum "pending"                      { value 1; }
+                                                enum "active"                       { value 2; }
+                                                enum "not-active"                   { value 3; }
+                                            }
+                                            description
+                                                "Operational state of the Threshold Crossing Alerts (TCAs) for the specified indices.
+
+                                                 The code points are as follows.  The conditions are evaluated in the
+                                                 order shown.
+                                                 pending
+                                                    is returned if the threshold configuration for the
+                                                    specified indices changed during the current measurement interval.
+                                                 active
+                                                    is returned if the specified indices have a default clear threshold configured,
+                                                    and the current measurement interval has generated a Raise TCA.
+                                                    is returned if the specified indices have a non-default clear threshold
+                                                    configured, and the most recent TCA generated was a Raise.
+                                                 not-active
+                                                    is returned for all other conditions (e.g. thresholding is not
+                                                    configured for the specified indices).";
+                                        }
+
+                                    } // list undet-availability-event
+
+                                    list undet-unavailability-event {
+                                        key "direction";
+                                        description "Enter the undet-unavailability-event context";
+
+                                        leaf direction {
+                                            type enumeration {
+                                                enum "forward"                      { value 1; }
+                                                enum "backward"                     { value 2; }
+                                                enum "aggregate"                    { value 3; }
+                                            }
+                                            description "Traffic flow direction";
+                                        }
+
+                                        leaf last-tca-time {
+                                            type yang:date-and-time;
+                                            description
+                                                "UTC date and time at the start of the measurement interval which generated the most
+                                                 recent delay-based Raise or Clear TCA for the specified indices.";
+                                        }
+
+                                        leaf oper-state {
+                                            type enumeration {
+                                                enum "pending"                      { value 1; }
+                                                enum "active"                       { value 2; }
+                                                enum "not-active"                   { value 3; }
+                                            }
+                                            description
+                                                "Operational state of the Threshold Crossing Alerts (TCAs) for the specified indices.
+
+                                                 The code points are as follows.  The conditions are evaluated in the
+                                                 order shown.
+                                                 pending
+                                                    is returned if the threshold configuration for the
+                                                    specified indices changed during the current measurement interval.
+                                                 active
+                                                    is returned if the specified indices have a default clear threshold configured,
+                                                    and the current measurement interval has generated a Raise TCA.
+                                                    is returned if the specified indices have a non-default clear threshold
+                                                    configured, and the most recent TCA generated was a Raise.
+                                                 not-active
+                                                    is returned for all other conditions (e.g. thresholding is not
+                                                    configured for the specified indices).";
+                                        }
+
+                                    } // list undet-unavailability-event
+
+                                } // container loss-events
+
+                                container statistics {
+                                    description "Frame loss statistics for OAM-PM LMM tests";
+
+                                    list measurement-interval {
+                                        key "duration";
+                                        description "Set of LMM loss test statistics for OAM-PM Measurement Interval of a given duration";
+
+                                        leaf duration {
+                                            type types-oam:statistics-measurement-interval-duration;
+                                            description "The duration of the measurement interval";
+                                        }
+
+                                        leaf newest-index {
+                                            type uint32 {
+                                                range "1..max";
+                                            }
+                                            description "The interval number of the newest interval for the specified session, test type";
+                                        }
+
+                                        list number {
+                                            key "mi-number";
+                                            description "LMM loss test statistics for one OAM-PM Measurement Interval Data Set";
+
+                                            leaf mi-number {
+                                                type uint32 {
+                                                    range "1..max";
+                                                }
+                                                description "Measurement interval number (the most recent interval is newest-index)";
+                                            }
+
+                                            leaf oper-state {
+                                                type enumeration {
+                                                    enum "in-progress"                  { value 1; }
+                                                    enum "completed"                    { value 2; }
+                                                }
+                                                description "Operational state of the specified measurement interval data set";
+                                            }
+
+                                            leaf suspect {
+                                                type boolean;
+                                                description "Indicates whether or not the specified measurement interval data set contains suspect information";
+                                            }
+
+                                            leaf start-time {
+                                                type yang:date-and-time;
+                                                description "Start time (in UTC) of the specified measurement interval data set";
+                                            }
+
+                                            leaf elapsed-time {
+                                                type uint32;
+                                                units "seconds";
+                                                description "Time elapsed since data collection started for the specified measurement interval data set";
+                                            }
+
+                                            leaf frames-sent {
+                                                type uint32;
+                                                description "Number of test frames sent for the specified measurement interval data set";
+                                            }
+
+                                            leaf frames-received {
+                                                type uint32;
+                                                description "Number of test frames received for the specified measurement interval data set";
+                                            }
+
+                                            container forward {
+                                                description "Statistics for the forward direction";
+
+                                                leaf tx {
+                                                    type uint64;
+                                                    description "Number of test request frames transmitted for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf rx {
+                                                    type uint64;
+                                                    description "Number of test request frames received for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf available {
+                                                    type uint32;
+                                                    description "Number of availability indicators evaluated as Available for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf unavailable {
+                                                    type uint32;
+                                                    description "Number of availability indicators evaluated as Unavailable for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf undetermined-available {
+                                                    type uint32;
+                                                    description "Number of availability indicators evaluated as Available in a given direction, based on extrapolation from the previous state";
+                                                }
+
+                                                leaf undetermined-unavailable {
+                                                    type uint32;
+                                                    description "Number of availability indicators evaluated as Unavailable in a given direction, based on extrapolation from the previous state";
+                                                }
+
+                                                leaf high-loss-intervals {
+                                                    type uint32;
+                                                    description "Number of High Loss Intervals (HLIs) for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf consecutive-high-loss-intervals {
+                                                    type uint32;
+                                                    description "Number of Consecutive High Loss Intervals (CHLIs) for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf minimum-frame-loss-ratio {
+                                                    type uint32;
+                                                    units "millipercent";
+                                                    description "Minimum Frame Loss Ratio (FLR) for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf maximum-frame-loss-ratio {
+                                                    type uint32;
+                                                    units "millipercent";
+                                                    description "Maximum Frame Loss Ratio (FLR) for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf average-frame-loss-ratio {
+                                                    type uint32;
+                                                    units "millipercent";
+                                                    description "Average Frame Loss Ratio (FLR) for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf undetermined-delta-ts {
+                                                    type uint32;
+                                                    description "Number of undetermined MEF-35 'delta_t's for the specified direction and measurement interval data set";
+                                                }
+
+                                            } // container forward
+
+                                            container backward {
+                                                description "Statistics for the backward direction";
+
+                                                leaf tx {
+                                                    type uint64;
+                                                    description "Number of test request frames transmitted for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf rx {
+                                                    type uint64;
+                                                    description "Number of test request frames received for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf available {
+                                                    type uint32;
+                                                    description "Number of availability indicators evaluated as Available for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf unavailable {
+                                                    type uint32;
+                                                    description "Number of availability indicators evaluated as Unavailable for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf undetermined-available {
+                                                    type uint32;
+                                                    description "Number of availability indicators evaluated as Available in a given direction, based on extrapolation from the previous state";
+                                                }
+
+                                                leaf undetermined-unavailable {
+                                                    type uint32;
+                                                    description "Number of availability indicators evaluated as Unavailable in a given direction, based on extrapolation from the previous state";
+                                                }
+
+                                                leaf high-loss-intervals {
+                                                    type uint32;
+                                                    description "Number of High Loss Intervals (HLIs) for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf consecutive-high-loss-intervals {
+                                                    type uint32;
+                                                    description "Number of Consecutive High Loss Intervals (CHLIs) for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf minimum-frame-loss-ratio {
+                                                    type uint32;
+                                                    units "millipercent";
+                                                    description "Minimum Frame Loss Ratio (FLR) for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf maximum-frame-loss-ratio {
+                                                    type uint32;
+                                                    units "millipercent";
+                                                    description "Maximum Frame Loss Ratio (FLR) for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf average-frame-loss-ratio {
+                                                    type uint32;
+                                                    units "millipercent";
+                                                    description "Average Frame Loss Ratio (FLR) for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf undetermined-delta-ts {
+                                                    type uint32;
+                                                    description "Number of undetermined MEF-35 'delta_t's for the specified direction and measurement interval data set";
+                                                }
+
+                                            } // container backward
+
+                                        } // list number
+
+                                    } // list measurement-interval
+
+                                } // container statistics
+
+                            } // container lmm
+
+                            container slm {
+                                description "Enter the slm context";
+
+                                leaf oper-state {
+                                    type enumeration {
+                                        enum "up"                           { value 1; }
+                                        enum "down"                         { value 2; }
+                                    }
+                                    description "The Operational state of OAM-PM tests for the session.";
+                                }
+
+                                leaf detected-tx-error {
+                                    type types-oam:oam-pm-session-test-detected-tx-error;
+                                    description
+                                        "Reason for the specified test's current inability (if any) to launch request frames
+
+                                         For example, 'eth-parent-admin-down(4)' could be returned for an SLM test
+                                         if the MEP to be tested is associated with a SAP which is
+                                         administratively down.
+
+                                         Not all request frame transmit failures are detected by this mechanism.
+                                         It is possible that 'none(1)' will be returned when the test is unable
+                                         to transmit frames.";
+                                }
+
+                                container loss-events {
+                                    description "Enter the loss-events context";
+
+                                    list avg-flr-event {
+                                        key "direction";
+                                        description "Enter the avg-flr-event context";
+
+                                        leaf direction {
+                                            type enumeration {
+                                                enum "forward"                      { value 1; }
+                                                enum "backward"                     { value 2; }
+                                            }
+                                            description "Traffic flow direction";
+                                        }
+
+                                        leaf last-tca-time {
+                                            type yang:date-and-time;
+                                            description
+                                                "UTC date and time at the start of the measurement interval which generated the most
+                                                 recent delay-based Raise or Clear TCA for the specified indices.";
+                                        }
+
+                                        leaf oper-state {
+                                            type enumeration {
+                                                enum "pending"                      { value 1; }
+                                                enum "active"                       { value 2; }
+                                                enum "not-active"                   { value 3; }
+                                            }
+                                            description
+                                                "Operational state of the Threshold Crossing Alerts (TCAs) for the specified indices.
+
+                                                 The code points are as follows.  The conditions are evaluated in the
+                                                 order shown.
+                                                 pending
+                                                    is returned if the threshold configuration for the
+                                                    specified indices changed during the current measurement interval.
+                                                 active
+                                                    is returned if the specified indices have a default clear threshold configured,
+                                                    and the current measurement interval has generated a Raise TCA.
+                                                    is returned if the specified indices have a non-default clear threshold
+                                                    configured, and the most recent TCA generated was a Raise.
+                                                 not-active
+                                                    is returned for all other conditions (e.g. thresholding is not
+                                                    configured for the specified indices).";
+                                        }
+
+                                    } // list avg-flr-event
+
+                                    list chli-event {
+                                        key "direction";
+                                        description "Enter the chli-event context";
+
+                                        leaf direction {
+                                            type enumeration {
+                                                enum "forward"                      { value 1; }
+                                                enum "backward"                     { value 2; }
+                                                enum "aggregate"                    { value 3; }
+                                            }
+                                            description "Traffic flow direction";
+                                        }
+
+                                        leaf last-tca-time {
+                                            type yang:date-and-time;
+                                            description
+                                                "UTC date and time at the start of the measurement interval which generated the most
+                                                 recent delay-based Raise or Clear TCA for the specified indices.";
+                                        }
+
+                                        leaf oper-state {
+                                            type enumeration {
+                                                enum "pending"                      { value 1; }
+                                                enum "active"                       { value 2; }
+                                                enum "not-active"                   { value 3; }
+                                            }
+                                            description
+                                                "Operational state of the Threshold Crossing Alerts (TCAs) for the specified indices.
+
+                                                 The code points are as follows.  The conditions are evaluated in the
+                                                 order shown.
+                                                 pending
+                                                    is returned if the threshold configuration for the
+                                                    specified indices changed during the current measurement interval.
+                                                 active
+                                                    is returned if the specified indices have a default clear threshold configured,
+                                                    and the current measurement interval has generated a Raise TCA.
+                                                    is returned if the specified indices have a non-default clear threshold
+                                                    configured, and the most recent TCA generated was a Raise.
+                                                 not-active
+                                                    is returned for all other conditions (e.g. thresholding is not
+                                                    configured for the specified indices).";
+                                        }
+
+                                    } // list chli-event
+
+                                    list hli-event {
+                                        key "direction";
+                                        description "Enter the hli-event context";
+
+                                        leaf direction {
+                                            type enumeration {
+                                                enum "forward"                      { value 1; }
+                                                enum "backward"                     { value 2; }
+                                                enum "aggregate"                    { value 3; }
+                                            }
+                                            description "Traffic flow direction";
+                                        }
+
+                                        leaf last-tca-time {
+                                            type yang:date-and-time;
+                                            description
+                                                "UTC date and time at the start of the measurement interval which generated the most
+                                                 recent delay-based Raise or Clear TCA for the specified indices.";
+                                        }
+
+                                        leaf oper-state {
+                                            type enumeration {
+                                                enum "pending"                      { value 1; }
+                                                enum "active"                       { value 2; }
+                                                enum "not-active"                   { value 3; }
+                                            }
+                                            description
+                                                "Operational state of the Threshold Crossing Alerts (TCAs) for the specified indices.
+
+                                                 The code points are as follows.  The conditions are evaluated in the
+                                                 order shown.
+                                                 pending
+                                                    is returned if the threshold configuration for the
+                                                    specified indices changed during the current measurement interval.
+                                                 active
+                                                    is returned if the specified indices have a default clear threshold configured,
+                                                    and the current measurement interval has generated a Raise TCA.
+                                                    is returned if the specified indices have a non-default clear threshold
+                                                    configured, and the most recent TCA generated was a Raise.
+                                                 not-active
+                                                    is returned for all other conditions (e.g. thresholding is not
+                                                    configured for the specified indices).";
+                                        }
+
+                                    } // list hli-event
+
+                                    list unavailability-event {
+                                        key "direction";
+                                        description "Enter the unavailability-event context";
+
+                                        leaf direction {
+                                            type enumeration {
+                                                enum "forward"                      { value 1; }
+                                                enum "backward"                     { value 2; }
+                                                enum "aggregate"                    { value 3; }
+                                            }
+                                            description "Traffic flow direction";
+                                        }
+
+                                        leaf last-tca-time {
+                                            type yang:date-and-time;
+                                            description
+                                                "UTC date and time at the start of the measurement interval which generated the most
+                                                 recent delay-based Raise or Clear TCA for the specified indices.";
+                                        }
+
+                                        leaf oper-state {
+                                            type enumeration {
+                                                enum "pending"                      { value 1; }
+                                                enum "active"                       { value 2; }
+                                                enum "not-active"                   { value 3; }
+                                            }
+                                            description
+                                                "Operational state of the Threshold Crossing Alerts (TCAs) for the specified indices.
+
+                                                 The code points are as follows.  The conditions are evaluated in the
+                                                 order shown.
+                                                 pending
+                                                    is returned if the threshold configuration for the
+                                                    specified indices changed during the current measurement interval.
+                                                 active
+                                                    is returned if the specified indices have a default clear threshold configured,
+                                                    and the current measurement interval has generated a Raise TCA.
+                                                    is returned if the specified indices have a non-default clear threshold
+                                                    configured, and the most recent TCA generated was a Raise.
+                                                 not-active
+                                                    is returned for all other conditions (e.g. thresholding is not
+                                                    configured for the specified indices).";
+                                        }
+
+                                    } // list unavailability-event
+
+                                    list undet-availability-event {
+                                        key "direction";
+                                        description "Enter the undet-availability-event context";
+
+                                        leaf direction {
+                                            type enumeration {
+                                                enum "forward"                      { value 1; }
+                                                enum "backward"                     { value 2; }
+                                                enum "aggregate"                    { value 3; }
+                                            }
+                                            description "Traffic flow direction";
+                                        }
+
+                                        leaf last-tca-time {
+                                            type yang:date-and-time;
+                                            description
+                                                "UTC date and time at the start of the measurement interval which generated the most
+                                                 recent delay-based Raise or Clear TCA for the specified indices.";
+                                        }
+
+                                        leaf oper-state {
+                                            type enumeration {
+                                                enum "pending"                      { value 1; }
+                                                enum "active"                       { value 2; }
+                                                enum "not-active"                   { value 3; }
+                                            }
+                                            description
+                                                "Operational state of the Threshold Crossing Alerts (TCAs) for the specified indices.
+
+                                                 The code points are as follows.  The conditions are evaluated in the
+                                                 order shown.
+                                                 pending
+                                                    is returned if the threshold configuration for the
+                                                    specified indices changed during the current measurement interval.
+                                                 active
+                                                    is returned if the specified indices have a default clear threshold configured,
+                                                    and the current measurement interval has generated a Raise TCA.
+                                                    is returned if the specified indices have a non-default clear threshold
+                                                    configured, and the most recent TCA generated was a Raise.
+                                                 not-active
+                                                    is returned for all other conditions (e.g. thresholding is not
+                                                    configured for the specified indices).";
+                                        }
+
+                                    } // list undet-availability-event
+
+                                    list undet-unavailability-event {
+                                        key "direction";
+                                        description "Enter the undet-unavailability-event context";
+
+                                        leaf direction {
+                                            type enumeration {
+                                                enum "forward"                      { value 1; }
+                                                enum "backward"                     { value 2; }
+                                                enum "aggregate"                    { value 3; }
+                                            }
+                                            description "Traffic flow direction";
+                                        }
+
+                                        leaf last-tca-time {
+                                            type yang:date-and-time;
+                                            description
+                                                "UTC date and time at the start of the measurement interval which generated the most
+                                                 recent delay-based Raise or Clear TCA for the specified indices.";
+                                        }
+
+                                        leaf oper-state {
+                                            type enumeration {
+                                                enum "pending"                      { value 1; }
+                                                enum "active"                       { value 2; }
+                                                enum "not-active"                   { value 3; }
+                                            }
+                                            description
+                                                "Operational state of the Threshold Crossing Alerts (TCAs) for the specified indices.
+
+                                                 The code points are as follows.  The conditions are evaluated in the
+                                                 order shown.
+                                                 pending
+                                                    is returned if the threshold configuration for the
+                                                    specified indices changed during the current measurement interval.
+                                                 active
+                                                    is returned if the specified indices have a default clear threshold configured,
+                                                    and the current measurement interval has generated a Raise TCA.
+                                                    is returned if the specified indices have a non-default clear threshold
+                                                    configured, and the most recent TCA generated was a Raise.
+                                                 not-active
+                                                    is returned for all other conditions (e.g. thresholding is not
+                                                    configured for the specified indices).";
+                                        }
+
+                                    } // list undet-unavailability-event
+
+                                } // container loss-events
+
+                                container statistics {
+                                    description "Frame loss statistics for OAM-PM SLM tests";
+
+                                    list measurement-interval {
+                                        key "duration";
+                                        description "Set of SLM loss test statistics for OAM-PM Measurement Interval of a given duration";
+
+                                        leaf duration {
+                                            type types-oam:statistics-measurement-interval-duration;
+                                            description "The duration of the measurement interval";
+                                        }
+
+                                        leaf newest-index {
+                                            type uint32 {
+                                                range "1..max";
+                                            }
+                                            description "The interval number of the newest interval for the specified session, test type";
+                                        }
+
+                                        list number {
+                                            key "mi-number";
+                                            description "SLM loss test statistics for one OAM-PM Measurement Interval Data Set";
+
+                                            leaf mi-number {
+                                                type uint32 {
+                                                    range "1..max";
+                                                }
+                                                description "Measurement interval number (the most recent interval is newest-index)";
+                                            }
+
+                                            leaf oper-state {
+                                                type enumeration {
+                                                    enum "in-progress"                  { value 1; }
+                                                    enum "completed"                    { value 2; }
+                                                }
+                                                description "Operational state of the specified measurement interval data set";
+                                            }
+
+                                            leaf suspect {
+                                                type boolean;
+                                                description "Indicates whether or not the specified measurement interval data set contains suspect information";
+                                            }
+
+                                            leaf start-time {
+                                                type yang:date-and-time;
+                                                description "Start time (in UTC) of the specified measurement interval data set";
+                                            }
+
+                                            leaf elapsed-time {
+                                                type uint32;
+                                                units "seconds";
+                                                description "Time elapsed since data collection started for the specified measurement interval data set";
+                                            }
+
+                                            leaf frames-sent {
+                                                type uint32;
+                                                description "Number of test frames sent for the specified measurement interval data set";
+                                            }
+
+                                            leaf frames-received {
+                                                type uint32;
+                                                description "Number of test frames received for the specified measurement interval data set";
+                                            }
+
+                                            container forward {
+                                                description "Statistics for the forward direction";
+
+                                                leaf tx {
+                                                    type uint32;
+                                                    description "Number of test request frames transmitted for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf rx {
+                                                    type uint32;
+                                                    description "Number of test request frames received for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf available {
+                                                    type uint32;
+                                                    description "Number of availability indicators evaluated as Available for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf unavailable {
+                                                    type uint32;
+                                                    description "Number of availability indicators evaluated as Unavailable for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf undetermined-available {
+                                                    type uint32;
+                                                    description "Number of availability indicators evaluated as Available in a given direction, based on extrapolation from the previous state";
+                                                }
+
+                                                leaf undetermined-unavailable {
+                                                    type uint32;
+                                                    description "Number of availability indicators evaluated as Unavailable in a given direction, based on extrapolation from the previous state";
+                                                }
+
+                                                leaf high-loss-intervals {
+                                                    type uint32;
+                                                    description "Number of High Loss Intervals (HLIs) for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf consecutive-high-loss-intervals {
+                                                    type uint32;
+                                                    description "Number of Consecutive High Loss Intervals (CHLIs) for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf minimum-frame-loss-ratio {
+                                                    type uint32;
+                                                    units "millipercent";
+                                                    description "Minimum Frame Loss Ratio (FLR) for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf maximum-frame-loss-ratio {
+                                                    type uint32;
+                                                    units "millipercent";
+                                                    description "Maximum Frame Loss Ratio (FLR) for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf average-frame-loss-ratio {
+                                                    type uint32;
+                                                    units "millipercent";
+                                                    description "Average Frame Loss Ratio (FLR) for the specified direction and measurement interval data set";
+                                                }
+
+                                            } // container forward
+
+                                            container backward {
+                                                description "Statistics for the backward direction";
+
+                                                leaf tx {
+                                                    type uint32;
+                                                    description "Number of test request frames transmitted for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf rx {
+                                                    type uint32;
+                                                    description "Number of test request frames received for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf available {
+                                                    type uint32;
+                                                    description "Number of availability indicators evaluated as Available for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf unavailable {
+                                                    type uint32;
+                                                    description "Number of availability indicators evaluated as Unavailable for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf undetermined-available {
+                                                    type uint32;
+                                                    description "Number of availability indicators evaluated as Available in a given direction, based on extrapolation from the previous state";
+                                                }
+
+                                                leaf undetermined-unavailable {
+                                                    type uint32;
+                                                    description "Number of availability indicators evaluated as Unavailable in a given direction, based on extrapolation from the previous state";
+                                                }
+
+                                                leaf high-loss-intervals {
+                                                    type uint32;
+                                                    description "Number of High Loss Intervals (HLIs) for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf consecutive-high-loss-intervals {
+                                                    type uint32;
+                                                    description "Number of Consecutive High Loss Intervals (CHLIs) for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf minimum-frame-loss-ratio {
+                                                    type uint32;
+                                                    units "millipercent";
+                                                    description "Minimum Frame Loss Ratio (FLR) for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf maximum-frame-loss-ratio {
+                                                    type uint32;
+                                                    units "millipercent";
+                                                    description "Maximum Frame Loss Ratio (FLR) for the specified direction and measurement interval data set";
+                                                }
+
+                                                leaf average-frame-loss-ratio {
+                                                    type uint32;
+                                                    units "millipercent";
+                                                    description "Average Frame Loss Ratio (FLR) for the specified direction and measurement interval data set";
+                                                }
+
+                                            } // container backward
+
+                                        } // list number
+
+                                    } // list measurement-interval
+
+                                } // container statistics
+
+                            } // container slm
+
+                        } // container ethernet
+
+                    }
+                    case ip-case {
+
+                        container ip {
+                            description "Enter the ip context";
+
+                            container twamp-light {
+                                description "Enter the twamp-light context";
+
+                                leaf oper-state {
+                                    type enumeration {
+                                        enum "up"                           { value 1; }
+                                        enum "down"                         { value 2; }
+                                    }
+                                    description "The Operational state of OAM-PM tests for the session.";
+                                }
+
+                                leaf detected-tx-error {
+                                    type types-oam:oam-pm-session-test-detected-tx-error;
+                                    description
+                                        "Reason for the specified test's current inability (if any) to launch request frames
+
+                                         For example, 'eth-parent-admin-down(4)' could be returned for an SLM test
+                                         if the MEP to be tested is associated with a SAP which is
+                                         administratively down.
+
+                                         Not all request frame transmit failures are detected by this mechanism.
+                                         It is possible that 'none(1)' will be returned when the test is unable
+                                         to transmit frames.";
+                                }
+
+                                list delay-events {
+                                    key "bin-metric direction";
+                                    description "TWAMP Light test state for delay-based OAM-PM Threshold Crossing Alerts (TCAs)";
+
+                                    leaf bin-metric {
+                                        type enumeration {
+                                            enum "fd"                           { value 1; }
+                                            enum "fdr"                          { value 2; }
+                                            enum "ifdv"                         { value 3; }
+                                        }
+                                        description "Frame Delay, Frame Delay Range, Inter-Frame Delay Variation";
+                                    }
+
+                                    leaf direction {
+                                        type types-oam:direction;
+                                        description "The MEF-35 traffic flow direction of an OAM-PM delay test";
+                                    }
+
+                                    leaf last-tca-time {
+                                        type yang:date-and-time;
+                                        description
+                                            "UTC date and time at the start of the measurement interval which generated the most
+                                             recent delay-based Raise or Clear TCA for the specified indices.";
+                                    }
+
+                                    leaf oper-state {
+                                        type enumeration {
+                                            enum "pending"                      { value 1; }
+                                            enum "active"                       { value 2; }
+                                            enum "not-active"                   { value 3; }
+                                        }
+                                        description
+                                            "Operational state of the Threshold Crossing Alerts (TCAs) for the specified indices.
+
+                                             The code points are as follows.  The conditions are evaluated in the
+                                             order shown.
+                                             pending
+                                                is returned if the threshold configuration for the
+                                                specified indices changed during the current measurement interval.
+                                             active
+                                                is returned if the specified indices have a default clear threshold configured,
+                                                and the current measurement interval has generated a Raise TCA.
+                                                is returned if the specified indices have a non-default clear threshold
+                                                configured, and the most recent TCA generated was a Raise.
+                                             not-active
+                                                is returned for all other conditions (e.g. thresholding is not
+                                                configured for the specified indices).";
+                                    }
+
+                                } // list delay-events
+
+                                container loss-events {
+                                    description "Enter the loss-events context";
+
+                                    list avg-flr-event {
+                                        key "direction";
+                                        description "Enter the avg-flr-event context";
+
+                                        leaf direction {
+                                            type enumeration {
+                                                enum "forward"                      { value 1; }
+                                                enum "backward"                     { value 2; }
+                                            }
+                                            description "Traffic flow direction";
+                                        }
+
+                                        leaf last-tca-time {
+                                            type yang:date-and-time;
+                                            description
+                                                "UTC date and time at the start of the measurement interval which generated the most
+                                                 recent delay-based Raise or Clear TCA for the specified indices.";
+                                        }
+
+                                        leaf oper-state {
+                                            type enumeration {
+                                                enum "pending"                      { value 1; }
+                                                enum "active"                       { value 2; }
+                                                enum "not-active"                   { value 3; }
+                                            }
+                                            description
+                                                "Operational state of the Threshold Crossing Alerts (TCAs) for the specified indices.
+
+                                                 The code points are as follows.  The conditions are evaluated in the
+                                                 order shown.
+                                                 pending
+                                                    is returned if the threshold configuration for the
+                                                    specified indices changed during the current measurement interval.
+                                                 active
+                                                    is returned if the specified indices have a default clear threshold configured,
+                                                    and the current measurement interval has generated a Raise TCA.
+                                                    is returned if the specified indices have a non-default clear threshold
+                                                    configured, and the most recent TCA generated was a Raise.
+                                                 not-active
+                                                    is returned for all other conditions (e.g. thresholding is not
+                                                    configured for the specified indices).";
+                                        }
+
+                                    } // list avg-flr-event
+
+                                    list chli-event {
+                                        key "direction";
+                                        description "Enter the chli-event context";
+
+                                        leaf direction {
+                                            type enumeration {
+                                                enum "forward"                      { value 1; }
+                                                enum "backward"                     { value 2; }
+                                                enum "aggregate"                    { value 3; }
+                                            }
+                                            description "Traffic flow direction";
+                                        }
+
+                                        leaf last-tca-time {
+                                            type yang:date-and-time;
+                                            description
+                                                "UTC date and time at the start of the measurement interval which generated the most
+                                                 recent delay-based Raise or Clear TCA for the specified indices.";
+                                        }
+
+                                        leaf oper-state {
+                                            type enumeration {
+                                                enum "pending"                      { value 1; }
+                                                enum "active"                       { value 2; }
+                                                enum "not-active"                   { value 3; }
+                                            }
+                                            description
+                                                "Operational state of the Threshold Crossing Alerts (TCAs) for the specified indices.
+
+                                                 The code points are as follows.  The conditions are evaluated in the
+                                                 order shown.
+                                                 pending
+                                                    is returned if the threshold configuration for the
+                                                    specified indices changed during the current measurement interval.
+                                                 active
+                                                    is returned if the specified indices have a default clear threshold configured,
+                                                    and the current measurement interval has generated a Raise TCA.
+                                                    is returned if the specified indices have a non-default clear threshold
+                                                    configured, and the most recent TCA generated was a Raise.
+                                                 not-active
+                                                    is returned for all other conditions (e.g. thresholding is not
+                                                    configured for the specified indices).";
+                                        }
+
+                                    } // list chli-event
+
+                                    list hli-event {
+                                        key "direction";
+                                        description "Enter the hli-event context";
+
+                                        leaf direction {
+                                            type enumeration {
+                                                enum "forward"                      { value 1; }
+                                                enum "backward"                     { value 2; }
+                                                enum "aggregate"                    { value 3; }
+                                            }
+                                            description "Traffic flow direction";
+                                        }
+
+                                        leaf last-tca-time {
+                                            type yang:date-and-time;
+                                            description
+                                                "UTC date and time at the start of the measurement interval which generated the most
+                                                 recent delay-based Raise or Clear TCA for the specified indices.";
+                                        }
+
+                                        leaf oper-state {
+                                            type enumeration {
+                                                enum "pending"                      { value 1; }
+                                                enum "active"                       { value 2; }
+                                                enum "not-active"                   { value 3; }
+                                            }
+                                            description
+                                                "Operational state of the Threshold Crossing Alerts (TCAs) for the specified indices.
+
+                                                 The code points are as follows.  The conditions are evaluated in the
+                                                 order shown.
+                                                 pending
+                                                    is returned if the threshold configuration for the
+                                                    specified indices changed during the current measurement interval.
+                                                 active
+                                                    is returned if the specified indices have a default clear threshold configured,
+                                                    and the current measurement interval has generated a Raise TCA.
+                                                    is returned if the specified indices have a non-default clear threshold
+                                                    configured, and the most recent TCA generated was a Raise.
+                                                 not-active
+                                                    is returned for all other conditions (e.g. thresholding is not
+                                                    configured for the specified indices).";
+                                        }
+
+                                    } // list hli-event
+
+                                    list unavailability-event {
+                                        key "direction";
+                                        description "Enter the unavailability-event context";
+
+                                        leaf direction {
+                                            type enumeration {
+                                                enum "forward"                      { value 1; }
+                                                enum "backward"                     { value 2; }
+                                                enum "aggregate"                    { value 3; }
+                                            }
+                                            description "Traffic flow direction";
+                                        }
+
+                                        leaf last-tca-time {
+                                            type yang:date-and-time;
+                                            description
+                                                "UTC date and time at the start of the measurement interval which generated the most
+                                                 recent delay-based Raise or Clear TCA for the specified indices.";
+                                        }
+
+                                        leaf oper-state {
+                                            type enumeration {
+                                                enum "pending"                      { value 1; }
+                                                enum "active"                       { value 2; }
+                                                enum "not-active"                   { value 3; }
+                                            }
+                                            description
+                                                "Operational state of the Threshold Crossing Alerts (TCAs) for the specified indices.
+
+                                                 The code points are as follows.  The conditions are evaluated in the
+                                                 order shown.
+                                                 pending
+                                                    is returned if the threshold configuration for the
+                                                    specified indices changed during the current measurement interval.
+                                                 active
+                                                    is returned if the specified indices have a default clear threshold configured,
+                                                    and the current measurement interval has generated a Raise TCA.
+                                                    is returned if the specified indices have a non-default clear threshold
+                                                    configured, and the most recent TCA generated was a Raise.
+                                                 not-active
+                                                    is returned for all other conditions (e.g. thresholding is not
+                                                    configured for the specified indices).";
+                                        }
+
+                                    } // list unavailability-event
+
+                                    list undet-availability-event {
+                                        key "direction";
+                                        description "Enter the undet-availability-event context";
+
+                                        leaf direction {
+                                            type enumeration {
+                                                enum "forward"                      { value 1; }
+                                                enum "backward"                     { value 2; }
+                                                enum "aggregate"                    { value 3; }
+                                            }
+                                            description "Traffic flow direction";
+                                        }
+
+                                        leaf last-tca-time {
+                                            type yang:date-and-time;
+                                            description
+                                                "UTC date and time at the start of the measurement interval which generated the most
+                                                 recent delay-based Raise or Clear TCA for the specified indices.";
+                                        }
+
+                                        leaf oper-state {
+                                            type enumeration {
+                                                enum "pending"                      { value 1; }
+                                                enum "active"                       { value 2; }
+                                                enum "not-active"                   { value 3; }
+                                            }
+                                            description
+                                                "Operational state of the Threshold Crossing Alerts (TCAs) for the specified indices.
+
+                                                 The code points are as follows.  The conditions are evaluated in the
+                                                 order shown.
+                                                 pending
+                                                    is returned if the threshold configuration for the
+                                                    specified indices changed during the current measurement interval.
+                                                 active
+                                                    is returned if the specified indices have a default clear threshold configured,
+                                                    and the current measurement interval has generated a Raise TCA.
+                                                    is returned if the specified indices have a non-default clear threshold
+                                                    configured, and the most recent TCA generated was a Raise.
+                                                 not-active
+                                                    is returned for all other conditions (e.g. thresholding is not
+                                                    configured for the specified indices).";
+                                        }
+
+                                    } // list undet-availability-event
+
+                                    list undet-unavailability-event {
+                                        key "direction";
+                                        description "Enter the undet-unavailability-event context";
+
+                                        leaf direction {
+                                            type enumeration {
+                                                enum "forward"                      { value 1; }
+                                                enum "backward"                     { value 2; }
+                                                enum "aggregate"                    { value 3; }
+                                            }
+                                            description "Traffic flow direction";
+                                        }
+
+                                        leaf last-tca-time {
+                                            type yang:date-and-time;
+                                            description
+                                                "UTC date and time at the start of the measurement interval which generated the most
+                                                 recent delay-based Raise or Clear TCA for the specified indices.";
+                                        }
+
+                                        leaf oper-state {
+                                            type enumeration {
+                                                enum "pending"                      { value 1; }
+                                                enum "active"                       { value 2; }
+                                                enum "not-active"                   { value 3; }
+                                            }
+                                            description
+                                                "Operational state of the Threshold Crossing Alerts (TCAs) for the specified indices.
+
+                                                 The code points are as follows.  The conditions are evaluated in the
+                                                 order shown.
+                                                 pending
+                                                    is returned if the threshold configuration for the
+                                                    specified indices changed during the current measurement interval.
+                                                 active
+                                                    is returned if the specified indices have a default clear threshold configured,
+                                                    and the current measurement interval has generated a Raise TCA.
+                                                    is returned if the specified indices have a non-default clear threshold
+                                                    configured, and the most recent TCA generated was a Raise.
+                                                 not-active
+                                                    is returned for all other conditions (e.g. thresholding is not
+                                                    configured for the specified indices).";
+                                        }
+
+                                    } // list undet-unavailability-event
+
+                                } // container loss-events
+
+                                container statistics {
+                                    description "Statistics for OAM-PM TWAMP-Light tests";
+
+                                    container delay {
+                                        description "Frame delay statistics for OAM-PM TWAMP-Light tests";
+
+                                        list measurement-interval {
+                                            key "duration";
+                                            description "Set of TWAMP-Light delay test statistics for OAM-PM Measurement Interval of a given duration";
+
+                                            leaf duration {
+                                                type types-oam:statistics-measurement-interval-duration;
+                                                description "The duration of the measurement interval";
+                                            }
+
+                                            leaf newest-index {
+                                                type uint32 {
+                                                    range "1..max";
+                                                }
+                                                description "The interval number of the newest interval for the specified session, test type";
+                                            }
+
+                                            list number {
+                                                key "mi-number";
+                                                description "TWAMP-Light delay test statistics for one OAM-PM Measurement Interval Data Set";
+
+                                                leaf mi-number {
+                                                    type uint32 {
+                                                        range "1..max";
+                                                    }
+                                                    description "Measurement interval number (the most recent interval is newest-index)";
+                                                }
+
+                                                leaf oper-state {
+                                                    type enumeration {
+                                                        enum "in-progress"                  { value 1; }
+                                                        enum "completed"                    { value 2; }
+                                                    }
+                                                    description "Operational state of the specified measurement interval data set";
+                                                }
+
+                                                leaf suspect {
+                                                    type boolean;
+                                                    description "Indicates whether or not the specified measurement interval data set contains suspect information";
+                                                }
+
+                                                leaf start-time {
+                                                    type yang:date-and-time;
+                                                    description "Start time (in UTC) of the specified measurement interval data set";
+                                                }
+
+                                                leaf elapsed-time {
+                                                    type uint32;
+                                                    units "seconds";
+                                                    description "Time elapsed since data collection started for the specified measurement interval data set";
+                                                }
+
+                                                leaf frames-sent {
+                                                    type uint32;
+                                                    description "Number of test frames sent for the specified measurement interval data set";
+                                                }
+
+                                                leaf frames-received {
+                                                    type uint32;
+                                                    description "Number of test frames received for the specified measurement interval data set";
+                                                }
+
+                                                list bin-type {
+                                                    key "bin-metric";
+
+                                                    leaf bin-metric {
+                                                        type enumeration {
+                                                            enum "fd"                           { value 1; }
+                                                            enum "fdr"                          { value 2; }
+                                                            enum "ifdv"                         { value 3; }
+                                                        }
+                                                        description "Frame Delay, Frame Delay Range, Inter-Frame Delay Variation";
+                                                    }
+
+                                                    container forward {
+                                                        description "Statistics for the forward direction";
+
+                                                        leaf minimum {
+                                                            type uint32;
+                                                            units "microseconds";
+                                                            description "Minimum delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                        }
+
+                                                        leaf maximum {
+                                                            type uint32;
+                                                            units "microseconds";
+                                                            description "Maximum delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                        }
+
+                                                        leaf average {
+                                                            type uint32;
+                                                            units "microseconds";
+                                                            description "Average delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                        }
+
+                                                    } // container forward
+
+                                                    container backward {
+                                                        description "Statistics for the backward direction";
+
+                                                        leaf minimum {
+                                                            type uint32;
+                                                            units "microseconds";
+                                                            description "Minimum delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                        }
+
+                                                        leaf maximum {
+                                                            type uint32;
+                                                            units "microseconds";
+                                                            description "Maximum delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                        }
+
+                                                        leaf average {
+                                                            type uint32;
+                                                            units "microseconds";
+                                                            description "Average delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                        }
+
+                                                    } // container backward
+
+                                                    container round-trip {
+                                                        description "Round-trip statistics";
+
+                                                        leaf minimum {
+                                                            type uint32;
+                                                            units "microseconds";
+                                                            description "Minimum delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                        }
+
+                                                        leaf maximum {
+                                                            type uint32;
+                                                            units "microseconds";
+                                                            description "Maximum delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                        }
+
+                                                        leaf average {
+                                                            type uint32;
+                                                            units "microseconds";
+                                                            description "Average delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                        }
+
+                                                    } // container round-trip
+
+                                                    list bin {
+                                                        key "bin-number";
+
+                                                        leaf bin-number {
+                                                            type uint32 {
+                                                                range "0..9";
+                                                            }
+                                                            description "The number of the bin";
+                                                        }
+
+                                                        leaf forward-measurements {
+                                                            type uint32;
+                                                            description "Number of delay measurements in the forward direction that fall within the configured range of the specified bin";
+                                                        }
+
+                                                        leaf backward-measurements {
+                                                            type uint32;
+                                                            description "Number of frame delay measurements in the backward direction that fall within the configured range of the specified bin";
+                                                        }
+
+                                                        leaf round-trip-measurements {
+                                                            type uint32;
+                                                            description "Number of round trip frame delay measurements that fall within the configured range of the specified bin";
+                                                        }
+
+                                                    } // list bin
+
+                                                } // list bin-type
+
+                                            } // list number
+
+                                        } // list measurement-interval
+
+                                    } // container delay
+
+                                    container loss {
+                                        description "Frame loss statistics for OAM-PM TWAMP-Light tests";
+
+                                        list measurement-interval {
+                                            key "duration";
+                                            description "Set of TWAMP-Light loss test statistics for OAM-PM Measurement Interval of a given duration";
+
+                                            leaf duration {
+                                                type types-oam:statistics-measurement-interval-duration;
+                                                description "The duration of the measurement interval";
+                                            }
+
+                                            leaf newest-index {
+                                                type uint32 {
+                                                    range "1..max";
+                                                }
+                                                description "The interval number of the newest interval for the specified session, test type";
+                                            }
+
+                                            list number {
+                                                key "mi-number";
+                                                description "TWAMP-Light loss test statistics for one OAM-PM Measurement Interval Data Set";
+
+                                                leaf mi-number {
+                                                    type uint32 {
+                                                        range "1..max";
+                                                    }
+                                                    description "Measurement interval number (the most recent interval is newest-index)";
+                                                }
+
+                                                leaf oper-state {
+                                                    type enumeration {
+                                                        enum "in-progress"                  { value 1; }
+                                                        enum "completed"                    { value 2; }
+                                                    }
+                                                    description "Operational state of the specified measurement interval data set";
+                                                }
+
+                                                leaf suspect {
+                                                    type boolean;
+                                                    description "Indicates whether or not the specified measurement interval data set contains suspect information";
+                                                }
+
+                                                leaf start-time {
+                                                    type yang:date-and-time;
+                                                    description "Start time (in UTC) of the specified measurement interval data set";
+                                                }
+
+                                                leaf elapsed-time {
+                                                    type uint32;
+                                                    units "seconds";
+                                                    description "Time elapsed since data collection started for the specified measurement interval data set";
+                                                }
+
+                                                leaf frames-sent {
+                                                    type uint32;
+                                                    description "Number of test frames sent for the specified measurement interval data set";
+                                                }
+
+                                                leaf frames-received {
+                                                    type uint32;
+                                                    description "Number of test frames received for the specified measurement interval data set";
+                                                }
+
+                                                container forward {
+                                                    description "Statistics for the forward direction";
+
+                                                    leaf tx {
+                                                        type uint32;
+                                                        description "Number of test request frames transmitted for the specified direction and measurement interval data set";
+                                                    }
+
+                                                    leaf rx {
+                                                        type uint32;
+                                                        description "Number of test request frames received for the specified direction and measurement interval data set";
+                                                    }
+
+                                                    leaf available {
+                                                        type uint32;
+                                                        description "Number of availability indicators evaluated as Available for the specified direction and measurement interval data set";
+                                                    }
+
+                                                    leaf unavailable {
+                                                        type uint32;
+                                                        description "Number of availability indicators evaluated as Unavailable for the specified direction and measurement interval data set";
+                                                    }
+
+                                                    leaf undetermined-available {
+                                                        type uint32;
+                                                        description "Number of availability indicators evaluated as Available in a given direction, based on extrapolation from the previous state";
+                                                    }
+
+                                                    leaf undetermined-unavailable {
+                                                        type uint32;
+                                                        description "Number of availability indicators evaluated as Unavailable in a given direction, based on extrapolation from the previous state";
+                                                    }
+
+                                                    leaf high-loss-intervals {
+                                                        type uint32;
+                                                        description "Number of High Loss Intervals (HLIs) for the specified direction and measurement interval data set";
+                                                    }
+
+                                                    leaf consecutive-high-loss-intervals {
+                                                        type uint32;
+                                                        description "Number of Consecutive High Loss Intervals (CHLIs) for the specified direction and measurement interval data set";
+                                                    }
+
+                                                    leaf minimum-frame-loss-ratio {
+                                                        type uint32;
+                                                        units "millipercent";
+                                                        description "Minimum Frame Loss Ratio (FLR) for the specified direction and measurement interval data set";
+                                                    }
+
+                                                    leaf maximum-frame-loss-ratio {
+                                                        type uint32;
+                                                        units "millipercent";
+                                                        description "Maximum Frame Loss Ratio (FLR) for the specified direction and measurement interval data set";
+                                                    }
+
+                                                    leaf average-frame-loss-ratio {
+                                                        type uint32;
+                                                        units "millipercent";
+                                                        description "Average Frame Loss Ratio (FLR) for the specified direction and measurement interval data set";
+                                                    }
+
+                                                } // container forward
+
+                                                container backward {
+                                                    description "Statistics for the backward direction";
+
+                                                    leaf tx {
+                                                        type uint32;
+                                                        description "Number of test request frames transmitted for the specified direction and measurement interval data set";
+                                                    }
+
+                                                    leaf rx {
+                                                        type uint32;
+                                                        description "Number of test request frames received for the specified direction and measurement interval data set";
+                                                    }
+
+                                                    leaf available {
+                                                        type uint32;
+                                                        description "Number of availability indicators evaluated as Available for the specified direction and measurement interval data set";
+                                                    }
+
+                                                    leaf unavailable {
+                                                        type uint32;
+                                                        description "Number of availability indicators evaluated as Unavailable for the specified direction and measurement interval data set";
+                                                    }
+
+                                                    leaf undetermined-available {
+                                                        type uint32;
+                                                        description "Number of availability indicators evaluated as Available in a given direction, based on extrapolation from the previous state";
+                                                    }
+
+                                                    leaf undetermined-unavailable {
+                                                        type uint32;
+                                                        description "Number of availability indicators evaluated as Unavailable in a given direction, based on extrapolation from the previous state";
+                                                    }
+
+                                                    leaf high-loss-intervals {
+                                                        type uint32;
+                                                        description "Number of High Loss Intervals (HLIs) for the specified direction and measurement interval data set";
+                                                    }
+
+                                                    leaf consecutive-high-loss-intervals {
+                                                        type uint32;
+                                                        description "Number of Consecutive High Loss Intervals (CHLIs) for the specified direction and measurement interval data set";
+                                                    }
+
+                                                    leaf minimum-frame-loss-ratio {
+                                                        type uint32;
+                                                        units "millipercent";
+                                                        description "Minimum Frame Loss Ratio (FLR) for the specified direction and measurement interval data set";
+                                                    }
+
+                                                    leaf maximum-frame-loss-ratio {
+                                                        type uint32;
+                                                        units "millipercent";
+                                                        description "Maximum Frame Loss Ratio (FLR) for the specified direction and measurement interval data set";
+                                                    }
+
+                                                    leaf average-frame-loss-ratio {
+                                                        type uint32;
+                                                        units "millipercent";
+                                                        description "Average Frame Loss Ratio (FLR) for the specified direction and measurement interval data set";
+                                                    }
+
+                                                } // container backward
+
+                                            } // list number
+
+                                        } // list measurement-interval
+
+                                    } // container loss
+
+                                } // container statistics
+
+                            } // container twamp-light
+
+                        } // container ip
+
+                    }
+                    case mpls-case {
+
+                        container mpls {
+                            description "The MPLS parameters for the session";
+
+                            container dm {
+                                description "The MPLS Delay Measurement (MPLS-DM) test for the session";
+
+                                leaf oper-state {
+                                    type enumeration {
+                                        enum "up"                           { value 1; }
+                                        enum "down"                         { value 2; }
+                                    }
+                                    description "The Operational state of OAM-PM tests for the session.";
+                                }
+
+                                leaf rx-status {
+                                    type types-oam:oam-pm-session-mpls-dm-rx-status;
+                                    description
+                                        "The most recent status received in an MPLS-DM response for the
+                                         specified MPLS-DM test.";
+                                }
+
+                                leaf udp-return-object-port {
+                                    type types-sros:tcp-udp-port;
+                                    description "The UDP port used to receive all out-of-band MPLS-DM responses.";
+                                }
+
+                                leaf detected-tx-error {
+                                    type types-oam:oam-pm-session-test-detected-tx-error;
+                                    description
+                                        "Reason for the specified test's current inability (if any) to launch request frames
+
+                                         For example, 'eth-parent-admin-down(4)' could be returned for an SLM test
+                                         if the MEP to be tested is associated with a SAP which is
+                                         administratively down.
+
+                                         Not all request frame transmit failures are detected by this mechanism.
+                                         It is possible that 'none(1)' will be returned when the test is unable
+                                         to transmit frames.";
+                                }
+
+                                list delay-events {
+                                    key "bin-metric direction";
+                                    description "MPLS-DM test state information for delay-based OAM-PM Threshold Crossing Alerts (TCAs)";
+
+                                    leaf bin-metric {
+                                        type enumeration {
+                                            enum "fd"                           { value 1; }
+                                            enum "fdr"                          { value 2; }
+                                            enum "ifdv"                         { value 3; }
+                                        }
+                                        description "Frame Delay, Frame Delay Range, Inter-Frame Delay Variation";
+                                    }
+
+                                    leaf direction {
+                                        type types-oam:direction;
+                                        description "The MEF-35 traffic flow direction of an OAM-PM delay test";
+                                    }
+
+                                    leaf last-tca-time {
+                                        type yang:date-and-time;
+                                        description
+                                            "UTC date and time at the start of the measurement interval which generated the most
+                                             recent delay-based Raise or Clear TCA for the specified indices.";
+                                    }
+
+                                    leaf oper-state {
+                                        type enumeration {
+                                            enum "pending"                      { value 1; }
+                                            enum "active"                       { value 2; }
+                                            enum "not-active"                   { value 3; }
+                                        }
+                                        description
+                                            "Operational state of the Threshold Crossing Alerts (TCAs) for the specified indices.
+
+                                             The code points are as follows.  The conditions are evaluated in the
+                                             order shown.
+                                             pending
+                                                is returned if the threshold configuration for the
+                                                specified indices changed during the current measurement interval.
+                                             active
+                                                is returned if the specified indices have a default clear threshold configured,
+                                                and the current measurement interval has generated a Raise TCA.
+                                                is returned if the specified indices have a non-default clear threshold
+                                                configured, and the most recent TCA generated was a Raise.
+                                             not-active
+                                                is returned for all other conditions (e.g. thresholding is not
+                                                configured for the specified indices).";
+                                    }
+
+                                } // list delay-events
+
+                                container statistics {
+                                    description "Frame delay statistics for OAM-PM MPLS-DM tests";
+
+                                    list measurement-interval {
+                                        key "duration";
+                                        description "Set of MPLS-DM test statistics for OAM-PM Measurement Interval of a given duration";
+
+                                        leaf duration {
+                                            type types-oam:statistics-measurement-interval-duration;
+                                            description "The duration of the measurement interval";
+                                        }
+
+                                        leaf newest-index {
+                                            type uint32 {
+                                                range "1..max";
+                                            }
+                                            description "The interval number of the newest interval for the specified session, test type";
+                                        }
+
+                                        list number {
+                                            key "mi-number";
+                                            description "MPLS-DM test statistics for one OAM-PM Measurement Interval Data Set";
+
+                                            leaf mi-number {
+                                                type uint32 {
+                                                    range "1..max";
+                                                }
+                                                description "Measurement interval number (the most recent interval is newest-index)";
+                                            }
+
+                                            leaf oper-state {
+                                                type enumeration {
+                                                    enum "in-progress"                  { value 1; }
+                                                    enum "completed"                    { value 2; }
+                                                }
+                                                description "Operational state of the specified measurement interval data set";
+                                            }
+
+                                            leaf suspect {
+                                                type boolean;
+                                                description "Indicates whether or not the specified measurement interval data set contains suspect information";
+                                            }
+
+                                            leaf start-time {
+                                                type yang:date-and-time;
+                                                description "Start time (in UTC) of the specified measurement interval data set";
+                                            }
+
+                                            leaf elapsed-time {
+                                                type uint32;
+                                                units "seconds";
+                                                description "Time elapsed since data collection started for the specified measurement interval data set";
+                                            }
+
+                                            leaf frames-sent {
+                                                type uint32;
+                                                description "Number of test frames sent for the specified measurement interval data set";
+                                            }
+
+                                            leaf frames-received {
+                                                type uint32;
+                                                description "Number of test frames received for the specified measurement interval data set";
+                                            }
+
+                                            list bin-type {
+                                                key "bin-metric";
+                                                description "Per-bin-type MPLS-DM statistics for one OAM Performance Monitoring Measurement Interval Data Set";
+
+                                                leaf bin-metric {
+                                                    type enumeration {
+                                                        enum "fd"                           { value 1; }
+                                                        enum "fdr"                          { value 2; }
+                                                        enum "ifdv"                         { value 3; }
+                                                    }
+                                                    description "Frame Delay, Frame Delay Range, Inter-Frame Delay Variation";
+                                                }
+
+                                                container forward {
+                                                    description "Statistics for the forward direction";
+
+                                                    leaf minimum {
+                                                        type uint32;
+                                                        units "microseconds";
+                                                        description "Minimum delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                    }
+
+                                                    leaf maximum {
+                                                        type uint32;
+                                                        units "microseconds";
+                                                        description "Maximum delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                    }
+
+                                                    leaf average {
+                                                        type uint32;
+                                                        units "microseconds";
+                                                        description "Average delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                    }
+
+                                                } // container forward
+
+                                                container backward {
+                                                    description "Statistics for the backward direction";
+
+                                                    leaf minimum {
+                                                        type uint32;
+                                                        units "microseconds";
+                                                        description "Minimum delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                    }
+
+                                                    leaf maximum {
+                                                        type uint32;
+                                                        units "microseconds";
+                                                        description "Maximum delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                    }
+
+                                                    leaf average {
+                                                        type uint32;
+                                                        units "microseconds";
+                                                        description "Average delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                    }
+
+                                                } // container backward
+
+                                                container round-trip {
+                                                    description "Round trip statistics";
+
+                                                    leaf minimum {
+                                                        type uint32;
+                                                        units "microseconds";
+                                                        description "Minimum delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                    }
+
+                                                    leaf maximum {
+                                                        type uint32;
+                                                        units "microseconds";
+                                                        description "Maximum delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                    }
+
+                                                    leaf average {
+                                                        type uint32;
+                                                        units "microseconds";
+                                                        description "Average delay for the specified direction, session, interval duration, interval number, and bin type";
+                                                    }
+
+                                                } // container round-trip
+
+                                                list bin {
+                                                    key "bin-number";
+                                                    description "Per-bin MPLS-DM statistics for one OAM Performance Monitoring Measurement Interval Data Set";
+
+                                                    leaf bin-number {
+                                                        type uint32 {
+                                                            range "0..9";
+                                                        }
+                                                        description "The number of the bin";
+                                                    }
+
+                                                    leaf forward-measurements {
+                                                        type uint32;
+                                                        description "Number of delay measurements in the forward direction that fall within the configured range of the specified bin";
+                                                    }
+
+                                                    leaf backward-measurements {
+                                                        type uint32;
+                                                        description "Number of frame delay measurements in the backward direction that fall within the configured range of the specified bin";
+                                                    }
+
+                                                    leaf round-trip-measurements {
+                                                        type uint32;
+                                                        description "Number of round trip frame delay measurements that fall within the configured range of the specified bin";
+                                                    }
+
+                                                } // list bin
+
+                                            } // list bin-type
+
+                                        } // list number
+
+                                    } // list measurement-interval
+
+                                } // container statistics
+
+                            } // container dm
+
+                        } // container mpls
+
+                    }
+                }
+            } // list session
+
+        } // container oam-pm
+
+    } // grouping state-oam-pm
+
+}

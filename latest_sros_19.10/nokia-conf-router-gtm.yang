@@ -1,0 +1,195 @@
+submodule nokia-conf-router-gtm {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-groups;
+    include nokia-conf-router;
+    include nokia-conf-router-mpls;
+
+    sros-ext:sros-major-release "rel19";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure GTM protocol on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-router-gtm YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2019-09-30";
+
+    grouping conf-router-gtm {
+        container gtm {
+            when "../router-name = 'Base'";
+            description "Enter the gtm context";
+
+            leaf mvpn {
+                type boolean;
+                default "false";
+                description "Configure multicast VPN.";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            container provider-tunnel {
+                description "Enter the provider-tunnel context";
+
+                container inclusive {
+                    must "not(./rsvp) or ./rsvp/admin-state = 'disable' or ./rsvp/lsp-template" {
+                        error-message "Lsp-template missing";
+                    }
+                    description "Enter the inclusive context";
+
+                    container rsvp {
+                        presence "Enable/Disable the Context for specifying RSVP P2MP LSP for the provider tunnel.";
+                        description "Enter the rsvp context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of P2MP RSVP as provider tunnel";
+                        }
+
+                        leaf lsp-template {
+                            type leafref {
+                                path "../../../../../../router/mpls/lsp-template/template-name";
+                            }
+                            description "Specify the Lsp Template.";
+                        }
+
+                    } // container rsvp
+
+                } // container inclusive
+
+                container selective {
+                    must "not(./rsvp) or ./rsvp/admin-state = 'disable' or ./rsvp/lsp-template" {
+                        error-message "Lsp-template missing";
+                    }
+                    description "Enter the selective context";
+
+                    leaf data-delay-interval {
+                        type uint32 {
+                            range "3..180";
+                        }
+                        default "3";
+                        description "The data delay interval.";
+                    }
+
+                    leaf maximum-p2mp-spmsi {
+                        type uint32 {
+                            range "1..4000";
+                        }
+                        default "10";
+                        description "Specify the maximum number of p2mp s-pmsi tunnels for the mvpn.";
+                    }
+
+                    container data-threshold {
+                        description "Enter the data-threshold context";
+
+                        list group-prefix {
+                            key "ip-group-prefix";
+                            description "Enter the group-prefix list instance";
+
+                            leaf ip-group-prefix {
+                                type types-sros:ip-multicast-prefix;
+                                description "Multicast group-prefix.";
+                            }
+
+                            leaf threshold {
+                                type uint32 {
+                                    range "1..4294967294";
+                                }
+                                units "kilobps";
+                                mandatory true;
+                                description "Configure threshold in kbps for a group prefix.";
+                            }
+
+                            leaf pe-threshold-add {
+                                must ". < ../pe-threshold-delete or (. = 65535 and . = 65535)" {
+                                    error-message "pe-threshold-delete should be greater than pe-threshold-add.";
+                                }
+                                type uint32 {
+                                    range "1..65535";
+                                }
+                                default "65535";
+                                description "Configure threshold.";
+                            }
+
+                            leaf pe-threshold-delete {
+                                type uint32 {
+                                    range "2..65535";
+                                }
+                                default "65535";
+                                description "Configure threshold.";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                        } // list group-prefix
+
+                    } // container data-threshold
+
+                    container rsvp {
+                        presence "Enable/Disable the Context for specifying RSVP P2MP LSP for the provider tunnel.";
+                        description "Enter the rsvp context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of P2MP RSVP as provider tunnel";
+                        }
+
+                        leaf lsp-template {
+                            type leafref {
+                                path "../../../../../../router/mpls/lsp-template/template-name";
+                            }
+                            description "Specify the Lsp Template.";
+                        }
+
+                    } // container rsvp
+
+                } // container selective
+
+            } // container provider-tunnel
+
+        } // container gtm
+
+    } // grouping conf-router-gtm
+
+}

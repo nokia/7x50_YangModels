@@ -1,0 +1,1801 @@
+submodule nokia-conf-aaa {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import ietf-inet-types                { prefix "inet"; }
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-diameter           { prefix "types-diam"; }
+    import nokia-types-nat                { prefix "types-nat"; }
+    import nokia-types-radius             { prefix "types-radius"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-groups;
+    include nokia-conf-python;
+    include nokia-conf-redundancy;
+
+    sros-ext:sros-major-release "rel19";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure authentication, authorization and accounting on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-aaa YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2019-09-18";
+
+    grouping conf-aaa {
+        container aaa {
+            description "Enter the aaa context";
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            container radius {
+                description "Enter the radius context";
+
+                leaf coa-port {
+                    type inet:port-number {
+                        range "1647|1700|1812|3799";
+                    }
+                    default "3799";
+                    description "Radius CoA port";
+                }
+
+                list acct-on-off-group {
+                    key "name";
+                    max-elements 32;
+                    description "Enter the acct-on-off-group list instance";
+
+                    leaf name {
+                        type types-sros:named-item;
+                        description "Accounting on/off group name";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                } // list acct-on-off-group
+
+                list server-policy {
+                    key "name";
+                    max-elements 32;
+                    description "Enter the server-policy list instance";
+
+                    leaf name {
+                        type types-sros:named-item;
+                        description "RADIUS script policy name";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf python-policy {
+                        type leafref {
+                            path "../../../../python/python-policy/name";
+                        }
+                        description "Python policy to modify the RADIUS messages";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container servers {
+                        description "Enter the servers context";
+
+                        leaf timeout {
+                            type types-sros:time-duration {
+                                range "1..340";
+                            }
+                            units "seconds";
+                            default "5";
+                            description "Time until the next retry to the RADIUS server";
+                        }
+
+                        leaf retry-count {
+                            type uint32 {
+                                range "1..256";
+                            }
+                            default "3";
+                            description "Number of retries for contacting the RADIUS server";
+                        }
+
+                        leaf hold-down-time {
+                            type types-sros:time-duration {
+                                range "30..86400";
+                            }
+                            units "seconds";
+                            default "30";
+                            description "Hold time before re-using a RADIUS server that was down";
+                        }
+
+                        leaf router-instance {
+                            type string;
+                            description "RADIUS routing instance";
+                        }
+
+                        leaf source-address {
+                            type types-sros:ipv4-address;
+                            description "Source address of RADIUS messages";
+                        }
+
+                        leaf ipv6-source-address {
+                            type types-sros:ipv6-address;
+                            description "Source address for IPv6 RADIUS datagrams";
+                        }
+
+                        leaf access-algorithm {
+                            type types-radius:server-selection-algo;
+                            description "Algorithm to access the set of RADIUS servers";
+                        }
+
+                        leaf stickiness {
+                            type boolean;
+                            default "true";
+                            description "Allow stickiness in a multi-server application";
+                        }
+
+                        list server {
+                            key "server-index";
+                            max-elements 32;
+                            description "Enter the server list instance";
+
+                            leaf server-index {
+                                type uint32 {
+                                    range "1..16";
+                                }
+                                description "RADIUS server index";
+                            }
+
+                            leaf server-name {
+                                type types-sros:named-item;
+                                mandatory true;
+                                description "RADIUS server name";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                        } // list server
+
+                        container buffering {
+                            description "Enter the buffering context";
+
+                            container acct-interim {
+                                must "./max >= ./min" {
+                                    error-message "Min must be < max";
+                                }
+                                presence "acct-interim";
+                                description "Enter the acct-interim context";
+
+                                leaf min {
+                                    type types-sros:time-duration {
+                                        range "1..3600";
+                                    }
+                                    units "seconds";
+                                    mandatory true;
+                                    description "Minimum time between retries to send RADIUS accounting interim update message";
+                                }
+
+                                leaf max {
+                                    type types-sros:time-duration {
+                                        range "1..3600";
+                                    }
+                                    units "seconds";
+                                    mandatory true;
+                                    description "Maximum time between retries to send RADIUS accounting interim update message";
+                                }
+
+                                leaf lifetime {
+                                    type types-sros:time-duration {
+                                        range "1..25";
+                                    }
+                                    units "hours";
+                                    mandatory true;
+                                    description "Time when an accounting message can be in the retransmission buffer";
+                                }
+
+                            } // container acct-interim
+
+                            container acct-stop {
+                                must "./max >= ./min" {
+                                    error-message "Min must be < max";
+                                }
+                                presence "acct-stop";
+                                description "Enter the acct-stop context";
+
+                                leaf min {
+                                    type types-sros:time-duration {
+                                        range "1..3600";
+                                    }
+                                    units "seconds";
+                                    mandatory true;
+                                    description "Minimum time between retries to send RADIUS accounting stop message";
+                                }
+
+                                leaf max {
+                                    type types-sros:time-duration {
+                                        range "1..3600";
+                                    }
+                                    units "seconds";
+                                    mandatory true;
+                                    description "Max time between retries to send RADIUS accounting stop message";
+                                }
+
+                                leaf lifetime {
+                                    type types-sros:time-duration {
+                                        range "1..25";
+                                    }
+                                    units "hours";
+                                    mandatory true;
+                                    description "Time when an accounting message can be in the retransmission buffer";
+                                }
+
+                            } // container acct-stop
+
+                        } // container buffering
+
+                        container health-check {
+                            description "Enter the health-check context";
+
+                            leaf down-timeout {
+                                type types-sros:time-duration {
+                                    range "1..340";
+                                }
+                                units "seconds";
+                                description "Time to wait for a reply message from the RADIUS server before the server is declared out-of-service";
+                            }
+
+                            container test-account {
+                                description "Enter the test-account context";
+
+                                leaf admin-state {
+                                    type types-sros:admin-state;
+                                    default "disable";
+                                    description "Administrative state of health check state";
+                                }
+
+                                leaf interval {
+                                    type types-sros:time-duration {
+                                        range "1..60";
+                                    }
+                                    units "seconds";
+                                    default "3";
+                                    description "Time for health check";
+                                }
+
+                                leaf user-name {
+                                    type types-sros:display-string {
+                                        length "1..64";
+                                    }
+                                    description "Username for health check";
+                                }
+
+                                leaf password {
+                                    type types-sros:encrypted-leaf {
+                                        length "1..115";
+                                    }
+                                    description "Password for health check";
+                                }
+
+                            } // container test-account
+
+                        } // container health-check
+
+                    } // container servers
+
+                    container acct-on-off {
+                        presence "Acct-On/Off";
+                        description "Enter the acct-on-off context";
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        choice mode {
+                            case monitor {
+
+                                leaf monitor {
+                                    type leafref {
+                                        path "../../../acct-on-off-group/name";
+                                    }
+                                    sros-ext:immutable;
+                                    description "Accounting on/off group name";
+                                }
+
+                            }
+                            case oper-state-change {
+
+                                container oper-state-change {
+                                    presence "change operational state";
+                                    description "Enter the oper-state-change context";
+
+                                    leaf group {
+                                        type leafref {
+                                            path "../../../../acct-on-off-group/name";
+                                        }
+                                        sros-ext:immutable;
+                                        description "Change of operational state for a group";
+                                    }
+
+                                } // container oper-state-change
+
+                            }
+                        }
+                    } // container acct-on-off
+
+                } // list server-policy
+
+                list route-downloader {
+                    must "./retry-interval/min <= ./retry-interval/max" {
+                        error-message "Minimum interval must be smaller than or equal to the maximum interval";
+                    }
+                    must "./admin-state != 'enable' or ./radius-server-policy" {
+                        error-message "The RADIUS server policy is not configured";
+                    }
+                    key "name";
+                    max-elements 1;
+                    description "Enter the route-downloader list instance";
+
+                    leaf name {
+                        type types-sros:named-item;
+                        description "Route downloader name";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of this Route Downloader";
+                    }
+
+                    leaf radius-server-policy {
+                        type leafref {
+                            path "../../server-policy/name";
+                        }
+                        description "RADIUS server policy used by this route downloader";
+                    }
+
+                    leaf download-interval {
+                        type uint32 {
+                            range "1..1440";
+                        }
+                        units "minutes";
+                        default "720";
+                        description "Time for system to wait between two consecutive runs of route-download process";
+                    }
+
+                    leaf default-metric {
+                        type uint32 {
+                            range "0..254";
+                        }
+                        default "2";
+                        description "Default metric of this route downloader";
+                    }
+
+                    leaf default-tag {
+                        type uint32 {
+                            range "0..4294967295";
+                        }
+                        default "0";
+                        description "Default tag of this route downloader";
+                    }
+
+                    leaf max-routes {
+                        type uint32 {
+                            range "1..200000";
+                        }
+                        default "200000";
+                        description "Maximum routes imported by this route downloader";
+                    }
+
+                    leaf base-user-name {
+                        type types-sros:named-item;
+                        description "Prefix of the username used by this route downloader";
+                    }
+
+                    leaf password {
+                        type types-sros:encrypted-leaf {
+                            length "1..71";
+                        }
+                        description "Route downloader password";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container retry-interval {
+                        description "Enter the retry-interval context";
+
+                        leaf min {
+                            type uint32 {
+                                range "1..1440";
+                            }
+                            units "minutes";
+                            default "10";
+                            description "Specifies the minimum duration of the retry interval. This duration grows exponentially after each sequential failure.";
+                        }
+
+                        leaf max {
+                            type uint32 {
+                                range "1..1440";
+                            }
+                            units "minutes";
+                            default "20";
+                            description "Specifies the maximum duration of the retry interval. This duration grows exponentially after each sequential failure";
+                        }
+
+                    } // container retry-interval
+
+                } // list route-downloader
+
+                list l2tp-accounting-policy {
+                    key "name";
+                    max-elements 32;
+                    description "Enter the l2tp-accounting-policy list instance";
+
+                    leaf name {
+                        type types-sros:named-item;
+                        description "Name for L2TP RADIUS accounting policy";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf acct-tunnel-connection-fmt {
+                        type types-sros:display-string {
+                            length "1..253";
+                            pattern "([^%]+|%[nsStTcC%])+";
+                        }
+                        default "%n";
+                        description "Accounting tunnel connection ASCII specification";
+                    }
+
+                    leaf radius-server-policy {
+                        type leafref {
+                            path "../../server-policy/name";
+                        }
+                        description "RADIUS server policy";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container accounting-type {
+                        must "./session != 'false' or ./tunnel != 'false'" {
+                            error-message "No accounting type specified";
+                        }
+                        description "Enter the accounting-type context";
+
+                        leaf session {
+                            type boolean;
+                            default "true";
+                            description "Enable/disable per session accounting";
+                        }
+
+                        leaf tunnel {
+                            type boolean;
+                            default "true";
+                            description "Enable/disable per tunnel accounting";
+                        }
+
+                    } // container accounting-type
+
+                    container include-radius-attribute {
+                        description "Enter the include-radius-attribute context";
+
+                        leaf calling-station-id {
+                            type boolean;
+                            default "false";
+                            description "Include the calling station ID attribute";
+                        }
+
+                        leaf nas-identifier {
+                            type boolean;
+                            default "false";
+                            description "Include the NAS-Identifier attribute";
+                        }
+
+                        container nas-port {
+                            presence "Include the NAS-Port attribute";
+                            description "Enter the nas-port context";
+
+                            leaf bit-spec {
+                                type types-sros:binary-specification {
+                                    pattern "([01]|(\\*[0123456789]+)?[oismpvc])+";
+                                }
+                                mandatory true;
+                                description "RADIUS NAS-Port attribute";
+                            }
+
+                        } // container nas-port
+
+                        container nas-port-id {
+                            presence "Include the NAS-Port-Id attribute";
+                            description "Enter the nas-port-id context";
+
+                            leaf prefix-string {
+                                type types-sros:string-not-all-spaces {
+                                    length "1..8";
+                                }
+                                description "Specifies NAS-Port-Id prefix string";
+                            }
+
+                            leaf suffix {
+                                type enumeration {
+                                    enum "circuit-id"                   { value 1; }
+                                    enum "remote-id"                    { value 2; }
+                                }
+                                description "NAS-Port-Id suffix";
+                            }
+
+                        } // container nas-port-id
+
+                        container nas-port-type {
+                            presence "Include the NAS-Port-Type attribute";
+                            description "Enter the nas-port-type context";
+
+                            leaf type {
+                                type union {
+                                    type enumeration {
+                                        enum "rfc-aligned"                  { value 1000; }
+                                    }
+                                    type uint32 {
+                                        range "0..255";
+                                    }
+                                }
+                                default "rfc-aligned";
+                                description "Value for RADIUS NAS-Port-Type attribute";
+                            }
+
+                        } // container nas-port-type
+
+                    } // container include-radius-attribute
+
+                } // list l2tp-accounting-policy
+
+                list isa-policy {
+                    must "./accounting/nat-periodic-update/interval or ./accounting/nat-periodic-update/rate-limit = 'unlimited'" {
+                        error-message "rate-limit set without interval";
+                    }
+                    key "name";
+                    max-elements 8;
+                    description "Enter the isa-policy list instance";
+
+                    leaf name {
+                        type types-sros:named-item;
+                        description "Policy name";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf password {
+                        type types-sros:encrypted-leaf {
+                            length "1..42";
+                        }
+                        description "Password used in the RADIUS access requests";
+                    }
+
+                    leaf nas-ip-address-origin {
+                        type enumeration {
+                            enum "system-ip"                    { value 0; }
+                            enum "isa-ip"                       { value 1; }
+                        }
+                        default "system-ip";
+                        description "NAS-IP-Address attribute";
+                    }
+
+                    leaf python-policy {
+                        type leafref {
+                            path "../../../../python/python-policy/name";
+                        }
+                        description "Python policy used for modifying RADIUS messages";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container accounting {
+                        description "Enter the accounting context";
+
+                        container include-attributes {
+                            description "Enter the include-attributes context";
+
+                            leaf acct-delay-time {
+                                type boolean;
+                                default "false";
+                                description "Include the Acct-Delay-Time attribute";
+                            }
+
+                            leaf acct-triggered-reason {
+                                type boolean;
+                                default "false";
+                                description "Include Alc-Acct-Triggered-Reason attribute";
+                            }
+
+                            leaf called-station-id {
+                                type boolean;
+                                default "false";
+                                description "Include the Called-Station-Id attribute";
+                            }
+
+                            leaf calling-station-id {
+                                type boolean;
+                                default "false";
+                                description "Include the Calling-Station-Id attribute";
+                            }
+
+                            leaf circuit-id {
+                                type boolean;
+                                default "false";
+                                description "Include the Circuit-Id attribute";
+                            }
+
+                            leaf class {
+                                type boolean;
+                                default "false";
+                                description "Include the Class attribute";
+                            }
+
+                            leaf dhcp-options {
+                                type boolean;
+                                default "false";
+                                description "Include the Alc-ToServer-Dhcp-Options attribute";
+                            }
+
+                            leaf dhcp-vendor-class-id {
+                                type boolean;
+                                default "false";
+                                description "Include the Alc-DHCP-Vendor-Class-Id attribute";
+                            }
+
+                            leaf frame-counters {
+                                type boolean;
+                                default "false";
+                                description "Include the Acct-Input-Packets and Acct-Output-Packets attributes";
+                            }
+
+                            leaf framed-ip-address {
+                                type boolean;
+                                default "false";
+                                description "Include the Framed-IP-Address attribute";
+                            }
+
+                            leaf framed-ip-netmask {
+                                type boolean;
+                                default "false";
+                                description "Include the Framed-IP-Netmask attribute";
+                            }
+
+                            leaf framed-ipv6-prefix {
+                                type boolean;
+                                default "false";
+                                description "Include the Framed-IPv6-Prefix attribute";
+                            }
+
+                            leaf hardware-timestamp {
+                                type boolean;
+                                default "false";
+                                description "Include the Event-Timestamp attribute";
+                            }
+
+                            leaf ipv6-address {
+                                type boolean;
+                                default "false";
+                                description "Include the IPv6-Address attribute";
+                            }
+
+                            leaf mac-address {
+                                type boolean;
+                                default "false";
+                                description "Include the Alc-Client-Hardware-Addr attribute";
+                            }
+
+                            leaf multi-session-id {
+                                type boolean;
+                                default "false";
+                                description "Include the Acct-Multi-Session-Id attribute";
+                            }
+
+                            leaf nas-identifier {
+                                type boolean;
+                                default "false";
+                                description "Include the NAS-Identifier attribute";
+                            }
+
+                            leaf nas-ip-address {
+                                type boolean;
+                                default "false";
+                                description "Include the NAS-IP-Address attribute";
+                            }
+
+                            leaf nas-port {
+                                type boolean;
+                                default "false";
+                                description "Include the NAS-Port attribute";
+                            }
+
+                            leaf nas-port-id {
+                                type boolean;
+                                default "false";
+                                description "Include the NAS-Port-Id attribute";
+                            }
+
+                            leaf nas-port-type {
+                                type boolean;
+                                default "false";
+                                description "Include the NAS-Port-Type attribute";
+                            }
+
+                            leaf nat-inside-service-id {
+                                type boolean;
+                                default "false";
+                                description "Include the NAT inside service ID in Alc-Serv-Id attribute";
+                            }
+
+                            leaf nat-outside-ip-address {
+                                type boolean;
+                                default "false";
+                                description "Include the Alc-Nat-Outside-Ip-Addr attribute";
+                            }
+
+                            leaf nat-outside-service-id {
+                                type boolean;
+                                default "false";
+                                description "Include the NAT outside service ID in the Alc-Serv-Id attribute";
+                            }
+
+                            leaf nat-port-range-block {
+                                type boolean;
+                                default "false";
+                                description "Include the Alc-Nat-Port-Range attribute";
+                            }
+
+                            leaf nat-subscriber-string {
+                                type boolean;
+                                default "false";
+                                description "Include the Alc-Subsc-ID-Str attribute";
+                            }
+
+                            leaf octet-counters {
+                                type boolean;
+                                default "false";
+                                description "Include the Acct-Input-Octets and Acct-Output-Octets attributes";
+                            }
+
+                            leaf proxied-subscriber-data {
+                                type boolean;
+                                default "false";
+                                description "Include subscriber data as RADIUS attributes that are passed into RADIUS accounting messages";
+                            }
+
+                            leaf release-reason {
+                                type boolean;
+                                default "false";
+                                description "Include the reason of NAT release in the Acct-Terminate-Cause attribute";
+                            }
+
+                            leaf remote-id {
+                                type boolean;
+                                default "false";
+                                description "Include the Remote-Id attribute";
+                            }
+
+                            leaf rssi {
+                                type boolean;
+                                default "false";
+                                description "Include the Alc-RSSI attribute";
+                            }
+
+                            leaf session-time {
+                                type boolean;
+                                default "false";
+                                description "Include the Acct-Session-Time attribute";
+                            }
+
+                            leaf subscriber-id {
+                                type boolean;
+                                default "false";
+                                description "Include the Alc-Subsc-ID-Str attribute";
+                            }
+
+                            leaf toserver-dhcp6-options {
+                                type boolean;
+                                default "false";
+                                description "Include the Alc-ToServer-Dhcp6-Options attribute";
+                            }
+
+                            leaf ue-creation-type {
+                                type boolean;
+                                default "false";
+                                description "Include the Alc-Wlan-Ue-Creation-Type attribute";
+                            }
+
+                            leaf user-name {
+                                type boolean;
+                                default "false";
+                                description "Include the User-Name attribute";
+                            }
+
+                            leaf wlan-ssid-vlan {
+                                type boolean;
+                                default "false";
+                                description "Include the per-SSID VLAN tag in Alc-Wlan-SSID-VLAN attribute";
+                            }
+
+                            leaf xconnect-tunnel-local-ipv6-address {
+                                type boolean;
+                                default "false";
+                                description "Include the Alc-Xconnect-Tunnel-Local-Ipv6 attribute";
+                            }
+
+                            leaf xconnect-tunnel-remote-ipv6-address {
+                                type boolean;
+                                default "false";
+                                description "Include the cross-connect tunnel remote IPv6 address attribute";
+                            }
+
+                            leaf xconnect-tunnel-service {
+                                type boolean;
+                                default "false";
+                                description "Include the Alc-Xconnect-Tunnel-Service attribute";
+                            }
+
+                            leaf xconnect-tunnel-type {
+                                type boolean;
+                                default "false";
+                                description "Include the Alc-Xconnect-Tunnel-Type attribute";
+                            }
+
+                            leaf xconnect-tunnel-home-address {
+                                type boolean;
+                                default "false";
+                                description "Include the Alc-Xconnect-Tunnel-Home-Ipv6 attribute";
+                            }
+
+                        } // container include-attributes
+
+                        container update-triggers {
+                            description "Enter the update-triggers context";
+
+                            leaf address-state {
+                                type boolean;
+                                default "false";
+                                description "Send an Interim-Update when DHCP/DHCP6/SLAAC state is created or removed";
+                            }
+
+                        } // container update-triggers
+
+                        container nat-periodic-update {
+                            description "Enter the nat-periodic-update context";
+
+                            leaf interval {
+                                type types-sros:time-duration {
+                                    range "1..72";
+                                }
+                                units "hours";
+                                description "Interval for periodic RADIUS Interim-Update messages";
+                            }
+
+                            leaf rate-limit {
+                                type union {
+                                    type uint32 {
+                                        range "1..100000";
+                                    }
+                                    type enumeration {
+                                        enum "unlimited"                    { value 0; }
+                                    }
+                                }
+                                units "packets per second";
+                                default "unlimited";
+                                description "Rate limit for periodic RADIUS Interim-Update messages";
+                            }
+
+                        } // container nat-periodic-update
+
+                    } // container accounting
+
+                    container authentication {
+                        description "Enter the authentication context";
+
+                        container include-attributes {
+                            description "Enter the include-attributes context";
+
+                            leaf called-station-id {
+                                type boolean;
+                                default "false";
+                                description "Include the Called-Station-Id attribute";
+                            }
+
+                            leaf calling-station-id {
+                                type boolean;
+                                default "false";
+                                description "Include the Calling-Station-Id attribute";
+                            }
+
+                            leaf circuit-id {
+                                type boolean;
+                                default "false";
+                                description "Include the Agent-Circuit-Id attribute";
+                            }
+
+                            leaf toserver-dhcp-options {
+                                type boolean;
+                                default "false";
+                                description "Include the Alc-ToServer-Dhcp-Options attribute";
+                            }
+
+                            leaf dhcp-vendor-class-id {
+                                type boolean;
+                                default "false";
+                                description "Include the Dhcp-Vendor-Class-Id attribute";
+                            }
+
+                            leaf framed-ip-address {
+                                type boolean;
+                                default "false";
+                                description "Include the Framed-IP-Address attribute";
+                            }
+
+                            leaf ipv6-address {
+                                type boolean;
+                                default "false";
+                                description "Include the Alc-Ipv6-Address attribute";
+                            }
+
+                            leaf mac-address {
+                                type boolean;
+                                default "false";
+                                description "Include the Alc-Client-Hardware-Addr attribute";
+                            }
+
+                            leaf nas-identifier {
+                                type boolean;
+                                default "false";
+                                description "Include the NAS-Identifier attribute";
+                            }
+
+                            leaf nas-ip-address {
+                                type boolean;
+                                default "true";
+                                description "Include the NAS-IP-Address attribute";
+                            }
+
+                            leaf nas-port {
+                                type boolean;
+                                default "false";
+                                description "Include the NAS-Port attribute";
+                            }
+
+                            leaf nas-port-id {
+                                type boolean;
+                                default "false";
+                                description "Include the NAS-Port-Id attribute";
+                            }
+
+                            leaf nas-port-type {
+                                type boolean;
+                                default "false";
+                                description "Include the NAS-Port-Type attribute";
+                            }
+
+                            leaf remote-id {
+                                type boolean;
+                                default "false";
+                                description "Include the Agent-Remote-Id attribute";
+                            }
+
+                            leaf toserver-dhcp6-options {
+                                type boolean;
+                                default "false";
+                                description "Include the Alc-ToServer-Dhcp6-Options attribute";
+                            }
+
+                            leaf wlan-ssid-vlan {
+                                type boolean;
+                                default "false";
+                                description "Include the per-SSID VLAN ID in Alc-Wlan-SSID-VLAN attribute";
+                            }
+
+                            leaf xconnect-tunnel-home-address {
+                                type boolean;
+                                default "false";
+                                description "Include the Alc-Xconnect-Tunnel-Home-Ipv6 attribute";
+                            }
+
+                        } // container include-attributes
+
+                    } // container authentication
+
+                    container user-name {
+                        description "Enter the user-name context";
+
+                        leaf format {
+                            type enumeration {
+                                enum "mac"                          { value 1; }
+                                enum "mac-ip"                       { value 2; }
+                                enum "dhcp-vendor"                  { value 3; }
+                                enum "circuit-id"                   { value 4; }
+                            }
+                            default "mac";
+                            description "How user is represented when contacting RADIUS server";
+                        }
+
+                        leaf mac-format {
+                            type types-nat:mac-format;
+                            description "How the MAC address gets formatted";
+                        }
+
+                    } // container user-name
+
+                    container servers {
+                        description "Enter the servers context";
+
+                        leaf source-address-range {
+                            type types-sros:ipv4-unicast-address;
+                            description "Starting source address of RADIUS messages; end depends on number of ISAs in the system";
+                        }
+
+                        leaf timeout {
+                            type types-sros:time-duration {
+                                range "1..90";
+                            }
+                            units "seconds";
+                            default "5";
+                            description "Timeout for a response from the RADIUS server";
+                        }
+
+                        leaf total-tries {
+                            type uint32 {
+                                range "1..10";
+                            }
+                            default "3";
+                            description "Maximum number of tries toward the same RADIUS server";
+                        }
+
+                        leaf router-instance {
+                            must ". != 'management' and . != 'vpls-management'" {
+                                error-message "Management and vpls-management are not allowed";
+                            }
+                            type string;
+                            description "The routing instance";
+                        }
+
+                        leaf access-algorithm {
+                            type types-radius:isa-server-selection-algo;
+                            description "Algorithm that accesses the RADIUS servers";
+                        }
+
+                        list server {
+                            must "./admin-state != 'enable' or ./ip-address" {
+                                error-message "the server's ip address must be configured ";
+                            }
+                            must "./admin-state != 'enable' or ./secret" {
+                                error-message "the server's secret must be configured ";
+                            }
+                            must "./admin-state != 'enable' or ./purpose/accounting or ./purpose/authentication or ./purpose/coa" {
+                                error-message "the server must be configured with, at least, one purpose ";
+                            }
+                            must "./admin-state != 'enable' or ../source-address-range" {
+                                error-message "the source-address-range must be configured ";
+                            }
+                            must "./admin-state != 'enable' or ../router-instance" {
+                                error-message "the server's router must be configured ";
+                            }
+                            key "index";
+                            max-elements 10;
+                            description "Enter the server list instance";
+
+                            leaf index {
+                                type uint32 {
+                                    range "1..10";
+                                }
+                                description "RADIUS server index that determines sequence in which servers are queried for auth requests";
+                            }
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "disable";
+                                description "Administrative state of the ISA RADIUS server";
+                            }
+
+                            leaf ip-address {
+                                type types-sros:ipv4-unicast-address;
+                                description "Destination IP address to reach RADIUS server";
+                            }
+
+                            leaf secret {
+                                type types-sros:encrypted-leaf {
+                                    length "1..115";
+                                }
+                                description "Shared secret to authenticate messages and encrypt attributes to or from this server";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            container purpose {
+                                description "Enter the purpose context";
+
+                                container accounting {
+                                    presence "Accounting";
+                                    description "Enter the accounting context";
+
+                                    leaf udp-port {
+                                        type types-sros:tcp-udp-port-non-zero;
+                                        default "1813";
+                                        description "ISA RADIUS server accounting UDP port";
+                                    }
+
+                                } // container accounting
+
+                                container authentication {
+                                    presence "Authentication";
+                                    description "Enter the authentication context";
+
+                                    leaf udp-port {
+                                        type types-sros:tcp-udp-port-non-zero;
+                                        default "1812";
+                                        description "ISA RADIUS server authentication UDP port";
+                                    }
+
+                                } // container authentication
+
+                                container coa {
+                                    presence "Change of Authorization";
+                                    description "Enter the coa context";
+
+                                    leaf udp-port {
+                                        type types-sros:tcp-udp-port-non-zero;
+                                        default "3799";
+                                        description "ISA RADIUS server change of authorization UDP port";
+                                    }
+
+                                } // container coa
+
+                            } // container purpose
+
+                        } // list server
+
+                    } // container servers
+
+                } // list isa-policy
+
+            } // container radius
+
+            container diameter {
+                description "Enter the diameter context";
+
+                list node {
+                    key "origin-host";
+                    max-elements 32;
+                    description "Enter the node list instance";
+
+                    leaf origin-host {
+                        type types-diam:diam-fqdn;
+                        description "Origin-Host AVP";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf origin-realm {
+                        type types-diam:diam-fqdn;
+                        sros-ext:immutable;
+                        description "Origin-realm name";
+                    }
+
+                    leaf python-policy {
+                        type leafref {
+                            path "../../../../python/python-policy/name";
+                        }
+                        description "Python policy for received or sent Diameter messages";
+                    }
+
+                    leaf router-instance {
+                        type string;
+                        default "Base";
+                        description "Router in which this node connects to its peers";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container connection {
+                        description "Enter the connection context";
+
+                        leaf timer {
+                            type types-sros:time-duration {
+                                range "1..1000";
+                            }
+                            units "seconds";
+                            default "30";
+                            description "The value of the timer that determines how frequent connection will be attempted towards a peer without an active transport connection.";
+                        }
+
+                        container ipv4 {
+                            description "Enter the ipv4 context";
+
+                            leaf local-address {
+                                type types-sros:ipv4-unicast-address;
+                                description "Local address of IPv4 TCP peer connection";
+                            }
+
+                            leaf allow-connections {
+                                must ". != 'true' or ../local-address" {
+                                    error-message "local address is required to allow connections";
+                                }
+                                type boolean;
+                                default "false";
+                                description "Listen on local address for incoming peer connections";
+                            }
+
+                        } // container ipv4
+
+                        container ipv6 {
+                            description "Enter the ipv6 context";
+
+                            leaf local-address {
+                                type types-sros:ipv6-unicast-address;
+                                description "Local address of IPv6 TCP peer connection";
+                            }
+
+                            leaf allow-connections {
+                                must ". != 'true' or ../local-address" {
+                                    error-message "local address is required to allow connections";
+                                }
+                                type boolean;
+                                default "false";
+                                description "Listen on local address for incoming peer connections";
+                            }
+
+                        } // container ipv6
+
+                    } // container connection
+
+                    list peer {
+                        key "index";
+                        max-elements 5;
+                        description "Enter the peer list instance";
+
+                        leaf index {
+                            type uint32 {
+                                range "1..5";
+                            }
+                            description "Index of peer within the node";
+                        }
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of the Diameter peer";
+                        }
+
+                        leaf address {
+                            type types-sros:ip-unicast-address;
+                            description "Diameter peer address";
+                        }
+
+                        leaf destination-host {
+                            type types-diam:diam-fqdn;
+                            sros-ext:immutable;
+                            mandatory true;
+                            description "Destination-host name";
+                        }
+
+                        leaf connection-timer {
+                            type types-sros:time-duration {
+                                range "1..1000";
+                            }
+                            units "seconds";
+                            description "Wait time before attempting reconnection to peer";
+                        }
+
+                        leaf preference {
+                            type uint32 {
+                                range "1..100";
+                            }
+                            default "50";
+                            description "Preference of this peer, lower is more preferred";
+                        }
+
+                        leaf watchdog-timer {
+                            type types-sros:time-duration {
+                                range "1..1000";
+                            }
+                            units "seconds";
+                            description "Time between consecutive watchdog messages";
+                        }
+
+                        leaf default-peer {
+                            type boolean;
+                            default "false";
+                            description "Use this peer as default route when performing realm based routing.";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                    } // list peer
+
+                } // list node
+
+                list peer-policy {
+                    must "./applications/gy = 'false' or (./applications/gx = 'false' and ./applications/nasreq = 'false') or ./role != 'client'" {
+                        error-message "Gy application with other applications not supported";
+                    }
+                    must "./role != 'proxy' or not(./proxy/local-address) or ./proxy/router-instance" {
+                        error-message "Router-instance should be configured together with local-address";
+                    }
+                    must "./role != 'proxy' or not(./proxy/router-instance) or ./proxy/local-address" {
+                        error-message "Local-address should be configured together with router-instance";
+                    }
+                    must "./role != 'proxy' or ./applications/gy = 'false'" {
+                        error-message "Proxy role not supported for Gy";
+                    }
+                    key "name";
+                    max-elements 32;
+                    description "Enter the peer-policy list instance";
+
+                    leaf name {
+                        type types-sros:named-item;
+                        description "Diameter peer policy name";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf origin-host {
+                        type string {
+                            length "1..80";
+                        }
+                        description "Origin-Host AVP sent in CER and all application-based messages";
+                    }
+
+                    leaf origin-realm {
+                        type string {
+                            length "1..80";
+                        }
+                        description "Origin-Realm AVP sent in CER and all application-based messages";
+                    }
+
+                    leaf router-instance {
+                        type string;
+                        default "Base";
+                        description "Diameter peer policy router";
+                    }
+
+                    leaf ipv4-source-address {
+                        type types-sros:ipv4-unicast-address;
+                        description "IPv4 source address for peering connection";
+                    }
+
+                    leaf ipv6-source-address {
+                        type types-sros:ipv6-unicast-address;
+                        description "IPv6 source address for IPv6-reachable peering";
+                    }
+
+                    leaf watchdog-timer {
+                        type types-sros:time-duration {
+                            range "1..1000";
+                        }
+                        units "seconds";
+                        default "30";
+                        description "Time between consecutive watchdog messages";
+                    }
+
+                    leaf connection-timer {
+                        type types-sros:time-duration {
+                            range "1..1000";
+                        }
+                        units "seconds";
+                        default "30";
+                        description "Wait time before attempting reconnection to peer";
+                    }
+
+                    leaf transaction-timer {
+                        type types-sros:time-duration {
+                            range "1..1000";
+                        }
+                        units "seconds";
+                        default "30";
+                        description "Timeout for base Diameter messages (DWR, CER, DPR)";
+                    }
+
+                    leaf vendor-support {
+                        type types-diam:diam-vendor-support;
+                        default "three-gpp";
+                        description "Vendor support announced in the capability exchange";
+                    }
+
+                    leaf python-policy {
+                        type leafref {
+                            path "../../../../python/python-policy/name";
+                        }
+                        description "Name of python policy for Diameter messages received or transmitted on Diameter peers";
+                    }
+
+                    leaf role {
+                        type enumeration {
+                            enum "client"                       { value 0; }
+                            enum "proxy"                        { value 1; }
+                        }
+                        sros-ext:immutable;
+                        default "client";
+                        description "Client or proxy role of a Diameter peer policy";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container applications {
+                        description "Enter the applications context";
+
+                        leaf gx {
+                            type boolean;
+                            default "false";
+                            description "Advertise Gx application support in CER messages";
+                        }
+
+                        leaf gy {
+                            type boolean;
+                            default "false";
+                            description "Advertise Gy application support in CER messages";
+                        }
+
+                        leaf nasreq {
+                            type boolean;
+                            default "false";
+                            description "Advertise NASREQ application support in CER messages";
+                        }
+
+                    } // container applications
+
+                    list peer {
+                        must "./admin-state != 'enable' or ./address" {
+                            error-message "Address is not configured yet";
+                        }
+                        must "./admin-state != 'enable' or ./destination-realm" {
+                            error-message "Destination-realm is not configured yet";
+                        }
+                        key "peer-name";
+                        max-elements 5;
+                        description "Enter the peer list instance";
+
+                        leaf peer-name {
+                            type types-sros:named-item;
+                            description "Name of peer in Diameter peer policy";
+                        }
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of the peer";
+                        }
+
+                        leaf address {
+                            type types-sros:ip-unicast-address;
+                            description "Diameter peer address";
+                        }
+
+                        leaf destination-host {
+                            type types-sros:string-not-all-spaces {
+                                length "1..80";
+                            }
+                            description "Name of Destination-Host AVP sent in CCR-i/u and RAA messages";
+                        }
+
+                        leaf destination-realm {
+                            type types-sros:string-not-all-spaces {
+                                length "1..80";
+                            }
+                            description "Name of Destination-Realm AVP sent in CCR-i/u and RAA messages";
+                        }
+
+                        leaf watchdog-timer {
+                            type types-sros:time-duration {
+                                range "1..1000";
+                            }
+                            units "seconds";
+                            description "Time between consecutive watchdog messages";
+                        }
+
+                        leaf connection-timer {
+                            type types-sros:time-duration {
+                                range "1..1000";
+                            }
+                            units "seconds";
+                            description "Wait time before attempting reconnection to peer";
+                        }
+
+                        leaf transaction-timer {
+                            type types-sros:time-duration {
+                                range "1..1000";
+                            }
+                            units "seconds";
+                            description "Timeout for base Diameter messages (DWR, CER, DPR)";
+                        }
+
+                        leaf preference {
+                            type uint32 {
+                                range "1..100";
+                            }
+                            default "50";
+                            description "Peer preference of this Diameter peer policy (lower is more preferred)";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        container transport {
+                            description "Enter the transport context";
+
+                            leaf port-number {
+                                type uint32 {
+                                    range "1..65535";
+                                }
+                                default "3868";
+                                description "Transport protocol port number used toward policy peer";
+                            }
+
+                        } // container transport
+
+                        container statistics {
+                            description "Enter the statistics context";
+
+                        } // container statistics
+
+                    } // list peer
+
+                    container proxy {
+                        when "../role = 'proxy'";
+                        description "Enter the proxy context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of Diameter proxy";
+                        }
+
+                        leaf router-instance {
+                            type string;
+                            description "Routing context associated with Diameter proxy";
+                        }
+
+                        leaf local-address {
+                            type types-sros:ip-unicast-address;
+                            description "Source IP address on which Diameter proxy listens for client connections";
+                        }
+
+                        container mcs-peer {
+                            presence "Multi-Chassis Synchronization peer in Diameter multi-chassis redundancy";
+                            description "Enter the mcs-peer context";
+
+                            leaf address {
+                                type leafref {
+                                    path "../../../../../../redundancy/multi-chassis/peer/ip-address";
+                                }
+                                sros-ext:immutable;
+                                mandatory true;
+                                description "MCS peer address";
+                            }
+
+                            leaf sync-tag {
+                                type types-sros:named-item;
+                                sros-ext:immutable;
+                                mandatory true;
+                                description "Synchronization tag shared by Multi-Chassis Synchronization (MCS) peers";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                        } // container mcs-peer
+
+                    } // container proxy
+
+                } // list peer-policy
+
+            } // container diameter
+
+            container wpp {
+                description "Enter the wpp context";
+
+                leaf system-name {
+                    type string {
+                        length "1..16";
+                    }
+                    description "System name used in WPP protocol messages";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                list portal-group {
+                    must "./admin-state = 'disable' or ./portal" {
+                        error-message "a portal-group must at least contain one portal";
+                    }
+                    key "group-name";
+                    description "Enter the portal-group list instance";
+
+                    leaf group-name {
+                        type types-sros:named-item;
+                        description "Portal group name";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of the portal group";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    list portal {
+                        key "router-instance name";
+                        max-elements 8;
+                        description "Add a list entry for portal";
+
+                        leaf router-instance {
+                            type string;
+                            description "Router on which the portal is configured";
+                        }
+
+                        leaf name {
+                            type types-sros:named-item;
+                            description "Portal name";
+                        }
+
+                    } // list portal
+
+                } // list portal-group
+
+            } // container wpp
+
+        } // container aaa
+
+    } // grouping conf-aaa
+
+}

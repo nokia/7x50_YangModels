@@ -1,0 +1,217 @@
+submodule nokia-conf-macsec {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+
+    sros-ext:sros-major-release "rel19";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure MACsec connectivity-association configuration on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-macsec YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2019-09-24";
+
+    grouping conf-macsec {
+        container macsec {
+            description "Enter the macsec context";
+
+            list connectivity-association {
+                key "ca-name";
+                description "Enter the connectivity-association list instance";
+
+                leaf ca-name {
+                    type string {
+                        length "1..32";
+                    }
+                    description "Connectivity association name";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of this CA";
+                }
+
+                leaf description {
+                    type string {
+                        length "1..80";
+                    }
+                    description "Text description";
+                }
+
+                leaf replay-window-size {
+                    type uint32 {
+                        range "0..4294967294";
+                    }
+                    default "0";
+                    description "Size of the replay protection window";
+                }
+
+                leaf replay-protection {
+                    type boolean;
+                    default "false";
+                    description "Discard packet that is not within the replay window size";
+                }
+
+                leaf macsec-encrypt {
+                    type boolean;
+                    default "true";
+                    description "Encrypt all PDUs and authenticate (ICV payload)";
+                }
+
+                leaf clear-tag-mode {
+                    type enumeration {
+                        enum "none"                         { value 0; }
+                        enum "single-tag"                   { value 1; }
+                        enum "dual-tag"                     { value 2; }
+                    }
+                    sros-ext:auto-restart-to-modify;
+                    default "none";
+                    description "Clear tag mode";
+                }
+
+                leaf encryption-offset {
+                    type uint32 {
+                        range "0|30|50";
+                    }
+                    default "0";
+                    description "Offset of the encryption in MACsec packet";
+                }
+
+                leaf cipher-suite {
+                    type enumeration {
+                        enum "gcm-aes-128"                  { value 1; }
+                        enum "gcm-aes-256"                  { value 2; }
+                        enum "gcm-aes-xpn-128"              { value 3; }
+                        enum "gcm-aes-xpn-256"              { value 4; }
+                    }
+                    default "gcm-aes-128";
+                    description "Datapath encryption protocol";
+                }
+
+                container static-cak {
+                    description "Enter the static-cak context";
+
+                    leaf active-psk {
+                        type uint32 {
+                            range "1..2";
+                        }
+                        default "1";
+                        description "Value of the pre-shared-key (PSK)";
+                    }
+
+                    leaf mka-hello-interval {
+                        type uint32 {
+                            range "1..6";
+                        }
+                        default "2";
+                        description "Interval used for MKA hello by the MKA protocol.";
+                    }
+
+                    leaf mka-key-server-priority {
+                        type uint32 {
+                            range "0..255";
+                        }
+                        default "16";
+                        description "Key server priority used by the MKA protocol";
+                    }
+
+                    list pre-shared-key {
+                        key "psk-id";
+                        max-elements 2;
+                        description "Enter the pre-shared-key list instance";
+
+                        leaf psk-id {
+                            type uint32 {
+                                range "1..2";
+                            }
+                            description "Value of the pre-shared-key (PSK)";
+                        }
+
+                        leaf encryption-type {
+                            type enumeration {
+                                enum "aes-128-cmac"                 { value 1; }
+                                enum "aes-256-cmac"                 { value 2; }
+                            }
+                            mandatory true;
+                            description "Encryption for authentication of the MKA packet";
+                        }
+
+                        leaf cak {
+                            type types-sros:encrypted-leaf-hex-without-prefix {
+                                length "1..71";
+                            }
+                            description "Connectivity association key (CAK) for a pre-shared key";
+                        }
+
+                        leaf cak-name {
+                            type string {
+                                length "1..64";
+                                pattern "(([0-9a-fA-F])([0-9a-fA-F])){1,32}" {
+                                    error-message "cak-name must be an even length hex string up to 64 characters.";
+                                }
+                            }
+                            description "Connectivity Association Key (CAK) name for the PSK";
+                        }
+
+                    } // list pre-shared-key
+
+                } // container static-cak
+
+            } // list connectivity-association
+
+            list mac-policy {
+                key "mac-policy-id";
+                description "Enter the mac-policy list instance";
+
+                leaf mac-policy-id {
+                    type uint32;
+                    description "The ID of the mac policy.";
+                }
+
+                list destination-mac-address {
+                    key "dest-mac-addr";
+                    max-elements 5;
+                    description "Add a list entry for destination-mac-address";
+
+                    leaf dest-mac-addr {
+                        type yang:mac-address;
+                        description "The destination mac address to be added to the policy.";
+                    }
+
+                } // list destination-mac-address
+
+            } // list mac-policy
+
+        } // container macsec
+
+    } // grouping conf-macsec
+
+}

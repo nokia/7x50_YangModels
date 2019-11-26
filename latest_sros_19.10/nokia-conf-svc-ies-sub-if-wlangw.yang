@@ -1,0 +1,279 @@
+submodule nokia-conf-svc-ies-sub-if-wlangw {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-groups;
+    include nokia-conf-isa;
+
+    sros-ext:sros-major-release "rel19";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure ies service subscriber interface WLAN Gateway on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-svc-ies-sub-if-wlangw YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2019-03-20";
+
+    grouping conf-svc-ies-sub-if-wlangw-wlan-gw {
+        container wlan-gw {
+            presence
+                "Marks the subscriber interface as being used specifically for WLAN
+                 Gateway functions.";
+            description "Enter the wlan-gw context";
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            container pool-manager {
+                must "./watermarks/low < ./watermarks/high" {
+                    error-message "Low watermark must be less than high watermark";
+                }
+                must "./dhcp6-client/dhcpv4-nat/admin-state != 'enable' or not(../../fwd-subscriber-interface)" {
+                    error-message "This function is not available on retail subscriber interfaces";
+                }
+                description "Enter the pool-manager context";
+
+                leaf wlan-gw-group {
+                    type leafref {
+                        path "../../../../../../isa/wlan-gw-group/id";
+                    }
+                    description "Identifier of the WLAN Gateway ISA group on which the prefixes are installed";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                container dhcp6-client {
+                    description "Enter the dhcp6-client context";
+
+                    leaf source-ip {
+                        type union {
+                            type enumeration {
+                                enum "use-interface-ip"             { value 0; }
+                            }
+                            type types-sros:ipv6-address;
+                        }
+                        default "use-interface-ip";
+                        description "Source IP address that is used by the DHCPv6 client";
+                    }
+
+                    leaf-list servers {
+                        type types-sros:ipv6-unicast-address;
+                        max-elements 8;
+                        description "DHCPv6 servers that are used for requesting addresses";
+                    }
+
+                    container lease-query {
+                        presence
+                            "Whether the DHCPv6 client will retrieve any existing
+                             addresses when becoming active.";
+                        description "Enter the lease-query context";
+
+                        leaf max-retries {
+                            type uint32 {
+                                range "0..10";
+                            }
+                            default "2";
+                            description "Maximum number of retries before the lease query assumes that no existing subnets were allocated";
+                        }
+
+                    } // container lease-query
+
+                    container dhcpv4-nat {
+                        description "Enter the dhcpv4-nat context";
+
+                        leaf admin-state {
+                            must ". != 'enable' or ../../../wlan-gw-group" {
+                                error-message "The wlan-gw-group is not configured yet";
+                            }
+                            must ". != 'enable' or ../../servers" {
+                                error-message "No DHCPv6 servers configured";
+                            }
+                            must ". != 'enable' or ../../../../../../../../subscriber-mgmt/wlan-gw/virtual-chassis-identifier" {
+                                error-message "No virtual-chassis-id configured";
+                            }
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of the DHCPv6 client entity";
+                        }
+
+                        leaf link-address {
+                            type types-sros:ipv6-address;
+                            default "::";
+                            description "The IPv6-address that should be included in the link-address field of the relay header.";
+                        }
+
+                        leaf pool-name {
+                            type types-sros:named-item;
+                            description "Pool name to be sent in the DHCPv6 messages";
+                        }
+
+                    } // container dhcpv4-nat
+
+                    container ia-na {
+                        must "./admin-state != 'enable' or ../../../../ipv6" {
+                            error-message "Cannot be enabled when no configuration is present for subscriber-interface/ipv6";
+                        }
+                        description "Enter the ia-na context";
+
+                        leaf admin-state {
+                            must ". != 'enable' or ../../../wlan-gw-group" {
+                                error-message "The wlan-gw-group is not configured yet";
+                            }
+                            must ". != 'enable' or ../../servers" {
+                                error-message "No DHCPv6 servers configured";
+                            }
+                            must ". != 'enable' or ../../../../../../../../subscriber-mgmt/wlan-gw/virtual-chassis-identifier" {
+                                error-message "No virtual-chassis-id configured";
+                            }
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of the DHCPv6 client entity";
+                        }
+
+                        leaf link-address {
+                            type types-sros:ipv6-address;
+                            default "::";
+                            description "The IPv6-address that should be included in the link-address field of the relay header.";
+                        }
+
+                        leaf pool-name {
+                            type types-sros:named-item;
+                            description "Pool name to be sent in the DHCPv6 messages";
+                        }
+
+                    } // container ia-na
+
+                    container slaac {
+                        must "./admin-state != 'enable' or ../../../../ipv6" {
+                            error-message "Cannot be enabled when no configuration is present for subscriber-interface/ipv6";
+                        }
+                        description "Enter the slaac context";
+
+                        leaf admin-state {
+                            must ". != 'enable' or ../../../wlan-gw-group" {
+                                error-message "The wlan-gw-group is not configured yet";
+                            }
+                            must ". != 'enable' or ../../servers" {
+                                error-message "No DHCPv6 servers configured";
+                            }
+                            must ". != 'enable' or ../../../../../../../../subscriber-mgmt/wlan-gw/virtual-chassis-identifier" {
+                                error-message "No virtual-chassis-id configured";
+                            }
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of the DHCPv6 client entity";
+                        }
+
+                        leaf link-address {
+                            type types-sros:ipv6-address;
+                            default "::";
+                            description "The IPv6-address that should be included in the link-address field of the relay header.";
+                        }
+
+                        leaf pool-name {
+                            type types-sros:named-item;
+                            description "Pool name to be sent in the DHCPv6 messages";
+                        }
+
+                    } // container slaac
+
+                } // container dhcp6-client
+
+                container watermarks {
+                    description "Enter the watermarks context";
+
+                    leaf high {
+                        type uint32 {
+                            range "51..99";
+                        }
+                        default "95";
+                        description "New prefix that is used when the ISA level reaches high watermark";
+                    }
+
+                    leaf low {
+                        type uint32 {
+                            range "50..98";
+                        }
+                        default "90";
+                        description "Prefix that is released if the usage level without this prefix is below the low watermark";
+                    }
+
+                } // container watermarks
+
+            } // container pool-manager
+
+            container redundancy {
+                description "Enter the redundancy context";
+
+                leaf admin-state {
+                    must ". = 'disable' or (../export and ../monitor)" {
+                        error-message "To enable WLAN-GW redundancy, both an export- and monitor-route needs to be configured";
+                    }
+                    must ". = 'disable' or not(../../../fwd-subscriber-interface)" {
+                        error-message "Cannot enable WLAN-GW redundancy in a subscriber interface with a forwarding interface";
+                    }
+                    must ". = 'disable' or ../../../admin-state = 'enable'" {
+                        error-message "WLAN-GW redundancy can only be enabled while the subscriber interface is admin up";
+                    }
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of redundancy";
+                }
+
+                leaf export {
+                    type types-sros:ipv4-unicast-prefix;
+                    sros-ext:auto-restart-to-modify;
+                    description "Route to export to peer";
+                }
+
+                leaf monitor {
+                    type types-sros:ipv4-unicast-prefix;
+                    sros-ext:auto-restart-to-modify;
+                    description "Peer route to monitor";
+                }
+
+            } // container redundancy
+
+        } // container wlan-gw
+
+    } // grouping conf-svc-ies-sub-if-wlangw-wlan-gw
+
+}

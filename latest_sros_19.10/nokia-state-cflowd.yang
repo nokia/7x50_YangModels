@@ -1,0 +1,257 @@
+submodule nokia-state-cflowd {
+
+    yang-version "1.1";
+
+    belongs-to nokia-state { prefix "state"; }
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-cflowd             { prefix "types-cflowd"; }
+    import nokia-types-qos                { prefix "types-qos"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+
+    sros-ext:sros-major-release "rel19";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model with operational state for Cflowd configuration on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-state-cflowd YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2019-08-16";
+
+    grouping state-cflowd {
+        container cflowd {
+            description "Enter the cflowd context";
+
+            leaf max-collectors {
+                type int32 {
+                    range "0..8";
+                }
+                description
+                    "Specifies the maximum number of row entries that can be created in the
+                     collector table.
+
+                     Current implementation does not allow to configure this field.";
+            }
+
+            leaf oper-status {
+                type types-sros:oper-state;
+                description "Indicates current operational status of the Cflowd data analysis.";
+            }
+
+            leaf active-flows {
+                type yang:gauge32;
+                description "Indicates current number of active flows being collected.";
+            }
+
+            leaf aggregation {
+                type yang:gauge32;
+                description
+                    "Indicates aggregation scheme(s) currently used to aggregate multiple individual
+                     flows into an aggregated flow for export to one or more remote host
+                     collectors.
+
+                     If no aggregation scheme is specified, {}, no data will be exported.
+                     If the 'raw (5)' scheme is specified, flow data is exported without
+                     aggregation in version 5 format.  All other aggregation types use
+                     version 8 format to export the flow data to the remote host
+                     collector.";
+            }
+
+            leaf total-packets-received {
+                type yang:counter64;
+                description "Indicates the total number of packets received for Cflowd.";
+            }
+
+            leaf total-packets-dropped {
+                type yang:counter64;
+                description "Indicates the total number of packets dropped for Cflowd.";
+            }
+
+            leaf raw-flows-created {
+                type yang:counter64;
+                description "Indicates the total number of raw flows created by system.";
+            }
+
+            leaf aggregate-flows-created {
+                type yang:counter64;
+                description "Indicates the total number of aggregate flows created by system.";
+            }
+
+            leaf raw-flows-matched {
+                type yang:counter64;
+                description "Indicates the number of raw packets matched to an existing raw flow.";
+            }
+
+            leaf aggregate-flows-matched {
+                type yang:counter64;
+                description "Indicates the number of packets matched to an existing aggregate flow.";
+            }
+
+            leaf raw-flows-flushed {
+                type yang:counter64;
+                description "Indicates the number of raw flows flushed.";
+            }
+
+            leaf aggregate-flows-flushed {
+                type yang:counter64;
+                description "Indicates the number of aggregate flows flushed.";
+            }
+
+            leaf overflow-events {
+                type yang:counter64;
+                description
+                    "Indicates the number of times the flow cache has entered
+                     the overflow state.";
+            }
+
+            leaf dropped-flows {
+                type yang:counter64;
+                description
+                    "Indicates the number of times a flow was dropped.
+                     Data from dropped flows are not reported to any collector.";
+            }
+
+            list version {
+                key "version-index";
+                description "Cflowd statistics per collector version.";
+
+                leaf version-index {
+                    type types-cflowd:collector-version;
+                    description "The cflowd collector version.";
+                }
+
+                leaf status {
+                    type boolean;
+                    description "Whether or not a collector of the specified version is in use.";
+                }
+
+                leaf sent-packets {
+                    type yang:counter64;
+                    units "packets";
+                    description "The number of packets transmitted for the specified version";
+                }
+
+                leaf open-packets {
+                    type yang:counter64;
+                    units "packets";
+                    description "The number of open packets pending for the specified version";
+                }
+
+                leaf errored-packets {
+                    type yang:counter64;
+                    units "packets";
+                    description "The number of errored packets for the specified version";
+                }
+
+            } // list version
+
+            list collector {
+                key "ip-address port";
+                description "Enter the collector list instance";
+
+                leaf ip-address {
+                    type types-sros:ip-unicast-address;
+                    description "IP address of a remote Cflowd collector host to receive the exported Cflowd data";
+                }
+
+                leaf port {
+                    type types-qos:tcp-udp-match-port {
+                        range "1..65535";
+                    }
+                    description "UDP port number on the remote Cflowd collector host to receive the exported Cflowd data";
+                }
+
+                leaf oper-status {
+                    type types-sros:oper-state;
+                    description "Indicates the current operational status of this remote collector host.";
+                }
+
+                leaf records-sent {
+                    type yang:counter64;
+                    description
+                        "Indicates the number of Cflowd records that have been transmitted
+                         to this remote collector host.";
+                }
+
+                leaf last-packet-sent {
+                    type types-sros:date-time;
+                    description
+                        "Indicates the time, when the last Cflowd packet was sent to this
+                         remote collector host.";
+                }
+
+                leaf packets-sent {
+                    type yang:counter64;
+                    description
+                        "Indicates the number of Cflowd packets that have been transmitted
+                         to this remote collector host.";
+                }
+
+                list template-statistics {
+                    key "template-flow-index";
+                    description "Statistics for template flows for this cflowd collector";
+
+                    leaf template-flow-index {
+                        type enumeration {
+                            enum "ipv4"                         { value 1; }
+                            enum "mpls"                         { value 2; }
+                            enum "ipv6"                         { value 3; }
+                            enum "l2"                           { value 4; }
+                        }
+                        description "The template flow type.";
+                    }
+
+                    leaf last-transmit-time {
+                        type yang:date-and-time;
+                        description "The time, since system startup, when the specified template was last transmitted.";
+                    }
+
+                    leaf sent-packets {
+                        type uint64;
+                        units "packets";
+                        description "The number of packets transmitted for the specified template.";
+                    }
+
+                    leaf open-packets {
+                        type uint64;
+                        units "packets";
+                        description "The number of open packets pending for the specified template.";
+                    }
+
+                    leaf errored-packets {
+                        type uint64;
+                        units "packets";
+                        description "The number of errored packets for the specified template";
+                    }
+
+                } // list template-statistics
+
+            } // list collector
+
+        } // container cflowd
+
+    } // grouping state-cflowd
+
+}

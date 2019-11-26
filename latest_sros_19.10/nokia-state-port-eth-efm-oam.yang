@@ -1,0 +1,704 @@
+submodule nokia-state-port-eth-efm-oam {
+
+    yang-version "1.1";
+
+    belongs-to nokia-state { prefix "state"; }
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+
+    sros-ext:sros-major-release "rel19";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model with operational state for ethernet ports supporting efm-oam on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-state-port-eth-efm-oam YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2019-07-28";
+
+    grouping state-port-eth-efm-oam {
+        container efm-oam {
+            description "Enter the efm-oam context";
+
+            leaf config-revision {
+                type uint32;
+                description
+                    "The configuration revision of the OAM entity as reflected in
+                     the latest OAMPDU sent by the OAM entity.  The config revision
+                     is used by OAM entities to indicate that configuration changes
+                     have occurred, which might require the peer OAM entity to
+                     re-evaluate whether OAM peering is allowed.";
+            }
+
+            leaf function-support {
+                type bits {
+                    bit unidirectional                 { position 0; }
+                    bit loopback                       { position 1; }
+                    bit event                          { position 2; }
+                    bit variable                       { position 3; }
+                }
+                description
+                    "The OAM functions supported on this Ethernet-like interface.
+                     OAM consists of separate functional sets beyond the basic
+                     discovery process that is always required.  These functional
+                     groups can be supported independently by any implementation.
+                     These values are communicated to the peer via the local
+                     configuration field of Information OAMPDUs.
+
+                     Setting 'unidirectional' indicates that the OA
+                     entity supports the transmission of OAMPDUs on links that are
+                     operating in unidirectional mode (traffic flowing in one
+                     direction only).  Setting 'loopback' indicates that
+                     the OAM entity can initiate and respond to loopback commands.
+                     Setting 'event' indicates that the OAM entity can
+                     send and receive Event Notification OAMPDUs.  Setting
+                     'variable' indicates that the OAM entity can send
+                     and receive Variable Request and Response OAMPDUs.";
+            }
+
+            leaf dying-gasp-tx-on-reset-oper-state {
+                type enumeration {
+                    enum "active"                       { value 1; }
+                    enum "inactive"                     { value 2; }
+                }
+                description
+                    "Indicates whether or not the node is transmitting Information OAMPDUs
+                     to the peer with the dying-gasp flag set.";
+            }
+
+            leaf grace-tx-oper-state {
+                type enumeration {
+                    enum "active"                       { value 1; }
+                    enum "inactive"                     { value 2; }
+                }
+                description
+                    "Indicates whether or not the node is locally executing a grace period. A value of
+                     'active' indicates that all peer timeouts are extended locally and an eligible
+                     EFM-OAM entity is transmitting grace period information. A value of 'inactive'
+                     indicates no grace period information is transmitted and standard values are used
+                     for timing out remote peers.";
+            }
+
+            leaf loop-detected {
+                type boolean;
+                description
+                    "Indicates if the OAM entity is receiving OAMPDUs that it transmitted.
+                     A value of 'true' indicates that the OAM entity is receiving it's own
+                     OAMPDUs while a value of 'false' indicates it is not.";
+            }
+
+            leaf loopback-state {
+                type enumeration {
+                    enum "none"                         { value 1; }
+                    enum "initiating"                   { value 2; }
+                    enum "remote-loopback"              { value 3; }
+                    enum "terminating"                  { value 4; }
+                    enum "local-loopback"               { value 5; }
+                    enum "unknown"                      { value 6; }
+                }
+                description
+                    "Indicates the loopback status of the OAM entity. This status is
+                     determined by a combination of the local parser and
+                     multiplexer states, the remote parser and multiplexer states,
+                     as well as by the actions of the local OAM client.  When
+                     operating in normal mode with no loopback in progress, the
+                     status reads none(1).
+
+                     The values initiating(2) and terminating(4)
+                     can be read or written.  The other values can only be read -
+                     they can never be written.  Writing initiatingLoopback causes
+                     the local OAM entity to start the loopback process with its
+                     peer.  This value can only be written when the status is
+                     none(1).  Writing the value initiating(2) in any
+                     other state has no effect.  When in remote-loopback(3), writing
+                     terminating(4) causes the local OAM entity to initiate
+                     the termination of the loopback state.  Writing
+                     terminating(4) in any other state has no effect.
+
+                     If the OAM client initiates a loopback and has sent a
+                     Loopback OAMPDU and is waiting for a response, where the local
+                     parser and multiplexer states are DISCARD (see [802.3ah,
+                     57.2.11.1]), the status is 'initiating'.  In this
+                     case, the local OAM entity has yet to receive any
+                     acknowledgment that the remote OAM entity has received its
+                     loopback command request.
+                     If the local OAM client knows that the remote OAM entity is in
+                     loopback mode (via the remote state information as described
+                     in [802.3ah, 57.2.11.1, 30.3.6.1.15]), the status is
+                     remote-loopback(3).  If the local OAM client is in the process
+                     of terminating the remote loopback [802.3ah, 57.2.11.3,
+                     30.3.6.1.14] with its local multiplexer and parser states in
+                     DISCARD, the status is terminating(4).  If the remote
+                     OAM client has put the local OAM entity in loopback mode as
+                     indicated by its local parser state, the status is
+                     local-loopback(5).
+
+                     The unknown(6) status indicates that the parser and
+                     multiplexer combination is unexpected.  This status may be
+                     returned if the OAM loopback is in a transition state but
+                     should not persist.
+
+                     The values of this attribute correspond to the following
+                     values of the local and remote parser and multiplexer states.
+
+                       value            LclPrsr   LclMux    RmtPrsr   RmtMux
+                       none               FWD       FWD       FWD       FWD
+                       initiating       DISCARD   DISCARD     FWD       FWD
+                       remote-loopback  DISCARD     FWD      LPBK    DISCARD
+                       terminating      DISCARD   DISCARD    LPBK    DISCARD
+                       local-loopback     LPBK    DISCARD   DISCARD     FWD
+                       unknown            ***   any other combination   ***";
+            }
+
+            leaf oper-state {
+                type enumeration {
+                    enum "disabled"                     { value 1; }
+                    enum "link-fault"                   { value 2; }
+                    enum "passive-wait"                 { value 3; }
+                    enum "active-send-local"            { value 4; }
+                    enum "send-local-and-remote"        { value 5; }
+                    enum "send-local-and-remote-ok"     { value 6; }
+                    enum "peering-locally-rejected"     { value 7; }
+                    enum "peering-remotely-rejected"    { value 8; }
+                    enum "operational"                  { value 9; }
+                    enum "non-oper-half-duplex"         { value 10; }
+                }
+                description "Indicates the operational state.";
+            }
+
+            leaf pdu-size {
+                type uint32;
+                units "octets";
+                description
+                    "The largest OAMPDU that the OAM entity supports.  OA entities exchange
+                     maximum OAMPDU sizes and negotiate to use the smaller of the two maximum
+                     OAMPDU sizes between the peers. This value is determined by the local
+                     implementation.";
+            }
+
+            leaf soft-reset-action {
+                type enumeration {
+                    enum "none"                         { value 1; }
+                    enum "grace"                        { value 2; }
+                    enum "dying-gasp"                   { value 3; }
+                }
+                description "Indicates which functionality is executed when a soft reset is invoked.";
+            }
+
+            leaf vendor-info {
+                type string;
+                description
+                    "Indicates the information that is included in the Vendor Information
+                     field of the Local Information TLV of every Information OAMPDU
+                     transmitted by the local EFM-OAM entity. The semantics of the Vendor
+                     Information field are proprietary and specific to the vendor (identified by
+                     vendor-oui).";
+            }
+
+            leaf vendor-oui {
+                type string;
+                description
+                    "Indicates the Organizationally Unique Identifier (OUI) which can be used
+                     to identify the vendor of the local EFM-OAM entity. This OUI is included
+                     in the Local Information TLV of every Information OAMPDU transmitted by
+                     the local EFM-OAM entity.";
+            }
+
+            container event-log {
+                description "The container of EFM OAM event log parameters.";
+
+                list degraded-event-log {
+                    key "log-index";
+                    description "The list of EFM OAM degraded event log parameters.";
+
+                    leaf log-index {
+                        type uint32;
+                        description
+                            "Specifies an arbitrary integer for identifying individual events
+                             within the event log.";
+                    }
+
+                    leaf event-time-reference {
+                        type yang:date-and-time;
+                        description "Indicates the time that the event occurred.";
+                    }
+
+                    leaf location {
+                        type enumeration {
+                            enum "local"                        { value 1; }
+                            enum "remote"                       { value 2; }
+                        }
+                        description
+                            "Indicates whether this event occurred locally, or was
+                             received from the OAM peer via Ethernet OAM.";
+                    }
+
+                    leaf state {
+                        type enumeration {
+                            enum "cleared"                      { value 1; }
+                            enum "active"                       { value 2; }
+                        }
+                        description "Indicates whether the event is active or cleared.";
+                    }
+
+                    leaf type {
+                        type types-sros:named-item;
+                        description "Indicates he type of event that generated this entry in the event log.";
+                    }
+
+                    leaf threshold {
+                        type yang:gauge64;
+                        description
+                            "Indicates the threshold value that was crossed for the
+                             threshold crossing event.";
+                    }
+
+                    leaf value {
+                        type yang:gauge64;
+                        description
+                            "Indicates the number of occurrences within a given window which caused the threshold
+                             crossing event to be generated.";
+                    }
+
+                    leaf window {
+                        type yang:gauge64;
+                        description
+                            "Indicates the window over which the value was measured for the
+                             threshold crossing event.";
+                    }
+
+                    leaf event-total {
+                        type uint32;
+                        description
+                            "Indicates the total number of times one or more of these occurrences
+                             have resulted in an Event Notification.";
+                    }
+
+                    leaf running-total {
+                        type yang:gauge64;
+                        description
+                            "Indicates the total number of times this event has happened since
+                             the last reset.";
+                    }
+
+                } // list degraded-event-log
+
+                list failure-event-log {
+                    key "log-index";
+                    description "The list of EFM OAM failure event log parameters.";
+
+                    leaf log-index {
+                        type uint32;
+                        description
+                            "Specifies an arbitrary integer for identifying individual events
+                             within the event log.";
+                    }
+
+                    leaf event-time-reference {
+                        type yang:date-and-time;
+                        description "Indicates the time that the event occurred.";
+                    }
+
+                    leaf location {
+                        type enumeration {
+                            enum "local"                        { value 1; }
+                            enum "remote"                       { value 2; }
+                        }
+                        description
+                            "Indicates whether this event occurred locally, or was
+                             received from the OAM peer via Ethernet OAM.";
+                    }
+
+                    leaf state {
+                        type enumeration {
+                            enum "cleared"                      { value 1; }
+                            enum "active"                       { value 2; }
+                        }
+                        description "Indicates whether the event is active or cleared.";
+                    }
+
+                    leaf type {
+                        type types-sros:named-item;
+                        description "Indicates he type of event that generated this entry in the event log.";
+                    }
+
+                    leaf threshold {
+                        type yang:gauge64;
+                        description
+                            "Indicates the threshold value that was crossed for the
+                             threshold crossing event.";
+                    }
+
+                    leaf value {
+                        type yang:gauge64;
+                        description
+                            "Indicates the number of occurrences within a given window which caused the threshold
+                             crossing event to be generated.";
+                    }
+
+                    leaf window {
+                        type yang:gauge64;
+                        description
+                            "Indicates the window over which the value was measured for the
+                             threshold crossing event.";
+                    }
+
+                    leaf event-total {
+                        type uint32;
+                        description
+                            "Indicates the total number of times one or more of these occurrences
+                             have resulted in an Event Notification.";
+                    }
+
+                    leaf running-total {
+                        type yang:gauge64;
+                        description
+                            "Indicates the total number of times this event has happened since
+                             the last reset.";
+                    }
+
+                } // list failure-event-log
+
+            } // container event-log
+
+            container peer {
+                description "The container of EFM OAM peer parameters.";
+
+                leaf config-revision {
+                    type uint32;
+                    description
+                        "Indicates the configuration revision of the OAM peer as reflected
+                         in the latest OAMPDU. This attribute is changed by the peer
+                         whenever it has a local configuration change for Ethernet OA
+                         on this interface. The configuration revision can be
+                         determined from the Revision field of the Local Information
+                         TLV of the most recently received Information OAMPDU with
+                         a Local Information TLV. A value of zero is returned if
+                         no Local Information TLV has been received.";
+                }
+
+                leaf function-support {
+                    type bits {
+                        bit unidirectional                 { position 0; }
+                        bit loopback                       { position 1; }
+                        bit event                          { position 2; }
+                        bit variable                       { position 3; }
+                    }
+                    description
+                        "Indicates the OAM functions supported on this Ethernet-like interface.
+                         OAM consists of separate functionality sets above the basic
+                         discovery process.  This value indicates the capabilities of
+                         the peer OAM entity with respect to these functions.  This
+                         value is initialized so all bits are clear.
+
+                         If unidirectional(0) is set, then the peer OAM entity
+                         supports sending OAM frames on Ethernet interfaces when the
+                         receive path is known to be inoperable.  If
+                         loopback(1) is set, then the peer OAM entity can send
+                         and receive OAM loopback commands.  If event(2) is set,
+                         then the peer OAM entity can send and receive event OAMPDUs to
+                         signal various error conditions.  If variable(3) is
+                         set, then the peer OAM entity can send and receive variable
+                         requests to monitor the attribute value as described in Clause
+                         57 of [802.3ah].
+
+                         The capabilities of the OAM peer can be determined from the
+                         configuration field of the Local Information TLV of the most
+                         recently received Information OAMPDU with a Local Information
+                         TLV.  All zeros are returned if no Local Information TLV has
+                         yet been received.";
+                }
+
+                leaf grace-rx {
+                    type boolean;
+                    description
+                        "Indicates whether or not the OAM entity is receiving 'grace-period'
+                         notifications through this peer.";
+                }
+
+                leaf mac-address {
+                    type yang:mac-address;
+                    description
+                        "Indicates the MAC address of the peer OAM entity. The MAC address
+                         is derived from the most recently received OAMPDU.";
+                }
+
+                leaf mode {
+                    type enumeration {
+                        enum "passive"                      { value 1; }
+                        enum "active"                       { value 2; }
+                        enum "unknown"                      { value 3; }
+                    }
+                    description
+                        "The mode of the OAM peer as reflected in the latest
+                         Information OAMPDU received with a Local Information TLV. The
+                         mode of the peer can be determined from the Configuration
+                         field in the Local Information TLV of the last Information
+                         OAMPDU received from the peer. The value is unknown(3)
+                         whenever no Local Information TLV has been received. The
+                         values of active(2) and passive(1) are returned when a Local
+                         Information TLV has been received indicating that the peer is
+                         in active or passive mode, respectively.";
+                }
+
+                leaf pdu-size {
+                    type uint32;
+                    units "octets";
+                    description
+                        "Indicates the maximum size of OAMPDU supported by the peer as
+                         reflected in the latest Information OAMPDU received with a Local
+                         Information TLV. Ethernet OAM on this interface must not use
+                         OAMPDUs that exceed this size. The maximum OAMPDU size can be
+                         determined from the PDU Configuration field of the Local
+                         Information TLV of the last Information OAMPDU received from
+                         the peer. A value of zero is returned if no Local Information
+                         TLV has been received.  Otherwise, the value of the OAM peer's
+                         maximum OAMPDU size is returned in this value.";
+                }
+
+                leaf vendor-info {
+                    type string;
+                    description
+                        "Indicates the Vendor Info of the OAM peer as reflected in the latest
+                         Information OAMPDU received with a Local Information TLV.
+                         The semantics of the Vendor Information field is proprietary
+                         and specific to the vendor (identified by the peer/vendor-oui.
+                         This information could, for example, be used to identify a specific
+                         product or product family. This value is initialized to zero before
+                         any Local Information TLV is received.";
+                }
+
+                leaf vendor-oui {
+                    type string;
+                    description
+                        "Indicates the OUI of the OAM peer as reflected in the latest
+                         Information OAMPDU received with a Local Information TLV. The
+                         OUI can be used to identify the vendor of the remote OA
+                         entity. This value is initialized to three octets of zero
+                         before any Local Information TLV is received.";
+                }
+
+            } // container peer
+
+            container statistics {
+                description "The container of Ethernet port EFM-OAM statistics.";
+
+                leaf frames-lost {
+                    type yang:counter32;
+                    units "frames";
+                    description
+                        "Indicates a count of the number of frames that were dropped by
+                         the OA multiplexer.  Since the OAM multiplexer has multiple
+                         inputs and a single output, there may be cases where frames are
+                         dropped due to transmit resource contention.  This counter is
+                         incremented whenever a frame is dropped by the OAM layer.
+                         Note that any Ethernet frame, not just OAMPDUs, may be dropped
+                         by the OAM layer.  This can occur when an OAMPDU takes
+                         precedence over a 'normal' frame resulting in the 'normal'
+                         frame being dropped.
+
+                         When this counter is incremented, no other /port/ethernet/efm-oam
+                         are incremented.";
+                }
+
+                container receive {
+                    description "The container of Ethernet port EFM-OAM receive statistics.";
+
+                    leaf information {
+                        type yang:counter32;
+                        units "frames";
+                        description
+                            "Indicates a count of the number of Information OAMPDUs received on
+                             this interface.";
+                    }
+
+                    leaf unique-event-notification {
+                        type yang:counter32;
+                        units "frames";
+                        description
+                            "Indicates a count of the number of unique Event OAMPDUs transmitted
+                             on this interface.  Event Notifications may be sent in duplicate
+                             to increase the probability of successfully being received,
+                             given the possibility that a frame may be lost in transit.
+                             Duplicate Event Notification transmissions are counted by
+                             duplicate-event-notification.
+
+                             A unique Event Notification OAMPDU is indicated as an Event
+                             Notification OAMPDU with a Sequence Number field that is
+                             distinct from the previously transmitted Event Notification
+                             OAMPDU Sequence Number.";
+                    }
+
+                    leaf duplicate-event-notification {
+                        type yang:counter32;
+                        units "frames";
+                        description
+                            "Indicates a count of the number of duplicate Event OAMPDUs transmitted
+                             on this interface.  Event Notification OAMPDUs may be sent in
+                             duplicate to increase the probability of successfully being
+                             received, given the possibility that a frame may be lost in
+                             transit.
+
+                             A duplicate Event Notification OAMPDU is indicated as an Event
+                             Notification OAMPDU with a Sequence Number field that is
+                             identical to the previously transmitted Event Notification
+                             OAMPDU Sequence Number.";
+                    }
+
+                    leaf loopback-control {
+                        type yang:counter32;
+                        units "frames";
+                        description
+                            "Indicates a count of the number of Loopback Control OAMPDUs
+                             transmitted on this interface.";
+                    }
+
+                    leaf organization-specific {
+                        type yang:counter32;
+                        units "frames";
+                        description
+                            "Indicates a count of the number of Organization Specific OAMPDUs
+                             transmitted on this interface.";
+                    }
+
+                    leaf unsupported-codes {
+                        type yang:counter32;
+                        units "frames";
+                        description
+                            "Indicates a count of the number of OAMPDUs transmitted on this
+                             interface with an unsupported op-code.";
+                    }
+
+                    leaf variable-request {
+                        type yang:counter32;
+                        units "frames";
+                        description
+                            "Indicates a count of the number of Variable Request OAMPDUs
+                             transmitted on this interface.";
+                    }
+
+                    leaf variable-response {
+                        type yang:counter32;
+                        units "frames";
+                        description
+                            "Indicates a count of the number of Variable Response OAMPDUs
+                             transmitted on this interface";
+                    }
+
+                } // container receive
+
+                container transmit {
+                    description "The container of Ethernet port EFM-OAM transmit statistics.";
+
+                    leaf information {
+                        type yang:counter32;
+                        units "frames";
+                        description
+                            "Indicates a count of the number of Information OAMPDUs received on
+                             this interface.";
+                    }
+
+                    leaf unique-event-notification {
+                        type yang:counter32;
+                        units "frames";
+                        description
+                            "Indicates a count of the number of unique Event OAMPDUs transmitted
+                             on this interface.  Event Notifications may be sent in duplicate
+                             to increase the probability of successfully being received,
+                             given the possibility that a frame may be lost in transit.
+                             Duplicate Event Notification transmissions are counted by
+                             duplicate-event-notification.
+
+                             A unique Event Notification OAMPDU is indicated as an Event
+                             Notification OAMPDU with a Sequence Number field that is
+                             distinct from the previously transmitted Event Notification
+                             OAMPDU Sequence Number.";
+                    }
+
+                    leaf duplicate-event-notification {
+                        type yang:counter32;
+                        units "frames";
+                        description
+                            "Indicates a count of the number of duplicate Event OAMPDUs transmitted
+                             on this interface.  Event Notification OAMPDUs may be sent in
+                             duplicate to increase the probability of successfully being
+                             received, given the possibility that a frame may be lost in
+                             transit.
+
+                             A duplicate Event Notification OAMPDU is indicated as an Event
+                             Notification OAMPDU with a Sequence Number field that is
+                             identical to the previously transmitted Event Notification
+                             OAMPDU Sequence Number.";
+                    }
+
+                    leaf loopback-control {
+                        type yang:counter32;
+                        units "frames";
+                        description
+                            "Indicates a count of the number of Loopback Control OAMPDUs
+                             transmitted on this interface.";
+                    }
+
+                    leaf organization-specific {
+                        type yang:counter32;
+                        units "frames";
+                        description
+                            "Indicates a count of the number of Organization Specific OAMPDUs
+                             transmitted on this interface.";
+                    }
+
+                    leaf unsupported-codes {
+                        type yang:counter32;
+                        units "frames";
+                        description
+                            "Indicates a count of the number of OAMPDUs transmitted on this
+                             interface with an unsupported op-code.";
+                    }
+
+                    leaf variable-request {
+                        type yang:counter32;
+                        units "frames";
+                        description
+                            "Indicates a count of the number of Variable Request OAMPDUs
+                             transmitted on this interface.";
+                    }
+
+                    leaf variable-response {
+                        type yang:counter32;
+                        units "frames";
+                        description
+                            "Indicates a count of the number of Variable Response OAMPDUs
+                             transmitted on this interface";
+                    }
+
+                } // container transmit
+
+            } // container statistics
+
+        } // container efm-oam
+
+    } // grouping state-port-eth-efm-oam
+
+}

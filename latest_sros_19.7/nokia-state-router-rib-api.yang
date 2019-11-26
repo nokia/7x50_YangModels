@@ -1,0 +1,786 @@
+submodule nokia-state-router-rib-api {
+
+    yang-version "1.1";
+
+    belongs-to nokia-state { prefix "state"; }
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+
+    sros-ext:sros-major-release "rel19";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model with operational state for rib-api on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-state-router-rib-api YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2019-06-28";
+
+    grouping state-router-rib-api {
+        container rib-api {
+            description "Enter the rib-api context";
+
+            list label {
+                key "in-label";
+                description "Label associated with RIB-API path.";
+
+                leaf in-label {
+                    type types-sros:mpls-label;
+                    description "Label for the RIB-API instance.";
+                }
+
+                container ingress-statistics {
+
+                    leaf packets {
+                        type yang:counter64;
+                        description "Total number of ingress packets for a binding label instance.";
+                    }
+
+                    leaf octets {
+                        type yang:counter64;
+                        description "Total number of ingress octets for a binding label instance.";
+                    }
+
+                } // container ingress-statistics
+
+                list instance {
+                    key "index";
+                    description "This is the instance associated with the RIB-API label entry.";
+
+                    leaf index {
+                        type uint32;
+                        description "This is the index associated with RIB-API entry.";
+                    }
+
+                    leaf preference {
+                        type uint8;
+                        description "Preference number of this RIB-API entry.";
+                    }
+
+                    leaf last-updated {
+                        type yang:date-and-time;
+                        description "Time when this instance is added or modified from a GRPC client.";
+                    }
+
+                    leaf stale-client {
+                        type boolean;
+                        description "Indicates whether the route is from a dis-connected gRPC Client.";
+                    }
+
+                    leaf status {
+                        type enumeration {
+                            enum "active"                       { value 1; }
+                            enum "inactive"                     { value 2; }
+                        }
+                        description "Indicates whether this instance is active in the system.";
+                    }
+
+                    leaf inactive-reason-code {
+                        type enumeration {
+                            enum "not-applicable"               { value 0; }
+                            enum "memory-allocation-failed"     { value 1; }
+                            enum "invalid-endpoint-address"     { value 2; }
+                            enum "invalid-binding-label"        { value 3; }
+                            enum "iom-programming-failed"       { value 4; }
+                            enum "back-pressured"               { value 5; }
+                            enum "higher-preference-policy-programmed" { value 6; }
+                            enum "label-not-available"          { value 7; }
+                            enum "max-policy-exceeded"          { value 8; }
+                        }
+                        description "The reason for the instance being inactive.";
+                    }
+
+                    leaf client-ip {
+                        type types-sros:ip-unicast-address;
+                        description "Client IP configuring this RIB-API entry, also used for sorting entries.";
+                    }
+
+                    leaf client-tag {
+                        type uint32;
+                        description "Indicates a unique identifier assigned to each gRPC connection by the gRPC server, also used for sorting entries.";
+                    }
+
+                    leaf type {
+                        type enumeration {
+                            enum "pop"                          { value 0; }
+                            enum "swap"                         { value 1; }
+                        }
+                        description "Type of this RIB-API entry.";
+                    }
+
+                    leaf ingress-statistics {
+                        type boolean;
+                        description "Whether ingress statistics are enabled for this instance.";
+                    }
+
+                    leaf ingress-statistics-oper-state {
+                        type types-sros:oper-state;
+                        description "The current operational state of ingress-statistics for this instance.";
+                    }
+
+                    container egress-statistics {
+                        description "Label overall egress statistics.";
+
+                        leaf overall-oper-state {
+                            type types-sros:oper-state;
+                            description "The operational state of egress statistics across all next-hops.";
+                        }
+
+                        leaf total-packets {
+                            type yang:counter64;
+                            description "Total number of egress packets for all next-hops.";
+                        }
+
+                        leaf total-octets {
+                            type yang:counter64;
+                            description "Total number of egress octets for all next-hops.";
+                        }
+
+                    } // container egress-statistics
+
+                    list next-hop-group {
+                        key "index";
+                        description "Next-hop group associated with a label instance.";
+
+                        leaf index {
+                            type uint32 {
+                                range "1..32";
+                            }
+                            description "Label path next-hop group identifier.";
+                        }
+
+                        leaf weight {
+                            type uint32;
+                            description "Load balancing weight of this nexthop group.";
+                        }
+
+                        container primary-next-hop {
+                            description "Primary next-hop.";
+
+                            leaf nexthop {
+                                type types-sros:ip-unicast-address;
+                                description "Address of the nexthop.";
+                            }
+
+                            leaf resolved {
+                                type boolean;
+                                description "Whether nexthop is resolved or not.";
+                            }
+
+                            leaf down-reason-code {
+                                type enumeration {
+                                    enum "not-applicable"               { value 0; }
+                                    enum "nexthop-not-resolved"         { value 1; }
+                                    enum "nexthop-is-local"             { value 3; }
+                                    enum "nexthop-is-multicast"         { value 4; }
+                                    enum "resolution-type-mismatch"     { value 5; }
+                                }
+                                description "The reason for the nexthop being unresolved.";
+                            }
+
+                            leaf egress-statistics-oper-state {
+                                type types-sros:oper-state;
+                                description
+                                    "The current operational state of egress statistics
+                                     for a next-hop group next-hop.";
+                            }
+
+                            list pushed-labels {
+                                key "push-label-index";
+                                description "Push labels.";
+
+                                leaf push-label-index {
+                                    type uint32;
+                                    description "Push label index.";
+                                }
+
+                                leaf label {
+                                    type uint32 {
+                                        range "1..max";
+                                    }
+                                    description "Push label value.";
+                                }
+
+                            } // list pushed-labels
+
+                            container egress-statistics {
+                                description "Egress statistics.";
+
+                                leaf packets {
+                                    type yang:counter64;
+                                    description
+                                        "The value of packets indicates the total number of egress packets
+                                         for a next-hop group next-hop.";
+                                }
+
+                                leaf octets {
+                                    type yang:counter64;
+                                    description
+                                        "The value of octets indicates the total number of egress octets
+                                         for a next-hop group next-hop.";
+                                }
+
+                            } // container egress-statistics
+
+                        } // container primary-next-hop
+
+                        container backup-next-hop {
+                            description "Backup next-hop.";
+
+                            leaf nexthop {
+                                type types-sros:ip-unicast-address;
+                                description "Address of the nexthop.";
+                            }
+
+                            leaf resolved {
+                                type boolean;
+                                description "Whether nexthop is resolved or not.";
+                            }
+
+                            leaf down-reason-code {
+                                type enumeration {
+                                    enum "not-applicable"               { value 0; }
+                                    enum "nexthop-not-resolved"         { value 1; }
+                                    enum "nexthop-is-local"             { value 3; }
+                                    enum "nexthop-is-multicast"         { value 4; }
+                                    enum "resolution-type-mismatch"     { value 5; }
+                                }
+                                description "The reason for the nexthop being unresolved.";
+                            }
+
+                            leaf egress-statistics-oper-state {
+                                type types-sros:oper-state;
+                                description
+                                    "The current operational state of egress statistics
+                                     for a next-hop group next-hop.";
+                            }
+
+                            list pushed-labels {
+                                key "push-label-index";
+                                description "Push labels.";
+
+                                leaf push-label-index {
+                                    type uint32;
+                                    description "Push label index.";
+                                }
+
+                                leaf label {
+                                    type uint32 {
+                                        range "1..max";
+                                    }
+                                    description "Push label value.";
+                                }
+
+                            } // list pushed-labels
+
+                            container egress-statistics {
+                                description "Egress statistics.";
+
+                                leaf packets {
+                                    type yang:counter64;
+                                    description
+                                        "The value of packets indicates the total number of egress packets
+                                         for a next-hop group next-hop.";
+                                }
+
+                                leaf octets {
+                                    type yang:counter64;
+                                    description
+                                        "The value of octets indicates the total number of egress octets
+                                         for a next-hop group next-hop.";
+                                }
+
+                            } // container egress-statistics
+
+                        } // container backup-next-hop
+
+                    } // list next-hop-group
+
+                } // list instance
+
+            } // list label
+
+            list tunnel {
+                key "endpoint";
+                description "This is the RIB-API tunnel entry.";
+
+                leaf endpoint {
+                    type types-sros:ip-unicast-address;
+                    description "Endpoint for the RIB-API instance.";
+                }
+
+                list instance {
+                    key "index";
+                    description "This is the instance associated with the RIB-API tunnel entry.";
+
+                    leaf index {
+                        type uint32;
+                        description "This is the index associated with RIB-API entry.";
+                    }
+
+                    leaf metric {
+                        type uint32 {
+                            range "0..16777215";
+                        }
+                        description "Metric of this RIB-API tunnel instance.";
+                    }
+
+                    leaf tunnel-table-preference {
+                        type uint8;
+                        description "Tunnel-table-preference of this RIB-API tunnel instance.";
+                    }
+
+                    leaf preference {
+                        type uint8;
+                        description "Preference number of this RIB-API entry.";
+                    }
+
+                    leaf last-updated {
+                        type yang:date-and-time;
+                        description "Time when this instance is added or modified from a GRPC client.";
+                    }
+
+                    leaf stale-client {
+                        type boolean;
+                        description "Indicates whether the route is from a dis-connected gRPC Client.";
+                    }
+
+                    leaf status {
+                        type enumeration {
+                            enum "active"                       { value 1; }
+                            enum "inactive"                     { value 2; }
+                        }
+                        description "Indicates whether this instance is active in the system.";
+                    }
+
+                    leaf inactive-reason-code {
+                        type enumeration {
+                            enum "not-applicable"               { value 0; }
+                            enum "memory-allocation-failed"     { value 1; }
+                            enum "invalid-endpoint-address"     { value 2; }
+                            enum "invalid-binding-label"        { value 3; }
+                            enum "iom-programming-failed"       { value 4; }
+                            enum "back-pressured"               { value 5; }
+                            enum "higher-preference-policy-programmed" { value 6; }
+                            enum "label-not-available"          { value 7; }
+                            enum "max-policy-exceeded"          { value 8; }
+                        }
+                        description "The reason for the instance being inactive.";
+                    }
+
+                    leaf client-ip {
+                        type types-sros:ip-unicast-address;
+                        description "Client IP configuring this RIB-API entry, also used for sorting entries.";
+                    }
+
+                    leaf client-tag {
+                        type uint32;
+                        description "Indicates a unique identifier assigned to each gRPC connection by the gRPC server, also used for sorting entries.";
+                    }
+
+                    container egress-statistics {
+                        description "Label overall egress statistics.";
+
+                        leaf overall-oper-state {
+                            type types-sros:oper-state;
+                            description "The operational state of egress statistics across all next-hops.";
+                        }
+
+                        leaf total-packets {
+                            type yang:counter64;
+                            description "Total number of egress packets for all next-hops.";
+                        }
+
+                        leaf total-octets {
+                            type yang:counter64;
+                            description "Total number of egress octets for all next-hops.";
+                        }
+
+                    } // container egress-statistics
+
+                    list next-hop-group {
+                        key "index";
+                        description "Next-hop group associated with a tunnel instance.";
+
+                        leaf index {
+                            type uint32 {
+                                range "1..32";
+                            }
+                            description "Index for nexthop group.";
+                        }
+
+                        leaf weight {
+                            type uint32;
+                            description "Load balancing weight of this nexthop group.";
+                        }
+
+                        container primary-next-hop {
+                            description "Primary next-hop.";
+
+                            leaf nexthop {
+                                type types-sros:ip-unicast-address;
+                                description "Address of the nexthop.";
+                            }
+
+                            leaf resolved {
+                                type boolean;
+                                description "Whether nexthop is resolved or not.";
+                            }
+
+                            leaf down-reason-code {
+                                type enumeration {
+                                    enum "not-applicable"               { value 0; }
+                                    enum "nexthop-not-resolved"         { value 1; }
+                                    enum "nexthop-is-local"             { value 3; }
+                                    enum "nexthop-is-multicast"         { value 4; }
+                                    enum "resolution-type-mismatch"     { value 5; }
+                                }
+                                description "The reason for the nexthop being unresolved.";
+                            }
+
+                            leaf egress-statistics-oper-state {
+                                type types-sros:oper-state;
+                                description
+                                    "The current operational state of egress statistics
+                                     for a next-hop group next-hop.";
+                            }
+
+                            list pushed-labels {
+                                key "push-label-index";
+                                description "Push labels.";
+
+                                leaf push-label-index {
+                                    type uint32;
+                                    description "Push label index.";
+                                }
+
+                                leaf label {
+                                    type uint32 {
+                                        range "1..max";
+                                    }
+                                    description "Push label value.";
+                                }
+
+                            } // list pushed-labels
+
+                            container egress-statistics {
+                                description "Egress statistics.";
+
+                                leaf packets {
+                                    type yang:counter64;
+                                    description
+                                        "The value of packets indicates the total number of egress packets
+                                         for a next-hop group next-hop.";
+                                }
+
+                                leaf octets {
+                                    type yang:counter64;
+                                    description
+                                        "The value of octets indicates the total number of egress octets
+                                         for a next-hop group next-hop.";
+                                }
+
+                            } // container egress-statistics
+
+                        } // container primary-next-hop
+
+                        container backup-next-hop {
+                            description "Backup next-hop.";
+
+                            leaf nexthop {
+                                type types-sros:ip-unicast-address;
+                                description "Address of the nexthop.";
+                            }
+
+                            leaf resolved {
+                                type boolean;
+                                description "Whether nexthop is resolved or not.";
+                            }
+
+                            leaf down-reason-code {
+                                type enumeration {
+                                    enum "not-applicable"               { value 0; }
+                                    enum "nexthop-not-resolved"         { value 1; }
+                                    enum "nexthop-is-local"             { value 3; }
+                                    enum "nexthop-is-multicast"         { value 4; }
+                                    enum "resolution-type-mismatch"     { value 5; }
+                                }
+                                description "The reason for the nexthop being unresolved.";
+                            }
+
+                            leaf egress-statistics-oper-state {
+                                type types-sros:oper-state;
+                                description
+                                    "The current operational state of egress statistics
+                                     for a next-hop group next-hop.";
+                            }
+
+                            list pushed-labels {
+                                key "push-label-index";
+                                description "Push labels.";
+
+                                leaf push-label-index {
+                                    type uint32;
+                                    description "Push label index.";
+                                }
+
+                                leaf label {
+                                    type uint32 {
+                                        range "1..max";
+                                    }
+                                    description "Push label value.";
+                                }
+
+                            } // list pushed-labels
+
+                            container egress-statistics {
+                                description "Egress statistics.";
+
+                                leaf packets {
+                                    type yang:counter64;
+                                    description
+                                        "The value of packets indicates the total number of egress packets
+                                         for a next-hop group next-hop.";
+                                }
+
+                                leaf octets {
+                                    type yang:counter64;
+                                    description
+                                        "The value of octets indicates the total number of egress octets
+                                         for a next-hop group next-hop.";
+                                }
+
+                            } // container egress-statistics
+
+                        } // container backup-next-hop
+
+                    } // list next-hop-group
+
+                } // list instance
+
+            } // list tunnel
+
+            container route-table {
+                description "This is the RIB-API route-table.";
+
+                container ipv4 {
+
+                    list route {
+                        key "ipv4-prefix";
+                        description "This is the IPv4 RIB-API route-table entry.";
+
+                        leaf ipv4-prefix {
+                            type types-sros:ipv4-prefix;
+                            description "Indicates the IPv4 prefix for this route table entry.";
+                        }
+
+                        list entry {
+                            key "index";
+                            description "This is a list of RIB-API route-entries with a particular prefix.";
+
+                            leaf index {
+                                type uint32;
+                                description "Index of a RIB-API route-entry.";
+                            }
+
+                            leaf client-ip {
+                                type types-sros:ip-unicast-address;
+                                description "Client IP configuring this RIB-API entry, also used for sorting entries.";
+                            }
+
+                            leaf client-tag {
+                                type uint32;
+                                description "Indicates a unique identifier assigned to each gRPC connection by the gRPC server, also used for sorting entries.";
+                            }
+
+                            leaf preference {
+                                type uint32;
+                                description
+                                    "Indicates the preference of this route versus the routes
+                                     from different clients with the same prefix; most preferred
+                                     route will be chosen for programming the RTM.
+
+                                     Lowest value signifies the most preferred entry.";
+                            }
+
+                            leaf metric {
+                                type uint32;
+                                description
+                                    "Indicates the metric of the next-hop.
+
+                                     This is used in addition to the preference for this next-hop.";
+                            }
+
+                            leaf rtm-preference {
+                                type uint8;
+                                description
+                                    "Indicates the preference of the route versus the routes having the same prefix
+                                     from different sources such as BGP or OSPF etc. 
+
+                                     Passed opaquely to RTM.";
+                            }
+
+                            leaf stale-client {
+                                type boolean;
+                                description "Indicates whether the route is from a dis-connected gRPC Client.";
+                            }
+
+                            leaf next-hop {
+                                type types-sros:ip-address;
+                                description "Next-hop address for RIB-API route-entry.";
+                            }
+
+                            leaf status {
+                                type enumeration {
+                                    enum "active"                       { value 1; }
+                                    enum "inactive"                     { value 2; }
+                                }
+                                description "Indicates whether or not this route is present in RTM.";
+                            }
+
+                            leaf inactive-reason-code {
+                                type enumeration {
+                                    enum "not-applicable"               { value 0; }
+                                    enum "nexthop-not-resolved-or-no-usable-tunnels" { value 1; }
+                                    enum "nexthop-bad-host-bits"        { value 2; }
+                                    enum "nexthop-not-evaluated-for-resolution" { value 3; }
+                                }
+                                description "The reason for the route being not present in RTM.";
+                            }
+
+                            leaf last-updated {
+                                type yang:date-and-time;
+                                description "Time when this route is added or modified from a gRPC client.";
+                            }
+
+                        } // list entry
+
+                    } // list route
+
+                } // container ipv4
+
+                container ipv6 {
+
+                    list route {
+                        key "ipv6-prefix";
+                        description "This is the IPv6 RIB-API route-table entry.";
+
+                        leaf ipv6-prefix {
+                            type types-sros:ipv6-prefix;
+                            description "Indicates the IPv6 prefix for this route table entry.";
+                        }
+
+                        list entry {
+                            key "index";
+                            description "This is a list of RIB-API route-entries with a particular prefix.";
+
+                            leaf index {
+                                type uint32;
+                                description "Index of a RIB-API route-entry.";
+                            }
+
+                            leaf client-ip {
+                                type types-sros:ip-unicast-address;
+                                description "Client IP configuring this RIB-API entry, also used for sorting entries.";
+                            }
+
+                            leaf client-tag {
+                                type uint32;
+                                description "Indicates a unique identifier assigned to each gRPC connection by the gRPC server, also used for sorting entries.";
+                            }
+
+                            leaf preference {
+                                type uint32;
+                                description
+                                    "Indicates the preference of this route versus the routes
+                                     from different clients with the same prefix; most preferred
+                                     route will be chosen for programming the RTM.
+
+                                     Lowest value signifies the most preferred entry.";
+                            }
+
+                            leaf metric {
+                                type uint32;
+                                description
+                                    "Indicates the metric of the next-hop.
+
+                                     This is used in addition to the preference for this next-hop.";
+                            }
+
+                            leaf rtm-preference {
+                                type uint8;
+                                description
+                                    "Indicates the preference of the route versus the routes having the same prefix
+                                     from different sources such as BGP or OSPF etc. 
+
+                                     Passed opaquely to RTM.";
+                            }
+
+                            leaf stale-client {
+                                type boolean;
+                                description "Indicates whether the route is from a dis-connected gRPC Client.";
+                            }
+
+                            leaf next-hop {
+                                type types-sros:ip-address;
+                                description "Next-hop address for RIB-API route-entry.";
+                            }
+
+                            leaf status {
+                                type enumeration {
+                                    enum "active"                       { value 1; }
+                                    enum "inactive"                     { value 2; }
+                                }
+                                description "Indicates whether or not this route is present in RTM.";
+                            }
+
+                            leaf inactive-reason-code {
+                                type enumeration {
+                                    enum "not-applicable"               { value 0; }
+                                    enum "nexthop-not-resolved-or-no-usable-tunnels" { value 1; }
+                                    enum "nexthop-bad-host-bits"        { value 2; }
+                                    enum "nexthop-not-evaluated-for-resolution" { value 3; }
+                                }
+                                description "The reason for the route being not present in RTM.";
+                            }
+
+                            leaf last-updated {
+                                type yang:date-and-time;
+                                description "Time when this route is added or modified from a gRPC client.";
+                            }
+
+                        } // list entry
+
+                    } // list route
+
+                } // container ipv6
+
+            } // container route-table
+
+        } // container rib-api
+
+    } // grouping state-router-rib-api
+
+}

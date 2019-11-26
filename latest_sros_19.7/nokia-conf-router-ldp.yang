@@ -1,0 +1,1408 @@
+submodule nokia-conf-router-ldp {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-ldp                { prefix "types-ldp"; }
+    import nokia-types-services           { prefix "types-services"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-bfd;
+    include nokia-conf-groups;
+    include nokia-conf-log;
+    include nokia-conf-policy-options;
+    include nokia-conf-router;
+    include nokia-conf-system;
+    include nokia-conf-system-security;
+
+    sros-ext:sros-major-release "rel19";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure ldp protocol on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-router-ldp YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2019-06-12";
+
+    grouping conf-router-ldp {
+        container ldp {
+            presence "Enables ldp functionality";
+            description "Enter the ldp context";
+
+            leaf class-forwarding {
+                type enumeration {
+                    enum "lsr"                          { value 1; description "class-forwarding for LSR/SWAP only"; }
+                    enum "ler"                          { value 2; description "class-forwarding for LER/PUSH only"; }
+                    enum "lsr-and-ler"                  { value 3; description "class-forwarding for LER/PUSH and LSR/SWAP"; }
+                }
+                description "Allow class-based forwarding for LDP over RSVP";
+            }
+
+            leaf entropy-label-capability {
+                type boolean;
+                default "false";
+                description "Allow receiving and processing of the entropy label and ELI on incoming packets of LDP LSPs";
+            }
+
+            leaf implicit-null-label {
+                type boolean;
+                default "false";
+                description "Signal the implicit null label value for all LDP FECs for which the node is the egress LER";
+            }
+
+            leaf consider-system-ip-in-gep {
+                type boolean;
+                default "false";
+                description "Use Global Export Policies to determine whether to create a FEC for the system IP addresses";
+            }
+
+            leaf label-withdrawal-delay {
+                type uint32 {
+                    range "3..120";
+                }
+                units "seconds";
+                description "Time interval during which LDP delays for the withdrawal of FEC-label binding";
+            }
+
+            leaf legacy-ipv4-lsr-interop {
+                type boolean;
+                default "false";
+                description "Allow interoperability with legacy IPv4 LSR implementations";
+            }
+
+            leaf mcast-upstream-frr {
+                type boolean;
+                default "false";
+                description "Use fast upstream switchover for mLDP FECs";
+            }
+
+            leaf mp-mbb-time {
+                type uint32 {
+                    range "0..10";
+                }
+                units "seconds";
+                default "3";
+                description "MP MBB time";
+            }
+
+            leaf shortcut-local-ttl-propagate {
+                type boolean;
+                default "true";
+                description "Propagate TTL over LSP shortcut for local packets";
+            }
+
+            leaf shortcut-transit-ttl-propagate {
+                type boolean;
+                default "true";
+                description "Enable/disable TTL propagation over LSP shortcut for transit packets.";
+            }
+
+            leaf admin-state {
+                type types-sros:admin-state;
+                default "enable";
+                description "Administrative state of the LDP instance";
+            }
+
+            leaf tunnel-down-damp-time {
+                type uint32 {
+                    range "0..20";
+                }
+                units "seconds";
+                default "3";
+                description "Time interval for an LDP to damp a tunnel down event before posting to the Route Table Manager (RTM)";
+            }
+
+            leaf prefer-tunnel-in-tunnel {
+                type boolean;
+                default "true";
+                description "Preference tunnel-in-tunnel over a simple LDP tunnel";
+            }
+
+            leaf mcast-upstream-asbr-frr {
+                type boolean;
+                default "false";
+                description "Enable ASBR MoFRR to allow local leaf to perform MoFRR for multiple ASBRs";
+            }
+
+            leaf generate-basic-fec-only {
+                type boolean;
+                default "false";
+                description "Ability for mLDP to generate a basic FEC despite the actual root node being resolved using BGP";
+            }
+
+            leaf resolve-root-using {
+                type enumeration {
+                    enum "ucast-rtm"                    { value 1; }
+                    enum "mcast-rtm"                    { value 2; }
+                }
+                default "ucast-rtm";
+                description "Resolution route table for multicast FECs";
+            }
+
+            leaf weighted-ecmp {
+                type boolean;
+                default "false";
+                description "Allow weighted load-balancing";
+            }
+
+            leaf-list import-policy {
+                type leafref {
+                    path "../../../policy-options/policy-statement/name";
+                }
+                max-elements 5;
+                ordered-by user;
+                description "Import policies to filter LDP label bindings received from LDP peers";
+            }
+
+            leaf-list export-policy {
+                type leafref {
+                    path "../../../policy-options/policy-statement/name";
+                }
+                max-elements 5;
+                ordered-by user;
+                description "First export policies to filter LDP label bindings advertised to LDP peers";
+            }
+
+            leaf-list export-tunnel-table {
+                type leafref {
+                    path "../../../policy-options/policy-statement/name";
+                }
+                max-elements 5;
+                ordered-by user;
+                description "Tunnel table export policies to export tunneled routes";
+            }
+
+            leaf-list import-tunnel-table {
+                type leafref {
+                    path "../../../policy-options/policy-statement/name";
+                }
+                max-elements 5;
+                ordered-by user;
+                description "Tunnel table import policies to control the insertion of non-host prefixes resolved by LDP";
+            }
+
+            leaf-list import-mcast-policy {
+                type leafref {
+                    path "../../../policy-options/policy-statement/name";
+                }
+                max-elements 5;
+                ordered-by user;
+                description "Specifies import multicast policies used for controlling which multicast FECs are accepted from downtream peers for resolution. Up to 5 policies can be specified.";
+            }
+
+            container aggregate-prefix-match {
+                presence "Enable aggregate prefix match";
+                description "Enter the aggregate-prefix-match context";
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of the LDP aggregate prefix match";
+                }
+
+                leaf-list prefix-exclude {
+                    type leafref {
+                        path "../../../../policy-options/policy-statement/name";
+                    }
+                    max-elements 5;
+                    ordered-by user;
+                    description "Import policies to filter LDP label bindings received from LDP peers";
+                }
+
+            } // container aggregate-prefix-match
+
+            container fast-reroute {
+                presence "Enable fast reroute.";
+                description "Enter the fast-reroute context";
+
+                leaf backup-sr-tunnel {
+                    type boolean;
+                    default "false";
+                    description "Use SR tunnel as a remote LFA backup tunnel next-hop by an LDP FEC";
+                }
+
+            } // container fast-reroute
+
+            container graceful-restart {
+                description "Enter the graceful-restart context";
+
+                leaf helper-mode {
+                    type boolean;
+                    default "false";
+                    description "Enable graceful restart helper";
+                }
+
+                leaf maximum-recovery-time {
+                    type uint32 {
+                        range "15..1800";
+                    }
+                    units "seconds";
+                    default "120";
+                    description "Value for the local maximum recovery time";
+                }
+
+                leaf neighbor-liveness-time {
+                    type uint32 {
+                        range "5..300";
+                    }
+                    units "seconds";
+                    default "120";
+                    description "Value for the neighbor liveness timer";
+                }
+
+            } // container graceful-restart
+
+            container ldp-shortcut {
+                description "Enter the ldp-shortcut context";
+
+                leaf ipv4 {
+                    type boolean;
+                    default "false";
+                    description "Forward IPv4 packets by using LDP shortcuts";
+                }
+
+                leaf ipv6 {
+                    type boolean;
+                    default "false";
+                    description "Forward IPv6 packets by using LDP shortcuts";
+                }
+
+            } // container ldp-shortcut
+
+            container import-pmsi-routes {
+                description "Enter the import-pmsi-routes context";
+
+                leaf mvpn {
+                    type boolean;
+                    default "false";
+                    description "Enable/disable import of BGP MVPN inter-AS routes.";
+                }
+
+                leaf mvpn-no-export-community {
+                    type boolean;
+                    default "false";
+                    description "Enable/disable import of BGP MVPN intra-AS routes.";
+                }
+
+            } // container import-pmsi-routes
+
+            list fec-originate {
+                key "fec-prefix";
+                description "Enter the fec-originate list instance";
+
+                leaf fec-prefix {
+                    type types-sros:ip-prefix;
+                    description "Static FEC IP prefix";
+                }
+
+                leaf advertised-label {
+                    type types-sros:mpls-label;
+                    description "Label that is advertised to upstream peer";
+                }
+
+                choice swap-or-pop {
+                    case swap {
+
+                        leaf next-hop {
+                            type types-sros:ip-address;
+                            description "IP address of the next hop";
+                        }
+
+                        leaf interface {
+                            type types-sros:named-item-or-empty;
+                            description "Interface name for this static FEC prefix";
+                        }
+
+                        leaf swap-label {
+                            type uint32 {
+                                range "6..1048575";
+                            }
+                            description "Value mapped to egress label associated with next-hop entry that LSR uses to swap incoming label";
+                        }
+
+                    }
+                    case pop {
+
+                        leaf pop {
+                            type boolean;
+                            description "Pop the label and transmit without the label";
+                        }
+
+                    }
+                }
+            } // list fec-originate
+
+            container egress-statistics {
+                description "Enter the egress-statistics context";
+
+                list fec-prefix {
+                    key "ip-prefix";
+                    description "Enter the fec-prefix list instance";
+
+                    leaf ip-prefix {
+                        type types-sros:ip-prefix;
+                        description "IP prefix";
+                    }
+
+                    leaf accounting-policy {
+                        type leafref {
+                            path "../../../../../log/accounting-policy/policy-id";
+                        }
+                        description "Accounting policy ID";
+                    }
+
+                    leaf collect-stats {
+                        type boolean;
+                        default "false";
+                        description "Collect statistics";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of the LDP egress statistics";
+                    }
+
+                } // list fec-prefix
+
+            } // container egress-statistics
+
+            list lsp-bfd {
+                key "prefix-list";
+                max-elements 16;
+                description "Enter the lsp-bfd list instance";
+
+                leaf prefix-list {
+                    type types-sros:named-item;
+                    description "Name of a router policy options prefix list";
+                }
+
+                leaf bfd-template {
+                    type leafref {
+                        path "../../../../bfd/bfd-template/name";
+                    }
+                    description "BFD template to apply to BFD sessions associated with the prefix list";
+                }
+
+                leaf failure-action {
+                    type enumeration {
+                        enum "down"                         { value 1; }
+                    }
+                    description "Reaction to BFD session failure for the prefix list";
+                }
+
+                leaf lsp-ping-interval {
+                    type union {
+                        type uint32 {
+                            range "60..300";
+                        }
+                        type enumeration {
+                            enum "none"                         { value 0; }
+                        }
+                    }
+                    units "seconds";
+                    default "60";
+                    description "LSP ping transmit interval for periodic verification";
+                }
+
+                leaf priority {
+                    type uint32 {
+                        range "1..99";
+                    }
+                    default "1";
+                    description "Prefix list to control the search order";
+                }
+
+                leaf source-address {
+                    type types-sros:ip-unicast-address;
+                    description "Source address in LSP ping packets and BFD control packets associated with prefix list";
+                }
+
+                leaf bfd-liveness {
+                    type boolean;
+                    default "false";
+                    description "Enable BFD on LDP LSPs with FECs that match the prefix list";
+                }
+
+            } // list lsp-bfd
+
+            container session-parameters {
+                description "Enter the session-parameters context";
+
+                list peer {
+                    key "ip-address";
+                    description "Enter the peer list instance";
+
+                    leaf ip-address {
+                        type types-sros:ip-address;
+                        description "IP address for server";
+                    }
+
+                    leaf adv-adj-addr-only {
+                        type boolean;
+                        default "false";
+                        description "Distribute only the local addresses used to establish the Hello adjacencies with a peer";
+                    }
+
+                    leaf adv-local-lsr-id {
+                        type boolean;
+                        default "false";
+                        description "Advertise local LSR ID over a specified LDP session";
+                    }
+
+                    leaf dod-label-distribution {
+                        type boolean;
+                        default "false";
+                        description "Use LDP Downstream-on-Demand (DoD) label distribution procedures";
+                    }
+
+                    leaf fec129-cisco-interop {
+                        type boolean;
+                        default "false";
+                        description "Allow translation between non-compliant FEC 129 formats of Cisco";
+                    }
+
+                    leaf pe-id-mac-flush-interop {
+                        type boolean;
+                        default "false";
+                        description "LDP to send the non-standard PE-ID TLV in an address withdraw message";
+                    }
+
+                    leaf community {
+                        type types-ldp:policy-string;
+                        description "Community string associated with a session to a specified peer";
+                    }
+
+                    leaf-list export-addresses {
+                        type leafref {
+                            path "../../../../../policy-options/policy-statement/name";
+                        }
+                        max-elements 5;
+                        ordered-by user;
+                        description "Export policies to determine which local addresses should be distributed to this peer";
+                    }
+
+                    leaf-list export-prefixes {
+                        type leafref {
+                            path "../../../../../policy-options/policy-statement/name";
+                        }
+                        max-elements 5;
+                        ordered-by user;
+                        description "Export policies to determine which FEC prefixes are redistributed to LDP and TLDP peers";
+                    }
+
+                    leaf-list import-prefixes {
+                        type leafref {
+                            path "../../../../../policy-options/policy-statement/name";
+                        }
+                        max-elements 5;
+                        ordered-by user;
+                        description "FEC prefixes to be redistributed to this LDP peer";
+                    }
+
+                    container fec-limit {
+                        description "Enter the fec-limit context";
+
+                        leaf limit {
+                            type uint32 {
+                                range "0|1..4294967295";
+                            }
+                            default "0";
+                            description "Maximum number of FECs to be accepted from this peer LSR";
+                        }
+
+                        leaf log-only {
+                            type boolean;
+                            default "false";
+                            description "Trap and syslog message to generate when reaching the threshold and limit";
+                        }
+
+                        leaf threshold {
+                            type uint32 {
+                                range "1..100";
+                            }
+                            default "90";
+                            description "Threshold when a trap and a syslog message are generated as warning and when limit is reached";
+                        }
+
+                    } // container fec-limit
+
+                    container fec-type-capability {
+                        description "Enter the fec-type-capability context";
+
+                        leaf p2mp {
+                            type boolean;
+                            default "true";
+                            description "Enable P2MP FEC capability for the session";
+                        }
+
+                        leaf prefix-ipv4 {
+                            type boolean;
+                            default "true";
+                            description "Enable IPv4 prefix FEC capability for the session";
+                        }
+
+                        leaf prefix-ipv6 {
+                            type boolean;
+                            default "true";
+                            description "Enable IPv6 prefix FEC capability";
+                        }
+
+                    } // container fec-type-capability
+
+                } // list peer
+
+            } // container session-parameters
+
+            container tcp-session-parameters {
+                description "Enter the tcp-session-parameters context";
+
+                list peer-transport {
+                    key "ip-address";
+                    description "Enter the peer-transport list instance";
+
+                    leaf ip-address {
+                        type types-sros:ip-address;
+                        description "IP address of an LDP peer";
+                    }
+
+                    leaf authentication-keychain {
+                        type leafref {
+                            path "../../../../../system/security/keychains/keychain/keychain-name";
+                        }
+                        description "TCP authentication keychain to use for the session";
+                    }
+
+                    leaf authentication-key {
+                        type types-sros:encrypted-leaf {
+                            length "1..51";
+                        }
+                        description "Authentication key for the peer";
+                    }
+
+                    leaf path-mtu-discovery {
+                        type boolean;
+                        default "false";
+                        description "Allow Path MTU Discovery for associated TCP connections";
+                    }
+
+                    leaf ttl-security {
+                        type uint32 {
+                            range "1..255";
+                        }
+                        description "Minimum TTL value for incoming BGP packet";
+                    }
+
+                } // list peer-transport
+
+            } // container tcp-session-parameters
+
+            container interface-parameters {
+                description "Enter the interface-parameters context";
+
+                container ipv4 {
+                    description "Enter the ipv4 context";
+
+                    leaf transport-address {
+                        type enumeration {
+                            enum "interface"                    { value 1; }
+                            enum "system"                       { value 2; }
+                        }
+                        default "system";
+                        description "Transport address to set up the LDP TCP sessions";
+                    }
+
+                    container hello {
+                        description "Enter the hello context";
+
+                        leaf timeout {
+                            type uint32 {
+                                range "3..65535";
+                            }
+                            units "seconds";
+                            default "15";
+                            description "Timeout value for Hello";
+                        }
+
+                        leaf factor {
+                            type uint32 {
+                                range "1..255";
+                            }
+                            default "3";
+                            description "Value for the Hello factor";
+                        }
+
+                    } // container hello
+
+                    container keepalive {
+                        description "Enter the keepalive context";
+
+                        leaf timeout {
+                            type uint32 {
+                                range "3..65535";
+                            }
+                            units "seconds";
+                            default "30";
+                            description "Timeout value for keepalive";
+                        }
+
+                        leaf factor {
+                            type uint32 {
+                                range "1..255";
+                            }
+                            default "3";
+                            description "Value for the keep-alive factor";
+                        }
+
+                    } // container keepalive
+
+                } // container ipv4
+
+                container ipv6 {
+                    description "Enter the ipv6 context";
+
+                    leaf transport-address {
+                        type enumeration {
+                            enum "interface"                    { value 1; }
+                            enum "system"                       { value 2; }
+                        }
+                        default "system";
+                        description "Transport address to set up the LDP TCP sessions";
+                    }
+
+                    container hello {
+                        description "Enter the hello context";
+
+                        leaf timeout {
+                            type uint32 {
+                                range "3..65535";
+                            }
+                            units "seconds";
+                            default "15";
+                            description "Timeout value for Hello";
+                        }
+
+                        leaf factor {
+                            type uint32 {
+                                range "1..255";
+                            }
+                            default "3";
+                            description "Value for the Hello factor";
+                        }
+
+                    } // container hello
+
+                    container keepalive {
+                        description "Enter the keepalive context";
+
+                        leaf timeout {
+                            type uint32 {
+                                range "3..65535";
+                            }
+                            units "seconds";
+                            default "30";
+                            description "Timeout value for keepalive";
+                        }
+
+                        leaf factor {
+                            type uint32 {
+                                range "1..255";
+                            }
+                            default "3";
+                            description "Value for the keep-alive factor";
+                        }
+
+                    } // container keepalive
+
+                } // container ipv6
+
+                list interface {
+                    key "ip-int-name";
+                    description "Enter the interface list instance";
+
+                    leaf ip-int-name {
+                        type leafref {
+                            path "../../../../interface/interface-name";
+                        }
+                        description "Interface name";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "enable";
+                        description "Administrative state of LDP";
+                    }
+
+                    container bfd-liveness {
+                        description "Enter the bfd-liveness context";
+
+                        leaf ipv4 {
+                            type boolean;
+                            default "false";
+                            description "Allow BFD tracking of IPv4 LDP Session for interface";
+                        }
+
+                        leaf ipv6 {
+                            type boolean;
+                            default "false";
+                            description "Allow BFD tracking of IPv4 LDP Session for interface";
+                        }
+
+                    } // container bfd-liveness
+
+                    container ipv4 {
+                        presence "Configure ldp IPv4 interface";
+                        description "Enter the ipv4 context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "enable";
+                            description "Administrative state of LDP";
+                        }
+
+                        leaf transport-address {
+                            type enumeration {
+                                enum "interface"                    { value 1; }
+                                enum "system"                       { value 2; }
+                            }
+                            description "Transport address to set up the LDP TCP sessions";
+                        }
+
+                        container hello {
+                            presence "Hello configuration";
+                            description "Enter the hello context";
+
+                            leaf timeout {
+                                type types-sros:time-duration {
+                                    range "3..65535";
+                                }
+                                description "Timeout value for Hello";
+                            }
+
+                            leaf factor {
+                                type uint32 {
+                                    range "1..255";
+                                }
+                                description "Factor value for Hello";
+                            }
+
+                        } // container hello
+
+                        container keepalive {
+                            presence "Keep-alive configuration";
+                            description "Enter the keepalive context";
+
+                            leaf timeout {
+                                type types-sros:time-duration {
+                                    range "3..65535";
+                                }
+                                description "Time that LDP waits before tearing down session";
+                            }
+
+                            leaf factor {
+                                type uint32 {
+                                    range "1..255";
+                                }
+                                description "Factor value for keepalive";
+                            }
+
+                        } // container keepalive
+
+                        container fec-type-capability {
+                            description "Enter the fec-type-capability context";
+
+                            leaf p2mp-ipv4 {
+                                type boolean;
+                                default "true";
+                                description "Enable IPv4 P2MP FEC capability";
+                            }
+
+                            leaf p2mp-ipv6 {
+                                type boolean;
+                                default "true";
+                                description "Enable IPv6 P2MP FEC capability";
+                            }
+
+                            leaf prefix-ipv4 {
+                                type boolean;
+                                default "true";
+                                description "Enable IPv4 prefix FEC capability";
+                            }
+
+                            leaf prefix-ipv6 {
+                                type boolean;
+                                default "true";
+                                description "Enable IPv6 prefix FEC capability";
+                            }
+
+                        } // container fec-type-capability
+
+                        container local-lsr-id {
+                            description "Enter the local-lsr-id context";
+
+                            leaf interface-name {
+                                type leafref {
+                                    path "../../../../../../interface/interface-name";
+                                }
+                                description "Name of network IP interface from which to obtain IP address to use as LSR-ID of LDP LSP";
+                            }
+
+                        } // container local-lsr-id
+
+                    } // container ipv4
+
+                    container ipv6 {
+                        presence "Enables ldp IPv6 interface";
+                        description "Enter the ipv6 context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "enable";
+                            description "Administrative state of LDP";
+                        }
+
+                        leaf transport-address {
+                            type enumeration {
+                                enum "interface"                    { value 1; }
+                                enum "system"                       { value 2; }
+                            }
+                            description "Transport address to set up the LDP TCP sessions";
+                        }
+
+                        container hello {
+                            presence "Hello configuration";
+                            description "Enter the hello context";
+
+                            leaf timeout {
+                                type types-sros:time-duration {
+                                    range "3..65535";
+                                }
+                                description "Timeout value for Hello";
+                            }
+
+                            leaf factor {
+                                type uint32 {
+                                    range "1..255";
+                                }
+                                description "Factor value for Hello";
+                            }
+
+                        } // container hello
+
+                        container keepalive {
+                            presence "Keep-alive configuration";
+                            description "Enter the keepalive context";
+
+                            leaf timeout {
+                                type types-sros:time-duration {
+                                    range "3..65535";
+                                }
+                                description "Time that LDP waits before tearing down session";
+                            }
+
+                            leaf factor {
+                                type uint32 {
+                                    range "1..255";
+                                }
+                                description "Factor value for keepalive";
+                            }
+
+                        } // container keepalive
+
+                        container fec-type-capability {
+                            description "Enter the fec-type-capability context";
+
+                            leaf p2mp-ipv4 {
+                                type boolean;
+                                default "true";
+                                description "Enable IPv4 P2MP FEC capability";
+                            }
+
+                            leaf p2mp-ipv6 {
+                                type boolean;
+                                default "true";
+                                description "Enable IPv6 P2MP FEC capability";
+                            }
+
+                            leaf prefix-ipv4 {
+                                type boolean;
+                                default "true";
+                                description "Enable IPv4 prefix FEC capability";
+                            }
+
+                            leaf prefix-ipv6 {
+                                type boolean;
+                                default "true";
+                                description "Enable IPv6 prefix FEC capability";
+                            }
+
+                        } // container fec-type-capability
+
+                        container local-lsr-id {
+                            description "Enter the local-lsr-id context";
+
+                            leaf interface-name {
+                                type leafref {
+                                    path "../../../../../../interface/interface-name";
+                                }
+                                description "Name of network IP interface from which to obtain IP address to use as LSR-ID of LDP LSP";
+                            }
+
+                            leaf format-32bit {
+                                type boolean;
+                                default "false";
+                                description "Use IPv4 address of local LSR-ID interface as LSR-ID of the LDP LSR";
+                            }
+
+                        } // container local-lsr-id
+
+                    } // container ipv6
+
+                } // list interface
+
+            } // container interface-parameters
+
+            container targeted-session {
+                description "Enter the targeted-session context";
+
+                leaf sdp-auto-targeted-session {
+                    type boolean;
+                    default "true";
+                    description "Allow auto-creation of targeted sessions by SDP";
+                }
+
+                leaf-list export-prefixes {
+                    type leafref {
+                        path "../../../../policy-options/policy-statement/name";
+                    }
+                    max-elements 5;
+                    ordered-by user;
+                    description "Export route policy to determine which routes are exported to this targeted LDP session";
+                }
+
+                leaf-list import-prefixes {
+                    type leafref {
+                        path "../../../../policy-options/policy-statement/name";
+                    }
+                    max-elements 5;
+                    ordered-by user;
+                    description "Import route policy to determine which routes are accepted from targeted LDP neighbors";
+                }
+
+                container ipv4 {
+                    description "Enter the ipv4 context";
+
+                    container hello {
+                        description "Enter the hello context";
+
+                        leaf timeout {
+                            type uint32 {
+                                range "3..65535";
+                            }
+                            units "seconds";
+                            default "45";
+                            description "Timeout value for Hello";
+                        }
+
+                        leaf factor {
+                            type uint32 {
+                                range "1..255";
+                            }
+                            default "3";
+                            description "Factor value for Hello";
+                        }
+
+                    } // container hello
+
+                    container keepalive {
+                        description "Enter the keepalive context";
+
+                        leaf timeout {
+                            type uint32 {
+                                range "3..65535";
+                            }
+                            units "seconds";
+                            default "40";
+                            description "Timeout value for keepalive";
+                        }
+
+                        leaf factor {
+                            type uint32 {
+                                range "1..255";
+                            }
+                            default "4";
+                            description "Factor value for keepalive";
+                        }
+
+                    } // container keepalive
+
+                    container hello-reduction {
+                        description "Enter the hello-reduction context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of suppression of periodic targeted Hello messages between LDP peers";
+                        }
+
+                        leaf factor {
+                            type uint32 {
+                                range "3..20";
+                            }
+                            default "3";
+                            description "Hello reduction dampening factor";
+                        }
+
+                    } // container hello-reduction
+
+                } // container ipv4
+
+                container ipv6 {
+                    description "Enter the ipv6 context";
+
+                    container hello {
+                        description "Enter the hello context";
+
+                        leaf timeout {
+                            type uint32 {
+                                range "3..65535";
+                            }
+                            units "seconds";
+                            default "45";
+                            description "Timeout value for Hello";
+                        }
+
+                        leaf factor {
+                            type uint32 {
+                                range "1..255";
+                            }
+                            default "3";
+                            description "Factor value for Hello";
+                        }
+
+                    } // container hello
+
+                    container keepalive {
+                        description "Enter the keepalive context";
+
+                        leaf timeout {
+                            type uint32 {
+                                range "3..65535";
+                            }
+                            units "seconds";
+                            default "40";
+                            description "Timeout value for keepalive";
+                        }
+
+                        leaf factor {
+                            type uint32 {
+                                range "1..255";
+                            }
+                            default "4";
+                            description "Factor value for keepalive";
+                        }
+
+                    } // container keepalive
+
+                    container hello-reduction {
+                        description "Enter the hello-reduction context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of suppression of periodic targeted Hello messages between LDP peers";
+                        }
+
+                        leaf factor {
+                            type uint32 {
+                                range "3..20";
+                            }
+                            default "3";
+                            description "Hello reduction dampening factor";
+                        }
+
+                    } // container hello-reduction
+
+                } // container ipv6
+
+                list peer {
+                    key "ip-address";
+                    description "Enter the peer list instance";
+
+                    leaf ip-address {
+                        type types-sros:ip-address;
+                        description "IP address of the peer";
+                    }
+
+                    leaf bfd-liveness {
+                        type boolean;
+                        default "false";
+                        description "Enable BFD tracking of LDP session for the peer";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "enable";
+                        description "Administrative state of the peer";
+                    }
+
+                    container local-lsr-id {
+                        description "Enter the local-lsr-id context";
+
+                        leaf interface-name {
+                            type leafref {
+                                path "../../../../../interface/interface-name";
+                            }
+                            description "Name of network IP interface from which to obtain IP address to use as LSR-ID of LDP LSP";
+                        }
+
+                        leaf format-32bit {
+                            type boolean;
+                            default "false";
+                            description "Use IPv4 address of local LSR-ID interface as LSR-ID of the LDP LSR";
+                        }
+
+                    } // container local-lsr-id
+
+                    container hello {
+                        presence "Hello configuration";
+                        description "Enter the hello context";
+
+                        leaf timeout {
+                            type types-sros:time-duration {
+                                range "3..65535";
+                            }
+                            description "Timeout value for Hello";
+                        }
+
+                        leaf factor {
+                            type uint32 {
+                                range "1..255";
+                            }
+                            description "Factor value for Hello";
+                        }
+
+                    } // container hello
+
+                    container keepalive {
+                        presence "Keep-alive configuration";
+                        description "Enter the keepalive context";
+
+                        leaf timeout {
+                            type types-sros:time-duration {
+                                range "3..65535";
+                            }
+                            description "Time that LDP waits before tearing down session";
+                        }
+
+                        leaf factor {
+                            type uint32 {
+                                range "1..255";
+                            }
+                            description "Factor value for keepalive";
+                        }
+
+                    } // container keepalive
+
+                    container hello-reduction {
+                        presence "Hello-reduction configuration";
+                        description "Enter the hello-reduction context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state-with-inherit;
+                            description "Administrative state of suppression of Hello messages";
+                        }
+
+                        leaf factor {
+                            type uint32 {
+                                range "3..20";
+                            }
+                            description "Hello reduction dampening factor";
+                        }
+
+                    } // container hello-reduction
+
+                    container tunneling {
+                        presence "Enable tunneling";
+                        description "Enter the tunneling context";
+
+                        list lsp {
+                            key "lsp-name";
+                            max-elements 4;
+                            description "Add a list entry for lsp";
+
+                            leaf lsp-name {
+                                type types-sros:named-item-64;
+                                description "LSP name";
+                            }
+
+                        } // list lsp
+
+                    } // container tunneling
+
+                } // list peer
+
+                list peer-template {
+                    key "template-name";
+                    max-elements 500;
+                    description "Enter the peer-template list instance";
+
+                    leaf template-name {
+                        type types-sros:named-item;
+                        description "Name for the targeted peer template";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "enable";
+                        description "Administrative state of the peer template";
+                    }
+
+                    leaf adv-local-lsr-id {
+                        type boolean;
+                        default "false";
+                        description "Advertise local LSR ID over a specified LDP session";
+                    }
+
+                    leaf bfd-liveness {
+                        type boolean;
+                        default "false";
+                        description "Enable BFD tracking of LDP session for sessions created by peer template";
+                    }
+
+                    leaf community {
+                        type types-ldp:policy-string;
+                        description "Community string associated with a session to a specified peer";
+                    }
+
+                    leaf tunneling {
+                        type boolean;
+                        default "false";
+                        description "Allow LDP over tunnels for sessions created by peer template";
+                    }
+
+                    container hello {
+                        presence "Hello configuration";
+                        description "Enter the hello context";
+
+                        leaf timeout {
+                            type types-sros:time-duration {
+                                range "3..65535";
+                            }
+                            description "Timeout value for Hello";
+                        }
+
+                        leaf factor {
+                            type uint32 {
+                                range "1..255";
+                            }
+                            description "Factor value for Hello";
+                        }
+
+                    } // container hello
+
+                    container hello-reduction {
+                        presence "Hello-reduction configuration";
+                        description "Enter the hello-reduction context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state-with-inherit;
+                            description "Administrative state of suppression of Hello messages";
+                        }
+
+                        leaf factor {
+                            type uint32 {
+                                range "3..20";
+                            }
+                            description "Hello reduction dampening factor";
+                        }
+
+                    } // container hello-reduction
+
+                    container keepalive {
+                        presence "Keep-alive configuration";
+                        description "Enter the keepalive context";
+
+                        leaf timeout {
+                            type types-sros:time-duration {
+                                range "3..65535";
+                            }
+                            description "Time that LDP waits before tearing down session";
+                        }
+
+                        leaf factor {
+                            type uint32 {
+                                range "1..255";
+                            }
+                            description "Factor value for keepalive";
+                        }
+
+                    } // container keepalive
+
+                    container local-lsr-id {
+                        description "Enter the local-lsr-id context";
+
+                        leaf interface-name {
+                            type leafref {
+                                path "../../../../../interface/interface-name";
+                            }
+                            description "Name of network IP interface from which to obtain IP address to use as LSR-ID of LDP LSP";
+                        }
+
+                    } // container local-lsr-id
+
+                } // list peer-template
+
+                list peer-template-map {
+                    key "template-map-name";
+                    max-elements 500;
+                    description "Enter the peer-template-map list instance";
+
+                    leaf template-map-name {
+                        type leafref {
+                            path "../../peer-template/template-name";
+                        }
+                        description "Name to identify the targeted peer template";
+                    }
+
+                    leaf-list policy-map {
+                        type leafref {
+                            path "../../../../../policy-options/policy-statement/name";
+                        }
+                        min-elements 1;
+                        max-elements 5;
+                        ordered-by user;
+                        description "Targeted peer template to apply to the given policies";
+                    }
+
+                } // list peer-template-map
+
+            } // container targeted-session
+
+        } // container ldp
+
+    } // grouping conf-router-ldp
+
+}

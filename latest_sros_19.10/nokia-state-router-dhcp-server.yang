@@ -1,0 +1,3092 @@
+submodule nokia-state-router-dhcp-server {
+
+    yang-version "1.1";
+
+    belongs-to nokia-state { prefix "state"; }
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-dhcp               { prefix "types-dhcp"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+    import nokia-types-subscriber-mgmt    { prefix "types-submgt"; }
+
+
+    sros-ext:sros-major-release "rel19";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model with operational state for DHCP server on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-state-router-dhcp-server YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2019-10-09";
+
+    grouping state-router-dhcp-server {
+        container dhcp-server {
+            description "Enter the dhcp-server context";
+
+            list dhcpv4 {
+                key "name";
+                description "Enter the dhcpv4 list instance";
+
+                leaf name {
+                    type types-sros:named-item;
+                    description "DHCP server name";
+                }
+
+                leaf oper-state {
+                    type enumeration {
+                        enum "unknown"                      { value 1; }
+                        enum "up"                           { value 2; }
+                        enum "down"                         { value 3; }
+                        enum "transition"                   { value 4; }
+                        enum "wait-persistence"             { value 5; }
+                    }
+                    description "Operational state of this local DHCP server.";
+                }
+
+                leaf creation-origin {
+                    type types-sros:creation-origin;
+                    description "Creation origin of this local DHCP server.";
+                }
+
+                container failover {
+                    description "Enter the failover context";
+
+                    leaf state {
+                        type enumeration {
+                            enum "unknown"                      { value 1; description "unknown"; }
+                            enum "init"                         { value 2; description "preparing to startup"; }
+                            enum "start-up"                     { value 3; description "starting up"; }
+                            enum "no-communication"             { value 4; description "communication with partner is lost"; }
+                            enum "partner-down"                 { value 5; description "partner is assumed down"; }
+                            enum "normal"                       { value 6; description "normal"; }
+                            enum "disabled"                     { value 7; description "administrative state of server or failover facility is down"; }
+                            enum "transition"                   { value 8; description "transition"; }
+                            enum "pre-normal"                   { value 9; description "sub-state of normal, that applies to a pair of
+                            servers A and B, while B is recovering after it went down:
+                            - server A is responding to (instead of dropping) renew and rebind messages
+                            for remote leases it has allocated during partnerDown;
+                            - server B is dropping (instead of NACKing) renew and rebind messages for 
+                            yet unknown local leases while resynchronizing with the MCS database."; }
+                        }
+                        description "Failover state";
+                    }
+
+                    leaf time-left {
+                        type union {
+                            type enumeration {
+                                enum "infinite"                     { value -1; description "none of the timers is running"; }
+                            }
+                            type int32;
+                        }
+                        units "seconds";
+                        description "Time left until expiry of one of the timers";
+                    }
+
+                    leaf actual-max-client-lead-time {
+                        type types-sros:time-duration {
+                            range "600..86399";
+                        }
+                        units "seconds";
+                        description "Actual maximum client lead time";
+                    }
+
+                    container statistics {
+                        description "DHCP server failover statistics";
+
+                        leaf lease-not-found {
+                            type yang:counter32;
+                            description "number of dropped binding updates because the corresponding lease cannot be found";
+                        }
+
+                        leaf drop-invalid-packets {
+                            type yang:counter32;
+                            description "number of dropped binding updates because the packet was malformed";
+                        }
+
+                        leaf admin-disabled {
+                            type yang:counter32;
+                            description "number of dropped binding updates because the failover admin-state is disabled";
+                        }
+
+                        leaf expired {
+                            type yang:counter32;
+                            description "number of dropped binding updates because the lease has expired";
+                        }
+
+                        leaf max-reached {
+                            type yang:counter32;
+                            description "number of dropped binding updates because the maximum number of leases was reached";
+                        }
+
+                        leaf subnet-not-found {
+                            type yang:counter32;
+                            description "number of dropped binding updates because the subnet could not be found for the lease";
+                        }
+
+                        leaf range-not-found {
+                            type yang:counter32;
+                            description "number of dropped binding updates because a valid include range could not be found for the lease";
+                        }
+
+                        leaf host-conflict {
+                            type yang:counter32;
+                            description "number of dropped add binding updates because the address is leased to another host";
+                        }
+
+                        leaf address-conflict {
+                            type yang:counter32;
+                            description "number of dropped add binding updates because the host has already another address";
+                        }
+
+                        leaf peer-conflict {
+                            type yang:counter32;
+                            description "number of dropped add binding updates because the failover peer has leased a conflicting address";
+                        }
+
+                        leaf persistency-congestion {
+                            type yang:counter32;
+                            description "number of dropped binding updates because of persistency congestion on the host";
+                        }
+
+                        leaf zero-lease-hold-time {
+                            type yang:counter32;
+                            description "number of dropped binding updates because the lease-hold-time is zero";
+                        }
+
+                        leaf invalid-prefix-length {
+                            type yang:counter32;
+                            description "number of dropped binding updates because the lease is not inside the valid prefix-length range";
+                        }
+
+                    } // container statistics
+
+                } // container failover
+
+                list pool {
+                    key "pool-name";
+                    description "Enter the pool list instance";
+
+                    leaf pool-name {
+                        type types-sros:named-item;
+                        description "DHCP server pool name";
+                    }
+
+                    container failover {
+                        description "Enter the failover context";
+
+                        leaf state {
+                            type enumeration {
+                                enum "unknown"                      { value 1; description "unknown"; }
+                                enum "init"                         { value 2; description "preparing to startup"; }
+                                enum "start-up"                     { value 3; description "starting up"; }
+                                enum "no-communication"             { value 4; description "communication with partner is lost"; }
+                                enum "partner-down"                 { value 5; description "partner is assumed down"; }
+                                enum "normal"                       { value 6; description "normal"; }
+                                enum "disabled"                     { value 7; description "administrative state of server or failover facility is down"; }
+                                enum "transition"                   { value 8; description "transition"; }
+                                enum "pre-normal"                   { value 9; description "sub-state of normal, that applies to a pair of
+                                servers A and B, while B is recovering after it went down:
+                                - server A is responding to (instead of dropping) renew and rebind messages
+                                for remote leases it has allocated during partnerDown;
+                                - server B is dropping (instead of NACKing) renew and rebind messages for 
+                                yet unknown local leases while resynchronizing with the MCS database."; }
+                            }
+                            description "Failover state";
+                        }
+
+                        leaf time-left {
+                            type union {
+                                type enumeration {
+                                    enum "infinite"                     { value -1; description "none of the timers is running"; }
+                                }
+                                type int32;
+                            }
+                            units "seconds";
+                            description "Time left until expiry of one of the timers";
+                        }
+
+                        leaf actual-max-client-lead-time {
+                            type types-sros:time-duration {
+                                range "600..86399";
+                            }
+                            units "seconds";
+                            description "Actual maximum client lead time";
+                        }
+
+                        container statistics {
+                            description "DHCP server pool failover statistics";
+
+                            leaf lease-not-found {
+                                type yang:counter32;
+                                description "number of dropped binding updates because the corresponding lease cannot be found";
+                            }
+
+                            leaf drop-invalid-packets {
+                                type yang:counter32;
+                                description "number of dropped binding updates because the packet was malformed";
+                            }
+
+                            leaf admin-disabled {
+                                type yang:counter32;
+                                description "number of dropped binding updates because the failover admin-state is disabled";
+                            }
+
+                            leaf expired {
+                                type yang:counter32;
+                                description "number of dropped binding updates because the lease has expired";
+                            }
+
+                            leaf max-reached {
+                                type yang:counter32;
+                                description "number of dropped binding updates because the maximum number of leases was reached";
+                            }
+
+                            leaf subnet-not-found {
+                                type yang:counter32;
+                                description "number of dropped binding updates because the subnet could not be found for the lease";
+                            }
+
+                            leaf range-not-found {
+                                type yang:counter32;
+                                description "number of dropped binding updates because a valid include range could not be found for the lease";
+                            }
+
+                            leaf host-conflict {
+                                type yang:counter32;
+                                description "number of dropped add binding updates because the address is leased to another host";
+                            }
+
+                            leaf address-conflict {
+                                type yang:counter32;
+                                description "number of dropped add binding updates because the host has already another address";
+                            }
+
+                            leaf peer-conflict {
+                                type yang:counter32;
+                                description "number of dropped add binding updates because the failover peer has leased a conflicting address";
+                            }
+
+                            leaf persistency-congestion {
+                                type yang:counter32;
+                                description "number of dropped binding updates because of persistency congestion on the host";
+                            }
+
+                            leaf zero-lease-hold-time {
+                                type yang:counter32;
+                                description "number of dropped binding updates because the lease-hold-time is zero";
+                            }
+
+                            leaf invalid-prefix-length {
+                                type yang:counter32;
+                                description "number of dropped binding updates because the lease is not inside the valid prefix-length range";
+                            }
+
+                        } // container statistics
+
+                    } // container failover
+
+                    list subnet {
+                        key "ipv4-prefix";
+                        description "Enter the subnet list instance";
+
+                        leaf ipv4-prefix {
+                            type types-sros:ipv4-unicast-prefix;
+                            description "IPv4 prefix for the subnet";
+                        }
+
+                        leaf active {
+                            type boolean;
+                            description "indicates if this subnet is currently being served by this system.";
+                        }
+
+                        list declined-address {
+                            key "address";
+                            description "IP address declined by client";
+
+                            leaf address {
+                                type types-sros:ipv4-address;
+                                description "IP address declined by client";
+                            }
+
+                            leaf mac-address {
+                                type yang:mac-address;
+                                description "The MAC address of the client";
+                            }
+
+                            leaf declined-time {
+                                type yang:date-and-time {
+                                    length "11";
+                                }
+                                description "When the client is declined";
+                            }
+
+                            leaf option82 {
+                                type binary {
+                                    length "0..257";
+                                }
+                                description "Option 82 from the client message";
+                            }
+
+                            leaf client-type {
+                                type types-dhcp:dhcp-server-client-type;
+                                description "Type of client";
+                            }
+
+                            leaf user-name {
+                                type types-submgt:ppp-user-name;
+                                description "PPP user name";
+                            }
+
+                            leaf circuit-id {
+                                type binary {
+                                    length "0..255";
+                                }
+                                description "The circuit ID from the option 82";
+                            }
+
+                        } // list declined-address
+
+                        container statistics {
+                            description "DHCP server pool subnet statistics";
+
+                            container local {
+
+                                leaf free-addresses {
+                                    type yang:counter32;
+                                    description "number of free addresses";
+                                }
+
+                                leaf declined-addresses {
+                                    type yang:counter32;
+                                    description "number of declined addresses";
+                                }
+
+                                leaf provisioned-addresses {
+                                    type yang:counter32;
+                                    description "number of provisioned addresses";
+                                }
+
+                                leaf offered-state {
+                                    type yang:counter32;
+                                    description "number of leases in state offered";
+                                }
+
+                                leaf stable-state {
+                                    type yang:counter32;
+                                    description "number of leases in state stable";
+                                }
+
+                                leaf force-renew-pending-state {
+                                    type yang:counter32;
+                                    description "number of leases in state force renew pending";
+                                }
+
+                                leaf remove-pending-state {
+                                    type yang:counter32;
+                                    description "number of leases in state remove pending";
+                                }
+
+                            } // container local
+
+                            container failover {
+
+                                leaf free-addresses {
+                                    type yang:counter32;
+                                    description "number of free addresses";
+                                }
+
+                                leaf declined-addresses {
+                                    type yang:counter32;
+                                    description "number of declined addresses";
+                                }
+
+                                leaf provisioned-addresses {
+                                    type yang:counter32;
+                                    description "number of provisioned addresses";
+                                }
+
+                                leaf offered-state {
+                                    type yang:counter32;
+                                    description "number of leases in state offered";
+                                }
+
+                                leaf stable-state {
+                                    type yang:counter32;
+                                    description "number of leases in state stable";
+                                }
+
+                                leaf force-renew-pending-state {
+                                    type yang:counter32;
+                                    description "number of leases in state force renew pending";
+                                }
+
+                                leaf remove-pending-state {
+                                    type yang:counter32;
+                                    description "number of leases in state remove pending";
+                                }
+
+                            } // container failover
+
+                            container extended-collection {
+                                description "extended collection";
+
+                                leaf extended-collection-last-reset {
+                                    type yang:date-and-time;
+                                    description "time of last reset of the extended statistics";
+                                }
+
+                                container local {
+
+                                    container stable-state {
+                                        description "peak, peak-time value of stable-state ";
+
+                                        leaf peak {
+                                            type yang:counter32;
+                                            description "peak value of stable-state since last reset";
+                                        }
+
+                                        leaf peak-time {
+                                            type yang:date-and-time;
+                                            description "time of last changed peak-state-state";
+                                        }
+
+                                    } // container stable-state
+
+                                    container leases-in-use {
+                                        description "current, peak and peak-time values of leases in use";
+
+                                        leaf current {
+                                            type yang:counter32;
+                                            description "current number of blocks";
+                                        }
+
+                                        leaf peak {
+                                            type yang:counter32;
+                                            description "peak value";
+                                        }
+
+                                        leaf peak-time {
+                                            type yang:date-and-time;
+                                            description "time of last change of the peak value";
+                                        }
+
+                                    } // container leases-in-use
+
+                                    container free-addresses {
+                                        description "peak and peak-time values of free-addresses";
+
+                                        leaf peak {
+                                            type yang:counter32;
+                                            description "peak value of free addresses since last reset";
+                                        }
+
+                                        leaf peak-time {
+                                            type yang:date-and-time;
+                                            description "time of last changed peak-free-addresses";
+                                        }
+
+                                        container relative {
+                                            description "current, peak values relative to the provisioned values";
+
+                                            leaf current {
+                                                type types-sros:percent;
+                                                description "current number of blocks";
+                                            }
+
+                                            leaf peak {
+                                                type types-sros:percent;
+                                                description "peak value";
+                                            }
+
+                                            leaf peak-time {
+                                                type yang:date-and-time;
+                                                description "time of last change of the peak value";
+                                            }
+
+                                        } // container relative
+
+                                    } // container free-addresses
+
+                                    container addresses-in-use {
+                                        description "current, peak values relative to the provisioned values";
+
+                                        container relative {
+                                            description "current, peak values relative to the provisioned values";
+
+                                            leaf current {
+                                                type types-sros:percent;
+                                                description "current number of blocks";
+                                            }
+
+                                            leaf peak {
+                                                type types-sros:percent;
+                                                description "peak value";
+                                            }
+
+                                            leaf peak-time {
+                                                type yang:date-and-time;
+                                                description "time of last change of the peak value";
+                                            }
+
+                                        } // container relative
+
+                                    } // container addresses-in-use
+
+                                    container offered-state {
+                                        description "peak and peak-time value of leases in state offered";
+
+                                        leaf peak {
+                                            type yang:counter32;
+                                            description "peak value of leases in state offered";
+                                        }
+
+                                        leaf peak-time {
+                                            type yang:date-and-time;
+                                            description "time of last changed peak-offered-state";
+                                        }
+
+                                    } // container offered-state
+
+                                } // container local
+
+                                container remote {
+
+                                    container stable-state {
+                                        description "peak, peak-time value of stable-state ";
+
+                                        leaf peak {
+                                            type yang:counter32;
+                                            description "peak value of stable-state since last reset";
+                                        }
+
+                                        leaf peak-time {
+                                            type yang:date-and-time;
+                                            description "time of last changed peak-state-state";
+                                        }
+
+                                    } // container stable-state
+
+                                    container leases-in-use {
+                                        description "current, peak and peak-time values of leases in use";
+
+                                        leaf current {
+                                            type yang:counter32;
+                                            description "current number of blocks";
+                                        }
+
+                                        leaf peak {
+                                            type yang:counter32;
+                                            description "peak value";
+                                        }
+
+                                        leaf peak-time {
+                                            type yang:date-and-time;
+                                            description "time of last change of the peak value";
+                                        }
+
+                                    } // container leases-in-use
+
+                                    container free-addresses {
+                                        description "peak and peak-time values of free-addresses";
+
+                                        leaf peak {
+                                            type yang:counter32;
+                                            description "peak value of free addresses since last reset";
+                                        }
+
+                                        leaf peak-time {
+                                            type yang:date-and-time;
+                                            description "time of last changed peak-free-addresses";
+                                        }
+
+                                        container relative {
+                                            description "current, peak values relative to the provisioned values";
+
+                                            leaf current {
+                                                type types-sros:percent;
+                                                description "current number of blocks";
+                                            }
+
+                                            leaf peak {
+                                                type types-sros:percent;
+                                                description "peak value";
+                                            }
+
+                                            leaf peak-time {
+                                                type yang:date-and-time;
+                                                description "time of last change of the peak value";
+                                            }
+
+                                        } // container relative
+
+                                    } // container free-addresses
+
+                                    container addresses-in-use {
+                                        description "current, peak values relative to the provisioned values";
+
+                                        container relative {
+                                            description "current, peak values relative to the provisioned values";
+
+                                            leaf current {
+                                                type types-sros:percent;
+                                                description "current number of blocks";
+                                            }
+
+                                            leaf peak {
+                                                type types-sros:percent;
+                                                description "peak value";
+                                            }
+
+                                            leaf peak-time {
+                                                type yang:date-and-time;
+                                                description "time of last change of the peak value";
+                                            }
+
+                                        } // container relative
+
+                                    } // container addresses-in-use
+
+                                    container offered-state {
+                                        description "peak and peak-time value of leases in state offered";
+
+                                        leaf peak {
+                                            type yang:counter32;
+                                            description "peak value of leases in state offered";
+                                        }
+
+                                        leaf peak-time {
+                                            type yang:date-and-time;
+                                            description "time of last changed peak-offered-state";
+                                        }
+
+                                    } // container offered-state
+
+                                } // container remote
+
+                            } // container extended-collection
+
+                        } // container statistics
+
+                    } // list subnet
+
+                    container statistics {
+                        description "DHCP server pool statistics";
+
+                        container local {
+
+                            leaf free-addresses {
+                                type yang:counter32;
+                                description "number of free addresses";
+                            }
+
+                            leaf declined-addresses {
+                                type yang:counter32;
+                                description "number of declined addresses";
+                            }
+
+                            leaf provisioned-addresses {
+                                type yang:counter32;
+                                description "number of provisioned addresses";
+                            }
+
+                            leaf offered-state {
+                                type yang:counter32;
+                                description "number of leases in state offered";
+                            }
+
+                            leaf stable-state {
+                                type yang:counter32;
+                                description "number of leases in state stable";
+                            }
+
+                            leaf force-renew-pending-state {
+                                type yang:counter32;
+                                description "number of leases in state force renew pending";
+                            }
+
+                            leaf remove-pending-state {
+                                type yang:counter32;
+                                description "number of leases in state remove pending";
+                            }
+
+                        } // container local
+
+                        container failover {
+
+                            leaf free-addresses {
+                                type yang:counter32;
+                                description "number of free addresses";
+                            }
+
+                            leaf declined-addresses {
+                                type yang:counter32;
+                                description "number of declined addresses";
+                            }
+
+                            leaf provisioned-addresses {
+                                type yang:counter32;
+                                description "number of provisioned addresses";
+                            }
+
+                            leaf offered-state {
+                                type yang:counter32;
+                                description "number of leases in state offered";
+                            }
+
+                            leaf stable-state {
+                                type yang:counter32;
+                                description "number of leases in state stable";
+                            }
+
+                            leaf force-renew-pending-state {
+                                type yang:counter32;
+                                description "number of leases in state force renew pending";
+                            }
+
+                            leaf remove-pending-state {
+                                type yang:counter32;
+                                description "number of leases in state remove pending";
+                            }
+
+                        } // container failover
+
+                        container extended-collection {
+                            description "extended collection";
+
+                            leaf extended-collection-last-reset {
+                                type yang:date-and-time;
+                                description "time of last reset of the extended statistics";
+                            }
+
+                            container local {
+
+                                container stable-state {
+                                    description "peak, peak-time value of stable-state ";
+
+                                    leaf peak {
+                                        type yang:counter32;
+                                        description "peak value of stable-state since last reset";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last changed peak-state-state";
+                                    }
+
+                                } // container stable-state
+
+                                container leases-in-use {
+                                    description "current, peak and peak-time values of leases in use";
+
+                                    leaf current {
+                                        type yang:counter32;
+                                        description "current number of blocks";
+                                    }
+
+                                    leaf peak {
+                                        type yang:counter32;
+                                        description "peak value";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last change of the peak value";
+                                    }
+
+                                } // container leases-in-use
+
+                                container free-addresses {
+                                    description "peak and peak-time values of free-addresses";
+
+                                    leaf peak {
+                                        type yang:counter32;
+                                        description "peak value of free addresses since last reset";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last changed peak-free-addresses";
+                                    }
+
+                                    container relative {
+                                        description "current, peak values relative to the provisioned values";
+
+                                        leaf current {
+                                            type types-sros:percent;
+                                            description "current number of blocks";
+                                        }
+
+                                        leaf peak {
+                                            type types-sros:percent;
+                                            description "peak value";
+                                        }
+
+                                        leaf peak-time {
+                                            type yang:date-and-time;
+                                            description "time of last change of the peak value";
+                                        }
+
+                                    } // container relative
+
+                                } // container free-addresses
+
+                                container addresses-in-use {
+                                    description "current, peak values relative to the provisioned values";
+
+                                    container relative {
+                                        description "current, peak values relative to the provisioned values";
+
+                                        leaf current {
+                                            type types-sros:percent;
+                                            description "current number of blocks";
+                                        }
+
+                                        leaf peak {
+                                            type types-sros:percent;
+                                            description "peak value";
+                                        }
+
+                                        leaf peak-time {
+                                            type yang:date-and-time;
+                                            description "time of last change of the peak value";
+                                        }
+
+                                    } // container relative
+
+                                } // container addresses-in-use
+
+                                container offered-state {
+                                    description "peak and peak-time value of leases in state offered";
+
+                                    leaf peak {
+                                        type yang:counter32;
+                                        description "peak value of leases in state offered";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last changed peak-offered-state";
+                                    }
+
+                                } // container offered-state
+
+                            } // container local
+
+                            container remote {
+
+                                container stable-state {
+                                    description "peak, peak-time value of stable-state ";
+
+                                    leaf peak {
+                                        type yang:counter32;
+                                        description "peak value of stable-state since last reset";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last changed peak-state-state";
+                                    }
+
+                                } // container stable-state
+
+                                container leases-in-use {
+                                    description "current, peak and peak-time values of leases in use";
+
+                                    leaf current {
+                                        type yang:counter32;
+                                        description "current number of blocks";
+                                    }
+
+                                    leaf peak {
+                                        type yang:counter32;
+                                        description "peak value";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last change of the peak value";
+                                    }
+
+                                } // container leases-in-use
+
+                                container free-addresses {
+                                    description "peak and peak-time values of free-addresses";
+
+                                    leaf peak {
+                                        type yang:counter32;
+                                        description "peak value of free addresses since last reset";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last changed peak-free-addresses";
+                                    }
+
+                                    container relative {
+                                        description "current, peak values relative to the provisioned values";
+
+                                        leaf current {
+                                            type types-sros:percent;
+                                            description "current number of blocks";
+                                        }
+
+                                        leaf peak {
+                                            type types-sros:percent;
+                                            description "peak value";
+                                        }
+
+                                        leaf peak-time {
+                                            type yang:date-and-time;
+                                            description "time of last change of the peak value";
+                                        }
+
+                                    } // container relative
+
+                                } // container free-addresses
+
+                                container addresses-in-use {
+                                    description "current, peak values relative to the provisioned values";
+
+                                    container relative {
+                                        description "current, peak values relative to the provisioned values";
+
+                                        leaf current {
+                                            type types-sros:percent;
+                                            description "current number of blocks";
+                                        }
+
+                                        leaf peak {
+                                            type types-sros:percent;
+                                            description "peak value";
+                                        }
+
+                                        leaf peak-time {
+                                            type yang:date-and-time;
+                                            description "time of last change of the peak value";
+                                        }
+
+                                    } // container relative
+
+                                } // container addresses-in-use
+
+                                container offered-state {
+                                    description "peak and peak-time value of leases in state offered";
+
+                                    leaf peak {
+                                        type yang:counter32;
+                                        description "peak value of leases in state offered";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last changed peak-offered-state";
+                                    }
+
+                                } // container offered-state
+
+                            } // container remote
+
+                        } // container extended-collection
+
+                    } // container statistics
+
+                } // list pool
+
+                container statistics {
+                    description "DHCP server statistics";
+
+                    leaf rx-discovers {
+                        type yang:counter64;
+                        description
+                            "the number of DHCPDISCOVER packets
+                             received";
+                    }
+
+                    leaf rx-requests {
+                        type yang:counter64;
+                        description
+                            "the number of DHCPREQUEST packets
+                             received";
+                    }
+
+                    leaf rx-releases {
+                        type yang:counter64;
+                        description
+                            "the number of DHCPRELEASE packets
+                             received";
+                    }
+
+                    leaf rx-declines {
+                        type yang:counter64;
+                        description
+                            "the number of DHCPDECLINE packets
+                             received";
+                    }
+
+                    leaf rx-informs {
+                        type yang:counter64;
+                        description
+                            "the number of DHCPINFORM packets
+                             received";
+                    }
+
+                    leaf tx-offers {
+                        type yang:counter64;
+                        description
+                            "the number of DHCPOFFER packets
+                             sent";
+                    }
+
+                    leaf tx-acks {
+                        type yang:counter64;
+                        description
+                            "the number of DHCPACK packets
+                             sent";
+                    }
+
+                    leaf tx-nacks {
+                        type yang:counter64;
+                        description
+                            "the number of DHCPNACK packets
+                             sent";
+                    }
+
+                    leaf tx-force-renews {
+                        type yang:counter64;
+                        description
+                            "The number of DHCPFORCERENEW packets
+                             sent";
+                    }
+
+                    leaf ignored-client-offers {
+                        type yang:counter32;
+                        description "the number of DHCPOFFER packets sent that were ignored by the clients.";
+                    }
+
+                    leaf leases-expired {
+                        type yang:counter32;
+                        description "the number of DHCP leases that were expired (because no release was received).";
+                    }
+
+                    container dropped {
+                        description "statistics related to drop-counters";
+
+                        leaf corrupt-packets {
+                            type yang:counter32;
+                            description "The number of DHCP packets received which are corrupt.";
+                        }
+
+                        leaf invalid-types {
+                            type yang:counter32;
+                            description "the number of DHCP packets received which have an unknown message type";
+                        }
+
+                        leaf local-user-database-unknown-hosts {
+                            type yang:counter32;
+                            description
+                                "the number of DHCP packets received from hosts which were not found
+                                 in the local user database";
+                        }
+
+                        leaf local-user-database-user-not-allowed {
+                            type yang:counter32;
+                            description
+                                "the number of DHCP packets received from hosts which were found
+                                 in the local user database but rejected (no address/pool in host config)";
+                        }
+
+                        leaf lease-not-ready {
+                            type yang:counter32;
+                            description "the number of DHCP packets dropped before the lease database was ready";
+                        }
+
+                        leaf lease-not-found {
+                            type yang:counter32;
+                            description "the number of DHCP packets dropped because no (valid) lease was found";
+                        }
+
+                        leaf address-exhaustion {
+                            type yang:counter32;
+                            description "the number of DHCP packets dropped because of no free addresses in the pool";
+                        }
+
+                        leaf invalid-user {
+                            type yang:counter32;
+                            description
+                                "the number of DHCP packets dropped because the MAC address of the sender
+                                 or the option 82 didn't match the host lease state.";
+                        }
+
+                        leaf overload {
+                            type yang:counter32;
+                            description
+                                "the number of DHCP packets dropped because they were received in excess
+                                 of what the server instance can handle.";
+                        }
+
+                        leaf persistency-overload {
+                            type yang:counter32;
+                            description
+                                "the number of DHCP packets dropped because they were received in excess of
+                                 what the DHCP persistence system can handle.";
+                        }
+
+                        leaf general-error {
+                            type yang:counter32;
+                            description "the number of DHCP packets dropped because of a generic error.";
+                        }
+
+                        leaf other-destination {
+                            type yang:counter32;
+                            description
+                                "the number of DHCP packets dropped because the request was not destined
+                                 to this server.";
+                        }
+
+                        leaf address-unavailable {
+                            type yang:counter32;
+                            description "the number of DHCP packets dropped because the requested address is not available.";
+                        }
+
+                        leaf max-leases-reached {
+                            type yang:counter32;
+                            description "the number of DHCP packets dropped because the maximum number of leases was reached.";
+                        }
+
+                        leaf server-down {
+                            type yang:counter32;
+                            description "the number of DHCP packets dropped during server instance disable.";
+                        }
+
+                        leaf subnet-not-configured {
+                            type yang:counter32;
+                            description
+                                "the number of DHCP packets dropped for user-db hosts with a fixed address
+                                 because the subnet to which the address belongs is not configured.";
+                        }
+
+                        leaf conflicting-gi-address {
+                            type yang:counter32;
+                            description
+                                "the number of DHCP requests dropped because they were received from a
+                                 different Gateway IP address within a timeframe of 10 seconds after a 
+                                 previous DHCPREQUEST.";
+                        }
+
+                        leaf audit {
+                            type yang:counter32;
+                            description
+                                "The number of DHCP requests dropped by the server instance
+                                 because this server instance is busy with the primary audit.";
+                        }
+
+                        leaf tx-failed {
+                            type yang:counter32;
+                            description
+                                "The number of DHCP responses dropped
+                                 because this server instance could not transmit it.";
+                        }
+
+                        leaf ludb-enabled {
+                            type yang:counter32;
+                            description
+                                "The number of internal calls from the local address assignment
+                                 infrastructure dropped by the DHCP server instance because a
+                                 local user database is attached to the server instance.";
+                        }
+
+                        leaf failover-enabled {
+                            type yang:counter32;
+                            description
+                                "The number of internal calls from the local address assignment
+                                 infrastructure dropped by the DHCP server instance because
+                                 failover is enabled for the server instance.";
+                        }
+
+                        leaf address-conflicts {
+                            type yang:counter32;
+                            description
+                                "A DHCP host is trying to acquire an IP address that was handed through
+                                 the local address assignment infrastructure, or the local address
+                                 assignment infrastructure tries to use an IP address that was handed
+                                 out to a DHCP client.";
+                        }
+
+                    } // container dropped
+
+                    container internal-requests {
+                        description "received internal requests";
+
+                        leaf ppp {
+                            type yang:counter64;
+                            description
+                                "The number of internal request calls received by the
+                                 DHCP server instance from the local address assignment
+                                 infrastructure for PPP.";
+                        }
+
+                        leaf ipoe {
+                            type yang:counter64;
+                            description
+                                "The number of internal request calls received by the
+                                 DHCP server instance from the local address assignment
+                                 infrastructure for IPoE.";
+                        }
+
+                        leaf ipsec {
+                            type yang:counter64;
+                            description
+                                "The number of internal request calls received by the
+                                 DHCP server instance from the local address assignment
+                                 infrastructure for IPsec.";
+                        }
+
+                        leaf releases {
+                            type yang:counter64;
+                            description
+                                "The number of internal release calls received by the
+                                 DHCP server instance from the local address assignment
+                                 infrastructure.";
+                        }
+
+                    } // container internal-requests
+
+                } // container statistics
+
+                list lease {
+                    key "address";
+                    description "IP addresses handed out to DHCP clients";
+
+                    leaf address {
+                        type types-sros:ip-address;
+                        description "Lease IP address";
+                    }
+
+                    leaf state {
+                        type enumeration {
+                            enum "offered"                      { value 0; description "The IP address was offered to the client. The client
+                            still has to acknowledge the offer by sending a DHCP
+                            request."; }
+                            enum "stable"                       { value 1; description "The IP address is now in use by the client."; }
+                            enum "force-renew-pending"          { value 2; description "The IP address is in use by the client, but the server
+                            sends a DHCP FORCERENEW message to the client, because
+                            an option has changed for this client."; }
+                            enum "remove-pending"               { value 3; description "The IP address is in use by the client, but it is no
+                            longer available in the configured IP address ranges.
+                            The server sends a FORCERENEW message to the client.
+                            When the client sends a renewal DHCP request message,
+                            it will be rejected."; }
+                            enum "held"                         { value 4; description "The IP address has been used by the client but the
+                            lease has timed out. The address is held so that the
+                            same client can acquire this address when requesting
+                            a new lease."; }
+                            enum "internal"                     { value 5; description "The IP address has been leased via the local pool
+                            management system and is now in use."; }
+                            enum "internal-orphan"              { value 6; description "The IP address has been leased via the local pool
+                            management system and is now in use. There is however
+                            no configured subnet to which this lease belongs,
+                            because it has been removed or because this lease was
+                            installed through dual-homing."; }
+                            enum "internal-offered"             { value 7; description "The IP address has been offered via the local pool
+                            management system. The client still has to acknowledge
+                            this offer."; }
+                            enum "internal-held"                { value 8; description "The IP address has been used by local pool management
+                            system but the lease is currently not active. The
+                            address is now in the hold list so that the local pool
+                            management system client can get the exactly same IP
+                            address again upon the next request for a lease."; }
+                            enum "sticky"                       { value 9; description "The IP address is reserved for the client and will
+                            remain reserved until the reservation for it is
+                            cleared.  The client will get the exactly same IP
+                            address again upon the next request for a lease."; }
+                        }
+                        description "The state of this lease.";
+                    }
+
+                    leaf start {
+                        type yang:date-and-time;
+                        description "When this lease was created";
+                    }
+
+                    leaf last-renew {
+                        type yang:date-and-time;
+                        description "When the last renew was done for this lease";
+                    }
+
+                    leaf remaining-lease-time {
+                        type uint32;
+                        units "seconds";
+                        description "The time left for this lease";
+                    }
+
+                    leaf client-type {
+                        type types-dhcp:dhcp-server-client-type;
+                        description "Type of client";
+                    }
+
+                    leaf ppp-user-name {
+                        type types-submgt:ppp-user-name;
+                        description "PPP user name";
+                    }
+
+                    leaf remaining-hold-time {
+                        type uint32;
+                        units "seconds";
+                        description "The hold time left for this lease";
+                    }
+
+                    leaf internal-client-type {
+                        type types-dhcp:dhcp-server-internal-client-type;
+                        description "Type of internal client";
+                    }
+
+                    leaf sticky-host-name {
+                        type types-sros:named-item-or-empty;
+                        description "The name of the sticky host";
+                    }
+
+                    container failover {
+
+                        leaf control-type {
+                            type types-dhcp:failover-control-type;
+                            description "The type of failover control for this DHCP lease state";
+                        }
+
+                        leaf expiration-interval {
+                            type uint32;
+                            units "seconds";
+                            description
+                                "The lease expiration interval for this lease that is
+                                 negotiated with the failover peer";
+                        }
+
+                    } // container failover
+
+                    container ipv4 {
+
+                        leaf transaction-id {
+                            type uint32;
+                            description
+                                "The transaction ID that the client has sent in its last DHCP
+                                 message to the server";
+                        }
+
+                        leaf client-id {
+                            type string {
+                                length "0..255";
+                            }
+                            description "The Client ID from the option 61";
+                        }
+
+                        leaf client-mac-address {
+                            type yang:mac-address;
+                            description "The MAC address of the client";
+                        }
+
+                        leaf vendor-class-id {
+                            type binary {
+                                length "0..32";
+                            }
+                            description "The content of option 60 for this DHCP lease state";
+                        }
+
+                        container option-82 {
+
+                            leaf value {
+                                type string {
+                                    length "0..257";
+                                }
+                                description "The content of option 82 for this DHCP lease state";
+                            }
+
+                            leaf circuit-id {
+                                type string {
+                                    length "0..255";
+                                }
+                                description "Circuit ID from option 82";
+                            }
+
+                            leaf remote-id {
+                                type string {
+                                    length "0..255";
+                                }
+                                description "The Remote ID from the option 82";
+                            }
+
+                            leaf subscriber-id {
+                                type string {
+                                    length "0..255";
+                                }
+                                description "The subscriber id from the option 82";
+                            }
+
+                            leaf vendor-specific-system {
+                                type string {
+                                    length "0..255";
+                                }
+                                description "The VSA-system from the option 82";
+                            }
+
+                            leaf vendor-specific-client-mac {
+                                type string {
+                                    length "0..255";
+                                }
+                                description "The VSA-client-mac from the option 82";
+                            }
+
+                            leaf vendor-specific-service {
+                                type string {
+                                    length "0..255";
+                                }
+                                description "The VSA-service from the option 82";
+                            }
+
+                            leaf vendor-specific-sap {
+                                type string {
+                                    length "0..255";
+                                }
+                                description "The VSA-sap from the option 82";
+                            }
+
+                            leaf vendor-specific-string {
+                                type string {
+                                    length "0..255";
+                                }
+                                description "The VSA-string from the option 82";
+                            }
+
+                        } // container option-82
+
+                    } // container ipv4
+
+                } // list lease
+
+                list sticky-lease {
+                    key "host-name";
+                    description
+                        "Sticky IP addresses that are reserved for use by specific hosts,
+                         whether they have an active lease or not";
+
+                    leaf host-name {
+                        type types-sros:named-item;
+                        description "The host name of the sticky lease.";
+                    }
+
+                    leaf address {
+                        type types-sros:ipv4-address;
+                        description "The client IP address of this lease";
+                    }
+
+                } // list sticky-lease
+
+            } // list dhcpv4
+
+            list dhcpv6 {
+                key "name";
+                description "Enter the dhcpv6 list instance";
+
+                leaf name {
+                    type types-sros:named-item;
+                    description "DHCP server name";
+                }
+
+                leaf oper-state {
+                    type enumeration {
+                        enum "unknown"                      { value 1; }
+                        enum "up"                           { value 2; }
+                        enum "down"                         { value 3; }
+                        enum "transition"                   { value 4; }
+                        enum "wait-persistence"             { value 5; }
+                    }
+                    description "Operational state of this local DHCP server.";
+                }
+
+                leaf creation-origin {
+                    type types-sros:creation-origin;
+                    description "Creation origin of this local DHCP server.";
+                }
+
+                container server-id {
+                    description "Enter the server-id context";
+
+                    leaf enterprise-number {
+                        type uint32;
+                        description "The vendor's registered Private Enterprise Number as maintained by IANA";
+                    }
+
+                } // container server-id
+
+                container failover {
+                    description "Enter the failover context";
+
+                    leaf state {
+                        type enumeration {
+                            enum "unknown"                      { value 1; description "unknown"; }
+                            enum "init"                         { value 2; description "preparing to startup"; }
+                            enum "start-up"                     { value 3; description "starting up"; }
+                            enum "no-communication"             { value 4; description "communication with partner is lost"; }
+                            enum "partner-down"                 { value 5; description "partner is assumed down"; }
+                            enum "normal"                       { value 6; description "normal"; }
+                            enum "disabled"                     { value 7; description "administrative state of server or failover facility is down"; }
+                            enum "transition"                   { value 8; description "transition"; }
+                            enum "pre-normal"                   { value 9; description "sub-state of normal, that applies to a pair of
+                            servers A and B, while B is recovering after it went down:
+                            - server A is responding to (instead of dropping) renew and rebind messages
+                            for remote leases it has allocated during partnerDown;
+                            - server B is dropping (instead of NACKing) renew and rebind messages for 
+                            yet unknown local leases while resynchronizing with the MCS database."; }
+                        }
+                        description "Failover state";
+                    }
+
+                    leaf time-left {
+                        type union {
+                            type enumeration {
+                                enum "infinite"                     { value -1; description "none of the timers is running"; }
+                            }
+                            type int32;
+                        }
+                        units "seconds";
+                        description "Time left until expiry of one of the timers";
+                    }
+
+                    leaf actual-max-client-lead-time {
+                        type types-sros:time-duration {
+                            range "600..86399";
+                        }
+                        units "seconds";
+                        description "Actual maximum client lead time";
+                    }
+
+                    container statistics {
+                        description "DHCP server failover statistics";
+
+                        leaf lease-not-found {
+                            type yang:counter32;
+                            description "number of dropped binding updates because the corresponding lease cannot be found";
+                        }
+
+                        leaf drop-invalid-packets {
+                            type yang:counter32;
+                            description "number of dropped binding updates because the packet was malformed";
+                        }
+
+                        leaf admin-disabled {
+                            type yang:counter32;
+                            description "number of dropped binding updates because the failover admin-state is disabled";
+                        }
+
+                        leaf expired {
+                            type yang:counter32;
+                            description "number of dropped binding updates because the lease has expired";
+                        }
+
+                        leaf max-reached {
+                            type yang:counter32;
+                            description "number of dropped binding updates because the maximum number of leases was reached";
+                        }
+
+                        leaf subnet-not-found {
+                            type yang:counter32;
+                            description "number of dropped binding updates because the subnet could not be found for the lease";
+                        }
+
+                        leaf range-not-found {
+                            type yang:counter32;
+                            description "number of dropped binding updates because a valid include range could not be found for the lease";
+                        }
+
+                        leaf host-conflict {
+                            type yang:counter32;
+                            description "number of dropped add binding updates because the address is leased to another host";
+                        }
+
+                        leaf address-conflict {
+                            type yang:counter32;
+                            description "number of dropped add binding updates because the host has already another address";
+                        }
+
+                        leaf peer-conflict {
+                            type yang:counter32;
+                            description "number of dropped add binding updates because the failover peer has leased a conflicting address";
+                        }
+
+                        leaf persistency-congestion {
+                            type yang:counter32;
+                            description "number of dropped binding updates because of persistency congestion on the host";
+                        }
+
+                        leaf zero-lease-hold-time {
+                            type yang:counter32;
+                            description "number of dropped binding updates because the lease-hold-time is zero";
+                        }
+
+                        leaf invalid-prefix-length {
+                            type yang:counter32;
+                            description "number of dropped binding updates because the lease is not inside the valid prefix-length range";
+                        }
+
+                    } // container statistics
+
+                } // container failover
+
+                list pool {
+                    key "pool-name";
+                    description "Enter the pool list instance";
+
+                    leaf pool-name {
+                        type types-sros:named-item;
+                        description "DHCP server pool name";
+                    }
+
+                    container failover {
+                        description "Enter the failover context";
+
+                        leaf state {
+                            type enumeration {
+                                enum "unknown"                      { value 1; description "unknown"; }
+                                enum "init"                         { value 2; description "preparing to startup"; }
+                                enum "start-up"                     { value 3; description "starting up"; }
+                                enum "no-communication"             { value 4; description "communication with partner is lost"; }
+                                enum "partner-down"                 { value 5; description "partner is assumed down"; }
+                                enum "normal"                       { value 6; description "normal"; }
+                                enum "disabled"                     { value 7; description "administrative state of server or failover facility is down"; }
+                                enum "transition"                   { value 8; description "transition"; }
+                                enum "pre-normal"                   { value 9; description "sub-state of normal, that applies to a pair of
+                                servers A and B, while B is recovering after it went down:
+                                - server A is responding to (instead of dropping) renew and rebind messages
+                                for remote leases it has allocated during partnerDown;
+                                - server B is dropping (instead of NACKing) renew and rebind messages for 
+                                yet unknown local leases while resynchronizing with the MCS database."; }
+                            }
+                            description "Failover state";
+                        }
+
+                        leaf time-left {
+                            type union {
+                                type enumeration {
+                                    enum "infinite"                     { value -1; description "none of the timers is running"; }
+                                }
+                                type int32;
+                            }
+                            units "seconds";
+                            description "Time left until expiry of one of the timers";
+                        }
+
+                        leaf actual-max-client-lead-time {
+                            type types-sros:time-duration {
+                                range "600..86399";
+                            }
+                            units "seconds";
+                            description "Actual maximum client lead time";
+                        }
+
+                        container statistics {
+                            description "DHCPv6 server pool failover statistics";
+
+                            leaf lease-not-found {
+                                type yang:counter32;
+                                description "number of dropped binding updates because the corresponding lease cannot be found";
+                            }
+
+                            leaf drop-invalid-packets {
+                                type yang:counter32;
+                                description "number of dropped binding updates because the packet was malformed";
+                            }
+
+                            leaf admin-disabled {
+                                type yang:counter32;
+                                description "number of dropped binding updates because the failover admin-state is disabled";
+                            }
+
+                            leaf expired {
+                                type yang:counter32;
+                                description "number of dropped binding updates because the lease has expired";
+                            }
+
+                            leaf max-reached {
+                                type yang:counter32;
+                                description "number of dropped binding updates because the maximum number of leases was reached";
+                            }
+
+                            leaf subnet-not-found {
+                                type yang:counter32;
+                                description "number of dropped binding updates because the subnet could not be found for the lease";
+                            }
+
+                            leaf range-not-found {
+                                type yang:counter32;
+                                description "number of dropped binding updates because a valid include range could not be found for the lease";
+                            }
+
+                            leaf host-conflict {
+                                type yang:counter32;
+                                description "number of dropped add binding updates because the address is leased to another host";
+                            }
+
+                            leaf address-conflict {
+                                type yang:counter32;
+                                description "number of dropped add binding updates because the host has already another address";
+                            }
+
+                            leaf peer-conflict {
+                                type yang:counter32;
+                                description "number of dropped add binding updates because the failover peer has leased a conflicting address";
+                            }
+
+                            leaf persistency-congestion {
+                                type yang:counter32;
+                                description "number of dropped binding updates because of persistency congestion on the host";
+                            }
+
+                            leaf zero-lease-hold-time {
+                                type yang:counter32;
+                                description "number of dropped binding updates because the lease-hold-time is zero";
+                            }
+
+                            leaf invalid-prefix-length {
+                                type yang:counter32;
+                                description "number of dropped binding updates because the lease is not inside the valid prefix-length range";
+                            }
+
+                        } // container statistics
+
+                    } // container failover
+
+                    list prefix-length-threshold {
+                        key "prefix-length";
+                        description "Enter the prefix-length-threshold list instance";
+
+                        leaf prefix-length {
+                            type uint32 {
+                                range "1..128";
+                            }
+                            description "Delegated prefix length for pool thresholds";
+                        }
+
+                        container statistics {
+                            description "DHCPv6 server pool threshold statistics";
+
+                            leaf valid-data {
+                                type boolean;
+                                description "the actual status of the threshold statistics data of the pool.";
+                            }
+
+                            leaf peak-reset-time {
+                                type yang:date-and-time;
+                                description "time at which the peak values have been reset.";
+                            }
+
+                            container current {
+
+                                leaf used-percentage {
+                                    type types-sros:percent;
+                                    description
+                                        "the percentage of used prefixes with the minimum free threshold
+                                         length in the pool compared to the number of provisioned prefixes.";
+                                }
+
+                                leaf free-percentage {
+                                    type types-sros:percent;
+                                    description
+                                        "the percentage of free prefixes with the minimum free threshold
+                                         length in the pool compared to the number of provisioned prefixes.";
+                                }
+
+                                leaf free-too-low {
+                                    type boolean;
+                                    description
+                                        "the number of free prefixes with the minimum free threshold
+                                         length available in the pool is below the configured number of
+                                         prefixes with the minimum free threshold length.";
+                                }
+
+                                leaf free-depleted {
+                                    type boolean;
+                                    description "there are no more prefixes with the minimum free threshold length available in the pool.";
+                                }
+
+                                leaf provisioned-blocks {
+                                    type types-sros:big-integer;
+                                    description "the part of the address space provisioned";
+                                }
+
+                                leaf free-blocks {
+                                    type types-sros:big-integer;
+                                    description "the part of the address space free";
+                                }
+
+                                container used-blocks {
+                                    description "the part of the address space in use";
+
+                                    leaf current {
+                                        type types-sros:big-integer;
+                                        description "current number of blocks";
+                                    }
+
+                                    leaf peak {
+                                        type types-sros:big-integer;
+                                        description "peak value";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last change of the peak value";
+                                    }
+
+                                    container relative {
+                                        description "current relative to the provisioned values";
+
+                                        leaf peak {
+                                            type types-sros:percent;
+                                            description "peak value relative to the provisioned value";
+                                        }
+
+                                    } // container relative
+
+                                } // container used-blocks
+
+                            } // container current
+
+                            container local {
+
+                                leaf provisioned-blocks {
+                                    type types-sros:big-integer;
+                                    description "the part of the address space provisioned";
+                                }
+
+                                leaf free-blocks {
+                                    type types-sros:big-integer;
+                                    description "the part of the address space free";
+                                }
+
+                                container used-blocks {
+                                    description "the part of the address space in use";
+
+                                    leaf current {
+                                        type types-sros:big-integer;
+                                        description "current number of blocks";
+                                    }
+
+                                    leaf peak {
+                                        type types-sros:big-integer;
+                                        description "peak value";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last change of the peak value";
+                                    }
+
+                                    container relative {
+                                        description "current relative to the provisioned values";
+
+                                        leaf peak {
+                                            type types-sros:percent;
+                                            description "peak value relative to the provisioned value";
+                                        }
+
+                                    } // container relative
+
+                                } // container used-blocks
+
+                            } // container local
+
+                            container remote {
+
+                                leaf provisioned-blocks {
+                                    type types-sros:big-integer;
+                                    description "the part of the address space provisioned";
+                                }
+
+                                leaf free-blocks {
+                                    type types-sros:big-integer;
+                                    description "the part of the address space free";
+                                }
+
+                                container used-blocks {
+                                    description "the part of the address space in use";
+
+                                    leaf current {
+                                        type types-sros:big-integer;
+                                        description "current number of blocks";
+                                    }
+
+                                    leaf peak {
+                                        type types-sros:big-integer;
+                                        description "peak value";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last change of the peak value";
+                                    }
+
+                                    container relative {
+                                        description "current relative to the provisioned values";
+
+                                        leaf peak {
+                                            type types-sros:percent;
+                                            description "peak value relative to the provisioned value";
+                                        }
+
+                                    } // container relative
+
+                                } // container used-blocks
+
+                            } // container remote
+
+                        } // container statistics
+
+                    } // list prefix-length-threshold
+
+                    list prefix {
+                        key "ipv6-prefix";
+                        description "Enter the prefix list instance";
+
+                        leaf ipv6-prefix {
+                            type types-sros:ipv6-prefix;
+                            description "IPv6 prefix to be excluded from available pool prefixes";
+                        }
+
+                        list prefix-length-threshold {
+                            key "prefix-length";
+                            description "Enter the prefix-length-threshold list instance";
+
+                            leaf prefix-length {
+                                type uint32 {
+                                    range "1..128";
+                                }
+                                description "Delegated prefix length for pool thresholds";
+                            }
+
+                            container statistics {
+                                description "DHCPv6 server pool prefix threshold statistics";
+
+                                leaf valid-data {
+                                    type boolean;
+                                    description "the actual status of the threshold statistics data of the pool.";
+                                }
+
+                                leaf peak-reset-time {
+                                    type yang:date-and-time;
+                                    description "time at which the peak values have been reset.";
+                                }
+
+                                container current {
+
+                                    leaf used-percentage {
+                                        type types-sros:percent;
+                                        description
+                                            "the percentage of used prefixes with the minimum free threshold
+                                             length in the pool compared to the number of provisioned prefixes.";
+                                    }
+
+                                    leaf free-percentage {
+                                        type types-sros:percent;
+                                        description
+                                            "the percentage of free prefixes with the minimum free threshold
+                                             length in the pool compared to the number of provisioned prefixes.";
+                                    }
+
+                                    leaf free-too-low {
+                                        type boolean;
+                                        description
+                                            "the number of free prefixes with the minimum free threshold
+                                             length available in the pool is below the configured number of
+                                             prefixes with the minimum free threshold length.";
+                                    }
+
+                                    leaf free-depleted {
+                                        type boolean;
+                                        description "there are no more prefixes with the minimum free threshold length available in the pool.";
+                                    }
+
+                                    leaf provisioned-blocks {
+                                        type types-sros:big-integer;
+                                        description "the part of the address space provisioned";
+                                    }
+
+                                    leaf free-blocks {
+                                        type types-sros:big-integer;
+                                        description "the part of the address space free";
+                                    }
+
+                                    container used-blocks {
+                                        description "the part of the address space in use";
+
+                                        leaf current {
+                                            type types-sros:big-integer;
+                                            description "current number of blocks";
+                                        }
+
+                                        leaf peak {
+                                            type types-sros:big-integer;
+                                            description "peak value";
+                                        }
+
+                                        leaf peak-time {
+                                            type yang:date-and-time;
+                                            description "time of last change of the peak value";
+                                        }
+
+                                        container relative {
+                                            description "current relative to the provisioned values";
+
+                                            leaf peak {
+                                                type types-sros:percent;
+                                                description "peak value relative to the provisioned value";
+                                            }
+
+                                        } // container relative
+
+                                    } // container used-blocks
+
+                                } // container current
+
+                                container local {
+
+                                    leaf provisioned-blocks {
+                                        type types-sros:big-integer;
+                                        description "the part of the address space provisioned";
+                                    }
+
+                                    leaf free-blocks {
+                                        type types-sros:big-integer;
+                                        description "the part of the address space free";
+                                    }
+
+                                    container used-blocks {
+                                        description "the part of the address space in use";
+
+                                        leaf current {
+                                            type types-sros:big-integer;
+                                            description "current number of blocks";
+                                        }
+
+                                        leaf peak {
+                                            type types-sros:big-integer;
+                                            description "peak value";
+                                        }
+
+                                        leaf peak-time {
+                                            type yang:date-and-time;
+                                            description "time of last change of the peak value";
+                                        }
+
+                                        container relative {
+                                            description "current relative to the provisioned values";
+
+                                            leaf peak {
+                                                type types-sros:percent;
+                                                description "peak value relative to the provisioned value";
+                                            }
+
+                                        } // container relative
+
+                                    } // container used-blocks
+
+                                } // container local
+
+                                container remote {
+
+                                    leaf provisioned-blocks {
+                                        type types-sros:big-integer;
+                                        description "the part of the address space provisioned";
+                                    }
+
+                                    leaf free-blocks {
+                                        type types-sros:big-integer;
+                                        description "the part of the address space free";
+                                    }
+
+                                    container used-blocks {
+                                        description "the part of the address space in use";
+
+                                        leaf current {
+                                            type types-sros:big-integer;
+                                            description "current number of blocks";
+                                        }
+
+                                        leaf peak {
+                                            type types-sros:big-integer;
+                                            description "peak value";
+                                        }
+
+                                        leaf peak-time {
+                                            type yang:date-and-time;
+                                            description "time of last change of the peak value";
+                                        }
+
+                                        container relative {
+                                            description "current relative to the provisioned values";
+
+                                            leaf peak {
+                                                type types-sros:percent;
+                                                description "peak value relative to the provisioned value";
+                                            }
+
+                                        } // container relative
+
+                                    } // container used-blocks
+
+                                } // container remote
+
+                            } // container statistics
+
+                        } // list prefix-length-threshold
+
+                        container statistics {
+                            description "DHCPv6 server pool prefix statistics";
+
+                            leaf advertise-state {
+                                type yang:counter32;
+                                description "number of leases in state advertised";
+                            }
+
+                            leaf stable-state {
+                                type yang:counter32;
+                                description "number of leases in state stable";
+                            }
+
+                            leaf reconfigure-pending-state {
+                                type yang:counter32;
+                                description "number of leases in reconfigure-pending stable";
+                            }
+
+                            leaf remove-pending-state {
+                                type yang:counter32;
+                                description "number of leases in remove-pending stable";
+                            }
+
+                            leaf declined {
+                                type yang:counter32;
+                                description "number of addresses that are declined";
+                            }
+
+                            container extended-collection {
+                                description "extended collection";
+
+                                leaf extended-collection-last-reset {
+                                    type yang:date-and-time;
+                                    description "time of last reset of the extended statistics";
+                                }
+
+                                leaf provisioned-blocks {
+                                    type yang:counter64;
+                                    description "number of provisioned /64 blocks";
+                                }
+
+                                container stable-state {
+                                    description "peak, peak-time value of stable-state ";
+
+                                    leaf peak {
+                                        type yang:counter32;
+                                        description "peak value of stable-state since last reset";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last changed peak-state-state";
+                                    }
+
+                                } // container stable-state
+
+                                container used-blocks {
+                                    description "current, peak and peak-time values of used /64 blocks";
+
+                                    leaf current {
+                                        type yang:counter64;
+                                        description "current number of blocks";
+                                    }
+
+                                    leaf peak {
+                                        type yang:counter64;
+                                        description "peak value";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last change of the peak value";
+                                    }
+
+                                    container relative {
+                                        description "current, peak values relative to the provisioned values";
+
+                                        leaf current {
+                                            type types-sros:percent;
+                                            description "current number of blocks";
+                                        }
+
+                                        leaf peak {
+                                            type types-sros:percent;
+                                            description "peak value";
+                                        }
+
+                                        leaf peak-time {
+                                            type yang:date-and-time;
+                                            description "time of last change of the peak value";
+                                        }
+
+                                    } // container relative
+
+                                } // container used-blocks
+
+                                container free-blocks {
+                                    description "current, peak and peak-time values of free /64 blocks";
+
+                                    leaf current {
+                                        type yang:counter64;
+                                        description "current number of blocks";
+                                    }
+
+                                    leaf peak {
+                                        type yang:counter64;
+                                        description "peak value";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last change of the peak value";
+                                    }
+
+                                    container relative {
+                                        description "current, peak values relative to the provisioned values";
+
+                                        leaf current {
+                                            type types-sros:percent;
+                                            description "current number of blocks";
+                                        }
+
+                                        leaf peak {
+                                            type types-sros:percent;
+                                            description "peak value";
+                                        }
+
+                                        leaf peak-time {
+                                            type yang:date-and-time;
+                                            description "time of last change of the peak value";
+                                        }
+
+                                    } // container relative
+
+                                } // container free-blocks
+
+                                container advertise-state {
+                                    description "current, peak and peak-time of leases in state advertised";
+
+                                    leaf current {
+                                        type yang:counter32;
+                                        description "current number of blocks";
+                                    }
+
+                                    leaf peak {
+                                        type yang:counter32;
+                                        description "peak value";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last change of the peak value";
+                                    }
+
+                                } // container advertise-state
+
+                            } // container extended-collection
+
+                        } // container statistics
+
+                    } // list prefix
+
+                    container statistics {
+                        description "DHCPv6 server pool statistics";
+
+                        container internal-requests {
+                            description "internal-request statistics";
+
+                            leaf wan-no-prefix {
+                                type yang:counter32;
+                                description "an internal request for a WAN address fails because the pool does not have a subnet available where the prefix-type is equal to wan-host.";
+                            }
+
+                            leaf slaac-no-prefix {
+                                type yang:counter32;
+                                description "an internal request for a SLAAC prefix fails because the pool does not have a subnet available where the prefix-type is equal to wan-host.";
+                            }
+
+                        } // container internal-requests
+
+                        container local {
+
+                            leaf stable-state {
+                                type yang:counter32;
+                                description "number of leases in state stable";
+                            }
+
+                        } // container local
+
+                        container remote {
+
+                            leaf stable-state {
+                                type yang:counter32;
+                                description "number of leases in state stable";
+                            }
+
+                        } // container remote
+
+                        container extended-collection {
+                            description "extended collection";
+
+                            leaf extended-collection-last-reset {
+                                type yang:date-and-time;
+                                description "time of last reset of the extended statistics";
+                            }
+
+                            container local {
+
+                                leaf provisioned-blocks {
+                                    type yang:counter64;
+                                    description "number of provisioned /64 blocks";
+                                }
+
+                                container stable-state {
+                                    description "peak, peak-time value of stable-state ";
+
+                                    leaf peak {
+                                        type yang:counter32;
+                                        description "peak value of stable-state since last reset";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last changed peak-state-state";
+                                    }
+
+                                } // container stable-state
+
+                                container used-blocks {
+                                    description "current, peak and peak-time values of used /64 blocks";
+
+                                    leaf current {
+                                        type yang:counter64;
+                                        description "current number of blocks";
+                                    }
+
+                                    leaf peak {
+                                        type yang:counter64;
+                                        description "peak value";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last change of the peak value";
+                                    }
+
+                                    container relative {
+                                        description "current, peak values relative to the provisioned values";
+
+                                        leaf current {
+                                            type types-sros:percent;
+                                            description "current number of blocks";
+                                        }
+
+                                        leaf peak {
+                                            type types-sros:percent;
+                                            description "peak value";
+                                        }
+
+                                        leaf peak-time {
+                                            type yang:date-and-time;
+                                            description "time of last change of the peak value";
+                                        }
+
+                                    } // container relative
+
+                                } // container used-blocks
+
+                                container free-blocks {
+                                    description "current, peak and peak-time values of free /64 blocks";
+
+                                    leaf current {
+                                        type yang:counter64;
+                                        description "current number of blocks";
+                                    }
+
+                                    leaf peak {
+                                        type yang:counter64;
+                                        description "peak value";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last change of the peak value";
+                                    }
+
+                                    container relative {
+                                        description "current, peak values relative to the provisioned values";
+
+                                        leaf current {
+                                            type types-sros:percent;
+                                            description "current number of blocks";
+                                        }
+
+                                        leaf peak {
+                                            type types-sros:percent;
+                                            description "peak value";
+                                        }
+
+                                        leaf peak-time {
+                                            type yang:date-and-time;
+                                            description "time of last change of the peak value";
+                                        }
+
+                                    } // container relative
+
+                                } // container free-blocks
+
+                                container advertise-state {
+                                    description "current, peak and peak-time of leases in state advertised";
+
+                                    leaf current {
+                                        type yang:counter32;
+                                        description "current number of blocks";
+                                    }
+
+                                    leaf peak {
+                                        type yang:counter32;
+                                        description "peak value";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last change of the peak value";
+                                    }
+
+                                } // container advertise-state
+
+                            } // container local
+
+                            container remote {
+
+                                leaf provisioned-blocks {
+                                    type yang:counter64;
+                                    description "number of provisioned /64 blocks";
+                                }
+
+                                container stable-state {
+                                    description "peak, peak-time value of stable-state ";
+
+                                    leaf peak {
+                                        type yang:counter32;
+                                        description "peak value of stable-state since last reset";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last changed peak-state-state";
+                                    }
+
+                                } // container stable-state
+
+                                container used-blocks {
+                                    description "current, peak and peak-time values of used /64 blocks";
+
+                                    leaf current {
+                                        type yang:counter64;
+                                        description "current number of blocks";
+                                    }
+
+                                    leaf peak {
+                                        type yang:counter64;
+                                        description "peak value";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last change of the peak value";
+                                    }
+
+                                    container relative {
+                                        description "current, peak values relative to the provisioned values";
+
+                                        leaf current {
+                                            type types-sros:percent;
+                                            description "current number of blocks";
+                                        }
+
+                                        leaf peak {
+                                            type types-sros:percent;
+                                            description "peak value";
+                                        }
+
+                                        leaf peak-time {
+                                            type yang:date-and-time;
+                                            description "time of last change of the peak value";
+                                        }
+
+                                    } // container relative
+
+                                } // container used-blocks
+
+                                container free-blocks {
+                                    description "current, peak and peak-time values of free /64 blocks";
+
+                                    leaf current {
+                                        type yang:counter64;
+                                        description "current number of blocks";
+                                    }
+
+                                    leaf peak {
+                                        type yang:counter64;
+                                        description "peak value";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last change of the peak value";
+                                    }
+
+                                    container relative {
+                                        description "current, peak values relative to the provisioned values";
+
+                                        leaf current {
+                                            type types-sros:percent;
+                                            description "current number of blocks";
+                                        }
+
+                                        leaf peak {
+                                            type types-sros:percent;
+                                            description "peak value";
+                                        }
+
+                                        leaf peak-time {
+                                            type yang:date-and-time;
+                                            description "time of last change of the peak value";
+                                        }
+
+                                    } // container relative
+
+                                } // container free-blocks
+
+                                container advertise-state {
+                                    description "current, peak and peak-time of leases in state advertised";
+
+                                    leaf current {
+                                        type yang:counter32;
+                                        description "current number of blocks";
+                                    }
+
+                                    leaf peak {
+                                        type yang:counter32;
+                                        description "peak value";
+                                    }
+
+                                    leaf peak-time {
+                                        type yang:date-and-time;
+                                        description "time of last change of the peak value";
+                                    }
+
+                                } // container advertise-state
+
+                            } // container remote
+
+                        } // container extended-collection
+
+                    } // container statistics
+
+                } // list pool
+
+                container statistics {
+                    description "DHCPv6 server statistics";
+
+                    leaf rx-solicits {
+                        type yang:counter64;
+                        description "The number of solicit messages received.";
+                    }
+
+                    leaf rx-requests {
+                        type yang:counter64;
+                        description "The number of request messages received.";
+                    }
+
+                    leaf rx-confirms {
+                        type yang:counter64;
+                        description "The number of confirm messages received.";
+                    }
+
+                    leaf rx-renews {
+                        type yang:counter64;
+                        description "The number of renew messages received.";
+                    }
+
+                    leaf rx-rebinds {
+                        type yang:counter64;
+                        description "The number of rebind messages received.";
+                    }
+
+                    leaf rx-declines {
+                        type yang:counter64;
+                        description "The number of decline messages received.";
+                    }
+
+                    leaf rx-releases {
+                        type yang:counter64;
+                        description "The number of release messages received.";
+                    }
+
+                    leaf tx-replies {
+                        type yang:counter64;
+                        description "The number of reply messages sent.";
+                    }
+
+                    leaf rx-info-requests {
+                        type yang:counter64;
+                        description "The number of information-request messages received.";
+                    }
+
+                    leaf tx-advertises {
+                        type yang:counter64;
+                        description "The number of advertise messages sent.";
+                    }
+
+                    leaf tx-reconfigures {
+                        type yang:counter64;
+                        description "The number of reconfigure messages sent.";
+                    }
+
+                    leaf ignored-client-offers {
+                        type yang:counter32;
+                        description "the number of DHCPOFFER packets sent that were ignored by the clients.";
+                    }
+
+                    leaf leases-expired {
+                        type yang:counter32;
+                        description "the number of DHCP leases that were expired without receipt of a release.";
+                    }
+
+                    leaf rx-lease-queries {
+                        type yang:counter64;
+                        description "The number of leasequery messages received.";
+                    }
+
+                    leaf tx-lease-query-replies {
+                        type yang:counter64;
+                        description "The number of leasequery-reply messages sent";
+                    }
+
+                    container dropped {
+                        description "statistics related to drop-counters";
+
+                        leaf corrupt-packets {
+                            type yang:counter32;
+                            description "The number of DHCP packets received which are corrupt.";
+                        }
+
+                        leaf invalid-types {
+                            type yang:counter32;
+                            description "The number of DHCP packets received which have an invalid message type.";
+                        }
+
+                        leaf lease-not-ready {
+                            type yang:counter32;
+                            description "The number of DHCP packets dropped before the lease database was ready.";
+                        }
+
+                        leaf address-exhaustion {
+                            type yang:counter32;
+                            description "The number of DHCP packets dropped because of no free address in the pool.";
+                        }
+
+                        leaf overload {
+                            type yang:counter32;
+                            description
+                                "the number of DHCP packets dropped because they were received in excess
+                                 of what the server instance can handle.";
+                        }
+
+                        leaf persistency-overload {
+                            type yang:counter32;
+                            description
+                                "the number of DHCP packets dropped because they were received in excess of
+                                 what the DHCP persistence system can handle.";
+                        }
+
+                        leaf general-error {
+                            type yang:counter32;
+                            description "the number of DHCP packets dropped because of a generic error.";
+                        }
+
+                        leaf other-destination {
+                            type yang:counter32;
+                            description
+                                "the number of DHCP packets dropped because the request was not destined
+                                 to this server.";
+                        }
+
+                        leaf max-leases-reached {
+                            type yang:counter32;
+                            description "the number of DHCP packets dropped because the maximum number of leases was reached.";
+                        }
+
+                        leaf server-down {
+                            type yang:counter32;
+                            description "the number of DHCP packets dropped during server instance disable.";
+                        }
+
+                        leaf conflicting-relay-address {
+                            type yang:counter32;
+                            description
+                                "the number of DHCP requests dropped because they
+                                 were received from a different Relay IP address 
+                                 within a timeframe of 10 seconds after a previous 
+                                 DHCPREQUEST.";
+                        }
+
+                        leaf failover-enabled {
+                            type yang:counter32;
+                            description
+                                "The number of internal calls from the local address assignment
+                                 infrastructure dropped by the DHCP server instance because
+                                 failover is enabled for the server instance.";
+                        }
+
+                        leaf address-conflicts {
+                            type yang:counter32;
+                            description
+                                "A DHCP host is trying to acquire an IP address that was handed through
+                                 the local address assignment infrastructure, or the local address
+                                 assignment infrastructure tries to use an IP address that was handed
+                                 out to a DHCP client.";
+                        }
+
+                        leaf interface-id-map-enabled {
+                            type yang:counter32;
+                            description
+                                "the number of internal calls from the local address assignment
+                                 infrastructure dropped because
+                                 interface ID mapping is enabled.";
+                        }
+
+                        leaf user-id-enabled {
+                            type yang:counter32;
+                            description
+                                "The number of internal calls from the local address assignment
+                                 infrastructure dropped because the user-id is not set to duid (2).";
+                        }
+
+                        leaf audit {
+                            type yang:counter64;
+                            description
+                                "The number of DHCP requests dropped by the server instance
+                                 because this server instance is in auditing state.";
+                        }
+
+                        leaf lease-query-not-allowed {
+                            type yang:counter32;
+                            description
+                                "The number of DHCP leasequery packets dropped
+                                 because the server is configured not to allow leasequery packets.";
+                        }
+
+                    } // container dropped
+
+                    container internal-requests {
+                        description "received internal requests";
+
+                        leaf ppp-slaac {
+                            type yang:counter64;
+                            description
+                                "the number of internal request calls received from
+                                 the local address assignment
+                                 infrastructure for PPP SLAAC.";
+                        }
+
+                        leaf ipoe-wan {
+                            type yang:counter64;
+                            description
+                                "the number of internal request calls received from the
+                                 local address assignment infrastructure for IPoE.";
+                        }
+
+                        leaf releases {
+                            type yang:counter64;
+                            description
+                                "The number of internal release calls received by the
+                                 DHCP server instance from the local address assignment
+                                 infrastructure.";
+                        }
+
+                        leaf ipoe-slaac {
+                            type yang:counter64;
+                            description
+                                "The number of internal request calls received from the local
+                                 address assignment infrastructure for IPoE SLAAC 
+                                 (stateless autoconfiguration).";
+                        }
+
+                        leaf ipsec {
+                            type yang:counter64;
+                            description
+                                "the number of internal request calls received from
+                                 the local address assignment
+                                 infrastructure for IPsec.";
+                        }
+
+                    } // container internal-requests
+
+                } // container statistics
+
+                list lease {
+                    key "address";
+                    description "IP addresses handed out to DHCP clients";
+
+                    leaf address {
+                        type types-sros:ip-address;
+                        description "Lease IP address";
+                    }
+
+                    leaf state {
+                        type enumeration {
+                            enum "offered"                      { value 0; description "The IP address was offered to the client. The client
+                            still has to acknowledge the offer by sending a DHCP
+                            request."; }
+                            enum "stable"                       { value 1; description "The IP address is now in use by the client."; }
+                            enum "force-renew-pending"          { value 2; description "The IP address is in use by the client, but the server
+                            sends a DHCP FORCERENEW message to the client, because
+                            an option has changed for this client."; }
+                            enum "remove-pending"               { value 3; description "The IP address is in use by the client, but it is no
+                            longer available in the configured IP address ranges.
+                            The server sends a FORCERENEW message to the client.
+                            When the client sends a renewal DHCP request message,
+                            it will be rejected."; }
+                            enum "held"                         { value 4; description "The IP address has been used by the client but the
+                            lease has timed out. The address is held so that the
+                            same client can acquire this address when requesting
+                            a new lease."; }
+                            enum "internal"                     { value 5; description "The IP address has been leased via the local pool
+                            management system and is now in use."; }
+                            enum "internal-orphan"              { value 6; description "The IP address has been leased via the local pool
+                            management system and is now in use. There is however
+                            no configured subnet to which this lease belongs,
+                            because it has been removed or because this lease was
+                            installed through dual-homing."; }
+                            enum "internal-offered"             { value 7; description "The IP address has been offered via the local pool
+                            management system. The client still has to acknowledge
+                            this offer."; }
+                            enum "internal-held"                { value 8; description "The IP address has been used by local pool management
+                            system but the lease is currently not active. The
+                            address is now in the hold list so that the local pool
+                            management system client can get the exactly same IP
+                            address again upon the next request for a lease."; }
+                            enum "sticky"                       { value 9; description "The IP address is reserved for the client and will
+                            remain reserved until the reservation for it is
+                            cleared.  The client will get the exactly same IP
+                            address again upon the next request for a lease."; }
+                        }
+                        description "The state of this lease.";
+                    }
+
+                    leaf start {
+                        type yang:date-and-time;
+                        description "When this lease was created";
+                    }
+
+                    leaf last-renew {
+                        type yang:date-and-time;
+                        description "When the last renew was done for this lease";
+                    }
+
+                    leaf remaining-lease-time {
+                        type uint32;
+                        units "seconds";
+                        description "The time left for this lease";
+                    }
+
+                    leaf client-type {
+                        type types-dhcp:dhcp-server-client-type;
+                        description "Type of client";
+                    }
+
+                    leaf ppp-user-name {
+                        type types-submgt:ppp-user-name;
+                        description "PPP user name";
+                    }
+
+                    leaf remaining-hold-time {
+                        type uint32;
+                        units "seconds";
+                        description "The hold time left for this lease";
+                    }
+
+                    leaf internal-client-type {
+                        type types-dhcp:dhcp-server-internal-client-type;
+                        description "Type of internal client";
+                    }
+
+                    leaf sticky-host-name {
+                        type types-sros:named-item-or-empty;
+                        description "The name of the sticky host";
+                    }
+
+                    container failover {
+
+                        leaf control-type {
+                            type types-dhcp:failover-control-type;
+                            description "The type of failover control for this DHCP lease state";
+                        }
+
+                        leaf expiration-interval {
+                            type uint32;
+                            units "seconds";
+                            description
+                                "The lease expiration interval for this lease that is
+                                 negotiated with the failover peer";
+                        }
+
+                    } // container failover
+
+                    container ipv6 {
+
+                        leaf client-prefix-length {
+                            type uint32 {
+                                range "1..128";
+                            }
+                            description "The length of client address";
+                        }
+
+                        leaf ia-id {
+                            type uint32;
+                            description "The Identity Association of the client";
+                        }
+
+                        leaf ia-type {
+                            type enumeration {
+                                enum "ia-na"                        { value 1; description "The IA_NA option type is used to request the assignment of
+                                non-temporary addresses."; }
+                                enum "ia-pd"                        { value 2; description "The IA_PD option is used to carry a prefix delegation identity
+                                association, the parameters associated with the IA_PD and the
+                                prefixes associated with it."; }
+                            }
+                            description "Type of the option.";
+                        }
+
+                        leaf link-local-address {
+                            type types-sros:ipv6-address;
+                            description "The link local address of the client";
+                        }
+
+                        container duid {
+                            description "The DHCP Unique Identifier associated with the client";
+
+                            leaf raw-data {
+                                type binary;
+                            }
+
+                            container duid-llt {
+
+                                leaf hardware-type {
+                                    type types-dhcp:dhcp6-duid-hardware-type;
+                                }
+
+                                leaf time {
+                                    type yang:date-and-time;
+                                }
+
+                                leaf link-layer-address {
+                                    type binary;
+                                }
+
+                            } // container duid-llt
+
+                            container duid-en {
+
+                                leaf enterprise-number {
+                                    type uint32;
+                                }
+
+                                leaf identifier {
+                                    type binary;
+                                }
+
+                            } // container duid-en
+
+                            container duid-ll {
+
+                                leaf hardware-type {
+                                    type types-dhcp:dhcp6-duid-hardware-type;
+                                }
+
+                                leaf link-layer-address {
+                                    type binary;
+                                }
+
+                            } // container duid-ll
+
+                        } // container duid
+
+                        container relay-interface-id {
+                            description
+                                "The value of the Interface-ID Option assigned by the
+                                 DHCPv6 Relay Agent";
+
+                            leaf raw-data {
+                                type binary;
+                            }
+
+                            leaf string {
+                                type string {
+                                    length "0..255";
+                                }
+                            }
+
+                        } // container relay-interface-id
+
+                        container ldra-interface-id {
+                            description
+                                "The value of the Interface-ID Option assigned by the
+                                 Lightweight DHCPv6 Relay Agent";
+
+                            leaf raw-data {
+                                type binary;
+                            }
+
+                            leaf string {
+                                type string {
+                                    length "0..255";
+                                }
+                            }
+
+                        } // container ldra-interface-id
+
+                    } // container ipv6
+
+                } // list lease
+
+            } // list dhcpv6
+
+        } // container dhcp-server
+
+    } // grouping state-router-dhcp-server
+
+}

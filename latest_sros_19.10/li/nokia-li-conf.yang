@@ -1,0 +1,1409 @@
+module nokia-li-conf {
+
+    yang-version "1.1";
+
+    namespace "urn:nokia.com:sros:ns:yang:sr:li-conf";
+
+    prefix "li-conf";
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-filter             { prefix "types-filter"; }
+    import nokia-types-services           { prefix "types-services"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+    import nokia-types-subscriber-mgmt    { prefix "types-submgt"; }
+
+    sros-ext:sros-major-release "rel19";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to show state data on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-li-conf YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2016-01-01";
+
+    container li {
+
+        container li-filter {
+            description "Configuration of LI filters.";
+
+            leaf lock-filter {
+                type enumeration {
+                    enum "lock"                         { value 0; }
+                    enum "unlock"                       { value 2; }
+                }
+                default "lock";
+                description
+                    "Specifies whether lawfully intercepted filters can be modified.
+
+                     The value:
+                     'lock': no users can modify regular filters in the config region once referenced in li-source.
+                     'unlock': all users can modify regular filters in the config region even if referenced in li-source.";
+            }
+
+            list li-ip-filter {
+                key "li-filter-name";
+                description "Configure an LI IP filter.";
+
+                leaf li-filter-name {
+                    type types-sros:named-item {
+                        pattern "((([^d_ ]|d($|[^e]|e($|[^f]|f($|[^a]|a($|[^u]|u($|[^l]|l($|[^t]|t\\P{C})))))))\\P{C}*))";
+                    }
+                    description "Specifies the name of the filter.";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Specifies the description for this filter.";
+                }
+
+                list entry {
+                    must "./match/src-port/range = 'false' or ./match/src-port/range/start < ./match/src-port/range/end" {
+                        error-message "End must be greater than start";
+                    }
+                    must "./match/dst-port/range = 'false' or ./match/dst-port/range/start < ./match/dst-port/range/end" {
+                        error-message "End must be greater than start";
+                    }
+                    key "li-entry-id";
+                    description "Configure an LI IP filter entry.";
+
+                    leaf li-entry-id {
+                        type types-filter:limited-entry-id;
+                        description "A unique ID of a specific entry.";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Specifies the description for this entry.";
+                    }
+
+                    container match {
+                        description "Configure match criteria for this LI IP filter entry.";
+
+                        leaf protocol {
+                            type types-sros:ipv4-match-protocol;
+                            description "IP protocol to match.";
+                        }
+
+                        container dst-port {
+                            description "Configure destination port match condition.";
+
+                            choice port {
+                                case eq {
+
+                                    leaf eq {
+                                        type uint16 {
+                                            range "0..65535";
+                                        }
+                                        description "Condition on equality to specified value.";
+                                    }
+
+                                }
+                                case lt {
+
+                                    leaf lt {
+                                        type uint16 {
+                                            range "1..65535";
+                                        }
+                                        description "Condition on being less than the specified value.";
+                                    }
+
+                                }
+                                case gt {
+
+                                    leaf gt {
+                                        type uint16 {
+                                            range "0..65534";
+                                        }
+                                        description "Condition on being greater than the specified value.";
+                                    }
+
+                                }
+                                case range {
+
+                                    container range {
+                                        presence "Enables port range matching.";
+                                        description "Specifies port range.";
+
+                                        leaf start {
+                                            type uint16 {
+                                                range "0..65534";
+                                            }
+                                            mandatory true;
+                                            description "Specifies lower bound port to match.";
+                                        }
+
+                                        leaf end {
+                                            type uint16 {
+                                                range "1..65535";
+                                            }
+                                            mandatory true;
+                                            description "Specifies upper bound port to match.";
+                                        }
+
+                                    } // container range
+
+                                }
+                            }
+                        } // container dst-port
+
+                        container src-port {
+                            description "Configure source port match condition.";
+
+                            choice port {
+                                case eq {
+
+                                    leaf eq {
+                                        type uint16 {
+                                            range "0..65535";
+                                        }
+                                        description "Condition on equality to specified value.";
+                                    }
+
+                                }
+                                case lt {
+
+                                    leaf lt {
+                                        type uint16 {
+                                            range "1..65535";
+                                        }
+                                        description "Condition on being less than the specified value.";
+                                    }
+
+                                }
+                                case gt {
+
+                                    leaf gt {
+                                        type uint16 {
+                                            range "0..65534";
+                                        }
+                                        description "Condition on being greater than the specified value.";
+                                    }
+
+                                }
+                                case range {
+
+                                    container range {
+                                        presence "Enables port range matching.";
+                                        description "Specifies port range.";
+
+                                        leaf start {
+                                            type uint16 {
+                                                range "0..65534";
+                                            }
+                                            mandatory true;
+                                            description "Specifies lower bound port to match.";
+                                        }
+
+                                        leaf end {
+                                            type uint16 {
+                                                range "1..65535";
+                                            }
+                                            mandatory true;
+                                            description "Specifies upper bound port to match.";
+                                        }
+
+                                    } // container range
+
+                                }
+                            }
+                        } // container src-port
+
+                        container dst-ip {
+                            description "Configure destination IP address match condition.";
+
+                            leaf address {
+                                type union {
+                                    type types-sros:ipv4-address;
+                                    type types-sros:ipv4-prefix-with-host-bits;
+                                }
+                                description "Specifies IP address to match.";
+                            }
+
+                            leaf mask {
+                                type types-sros:ipv4-address;
+                                description "Specifies the mask that is applied as an AND to the IP address.";
+                            }
+
+                        } // container dst-ip
+
+                        container src-ip {
+                            description "Configure source IP address match condition";
+
+                            leaf address {
+                                type union {
+                                    type types-sros:ipv4-address;
+                                    type types-sros:ipv4-prefix-with-host-bits;
+                                }
+                                description "Specifies IP address to match.";
+                            }
+
+                            leaf mask {
+                                type types-sros:ipv4-address;
+                                description "Specifies the mask that is applied as an AND to the IP address.";
+                            }
+
+                        } // container src-ip
+
+                    } // container match
+
+                } // list entry
+
+            } // list li-ip-filter
+
+            list li-ipv6-filter {
+                key "li-filter-name";
+                description "Configure an LI IPv6 filter.";
+
+                leaf li-filter-name {
+                    type types-sros:named-item {
+                        pattern "((([^d_ ]|d($|[^e]|e($|[^f]|f($|[^a]|a($|[^u]|u($|[^l]|l($|[^t]|t\\P{C})))))))\\P{C}*))";
+                    }
+                    description "Specifies the name of the filter.";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Specifies the description for this filter.";
+                }
+
+                list entry {
+                    must "./match/src-port/range = 'false' or ./match/src-port/range/start < ./match/src-port/range/end" {
+                        error-message "End must be greater than start";
+                    }
+                    must "./match/dst-port/range = 'false' or ./match/dst-port/range/start < ./match/dst-port/range/end" {
+                        error-message "End must be greater than start";
+                    }
+                    key "li-entry-id";
+                    description "Configure an LI IPv6 filter entry.";
+
+                    leaf li-entry-id {
+                        type types-filter:limited-entry-id;
+                        description "A unique ID of a specific entry.";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Specifies the description for this entry.";
+                    }
+
+                    container match {
+                        description "Configure match criteria for this LI IPv6 filter entry.";
+
+                        leaf next-header {
+                            must ". != 0 and . != 43 and . != 44 and . != 50 and . != 51 and . != 60" {
+                                error-message "Protocol not valid for filter type";
+                            }
+                            type types-sros:ipv6-match-protocol;
+                            description
+                                "IPv6 next header to match.
+                                 Because the match criteria only pertains to the last
+                                 next-header, the following values are not accepted:
+                                 0, 43, 44, 50, 51, and 60.";
+                        }
+
+                        container dst-port {
+                            description "Configure destination port match condition.";
+
+                            choice port {
+                                case eq {
+
+                                    leaf eq {
+                                        type uint16 {
+                                            range "0..65535";
+                                        }
+                                        description "Condition on equality to specified value.";
+                                    }
+
+                                }
+                                case lt {
+
+                                    leaf lt {
+                                        type uint16 {
+                                            range "1..65535";
+                                        }
+                                        description "Condition on being less than the specified value.";
+                                    }
+
+                                }
+                                case gt {
+
+                                    leaf gt {
+                                        type uint16 {
+                                            range "0..65534";
+                                        }
+                                        description "Condition on being greater than the specified value.";
+                                    }
+
+                                }
+                                case range {
+
+                                    container range {
+                                        presence "Enables port range matching.";
+                                        description "Specifies port range.";
+
+                                        leaf start {
+                                            type uint16 {
+                                                range "0..65534";
+                                            }
+                                            mandatory true;
+                                            description "Specifies lower bound port to match.";
+                                        }
+
+                                        leaf end {
+                                            type uint16 {
+                                                range "1..65535";
+                                            }
+                                            mandatory true;
+                                            description "Specifies upper bound port to match.";
+                                        }
+
+                                    } // container range
+
+                                }
+                            }
+                        } // container dst-port
+
+                        container src-port {
+                            description "Configure source port match condition.";
+
+                            choice port {
+                                case eq {
+
+                                    leaf eq {
+                                        type uint16 {
+                                            range "0..65535";
+                                        }
+                                        description "Condition on equality to specified value.";
+                                    }
+
+                                }
+                                case lt {
+
+                                    leaf lt {
+                                        type uint16 {
+                                            range "1..65535";
+                                        }
+                                        description "Condition on being less than the specified value.";
+                                    }
+
+                                }
+                                case gt {
+
+                                    leaf gt {
+                                        type uint16 {
+                                            range "0..65534";
+                                        }
+                                        description "Condition on being greater than the specified value.";
+                                    }
+
+                                }
+                                case range {
+
+                                    container range {
+                                        presence "Enables port range matching.";
+                                        description "Specifies port range.";
+
+                                        leaf start {
+                                            type uint16 {
+                                                range "0..65534";
+                                            }
+                                            mandatory true;
+                                            description "Specifies lower bound port to match.";
+                                        }
+
+                                        leaf end {
+                                            type uint16 {
+                                                range "1..65535";
+                                            }
+                                            mandatory true;
+                                            description "Specifies upper bound port to match.";
+                                        }
+
+                                    } // container range
+
+                                }
+                            }
+                        } // container src-port
+
+                        container dst-ip {
+                            description "Configure destination IPv6 address match condition.";
+
+                            leaf address {
+                                type union {
+                                    type types-sros:ipv6-address;
+                                    type types-sros:ipv6-prefix-with-host-bits;
+                                }
+                                description "Specifies IP address to match.";
+                            }
+
+                            leaf mask {
+                                type types-sros:ipv6-address;
+                                description "Specifies the mask that is applied as an AND to the IPv6 address.";
+                            }
+
+                        } // container dst-ip
+
+                        container src-ip {
+                            description "Configure source IPv6 address match condition.";
+
+                            leaf address {
+                                type union {
+                                    type types-sros:ipv6-address;
+                                    type types-sros:ipv6-prefix-with-host-bits;
+                                }
+                                description "Specifies IP address to match.";
+                            }
+
+                            leaf mask {
+                                type types-sros:ipv6-address;
+                                description "Specifies the mask that is applied as an AND to the IPv6 address.";
+                            }
+
+                        } // container src-ip
+
+                    } // container match
+
+                } // list entry
+
+            } // list li-ipv6-filter
+
+            list li-mac-filter {
+                key "li-filter-name";
+                description "Configure an LI MAC filter.";
+
+                leaf li-filter-name {
+                    type types-sros:named-item {
+                        pattern "((([^d_ ]|d($|[^e]|e($|[^f]|f($|[^a]|a($|[^u]|u($|[^l]|l($|[^t]|t\\P{C})))))))\\P{C}*))";
+                    }
+                    description "Specifies the name of the filter.";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Specifies the description for this filter.";
+                }
+
+                list entry {
+                    key "li-entry-id";
+                    description "Configure an LI MAC filter entry.";
+
+                    leaf li-entry-id {
+                        type types-filter:limited-entry-id;
+                        description "A unique ID of a specific entry.";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Specifies the description for this entry.";
+                    }
+
+                    container match {
+                        description "Configure match criteria for this LI MAC filter entry.";
+
+                        leaf frame-type {
+                            type types-filter:mac-frame-type;
+                            default "802dot3";
+                            description "The type of MAC frame for which we are defining this match criteria.";
+                        }
+
+                        container dst-mac {
+                            presence "Configure destination MAC match condition.";
+                            description "Configure destination MAC match condition.";
+
+                            leaf address {
+                                type yang:mac-address;
+                                mandatory true;
+                                description "Specifies MAC address.";
+                            }
+
+                            leaf mask {
+                                must ". = 'ff:ff:ff:ff:ff:ff' or . != '00:00:00:00:00:00'" {
+                                    error-message "The MAC address mask cannot be 00:00:00:00:00:00.";
+                                }
+                                type yang:mac-address;
+                                default "ff:ff:ff:ff:ff:ff";
+                                description "Specifies MAC address mask.";
+                            }
+
+                        } // container dst-mac
+
+                        container src-mac {
+                            presence "Configure source MAC match condition.";
+                            description "Configure source MAC match condition.";
+
+                            leaf address {
+                                type yang:mac-address;
+                                mandatory true;
+                                description "Specifies MAC address.";
+                            }
+
+                            leaf mask {
+                                must ". = 'ff:ff:ff:ff:ff:ff' or . != '00:00:00:00:00:00'" {
+                                    error-message "The MAC address mask cannot be 00:00:00:00:00:00.";
+                                }
+                                type yang:mac-address;
+                                default "ff:ff:ff:ff:ff:ff";
+                                description "Specifies MAC address mask.";
+                            }
+
+                        } // container src-mac
+
+                    } // container match
+
+                } // list entry
+
+            } // list li-mac-filter
+
+            container associations {
+                description "Associate LI filters with regular filters.";
+
+                list li-ip-filter {
+                    key "li-filter-name";
+                    description "li-ip-filter associations";
+
+                    leaf li-filter-name {
+                        type leafref {
+                            path "../../../li-ip-filter/li-filter-name";
+                        }
+                        description "LI IP filter name.";
+                    }
+
+                    list ip-filter {
+                        key "filter-name";
+                        min-elements 1;
+                        max-elements 1;
+                        description "Associate ip-filter with li-ip-filter";
+
+                        leaf filter-name {
+                            type types-filter:filter-name {
+                                pattern "(([1-9]|[1-9][0-9]|[1-9][0-9][0-9]|[1-9][0-9][0-9][0-9]|[1-5][0-9][0-9][0-9][0-9]|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])|(([^f0-9_ ]|f($|[^S]|S($|[^p]|p($|[^e]|e($|[^c]|c($|[^\\-]|-($|[^0-9]+)))))))\\P{C}*))";
+                            }
+                            description "Associate an IP filter with this LI IP filter.";
+                        }
+
+                    } // list ip-filter
+
+                } // list li-ip-filter
+
+                list li-ipv6-filter {
+                    key "li-filter-name";
+                    description "li-ipv6-filter associations";
+
+                    leaf li-filter-name {
+                        type leafref {
+                            path "../../../li-ipv6-filter/li-filter-name";
+                        }
+                        description "LI IPv6 filter name.";
+                    }
+
+                    list ipv6-filter {
+                        key "filter-name";
+                        min-elements 1;
+                        max-elements 1;
+                        description "Associate ipv6-filter with li-ipv6-filter";
+
+                        leaf filter-name {
+                            type types-filter:filter-name {
+                                pattern "(([1-9]|[1-9][0-9]|[1-9][0-9][0-9]|[1-9][0-9][0-9][0-9]|[1-5][0-9][0-9][0-9][0-9]|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])|(([^f0-9_ ]|f($|[^S]|S($|[^p]|p($|[^e]|e($|[^c]|c($|[^\\-]|-($|[^0-9]+)))))))\\P{C}*))";
+                            }
+                            description "Associate an IP filter with this LI IP filter.";
+                        }
+
+                    } // list ipv6-filter
+
+                } // list li-ipv6-filter
+
+                list li-mac-filter {
+                    key "li-filter-name";
+                    description "li-mac-filter associations";
+
+                    leaf li-filter-name {
+                        type leafref {
+                            path "../../../li-mac-filter/li-filter-name";
+                        }
+                        description "LI MAC filter name.";
+                    }
+
+                    list mac-filter {
+                        key "filter-name";
+                        min-elements 1;
+                        max-elements 1;
+                        description "Associate mac-filter with li-mac-filter";
+
+                        leaf filter-name {
+                            type types-filter:filter-name {
+                                pattern "(([1-9]|[1-9][0-9]|[1-9][0-9][0-9]|[1-9][0-9][0-9][0-9]|[1-5][0-9][0-9][0-9][0-9]|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])|(([^f0-9_ ]|f($|[^S]|S($|[^p]|p($|[^e]|e($|[^c]|c($|[^\\-]|-($|[^0-9]+)))))))\\P{C}*))";
+                            }
+                            description "Associate an IP filter with this LI IP filter.";
+                        }
+
+                    } // list mac-filter
+
+                } // list li-mac-filter
+
+            } // container associations
+
+            list reserved-block {
+                must "./entry-range = 'false' or ./entry-range/start <= ./entry-range/end" {
+                    error-message "End must be greater than or equal to start";
+                }
+                key "block-name";
+                max-elements 8;
+                description "Configure a filter entry block reserved for Lawful Intercept (LI).";
+
+                leaf block-name {
+                    type types-sros:named-item {
+                        pattern "((([^d_ ]|d($|[^e]|e($|[^f]|f($|[^a]|a($|[^u]|u($|[^l]|l($|[^t]|t\\P{C})))))))\\P{C}*))";
+                    }
+                    description "The object uniquely identifies an LI reserved block.";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "User-provided description for the reserved block.";
+                }
+
+                list ip-filter {
+                    key "filter-name";
+                    description "Configure an IP filter in which the reservation is done.";
+
+                    leaf filter-name {
+                        type types-filter:filter-name {
+                            pattern "(([1-9]|[1-9][0-9]|[1-9][0-9][0-9]|[1-9][0-9][0-9][0-9]|[1-5][0-9][0-9][0-9][0-9]|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])|(([^f0-9_ ]|f($|[^S]|S($|[^p]|p($|[^e]|e($|[^c]|c($|[^\\-]|-($|[^0-9]+)))))))\\P{C}*))";
+                        }
+                        description "Configure a filter ID of entry block reserved for Lawful Intercept (LI).";
+                    }
+
+                } // list ip-filter
+
+                list ipv6-filter {
+                    key "filter-name";
+                    description "Configure an IPv6 filter in which the reservation is done.";
+
+                    leaf filter-name {
+                        type types-filter:filter-name {
+                            pattern "(([1-9]|[1-9][0-9]|[1-9][0-9][0-9]|[1-9][0-9][0-9][0-9]|[1-5][0-9][0-9][0-9][0-9]|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])|(([^f0-9_ ]|f($|[^S]|S($|[^p]|p($|[^e]|e($|[^c]|c($|[^\\-]|-($|[^0-9]+)))))))\\P{C}*))";
+                        }
+                        description "Configure a filter ID of entry block reserved for Lawful Intercept (LI).";
+                    }
+
+                } // list ipv6-filter
+
+                list mac-filter {
+                    key "filter-name";
+                    description "Configure an MAC filter in which the reservation is done.";
+
+                    leaf filter-name {
+                        type types-filter:filter-name {
+                            pattern "(([1-9]|[1-9][0-9]|[1-9][0-9][0-9]|[1-9][0-9][0-9][0-9]|[1-5][0-9][0-9][0-9][0-9]|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])|(([^f0-9_ ]|f($|[^S]|S($|[^p]|p($|[^e]|e($|[^c]|c($|[^\\-]|-($|[^0-9]+)))))))\\P{C}*))";
+                        }
+                        description "Configure a filter ID of entry block reserved for Lawful Intercept (LI).";
+                    }
+
+                } // list mac-filter
+
+                container entry-range {
+                    presence "Presence of a range of entries reserved for LI.";
+                    description "Configure a range of entries reserved for LI.";
+
+                    leaf start {
+                        type types-filter:entry-id;
+                        mandatory true;
+                        description
+                            "Specifies lower bound of range where li-filter entries will be inserted in
+                             the filter.
+
+                             The range defined here will be reserved for those entries, no other entries will be
+                             allowed.";
+                    }
+
+                    leaf end {
+                        type types-filter:entry-id;
+                        mandatory true;
+                        description
+                            "Specifies upper bound of range where  li-filter entries will be inserted in
+                             the filter.";
+                    }
+
+                } // container entry-range
+
+            } // list reserved-block
+
+        } // container li-filter
+
+
+        list li-source {
+            key "service-name";
+            description "Configuration of LI mirror-source objects.";
+
+            leaf service-name {
+                type types-services:service-name;
+                description "Name of the LI service";
+            }
+
+            leaf admin-state {
+                type types-sros:admin-state;
+                default "enable";
+                description "Enable/disable mirror service.";
+            }
+
+            list sap {
+                must "./ingress = 'true' or ./egress = 'true'" {
+                    error-message "Must have ingress, egress or both";
+                }
+                key "sap-id";
+                description "SAP information.";
+
+                leaf intercept-id {
+                    type types-services:li-interception-identifier;
+                    description "The intercept id of the traffic flow";
+                }
+
+                leaf session-id {
+                    type types-services:li-session-identifier;
+                    description "The session id of the traffic flow";
+                }
+
+                leaf sap-id {
+                    type types-sros:sap;
+                }
+
+                leaf ingress {
+                    type boolean;
+                    default "false";
+                    description "Whether ingress packets will be mirrored or not.";
+                }
+
+                leaf egress {
+                    type boolean;
+                    default "false";
+                    description "Whether egress packets will be mirrored or not.";
+                }
+
+            } // list sap
+
+            list li-ip-filter {
+                key "li-filter-name";
+                description "Enter the li-ip-filter context";
+
+                leaf li-filter-name {
+                    type leafref {
+                        path "../../../li-filter/li-ip-filter/li-filter-name";
+                    }
+                    description "A unique ID for an li-ip-filter";
+                }
+
+                list entry {
+                    key "li-entry-id";
+                    min-elements 1;
+                    description "LI IP Filter entry information";
+
+                    leaf li-entry-id {
+                        type leafref {
+                            path "../../../../li-filter/li-ip-filter[li-filter-name=current()/../../li-filter-name]/entry/li-entry-id";
+                        }
+                        description "A unique ID for an li-ip-filter entry";
+                    }
+
+                    leaf intercept-id {
+                        type types-services:li-interception-identifier;
+                        description "The intercept id of the traffic flow";
+                    }
+
+                    leaf session-id {
+                        type types-services:li-session-identifier;
+                        description "The session id of the traffic flow";
+                    }
+
+                } // list entry
+
+            } // list li-ip-filter
+
+            list li-ipv6-filter {
+                key "li-filter-name";
+                description "Enter the li-ipv6-filter context";
+
+                leaf li-filter-name {
+                    type leafref {
+                        path "../../../li-filter/li-ipv6-filter/li-filter-name";
+                    }
+                    description "A unique ID for an li-ipv6-filter";
+                }
+
+                list entry {
+                    key "li-entry-id";
+                    min-elements 1;
+                    description "LI IPv6 Filter entry information";
+
+                    leaf li-entry-id {
+                        type leafref {
+                            path "../../../../li-filter/li-ipv6-filter[li-filter-name=current()/../../li-filter-name]/entry/li-entry-id";
+                        }
+                        description "A unique ID for an li-ipv6-filter entry";
+                    }
+
+                    leaf intercept-id {
+                        type types-services:li-interception-identifier;
+                        description "The intercept id of the traffic flow";
+                    }
+
+                    leaf session-id {
+                        type types-services:li-session-identifier;
+                        description "The session id of the traffic flow";
+                    }
+
+                } // list entry
+
+            } // list li-ipv6-filter
+
+            list li-mac-filter {
+                key "li-filter-name";
+                description "Enter the li-mac-filter context";
+
+                leaf li-filter-name {
+                    type leafref {
+                        path "../../../li-filter/li-mac-filter/li-filter-name";
+                    }
+                    description "A unique ID for an li-mac-filter";
+                }
+
+                list entry {
+                    key "li-entry-id";
+                    min-elements 1;
+                    description "LI MAC Filter entry information";
+
+                    leaf li-entry-id {
+                        type leafref {
+                            path "../../../../li-filter/li-mac-filter[li-filter-name=current()/../../li-filter-name]/entry/li-entry-id";
+                        }
+                        description "A unique ID for an li-mac-filter entry";
+                    }
+
+                    leaf intercept-id {
+                        type types-services:li-interception-identifier;
+                        description "The intercept id of the traffic flow";
+                    }
+
+                    leaf session-id {
+                        type types-services:li-session-identifier;
+                        description "The session id of the traffic flow";
+                    }
+
+                } // list entry
+
+            } // list li-mac-filter
+
+            container nat {
+                description "LI NAT subscribers";
+
+                container ethernet-header {
+                    description "Ethernet header for the NAT sources";
+
+                    leaf source-address {
+                        must ". != '00:00:00:00:00:00'" {
+                            error-message "Invalid mac-address (00:00:00:00:00:00).";
+                        }
+                        type types-sros:mac-address;
+                        description "Source MAC Address field of the of the ethernet encapsulation";
+                    }
+
+                    leaf destination-address {
+                        must ". != '00:00:00:00:00:00'" {
+                            error-message "Invalid mac-address (00:00:00:00:00:00).";
+                        }
+                        type types-sros:mac-address;
+                        description "Destination MAC Address field of the of the ethernet encapsulation";
+                    }
+
+                    leaf type {
+                        type uint16 {
+                            range "1536..65535";
+                        }
+                        default "1792";
+                        description "Ethertype of the ethernet encapsulation";
+                    }
+
+                } // container ethernet-header
+
+                list nat44 {
+                    key "router-instance ip";
+                    description "Classic LSN subscriber source";
+
+                    leaf router-instance {
+                        type types-services:service-name;
+                        description "Name of the service";
+                    }
+
+                    leaf ip {
+                        type types-sros:ipv4-address;
+                        description "IP address of the subscriber";
+                    }
+
+                    leaf intercept-id {
+                        type types-services:li-interception-identifier-wide;
+                        description "The intercept id of the traffic flow";
+                    }
+
+                    leaf session-id {
+                        type types-services:li-session-identifier;
+                        description "The session id of the traffic flow";
+                    }
+
+                } // list nat44
+
+                list dslite {
+                    key "router-instance b4";
+                    description "Dual Stack Lite LSN subscriber source";
+
+                    leaf router-instance {
+                        type types-services:service-name;
+                        description "Name of the service";
+                    }
+
+                    leaf b4 {
+                        type types-sros:ipv6-prefix;
+                        description "B4 prefix of the subscriber";
+                    }
+
+                    leaf intercept-id {
+                        type types-services:li-interception-identifier-wide;
+                        description "The intercept id of the traffic flow";
+                    }
+
+                    leaf session-id {
+                        type types-services:li-session-identifier;
+                        description "The session id of the traffic flow";
+                    }
+
+                } // list dslite
+
+                list nat64 {
+                    key "router-instance ip";
+                    description "NAT64 LSN subscriber source";
+
+                    leaf router-instance {
+                        type types-services:service-name;
+                        description "Name of the service";
+                    }
+
+                    leaf ip {
+                        type types-sros:ipv6-prefix;
+                        description "IP prefix of the subscriber";
+                    }
+
+                    leaf intercept-id {
+                        type types-services:li-interception-identifier-wide;
+                        description "The intercept id of the traffic flow";
+                    }
+
+                    leaf session-id {
+                        type types-services:li-session-identifier;
+                        description "The session id of the traffic flow";
+                    }
+
+                } // list nat64
+
+                list l2-aware {
+                    key "subscriber-id";
+                    description "Layer-2-Aware subscriber source";
+
+                    leaf subscriber-id {
+                        type types-submgt:subscriber-id;
+                        description "The string identifying the subscribe";
+                    }
+
+                    leaf intercept-id {
+                        type types-services:li-interception-identifier-wide;
+                        description "The intercept id of the traffic flow";
+                    }
+
+                    leaf session-id {
+                        type types-services:li-session-identifier;
+                        description "The session id of the traffic flow";
+                    }
+
+                } // list l2-aware
+
+            } // container nat
+
+            list wlan-gw-dsm-ue {
+                key "mac";
+                description "DSM UE source";
+
+                leaf mac {
+                    type yang:mac-address;
+                    description "MAC address of the DSM UE";
+                }
+
+                leaf intercept-id {
+                    type types-services:li-interception-identifier-wide;
+                    description "Intercept identifier";
+                }
+
+                leaf session-id {
+                    type types-services:li-session-identifier;
+                    description "Session identifier";
+                }
+
+            } // list wlan-gw-dsm-ue
+
+            list subscriber {
+                must "./ingress = 'true' or ./egress = 'true'" {
+                    error-message "Must have ingress, egress or both";
+                }
+                key "subscriber-id";
+                description "Subscriber source";
+
+                leaf subscriber-id {
+                    type types-submgt:subscriber-id;
+                    description "The string identifying the subscriber";
+                }
+
+                leaf ingress {
+                    type boolean;
+                    default "false";
+                    description "Whether ingress packets will be mirrored or not.";
+                }
+
+                leaf egress {
+                    type boolean;
+                    default "false";
+                    description "Whether egress packets will be mirrored or not.";
+                }
+
+                leaf-list fc {
+                    type enumeration {
+                        enum "be"                           { value 0; }
+                        enum "l2"                           { value 1; }
+                        enum "af"                           { value 2; }
+                        enum "l1"                           { value 3; }
+                        enum "h2"                           { value 4; }
+                        enum "ef"                           { value 5; }
+                        enum "h1"                           { value 6; }
+                        enum "nc"                           { value 7; }
+                    }
+                    max-elements 8;
+                    description "The forwarding classes traffic which should be mirrored";
+                }
+
+                leaf host-type {
+                    type enumeration {
+                        enum "ipoe"                         { value 2; }
+                        enum "ppp"                          { value 3; }
+                    }
+                    description "The type of subscriber host to be monitored";
+                }
+
+                leaf ip-family {
+                    type enumeration {
+                        enum "ipv4"                         { value 2; }
+                        enum "ipv6"                         { value 3; }
+                    }
+                    description "The family of IP flows to be monitored for an IPoE type of host";
+                }
+
+                leaf intercept-id {
+                    type types-services:li-interception-identifier;
+                    description "The intercept id of the traffic flow";
+                }
+
+                leaf session-id {
+                    type types-services:li-session-identifier;
+                    description "The session id of the traffic flow";
+                }
+
+                choice host-identification {
+                    case sap-id {
+
+                        leaf sap-id {
+                            type types-sros:sap;
+                            description "SAP identifier.";
+                        }
+
+                        leaf mac-address {
+                            type yang:mac-address;
+                            description "The source MAC address";
+                        }
+
+                        leaf ip-address {
+                            type types-sros:ipv4-address;
+                            description "IP address of the subscriber";
+                        }
+
+                    }
+                    case sla-profile {
+
+                        leaf sla-profile {
+                            type types-sros:external-named-item;
+                            description "SLA profile";
+                        }
+
+                    }
+                }
+            } // list subscriber
+
+        } // list li-source
+
+
+        container log {
+            description "Enter the log context";
+
+            list log-id {
+                key "id";
+                max-elements 30;
+                description "Enter the log-id list instance";
+
+                leaf id {
+                    type int32 {
+                        range "1..100";
+                    }
+                    description
+                        "The value of log-queue-id uniquely identifies an event
+                         stream log";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "enable";
+                    description "The administrative state of the log";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "The description of the log";
+                }
+
+                leaf time-format {
+                    type enumeration {
+                        enum "utc"                          { value 1; }
+                        enum "local"                        { value 2; }
+                    }
+                    default "utc";
+                    description
+                        "Time format of the log.
+
+                         When time-format has a value of 'utc' timestamps are
+                         written using the Coordinated Universal Time value.
+                         When time-format has a value of 'local' timestamps are
+                         written in the system's local time.";
+                }
+
+                leaf filter {
+                    type uint32 {
+                        range "1..1500";
+                    }
+                    description
+                        "The value of filter is the index into log-filter that
+                         defines a filter to be applied to this log's source event
+                         stream to limit the event output to this log's
+                         destination. If filter has a value of 0, then all
+                         events in the source log are forwarded to the
+                         destination.";
+                }
+
+                container source {
+                    description "Enter the source context";
+
+                    leaf li {
+                        type boolean;
+                        default "false";
+                        description "The 'li' event stream contains all events configured for LI activities";
+                    }
+
+                } // container source
+
+                container destination {
+                    description "Enter the destination context";
+
+                    choice log-id-destination {
+                        case memory {
+
+                            container memory {
+                                presence "Send log events to a buffer in memory";
+                                description "Send log events to a buffer in memory";
+
+                                leaf max-entries {
+                                    type uint32 {
+                                        range "50..1024";
+                                    }
+                                    sros-ext:immutable;
+                                    default "100";
+                                    description "Number of events stored in this memory log";
+                                }
+
+                            } // container memory
+
+                        }
+                        case snmp {
+
+                            container snmp {
+                                presence "Send log events to the snmp-trap-group that has the same id as this log";
+                                description "Send log events to the snmp-trap-group that has the same id as this log";
+
+                                leaf max-entries {
+                                    type uint32 {
+                                        range "50..1024";
+                                    }
+                                    sros-ext:immutable;
+                                    default "100";
+                                    description "Number of events stored in this snmp log";
+                                }
+
+                            } // container snmp
+
+                        }
+                    }
+                } // container destination
+
+            } // list log-id
+
+        } // container log
+
+
+        container mirror-dest-reservation {
+            must "./end >= ./start" {
+                error-message "start service-id cannot be greater than end service-id";
+            }
+            must "./end <= ./start or (./end - ./start) < 128" {
+                error-message "a maximum of 128 service-id range is allowed";
+            }
+            description "service identifier range reserved for LI mirror destination services";
+
+            leaf start {
+                type uint32 {
+                    range "1..2147483647";
+                }
+                description "First service id";
+            }
+
+            leaf end {
+                type uint32 {
+                    range "1..2147483647";
+                }
+                description "Last service id";
+            }
+
+        } // container mirror-dest-reservation
+
+
+        list mirror-dest-template {
+            key "name";
+            max-elements 8;
+            description "Configuration of LI mirror destination template";
+
+            leaf name {
+                type types-sros:named-item;
+                description "Mirror destination template name";
+            }
+
+            leaf type {
+                type types-services:mirror-type;
+                sros-ext:immutable;
+                default "ether";
+                description "Configure mirror type information.";
+            }
+
+            container layer-3-encap {
+                description "Layer-3 header encapsulation";
+
+                leaf router-instance {
+                    type types-sros:router-instance;
+                    default "Base";
+                    description "Specifies a virtual router instance as a string (unlike vrtr-id).";
+                }
+
+                leaf encap-type {
+                    type enumeration {
+                        enum "ip-udp-shim"                  { value 1; }
+                        enum "ip-gre"                       { value 2; }
+                    }
+                    sros-ext:immutable;
+                    default "ip-udp-shim";
+                    description "The header type of the layer 3 encapsulation.";
+                }
+
+                leaf direction-bit {
+                    type boolean;
+                    default "false";
+                    description
+                        "If the highest bit in the Interception ID field
+                         of the shim header is used to indicate the direction
+                         of the mirrored traffic flow.";
+                }
+
+                leaf ip-source {
+                    type types-sros:ipv4-unicast-address;
+                    description "Source IPv4 address to be used in the layer-3 encapsulation";
+                }
+
+                container udp {
+                    description "UDP ports to be used in the Layer-3 encapsulation";
+
+                    leaf source {
+                        when "../../encap-type = 'ip-udp-shim'";
+                        type types-sros:tcp-udp-port-non-zero;
+                        description "Source UDP port";
+                    }
+
+                    leaf destination {
+                        when "../../encap-type = 'ip-udp-shim'";
+                        type types-sros:tcp-udp-port-non-zero;
+                        description "Destination UDP port";
+                    }
+
+                } // container udp
+
+            } // container layer-3-encap
+
+        } // list mirror-dest-template
+
+
+        container nat {
+            description "Li options related with NAT";
+
+            leaf use-outside-ip-address {
+                type boolean;
+                default "false";
+                description "For Layer-2-Aware NAT subscribers, report their outside IP address.";
+            }
+
+        } // container nat
+
+
+        container radius {
+            description "Radius for Lawful Intercept";
+
+            leaf mirror-dest-template {
+                type leafref {
+                    path "../../mirror-dest-template/name";
+                }
+                description "mirror destination template for use with Radius";
+            }
+
+        } // container radius
+
+
+    } // container li
+
+}

@@ -1,0 +1,761 @@
+submodule nokia-conf-card {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-card               { prefix "types-card"; }
+    import nokia-types-chassis            { prefix "types-chassis"; }
+    import nokia-types-qos                { prefix "types-qos"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-card-fp;
+    include nokia-conf-groups;
+    include nokia-conf-port;
+    include nokia-conf-qos;
+
+    sros-ext:sros-major-release "rel19";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure cards on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-card YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2019-07-19";
+
+    grouping conf-card {
+        list card {
+            key "slot-number";
+            description "Enter the card list instance";
+
+            leaf slot-number {
+                type types-card:card-slot;
+                description "IOM slot within a chassis";
+            }
+
+            leaf admin-state {
+                type types-sros:admin-state;
+                default "enable";
+                description "Administrative state of the I/O module";
+            }
+
+            leaf card-type {
+                type types-card:sros-iom-type;
+                sros-ext:immutable;
+                description "Card type";
+            }
+
+            leaf fail-on-error {
+                type boolean;
+                default "false";
+                description "Set the Operational State of the card to Failed when an error is detected";
+            }
+
+            leaf reset-on-recoverable-error {
+                type boolean;
+                default "false";
+                description "Reset card for fatal memory parity error on a Q-chip of the card, regardless of fail-on-error setting";
+            }
+
+            leaf level {
+                type types-card:sros-iom-level;
+                sros-ext:immutable;
+                description "Functional level of I/O module for slot";
+            }
+
+            leaf power-save {
+                type boolean;
+                default "false";
+                description "Keeps the card in a low-power, unloaded state when set.";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            list upgrade {
+                key "upgrade-index";
+                description "Enter the upgrade list instance";
+
+                leaf upgrade-index {
+                    type uint32 {
+                        range "1..6";
+                    }
+                    description "The unique value which identifies the functional upgrade number on this card on the system.";
+                }
+
+                leaf path {
+                    type types-card:sros-iom-level-upgrade-path;
+                    sros-ext:immutable;
+                    mandatory true;
+                    description "Provisions the functional level upgrade path of the I/O module for this slot.";
+                }
+
+            } // list upgrade
+
+            container virtual-scheduler-adjustment {
+                description "Enter the virtual-scheduler-adjustment context";
+
+                leaf internal-scheduler-weight-mode {
+                    type types-qos:internal-scheduler-weight-mode;
+                    default "auto";
+                    description "Internal scheduler weight mode";
+                }
+
+                leaf slow-queue-threshold-rate {
+                    type uint32 {
+                        range "0..1000000";
+                    }
+                    units "kilobps";
+                    default "1000";
+                    description "Rate of the slow queue threshold";
+                }
+
+                container interval {
+                    description "Enter the interval context";
+
+                    leaf scheduler-run-minimum {
+                        type decimal64 {
+                            range "0.01..1000.00";
+                            fraction-digits 2;
+                        }
+                        units "percent";
+                        default "100.00";
+                        description "Minimum time of the scheduler run";
+                    }
+
+                    leaf task-scheduling {
+                        type decimal64 {
+                            range "0.01..1000.00";
+                            fraction-digits 2;
+                        }
+                        units "percent";
+                        default "100.00";
+                        description "Task scheduling interval";
+                    }
+
+                    container rate-calculation-minimum {
+                        description "Enter the rate-calculation-minimum context";
+
+                        leaf fast-queue {
+                            type decimal64 {
+                                range "0.01..1000.00";
+                                fraction-digits 2;
+                            }
+                            units "percent";
+                            default "100.00";
+                            description "Default minimum rate calculation time for fast queues";
+                        }
+
+                        leaf slow-queue {
+                            type decimal64 {
+                                range "0.01..1000.00";
+                                fraction-digits 2;
+                            }
+                            units "percent";
+                            default "100.00";
+                            description "Default minimum rate calculation time for slow queues";
+                        }
+
+                    } // container rate-calculation-minimum
+
+                } // container interval
+
+            } // container virtual-scheduler-adjustment
+
+            list mda {
+                key "mda-slot";
+                description "Enter the mda list instance";
+
+                leaf mda-slot {
+                    type uint32 {
+                        range "1..6";
+                    }
+                    description "MDA slot";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "enable";
+                    description "Administrative state of MDA";
+                }
+
+                leaf fail-on-error {
+                    type boolean;
+                    default "false";
+                    description "Set the Operational State of the MDA to Failed when threshold of egress XPL errors is reached";
+                }
+
+                leaf mda-type {
+                    type types-card:sros-mda-type;
+                    sros-ext:immutable;
+                    description "MDA configuration for slot";
+                }
+
+                leaf power-priority-level {
+                    type uint32 {
+                        range "1..200";
+                    }
+                    default "150";
+                    description "Power priority value, lower value has higher priority";
+                }
+
+                leaf reset-on-recoverable-error {
+                    type boolean;
+                    default "false";
+                    description "Reset MDA for fatal memory parity error on a Q-chip of the MDA, regardless of fail-on-error setting";
+                }
+
+                leaf sync-e {
+                    type enumeration {
+                        enum "true"                         { value 1; }
+                        enum "false"                        { value 2; }
+                    }
+                    description "Synchronous Ethernet";
+                }
+
+                leaf level {
+                    type types-card:sros-mda-level;
+                    sros-ext:immutable;
+                    description "Functional level of MDA for slot";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                container clock-mode {
+                    description "Enter the clock-mode context";
+
+                    leaf mode {
+                        type enumeration {
+                            enum "adaptive"                     { value 1; }
+                            enum "differential"                 { value 2; }
+                        }
+                        description "Clock mode";
+                    }
+
+                    leaf timestamp-freq {
+                        type uint32 {
+                            range "19940|77760|103680";
+                        }
+                        description "Differential timestamp frequency";
+                    }
+
+                } // container clock-mode
+
+                container egress-xpl {
+                    description "Enter the egress-xpl context";
+
+                    leaf threshold {
+                        type uint32 {
+                            range "1..1000000";
+                        }
+                        units "xpl errors";
+                        default "1000";
+                        description "Threshold value for egress XPL errors";
+                    }
+
+                    leaf window {
+                        type uint32 {
+                            range "1..1440";
+                        }
+                        units "minutes";
+                        default "60";
+                        description "Time interval to measure frequency of egress XPL errors against threshold value";
+                    }
+
+                } // container egress-xpl
+
+                container ingress-xpl {
+                    description "Enter the ingress-xpl context";
+
+                    leaf threshold {
+                        type uint32 {
+                            range "1..1000000";
+                        }
+                        units "xpl errors";
+                        default "1000";
+                        description "Threshold value for ingress XPL errors";
+                    }
+
+                    leaf window {
+                        type uint32 {
+                            range "1..1440";
+                        }
+                        units "minutes";
+                        default "60";
+                        description "Time interval to measure frequency of ingress XPL errors against threshold value";
+                    }
+
+                } // container ingress-xpl
+
+                list upgrade {
+                    key "upgrade-index";
+                    description "Enter the upgrade list instance";
+
+                    leaf upgrade-index {
+                        type uint32 {
+                            range "1..6";
+                        }
+                        description "The unique value which identifies the functional upgrade number on this MDA on the system.";
+                    }
+
+                    leaf path {
+                        type types-card:sros-mda-level-upgrade-path;
+                        sros-ext:immutable;
+                        mandatory true;
+                        description "Provisions the functional level upgrade path of the MDA for this slot.";
+                    }
+
+                } // list upgrade
+
+                list event {
+                    key "type";
+                    description "Enter the event list instance";
+
+                    leaf type {
+                        type types-chassis:hw-event-type;
+                        description "The unique value which identifies the event type to be monitored on this MDA in the system.";
+                    }
+
+                    leaf action {
+                        type types-chassis:hw-event-action;
+                        description "Provisions action to be taken on the MDA when the event is detected.";
+                    }
+
+                } // list event
+
+                container access {
+                    description "Enter the access context";
+
+                    container egress {
+                        description "Enter the egress context";
+
+                        list pool {
+                            key "name";
+                            description "Enter the pool list instance";
+
+                            leaf name {
+                                type types-sros:named-item;
+                                description "Unique pool name for MDA";
+                            }
+
+                            leaf amber-alarm-threshold {
+                                type uint32 {
+                                    range "1..1000";
+                                }
+                                units "percent";
+                                description "Configure amber alarm threshold allowed on over-subscription.";
+                            }
+
+                            leaf red-alarm-threshold {
+                                type uint32 {
+                                    range "1..1000";
+                                }
+                                units "percent";
+                                description "Configure red alarm threshold allowed on over-subscription.";
+                            }
+
+                            leaf slope-policy {
+                                type leafref {
+                                    path "../../../../../../qos/slope-policy/slope-policy-name";
+                                }
+                                description "Configure the slope policy.";
+                            }
+
+                            container resv-cbs {
+                                description "Enter the resv-cbs context";
+
+                                leaf cbs {
+                                    type int32 {
+                                        range "0..100";
+                                    }
+                                    units "percent";
+                                    description "Configure the percentage of pool size reserved for CBS. For network, the default value is computed as the sum of the CBS request by the entities using the pool. For access, the default value is 30%.";
+                                }
+
+                                container amber-alarm-action {
+                                    description "Enter the amber-alarm-action context";
+
+                                    leaf step {
+                                        type uint32 {
+                                            range "1..100";
+                                        }
+                                        units "percent";
+                                        description "Configure the step-size percentage for the reserved CBS size of the pool. When set to a value of zero (0), the adaptive CBS sizing is disabled. To enable adaptive CBS sizing, both this leaf and amber-alarm-action/max must be set to non-default values. Adaptive CBS sizing can only be enabled when resv-cbs is non-default.";
+                                    }
+
+                                    leaf max {
+                                        type uint32 {
+                                            range "1..100";
+                                        }
+                                        units "percent";
+                                        description "Configure the maximum percentage for the reserved CBS size of the pool. When set to a value of zero (0), the adaptive CBS sizing is disabled. To enable adaptive CBS sizing, both this leaf and amber-alarm-action/step must be set to non-default values. Adaptive CBS sizing can only be enabled when resv-cbs is non-default. This value must not be more than resv-cbs.";
+                                    }
+
+                                } // container amber-alarm-action
+
+                            } // container resv-cbs
+
+                        } // list pool
+
+                    } // container egress
+
+                    container ingress {
+                        description "Enter the ingress context";
+
+                        list pool {
+                            key "name";
+                            description "Enter the pool list instance";
+
+                            leaf name {
+                                type types-sros:named-item;
+                                description "Unique pool name for MDA";
+                            }
+
+                            leaf amber-alarm-threshold {
+                                type uint32 {
+                                    range "1..1000";
+                                }
+                                units "percent";
+                                description "Amber alarm threshold allowed on over-subscription";
+                            }
+
+                            leaf red-alarm-threshold {
+                                type uint32 {
+                                    range "1..1000";
+                                }
+                                units "percent";
+                                description "Red alarm threshold allowed on over-subscription";
+                            }
+
+                            leaf slope-policy {
+                                type leafref {
+                                    path "../../../../../../qos/slope-policy/slope-policy-name";
+                                }
+                                description "Slope policy name";
+                            }
+
+                            container resv-cbs {
+                                description "Enter the resv-cbs context";
+
+                                leaf cbs {
+                                    type int32 {
+                                        range "0..100";
+                                    }
+                                    units "percent";
+                                    description "Percentage of pool size reserved for CBS";
+                                }
+
+                                container amber-alarm-action {
+                                    description "Enter the amber-alarm-action context";
+
+                                    leaf step {
+                                        type uint32 {
+                                            range "1..100";
+                                        }
+                                        units "percent";
+                                        description "Step-size percentage for reserved CBS size of the pool";
+                                    }
+
+                                    leaf max {
+                                        type uint32 {
+                                            range "1..100";
+                                        }
+                                        units "percent";
+                                        description "Maximum percentage for reserved CBS size of the pool";
+                                    }
+
+                                } // container amber-alarm-action
+
+                            } // container resv-cbs
+
+                        } // list pool
+
+                    } // container ingress
+
+                } // container access
+
+                container atm {
+                    description "Enter the atm context";
+
+                    leaf mode {
+                        type enumeration {
+                            enum "max8k-vc"                     { value 1; }
+                            enum "max16k-vc"                    { value 2; }
+                        }
+                        description "Mode of operation";
+                    }
+
+                } // container atm
+
+                container egress {
+                    description "Enter the egress context";
+
+                    leaf hsmda-pool-policy {
+                        type leafref {
+                            path "../../../../qos/hsmda-pool-policy/hsmda-pool-policy-name";
+                        }
+                        description "Egress HSMDA pool policy";
+                    }
+
+                    container hsmda-aggregate-queue-burst {
+                        description "Enter the hsmda-aggregate-queue-burst context";
+
+                        leaf high-burst-increase {
+                            type int32 {
+                                range "0..65536";
+                            }
+                            units "bytes";
+                            description "High burst increase";
+                        }
+
+                        leaf low-burst-multiplier {
+                            type int32 {
+                                range "1..65536";
+                            }
+                            description "Low burst multiplier";
+                        }
+
+                    } // container hsmda-aggregate-queue-burst
+
+                } // container egress
+
+                container network {
+                    description "Enter the network context";
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container egress {
+                        description "Enter the egress context";
+
+                        list pool {
+                            key "name";
+                            description "Enter the pool list instance";
+
+                            leaf name {
+                                type types-sros:named-item;
+                                description "Unique pool name for MDA";
+                            }
+
+                            leaf amber-alarm-threshold {
+                                type uint32 {
+                                    range "1..1000";
+                                }
+                                units "percent";
+                                description "Configure amber alarm threshold allowed on over-subscription.";
+                            }
+
+                            leaf red-alarm-threshold {
+                                type uint32 {
+                                    range "1..1000";
+                                }
+                                units "percent";
+                                description "Configure red alarm threshold allowed on over-subscription.";
+                            }
+
+                            leaf slope-policy {
+                                type leafref {
+                                    path "../../../../../../qos/slope-policy/slope-policy-name";
+                                }
+                                description "Configure the slope policy.";
+                            }
+
+                            container resv-cbs {
+                                description "Enter the resv-cbs context";
+
+                                leaf cbs {
+                                    type int32 {
+                                        range "0..100";
+                                    }
+                                    units "percent";
+                                    description "Configure the percentage of pool size reserved for CBS. For network, the default value is computed as the sum of the CBS request by the entities using the pool. For access, the default value is 30%.";
+                                }
+
+                                container amber-alarm-action {
+                                    description "Enter the amber-alarm-action context";
+
+                                    leaf step {
+                                        type uint32 {
+                                            range "1..100";
+                                        }
+                                        units "percent";
+                                        description "Configure the step-size percentage for the reserved CBS size of the pool. When set to a value of zero (0), the adaptive CBS sizing is disabled. To enable adaptive CBS sizing, both this leaf and amber-alarm-action/max must be set to non-default values. Adaptive CBS sizing can only be enabled when resv-cbs is non-default.";
+                                    }
+
+                                    leaf max {
+                                        type uint32 {
+                                            range "1..100";
+                                        }
+                                        units "percent";
+                                        description "Configure the maximum percentage for the reserved CBS size of the pool. When set to a value of zero (0), the adaptive CBS sizing is disabled. To enable adaptive CBS sizing, both this leaf and amber-alarm-action/step must be set to non-default values. Adaptive CBS sizing can only be enabled when resv-cbs is non-default. This value must not be more than resv-cbs.";
+                                    }
+
+                                } // container amber-alarm-action
+
+                            } // container resv-cbs
+
+                        } // list pool
+
+                    } // container egress
+
+                    container ingress {
+                        description "Enter the ingress context";
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf queue-policy {
+                            status obsolete;
+                            type leafref {
+                                path "../../../../../qos/network-queue/network-queue-policy";
+                            }
+                            description "Network-queue policy";
+                        }
+
+                        list pool {
+                            status obsolete;
+                            key "name";
+                            description "Enter the pool list instance";
+
+                            leaf name {
+                                status obsolete;
+                                type types-sros:named-item;
+                                description "Unique pool name for MDA";
+                            }
+
+                            leaf amber-alarm-threshold {
+                                status obsolete;
+                                type uint32 {
+                                    range "1..1000";
+                                }
+                                units "percent";
+                                description "Amber alarm threshold allowed on over-subscription";
+                            }
+
+                            leaf red-alarm-threshold {
+                                status obsolete;
+                                type uint32 {
+                                    range "1..1000";
+                                }
+                                units "percent";
+                                description "Red alarm threshold allowed on over-subscription";
+                            }
+
+                            leaf slope-policy {
+                                status obsolete;
+                                type leafref {
+                                    path "../../../../../../qos/slope-policy/slope-policy-name";
+                                }
+                                description "Slope policy name";
+                            }
+
+                            leaf-list apply-groups {
+                                status obsolete;
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            container resv-cbs {
+                                status obsolete;
+                                description "Enter the resv-cbs context";
+
+                                leaf cbs {
+                                    status obsolete;
+                                    type int32 {
+                                        range "0..100";
+                                    }
+                                    units "percent";
+                                    description "Percentage of pool size reserved for CBS";
+                                }
+
+                                container amber-alarm-action {
+                                    status obsolete;
+                                    description "Enter the amber-alarm-action context";
+
+                                    leaf step {
+                                        status obsolete;
+                                        type uint32 {
+                                            range "1..100";
+                                        }
+                                        units "percent";
+                                        description "Step-size percentage for reserved CBS size of the pool";
+                                    }
+
+                                    leaf max {
+                                        status obsolete;
+                                        type uint32 {
+                                            range "1..100";
+                                        }
+                                        units "percent";
+                                        description "Maximum percentage for reserved CBS size of the pool";
+                                    }
+
+                                } // container amber-alarm-action
+
+                            } // container resv-cbs
+
+                        } // list pool
+
+                    } // container ingress
+
+                } // container network
+
+            } // list mda
+
+            uses conf-card-fp;
+        } // list card
+
+    } // grouping conf-card
+
+}
