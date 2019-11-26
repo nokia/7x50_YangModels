@@ -46,6 +46,7 @@ submodule nokia-conf-router-l2tp {
 
     grouping conf-router-l2tp {
         container l2tp {
+            must "../router-name = 'Base'";
             presence "L2TP for routers.";
             description "Enter the l2tp context";
 
@@ -157,6 +158,15 @@ submodule nokia-conf-router-l2tp {
                 }
                 default "next-preference-level";
                 description "Tunnel that is selected when previous session setup failed";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
             }
 
             container exclude-avps {
@@ -378,6 +388,15 @@ submodule nokia-conf-router-l2tp {
                         description "Synchronization tag on the multi-chassis peer";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                 } // list track-srrp
 
             } // container failover
@@ -441,6 +460,30 @@ submodule nokia-conf-router-l2tp {
             } // container ethernet-tunnel
 
             list group {
+                must "not(./lns/ppp/default-group-interface/service-name) or ./lns/ppp/default-group-interface/interface" {
+                    error-message "interface must not be default when service-name is not default";
+                }
+                must "./lns/ppp/default-group-interface/service-name or not(./lns/ppp/default-group-interface/interface)" {
+                    error-message "service-name must not be default when interface is not default";
+                }
+                must "not(./lns/ppp/authentication-policy) or not(./lns/ppp/user-db)" {
+                    error-message "user-db and authentication-policy are mutually exclusive";
+                }
+                must "./lns/ppp/chap-challenge-length/start <= ./lns/ppp/chap-challenge-length/end" {
+                    error-message "invalid range";
+                }
+                must "./protocol != 'v3' or not(./challenge)" {
+                    error-message "challenge can not be configured on a v3 tunnel group";
+                }
+                must "./protocol != 'v3' or not(./password)" {
+                    error-message "password can not be configured on a v3 tunnel group";
+                }
+                must "./protocol = 'v2' or not(./radius-accounting-policy)" {
+                    error-message "radius-accounting-policy can only be configured on a v2 tunnel group";
+                }
+                must "./protocol = 'v2' or ./l2tpv3/pw-cap-list/ethernet != 'false' or ./l2tpv3/pw-cap-list/ethernet-vlan != 'false' or ./admin-state != 'enable' or ../admin-state != 'enable'" {
+                    error-message "pw-cap-list must not be empty when protocol is not v2";
+                }
                 key "tunnel-group-name";
                 description "Enter the group list instance";
 
@@ -542,6 +585,15 @@ submodule nokia-conf-router-l2tp {
                     description "Session assignment method";
                 }
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
                 container failover {
                     when "../protocol = 'v2'";
                     description "Enter the failover context";
@@ -570,7 +622,7 @@ submodule nokia-conf-router-l2tp {
                 } // container lac
 
                 container l2tpv3 {
-                    when "../protocol != 'v2'";
+                    when "not(../protocol = 'v2')";
                     description "Enter the l2tpv3 context";
 
                     leaf rem-router-id {
@@ -639,7 +691,7 @@ submodule nokia-conf-router-l2tp {
                 } // container l2tpv3
 
                 container ethernet-tunnel {
-                    when "../protocol != 'v2'";
+                    when "not(../protocol = 'v2')";
                     description "Enter the ethernet-tunnel context";
 
                     leaf reconnect-timeout {
@@ -817,6 +869,15 @@ submodule nokia-conf-router-l2tp {
                             description "Request a peer to send short sequence numbers";
                         }
 
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
                         container endpoint {
                             description "Enter the endpoint context";
 
@@ -845,6 +906,51 @@ submodule nokia-conf-router-l2tp {
                 } // container lns
 
                 list tunnel {
+                    must "not(./lns/ppp/default-group-interface/service-name) or ./lns/ppp/default-group-interface/interface" {
+                        error-message "interface must not be default when service-name is not default";
+                    }
+                    must "./lns/ppp/default-group-interface/service-name or not(./lns/ppp/default-group-interface/interface)" {
+                        error-message "service-name must not be default when interface is not default";
+                    }
+                    must "not(./lns/ppp/authentication-policy) or not(./lns/ppp/user-db)" {
+                        error-message "authentication-policy and user-db are mutually exclusive";
+                    }
+                    must "./lns/ppp/keepalive/interval or not(./lns/ppp/keepalive/multiplier)" {
+                        error-message "interval must not be default when multiplier is not default";
+                    }
+                    must "not(./lns/ppp/keepalive/interval) or ./lns/ppp/keepalive/multiplier" {
+                        error-message "multiplier must not be default when interval is not default";
+                    }
+                    must "(not(./lns/ppp/chap-challenge-length/start) or ./lns/ppp/chap-challenge-length/end) and (./lns/ppp/chap-challenge-length/start or not(./lns/ppp/chap-challenge-length/end))" {
+                        error-message "range is incomplete";
+                    }
+                    must "./lns/ppp/chap-challenge-length/start <= ./lns/ppp/chap-challenge-length/end" {
+                        error-message "invalid range";
+                    }
+                    must "../protocol = 'v3' or ./admin-state != 'enable' or ../admin-state != 'enable' or ../../admin-state != 'enable' or ./password or ../password or ../../password or (./challenge != 'true' and (./challenge or (../challenge != 'true' and (../challenge or ../../challenge != 'true'))))" {
+                        error-message "a password must be configured because challenge is true for an enabled tunnel";
+                    }
+                    must "../protocol != 'v3' or not(./challenge)" {
+                        error-message "challenge can not be configured on a v3 tunnel";
+                    }
+                    must "../protocol != 'v3' or not(./password)" {
+                        error-message "password can not be configured on a v3 tunnel";
+                    }
+                    must "./admin-state != 'enable' or ../admin-state != 'enable' or ../../admin-state != 'enable' or ../l2tpv3/password or ../../l2tpv3/password or ((../l2tpv3/nonce-length = 0 or not(../l2tpv3/nonce-length)) and (../l2tpv3/nonce-length or ../../l2tpv3/nonce-length = 0))" {
+                        error-message "a l2tpv3 password must be configured because the nonce-length is not 0 for an enabled tunnel";
+                    }
+                    must "./admin-state != 'enable' or ../admin-state != 'enable' or ../../admin-state != 'enable' or ../protocol = 'v2' or ../../l2tpv3/transport-type/ip != 'false'" {
+                        error-message "a transport type must be configured for an enabled non-v2 tunnel";
+                    }
+                    must "./admin-state != 'enable' or ../admin-state != 'enable' or ../../admin-state != 'enable' or ((./avp-hiding = 'never' or not(./avp-hiding)) and (./avp-hiding or ((../avp-hiding = 'never' or not(../avp-hiding)) and (../avp-hiding or not(../../avp-hiding))))) or ../protocol != 'v2' or ./password or ../password or ../../password" {
+                        error-message "an enabled v2-tunnel requires a password when avp-hiding is not never";
+                    }
+                    must "./admin-state != 'enable' or ../admin-state != 'enable' or ../../admin-state != 'enable' or ((./avp-hiding = 'never' or not(./avp-hiding)) and (./avp-hiding or ((../avp-hiding = 'never' or not(../avp-hiding)) and (../avp-hiding or not(../../avp-hiding))))) or ../protocol = 'v2' or ../l2tpv3/password or ../../l2tpv3/password" {
+                        error-message "an enabled non-v2-tunnel requires a l2tpv3 password when avp-hiding is not never";
+                    }
+                    must "../protocol = 'v2' or not(./radius-accounting-policy)" {
+                        error-message "radius-accounting-policy can only be configured on a v2 tunnel group";
+                    }
                     key "tunnel-name";
                     max-elements 31;
                     description "Enter the tunnel list instance";
@@ -960,6 +1066,15 @@ submodule nokia-conf-router-l2tp {
                         description "L2TP session limit for each tunnel of this router";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                     container failover {
                         when "../../protocol = 'v2'";
                         description "Enter the failover context";
@@ -988,7 +1103,7 @@ submodule nokia-conf-router-l2tp {
                     } // container lac
 
                     container l2tpv3 {
-                        when "../../protocol != 'v2'";
+                        when "not(../../protocol = 'v2')";
                         description "Enter the l2tpv3 context";
 
                         leaf public-tcp-mss-adjust {
@@ -1150,6 +1265,15 @@ submodule nokia-conf-router-l2tp {
                             leaf short-sequence-numbers {
                                 type types-sros:bool-with-inherit;
                                 description "Request a peer to send short sequence numbers";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
                             }
 
                             container endpoint {

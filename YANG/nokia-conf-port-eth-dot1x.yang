@@ -41,7 +41,7 @@ submodule nokia-conf-port-eth-dot1x {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-05-17";
+    revision "2019-10-16";
 
     grouping conf-port-eth-dot1x {
         container dot1x {
@@ -105,9 +105,21 @@ submodule nokia-conf-port-eth-dot1x {
             }
 
             leaf tunneling {
+                must ". != 'true' or ../port-control = 'force-authorized'" {
+                    error-message "port-control must be force-authorized to enable tunneling";
+                }
                 type boolean;
                 default "false";
                 description "Allow tunneling of untagged 802.1x frames received on a port";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
             }
 
             container macsec {
@@ -124,6 +136,15 @@ submodule nokia-conf-port-eth-dot1x {
                         path "../../../../../macsec/mac-policy/mac-policy-id";
                     }
                     description "Configure the policy of mac addresses to be excluded.";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
                 }
 
                 container exclude-protocol {
@@ -191,6 +212,12 @@ submodule nokia-conf-port-eth-dot1x {
                     }
 
                     leaf admin-state {
+                        must ". != 'enable' or ../ca-name" {
+                            error-message "ca-name must be configured";
+                        }
+                        must ". != 'enable' or ../max-peers" {
+                            error-message "max-peers must be configured";
+                        }
                         type types-sros:admin-state;
                         default "disable";
                         description "Administrative state of MACsec on this port";
@@ -205,7 +232,6 @@ submodule nokia-conf-port-eth-dot1x {
 
                     leaf eapol-destination-address {
                         type yang:mac-address;
-                        default "00:00:00:00:00:00";
                         description "Configure the eapol destination address.";
                     }
 
@@ -217,6 +243,15 @@ submodule nokia-conf-port-eth-dot1x {
                         description "Configure the max number of peers supported on this port.";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                     container encap-match {
                         description "Enter the encap-match context";
 
@@ -225,7 +260,8 @@ submodule nokia-conf-port-eth-dot1x {
                             case all-match {
 
                                 leaf all-match {
-                                    type empty;
+                                    type boolean;
+                                    default "true";
                                     description "Configure encap match to all.";
                                 }
 
@@ -233,7 +269,7 @@ submodule nokia-conf-port-eth-dot1x {
                             case untagged {
 
                                 leaf untagged {
-                                    type empty;
+                                    type boolean;
                                     description "Configure encap match to untagged.";
                                 }
 

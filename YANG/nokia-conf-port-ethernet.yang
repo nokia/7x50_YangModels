@@ -48,10 +48,13 @@ submodule nokia-conf-port-ethernet {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-06-21";
+    revision "2019-09-18";
 
     grouping conf-port-ethernet {
         container ethernet {
+            must "not(./crc-monitor/signal-degrade/threshold) or not(./crc-monitor/signal-failure/threshold) or ((./crc-monitor/signal-degrade/threshold != ./crc-monitor/signal-failure/threshold or ./crc-monitor/signal-degrade/multiplier <= ./crc-monitor/signal-failure/multiplier) and (./crc-monitor/signal-degrade/threshold = ./crc-monitor/signal-failure/threshold or ./crc-monitor/signal-degrade/threshold >= ./crc-monitor/signal-failure/threshold))" {
+                error-message "signal-degrade must be less than or equal to signal-failure";
+            }
             description "Enter the ethernet context";
 
             leaf accounting-policy {
@@ -184,7 +187,6 @@ submodule nokia-conf-port-ethernet {
             leaf xgig {
                 type enumeration {
                     enum "lan"                          { value 1; }
-                    enum "wan"                          { value 2; }
                 }
                 description "LAN or WAN mode for the Ethernet port";
             }
@@ -226,6 +228,15 @@ submodule nokia-conf-port-ethernet {
                 }
 
                 leaf up {
+                    must "../units != 'seconds' or . <= 36000" {
+                        error-message "outside of supported range (1-36000 seconds)";
+                    }
+                    must "../units != 'centiseconds' or . >= 10" {
+                        error-message "outside of supported range (10-3600000 centiseconds)";
+                    }
+                    must "../units != 'centiseconds' or (. mod 5) = 0" {
+                        error-message "Interval must be in steps of 5";
+                    }
                     type uint32 {
                         range "1..3600000";
                     }
@@ -233,6 +244,15 @@ submodule nokia-conf-port-ethernet {
                 }
 
                 leaf down {
+                    must "../units != 'seconds' or . <= 36000" {
+                        error-message "outside of supported range (1-36000 seconds)";
+                    }
+                    must "../units != 'centiseconds' or . >= 10" {
+                        error-message "outside of supported range (10-3600000 centiseconds)";
+                    }
+                    must "../units != 'centiseconds' or (. mod 5) = 0" {
+                        error-message "Interval must be in steps of 5";
+                    }
                     type uint32 {
                         range "1..3600000";
                     }
@@ -245,16 +265,38 @@ submodule nokia-conf-port-ethernet {
                 description "Enter the loopback context";
 
                 leaf direction {
+                    must "../../down-when-looped/admin-state != 'enable'" {
+                        error-message "down-when-looped admin-state must be disabled to have loopback direction";
+                    }
+                    must "../../efm-oam/accept-remote-loopback != 'true'" {
+                        error-message "efm-oam accept-remote-loopback must be false to have loopback direction";
+                    }
+                    must ". != 'internal' or ../../efm-oam/admin-state != 'enable'" {
+                        error-message "efm-oam admin-state must be disabled to have loopback direction internal";
+                    }
                     type enumeration {
+                        enum "line"                         { value 1; }
                         enum "internal"                     { value 2; }
                     }
                     description "Direction of loopback.";
                 }
 
                 leaf swap-src-dst-mac {
+                    must ". != 'true' or ../direction" {
+                        error-message "swap-src-dst-mac must be false when direction is none";
+                    }
                     type boolean;
                     default "false";
                     description "Enable/disable swapping of source and destination MAC addresses.";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
                 }
 
             } // container loopback
@@ -377,6 +419,9 @@ submodule nokia-conf-port-ethernet {
                 }
 
                 leaf max-suppress-time {
+                    must ". >= ../half-life" {
+                        error-message "max-suppress-time must be greater than or equal to half-life";
+                    }
                     type uint32 {
                         range "1..43200";
                     }
@@ -386,6 +431,9 @@ submodule nokia-conf-port-ethernet {
                 }
 
                 leaf reuse-threshold {
+                    must ". < ../suppress-threshold" {
+                        error-message "reuse-threshold must be less than suppress-threshold";
+                    }
                     type uint32 {
                         range "1..20000";
                     }
@@ -401,6 +449,15 @@ submodule nokia-conf-port-ethernet {
                     units "penalties";
                     default "2000";
                     description "Penalties threshold above which port-up state is suppressed";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
                 }
 
             } // container dampening
@@ -444,6 +501,11 @@ submodule nokia-conf-port-ethernet {
                 description "Enter the eth-cfm context";
 
                 list mep {
+                    must "./grace/eth-ed/tx-eth-ed != 'true' or ./grace/eth-vsm-grace/tx-eth-vsm-grace != 'true'";
+                    must "./vlan != 'none' or not(./csf)" {
+                        error-message "csf only supported on primary-vlan port and lag MEPs";
+                    }
+                    must "./vlan = 'none' or ./eth-bn/receive != 'true'";
                     key "md-admin-name ma-admin-name mep-id";
                     description "Enter the mep list instance";
 
@@ -751,6 +813,15 @@ submodule nokia-conf-port-ethernet {
                     description "Maximum rate to override the QoS scheduler policy";
                 }
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
                 list group {
                     key "group-id";
                     description "Enter the group list instance";
@@ -766,6 +837,15 @@ submodule nokia-conf-port-ethernet {
                         type types-qos:hs-pir-rate-override;
                         units "megabps";
                         description "Ingress and egress HSMDA scheduler override";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                 } // list group
@@ -792,6 +872,15 @@ submodule nokia-conf-port-ethernet {
                             range "1..100";
                         }
                         description "Weight that the HSMDA scheduler policy applies to this policy";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                 } // list scheduling-class
@@ -847,6 +936,15 @@ submodule nokia-conf-port-ethernet {
                     description "Configure the polling verification timer for UNI-N.";
                 }
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
             } // container elmi
 
             container ssm {
@@ -872,9 +970,21 @@ submodule nokia-conf-port-ethernet {
                     description "Transmit value of QL-DUS/QL-DNU in SSM messaging channel";
                 }
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
             } // container ssm
 
             container symbol-monitor {
+                must "not(./signal-degrade/threshold) or not(./signal-failure/threshold) or ((./signal-degrade/threshold != ./signal-failure/threshold or ./signal-degrade/multiplier <= ./signal-failure/multiplier) and (./signal-degrade/threshold = ./signal-failure/threshold or ./signal-degrade/threshold >= ./signal-failure/threshold))" {
+                    error-message "signal-degrade must be less than or equal to signal-failure";
+                }
                 description "Enter the symbol-monitor context";
 
                 leaf admin-state {
@@ -890,6 +1000,15 @@ submodule nokia-conf-port-ethernet {
                     units "seconds";
                     default "10";
                     description "Window size of the monitor";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
                 }
 
                 container signal-degrade {

@@ -41,10 +41,16 @@ submodule nokia-conf-router-bgp {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-07-19";
+    revision "2019-10-18";
 
     grouping conf-router-bgp {
         container bgp {
+            must "./route-table-install != 'true' or ./next-hop-resolution/labeled-routes/rr-use-route-table != 'true'" {
+                error-message "route-table-install and rr-use-route-table cannot both be set to true";
+            }
+            must "../router-name = 'Base'" {
+                error-message "Protocol only supported in router Base";
+            }
             presence "Enables bgp functionality on this router";
             description "Enter the bgp context";
 
@@ -101,6 +107,12 @@ submodule nokia-conf-router-bgp {
                 description "Threshold for the global ASN in a received AS path";
             }
 
+            leaf selective-label-ipv4-install {
+                type boolean;
+                default "false";
+                description "Enable/Disable selective download for bgp label-ipv4 routes.";
+            }
+
             leaf min-route-advertisement {
                 type int16 {
                     range "1..255";
@@ -121,6 +133,12 @@ submodule nokia-conf-router-bgp {
                 }
                 default "170";
                 description "Route preference for routes learned from all peers";
+            }
+
+            leaf block-prefix-sid {
+                type boolean;
+                default "false";
+                description "Enables or disables the prefix SID attribute";
             }
 
             leaf multihop {
@@ -358,6 +376,9 @@ submodule nokia-conf-router-bgp {
                 }
 
                 leaf minimum-hold-time {
+                    must ". <= ../seconds" {
+                        error-message "minimum hold-time should be less than actual hold-time";
+                    }
                     type int32 {
                         range "0|3..65535";
                     }
@@ -496,6 +517,12 @@ submodule nokia-conf-router-bgp {
                     description "Add support for the SR-policy-IPv4 family";
                 }
 
+                leaf sr-policy-ipv6 {
+                    type boolean;
+                    default "false";
+                    description "Enable/disable family type sr-policy-ipv6.";
+                }
+
             } // container family
 
             container send-default {
@@ -514,6 +541,9 @@ submodule nokia-conf-router-bgp {
                 }
 
                 leaf export-policy {
+                    must "../ipv4 != 'false' or ../ipv6 != 'false'" {
+                        error-message "export-policy cannot be set without either ipv4/ipv6";
+                    }
                     type types-sros:named-item-64;
                     description "Export policy name";
                 }
@@ -578,6 +608,12 @@ submodule nokia-conf-router-bgp {
                     description "Keep private ASN if AS-PATH contains eBGP peer's ASN";
                 }
 
+                leaf replace {
+                    type boolean;
+                    default "false";
+                    description "Replace private ASN with global ASN before advertising";
+                }
+
             } // container remove-private
 
             container cluster {
@@ -589,13 +625,19 @@ submodule nokia-conf-router-bgp {
                 }
 
                 leaf orr-location {
+                    must "../cluster-id" {
+                        error-message "configure cluster before specifying orr-location";
+                    }
                     type uint32 {
-                        range "1..16";
+                        range "1..255";
                     }
                     description "Optimal route reflection location for the cluster";
                 }
 
                 leaf allow-local-fallback {
+                    must ". = 'false' or ../orr-location" {
+                        error-message "specify orr-location before enabling allow-local-fallback";
+                    }
                     type boolean;
                     default "false";
                     description "Allow fallback to RR topology location";
@@ -631,12 +673,18 @@ submodule nokia-conf-router-bgp {
                 }
 
                 leaf private {
+                    must ". = 'false' or ../as-number" {
+                        error-message "private cannot be set without enabling local-as";
+                    }
                     type boolean;
                     default "false";
                     description "Hide the local ASN in sent paths learned from peering";
                 }
 
                 leaf prepend-global-as {
+                    must ". = 'true' or ../as-number" {
+                        error-message "prepend-global-as cannot be set without enabling local-as";
+                    }
                     type boolean;
                     default "true";
                     description "Prepend global AS when advertising routes to BGP peer";
@@ -1100,6 +1148,15 @@ submodule nokia-conf-router-bgp {
                         description "Maximum wait time before advertising routes";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                 } // list family
 
             } // container convergence
@@ -1307,6 +1364,15 @@ submodule nokia-conf-router-bgp {
                     description "BGP import policy name";
                 }
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
             } // container import
 
             container export {
@@ -1324,6 +1390,15 @@ submodule nokia-conf-router-bgp {
                     max-elements 15;
                     ordered-by user;
                     description "Export policy name";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
                 }
 
             } // container export
@@ -1461,6 +1536,7 @@ submodule nokia-conf-router-bgp {
                     }
 
                     leaf without-no-export {
+                        must "../advertise-stale-to-all-neighbors != 'false' or . = 'false'";
                         type boolean;
                         default "false";
                         description "Advertise LLGR stale routes to non-LLGR peers";
@@ -1488,6 +1564,15 @@ submodule nokia-conf-router-bgp {
                                 range "0..16777215";
                             }
                             description "Locally-configured stale routes override time";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
                         }
 
                     } // list family
@@ -1534,7 +1619,7 @@ submodule nokia-conf-router-bgp {
 
                     leaf location-id {
                         type uint32 {
-                            range "1..16";
+                            range "1..255";
                         }
                         description "Optimal route reflection location ID";
                     }
@@ -1569,6 +1654,15 @@ submodule nokia-conf-router-bgp {
                         description "Tertiary IPv6 address of the reference location for ORR";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                 } // list location
 
             } // container optimal-route-reflection
@@ -1586,6 +1680,12 @@ submodule nokia-conf-router-bgp {
                     type boolean;
                     default "false";
                     description "Use weighted ECMP for next-hop tunnel selection for 6PE";
+                }
+
+                leaf allow-unresolved-leaking {
+                    type boolean;
+                    default "false";
+                    description "If allow-unresolved-leaking is enabled then BGP routes with an unresolved next-hop can be leaked to another BGP routing instance.";
                 }
 
                 leaf policy {
@@ -1628,6 +1728,15 @@ submodule nokia-conf-router-bgp {
                             type boolean;
                             default "false";
                             description "Consider only LSPs with an admin-tag for next hop";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
                         }
 
                         container resolution-filter {
@@ -1744,6 +1853,15 @@ submodule nokia-conf-router-bgp {
                                 type boolean;
                                 default "false";
                                 description "Consider only LSPs with an admin-tag for next hop";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
                             }
 
                             container resolution-filter {
@@ -1896,6 +2014,15 @@ submodule nokia-conf-router-bgp {
                         description "Ignore differences in the next-hop cost for multipath";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                 } // list family
 
             } // container multipath
@@ -1951,6 +2078,9 @@ submodule nokia-conf-router-bgp {
                 description "Enter the monitor context";
 
                 leaf all-stations {
+                    must ". != 'true' or not(../station)" {
+                        error-message "all-stations must not be set when a station exists in the list";
+                    }
                     type boolean;
                     default "false";
                     description "Send BMP messages to all configured stations";
@@ -1960,6 +2090,15 @@ submodule nokia-conf-router-bgp {
                     type types-sros:admin-state;
                     default "disable";
                     description "Administrative state of BMP monitoring";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
                 }
 
                 container route-monitoring {
@@ -2009,6 +2148,15 @@ submodule nokia-conf-router-bgp {
                             description "Name of policy that controls route importation into RIB";
                         }
 
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
                     } // container route-table-import
 
                     container leak-import {
@@ -2024,6 +2172,15 @@ submodule nokia-conf-router-bgp {
                             max-elements 15;
                             ordered-by user;
                             description "Leak import policy name";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
                         }
 
                     } // container leak-import
@@ -2041,6 +2198,15 @@ submodule nokia-conf-router-bgp {
                             description "Name of policy that controls route importation into RIB";
                         }
 
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
                     } // container route-table-import
 
                     container leak-import {
@@ -2056,6 +2222,15 @@ submodule nokia-conf-router-bgp {
                             max-elements 15;
                             ordered-by user;
                             description "Leak import policy name";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
                         }
 
                     } // container leak-import
@@ -2073,6 +2248,15 @@ submodule nokia-conf-router-bgp {
                             description "Name of policy that controls route importation into RIB";
                         }
 
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
                     } // container route-table-import
 
                     container leak-import {
@@ -2090,6 +2274,15 @@ submodule nokia-conf-router-bgp {
                             description "Leak import policy name";
                         }
 
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
                     } // container leak-import
 
                 } // container label-ipv4
@@ -2105,13 +2298,89 @@ submodule nokia-conf-router-bgp {
                             description "Name of policy that controls route importation into RIB";
                         }
 
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
                     } // container route-table-import
 
                 } // container label-ipv6
 
             } // container rib-management
 
+            container segment-routing {
+                description "Enter the segment-routing context";
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administratively enable or disable segment-routing";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                container prefix-sid-range {
+                    presence "Configure prefix-sid-range";
+                    description "Enter the prefix-sid-range context";
+
+                    choice type {
+                        case global {
+
+                            leaf global {
+                                type empty;
+                                description "Use global SR range";
+                            }
+
+                        }
+                        case local {
+
+                            leaf start-label {
+                                type uint32 {
+                                    range "0..524287";
+                                }
+                                sros-ext:auto-restart-to-modify;
+                                default "0";
+                                description "Value for the local label starting offset";
+                            }
+
+                            leaf max-index {
+                                type uint32 {
+                                    range "0..524287";
+                                }
+                                sros-ext:auto-restart-to-modify;
+                                default "1";
+                                description "Maximum local SID index";
+                            }
+
+                        }
+                    }
+                } // container prefix-sid-range
+
+            } // container segment-routing
+
             list group {
+                must "./static-group != 'false'";
+                must "not(./extended-nh-encoding) or ./extended-nh-encoding/vpn-ipv4 != 'false' or ./extended-nh-encoding/label-ipv4 != 'false' or ./extended-nh-encoding/ipv4 != 'false'" {
+                    error-message "All the families cannot be set to false";
+                }
+                must "not(./advertise-ipv6-next-hops) or ./advertise-ipv6-next-hops/vpn-ipv6 != 'false' or ./advertise-ipv6-next-hops/label-ipv6 != 'false' or ./advertise-ipv6-next-hops/evpn != 'false' or ./advertise-ipv6-next-hops/vpn-ipv4 != 'false' or ./advertise-ipv6-next-hops/label-ipv4 != 'false' or ./advertise-ipv6-next-hops/ipv4 != 'false'" {
+                    error-message "All the families cannot be set to false";
+                }
+                must "./send-default/ipv4 != 'false' or not(./send-default) or ./send-default/ipv6 != 'false'" {
+                    error-message "All the send-default families cannot be set to false";
+                }
                 key "group-name";
                 description "Enter the group list instance";
 
@@ -2152,6 +2421,9 @@ submodule nokia-conf-router-bgp {
                 }
 
                 leaf damping {
+                    must ". != 'false'" {
+                        error-message "damping is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Use BGP route damping to reduce route flap";
                 }
@@ -2175,6 +2447,14 @@ submodule nokia-conf-router-bgp {
                     description "Threshold for the global ASN in a received AS path";
                 }
 
+                leaf selective-label-ipv4-install {
+                    must ". != 'false'" {
+                        error-message "selective-label-ipv4-install is not allowed to be set to false";
+                    }
+                    type boolean;
+                    description "Enable/Disable selective download for bgp label-ipv4 routes.";
+                }
+
                 leaf min-route-advertisement {
                     type int16 {
                         range "1..255";
@@ -2183,6 +2463,9 @@ submodule nokia-conf-router-bgp {
                 }
 
                 leaf aggregator-id-zero {
+                    must ". != 'false'" {
+                        error-message "aggregator-id-zero is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Set router ID in the BGP AGGREGATOR attribute to zero";
                 }
@@ -2192,6 +2475,12 @@ submodule nokia-conf-router-bgp {
                         range "1..255";
                     }
                     description "Route preference for routes learned from all peers";
+                }
+
+                leaf block-prefix-sid {
+                    type boolean;
+                    default "false";
+                    description "Enables or disables the prefix SID attribute.";
                 }
 
                 leaf multihop {
@@ -2219,16 +2508,25 @@ submodule nokia-conf-router-bgp {
                 }
 
                 leaf client-reflect {
+                    must ". != 'true'" {
+                        error-message "client-reflect is not allowed to be set to true";
+                    }
                     type boolean;
                     description "Allow cluster RR to advertise routes to its clients";
                 }
 
                 leaf vpn-apply-export {
+                    must ". != 'false'" {
+                        error-message "vpn-apply-export is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Apply base-instance BGP export policies to VPN routes";
                 }
 
                 leaf vpn-apply-import {
+                    must ". != 'false'" {
+                        error-message "vpn-apply-import is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Apply base-instance BGP import policies to VPN routes";
                 }
@@ -2240,11 +2538,17 @@ submodule nokia-conf-router-bgp {
                 }
 
                 leaf asn-4-byte {
+                    must ". != 'true'" {
+                        error-message "asn-4-byte is not allowed to be set to true";
+                    }
                     type boolean;
                     description "Advertise the use of 4-byte ASNs";
                 }
 
                 leaf path-mtu-discovery {
+                    must ". != 'false'" {
+                        error-message "path-mtu-discovery is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Enable Path MTU Discovery";
                 }
@@ -2281,11 +2585,17 @@ submodule nokia-conf-router-bgp {
                 }
 
                 leaf enforce-first-as {
+                    must ". != 'false'" {
+                        error-message "enforce-first-as is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Enforce the configured peer AS value in received routes";
                 }
 
                 leaf initial-send-delay-zero {
+                    must ". != 'false'" {
+                        error-message "initial-send-delay-zero is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Send BGP updates as soon as the session comes up";
                 }
@@ -2315,6 +2625,9 @@ submodule nokia-conf-router-bgp {
                 }
 
                 leaf advertise-inactive {
+                    must ". != 'false'" {
+                        error-message "advertise-inactive is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Advertise an inactive BGP route to peers";
                 }
@@ -2327,16 +2640,25 @@ submodule nokia-conf-router-bgp {
                 }
 
                 leaf bfd-liveness {
+                    must ". != 'false'" {
+                        error-message "bfd-liveness is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Enable BFD";
                 }
 
                 leaf fast-external-failover {
+                    must ". != 'true'" {
+                        error-message "fast-external-failover is not allowed to be set to true";
+                    }
                     type boolean;
                     description "Drop external BGP session immediately when link fails";
                 }
 
                 leaf peer-ip-tracking {
+                    must ". != 'false'" {
+                        error-message "peer-ip-tracking is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Enable BGP peer tracking";
                 }
@@ -2349,11 +2671,17 @@ submodule nokia-conf-router-bgp {
                 }
 
                 leaf split-horizon {
+                    must ". != 'false'" {
+                        error-message "split-horizon is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Prevent routes being reflected back to best-route peer";
                 }
 
                 leaf third-party-nexthop {
+                    must ". != 'false'" {
+                        error-message "third-party-nexthop is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Apply third-party next-hop processing to EBGP peers";
                 }
@@ -2396,6 +2724,12 @@ submodule nokia-conf-router-bgp {
                     }
 
                     leaf minimum-hold-time {
+                        must ". = 0 or ../seconds" {
+                            error-message "hold-times-seconds should also be configured";
+                        }
+                        must ". <= ../seconds" {
+                            error-message "minimum hold-time should be less than actual hold-time";
+                        }
                         type int32 {
                             range "0|3..65536";
                         }
@@ -2535,6 +2869,12 @@ submodule nokia-conf-router-bgp {
                         description "Add support for the SR-policy-IPv4 family";
                     }
 
+                    leaf sr-policy-ipv6 {
+                        type boolean;
+                        default "false";
+                        description "Enable/disable family type sr-policy-ipv6.";
+                    }
+
                 } // container family
 
                 container send-default {
@@ -2554,6 +2894,9 @@ submodule nokia-conf-router-bgp {
                     }
 
                     leaf export-policy {
+                        must "../ipv4 != 'false' or ../ipv6 != 'false'" {
+                            error-message "export-policy cannot be set without either ipv4/ipv6";
+                        }
                         type types-sros:named-item-64;
                         description "Export policy name";
                     }
@@ -2614,6 +2957,12 @@ submodule nokia-conf-router-bgp {
                         description "Keep private ASN if it is the same as the BGP peer ASN";
                     }
 
+                    leaf replace {
+                        type boolean;
+                        default "false";
+                        description "Replace private ASN with global ASN before advertising";
+                    }
+
                 } // container remove-private
 
                 container cluster {
@@ -2625,13 +2974,19 @@ submodule nokia-conf-router-bgp {
                     }
 
                     leaf orr-location {
+                        must "../cluster-id" {
+                            error-message "configure cluster before specifying orr-location";
+                        }
                         type uint32 {
-                            range "1..16";
+                            range "1..255";
                         }
                         description "Optimal route reflection location for the cluster";
                     }
 
                     leaf allow-local-fallback {
+                        must ". = 'false' or ../orr-location" {
+                            error-message "specify orr-location before enabling allow-local-fallback";
+                        }
                         type boolean;
                         default "false";
                         description "Allow fallback to RR topology location";
@@ -2668,12 +3023,18 @@ submodule nokia-conf-router-bgp {
                     }
 
                     leaf private {
+                        must ". = 'false' or ../as-number" {
+                            error-message "private cannot be set without enabling local-as";
+                        }
                         type boolean;
                         default "false";
                         description "Hide the local ASN in sent paths learned from peering";
                     }
 
                     leaf prepend-global-as {
+                        must ". = 'true' or ../as-number" {
+                            error-message "prepend-global-as cannot be set without enabling local-as";
+                        }
                         type boolean;
                         default "true";
                         description "Prepend global ASN when advertising routes to BGP peer";
@@ -2900,16 +3261,25 @@ submodule nokia-conf-router-bgp {
                     description "Enter the send-communities context";
 
                     leaf standard {
+                        must ". != 'true'" {
+                            error-message "send-communities/standard is not allowed to be set to true";
+                        }
                         type boolean;
                         description "Advertise the Communities attribute to peers";
                     }
 
                     leaf extended {
+                        must ". != 'true'" {
+                            error-message "send-communities/extended is not allowed to be set to true";
+                        }
                         type boolean;
                         description "Advertise the Extended Communities attribute to peers";
                     }
 
                     leaf large {
+                        must ". != 'true'" {
+                            error-message "send-communities/large is not allowed to be set to true";
+                        }
                         type boolean;
                         description "Advertise the Large Communities attribute to peers";
                     }
@@ -2920,6 +3290,9 @@ submodule nokia-conf-router-bgp {
                     description "Enter the error-handling context";
 
                     leaf update-fault-tolerance {
+                        must ". != 'false'" {
+                            error-message "error-handling is not allowed to be set to false";
+                        }
                         type boolean;
                         description "Tolerate non-critical errors in UPDATE messages";
                     }
@@ -3172,6 +3545,15 @@ submodule nokia-conf-router-bgp {
                         description "BGP import policy name";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                 } // container import
 
                 container export {
@@ -3189,6 +3571,15 @@ submodule nokia-conf-router-bgp {
                         max-elements 15;
                         ordered-by user;
                         description "BGP export policy name";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                 } // container export
@@ -3330,6 +3721,7 @@ submodule nokia-conf-router-bgp {
                         }
 
                         leaf without-no-export {
+                            must "../advertise-stale-to-all-neighbors != 'false' or . = 'false'";
                             type boolean;
                             default "false";
                             description "Advertise LLGR stale routes to non-LLGR peers";
@@ -3360,6 +3752,15 @@ submodule nokia-conf-router-bgp {
                                 description "Locally-configured stale routes override time";
                             }
 
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
                         } // list family
 
                     } // container long-lived
@@ -3375,6 +3776,9 @@ submodule nokia-conf-router-bgp {
                         description "Enter the extended-community context";
 
                         leaf accept-orf {
+                            must ". != 'false'" {
+                                error-message "accept-orf is not allowed to be set to false";
+                            }
                             type boolean;
                             description "Negotiate with peer to accept BGP ORF filters";
                         }
@@ -3401,11 +3805,14 @@ submodule nokia-conf-router-bgp {
                 } // container outbound-route-filtering
 
                 list prefix-limit {
+                    must "./log-only = 'false' or not(./idle-timeout)" {
+                        error-message "cannot set both log-only and idle-timeout";
+                    }
                     key "family";
                     description "Enter the prefix-limit list instance";
 
                     leaf family {
-                        type types-bgp:ip-family-identifier-prefix-lim;
+                        type types-bgp:ip-family-identifier;
                         description "Address family to which the limit applies";
                     }
 
@@ -3479,6 +3886,15 @@ submodule nokia-conf-router-bgp {
                                 description "Allowed peer AS range";
                             }
 
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
                         } // list prefix
 
                     } // container match
@@ -3490,6 +3906,9 @@ submodule nokia-conf-router-bgp {
                     description "Enter the monitor context";
 
                     leaf all-stations {
+                        must ". != 'true' or not(../station)" {
+                            error-message "all-stations must not be set when a station exists in the list";
+                        }
                         type boolean;
                         default "false";
                         description "Send BMP messages to all configured stations";
@@ -3499,6 +3918,15 @@ submodule nokia-conf-router-bgp {
                         type types-sros:admin-state;
                         default "disable";
                         description "Administrative state of BMP monitoring";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                     container route-monitoring {
@@ -3537,6 +3965,27 @@ submodule nokia-conf-router-bgp {
             } // list group
 
             list neighbor {
+                must "not(./extended-nh-encoding) or ./extended-nh-encoding/vpn-ipv4 != 'false' or ./extended-nh-encoding/label-ipv4 != 'false' or ./extended-nh-encoding/ipv4 != 'false'" {
+                    error-message "All the families cannot be set to false";
+                }
+                must "not(./advertise-ipv6-next-hops) or ./advertise-ipv6-next-hops/vpn-ipv6 != 'false' or ./advertise-ipv6-next-hops/label-ipv6 != 'false' or ./advertise-ipv6-next-hops/evpn != 'false' or ./advertise-ipv6-next-hops/vpn-ipv4 != 'false' or ./advertise-ipv6-next-hops/label-ipv4 != 'false' or ./advertise-ipv6-next-hops/ipv4 != 'false'" {
+                    error-message "All the families cannot be set to false";
+                }
+                must "./link-bandwidth/accept-from-ebgp/ipv4 != 'false' or not(./link-bandwidth/accept-from-ebgp) or ./link-bandwidth/accept-from-ebgp/ipv6 != 'false' or ./link-bandwidth/accept-from-ebgp/vpn-ipv4 != 'false' or ./link-bandwidth/accept-from-ebgp/vpn-ipv6 != 'false' or ./link-bandwidth/accept-from-ebgp/label-ipv4 != 'false' or ./link-bandwidth/accept-from-ebgp/label-ipv6 != 'false'" {
+                    error-message "All the accept-from-ebgp families cannot be set to false";
+                }
+                must "./link-bandwidth/add-to-received-ebgp/ipv4 != 'false' or not(./link-bandwidth/add-to-received-ebgp) or ./link-bandwidth/add-to-received-ebgp/ipv6 != 'false' or ./link-bandwidth/add-to-received-ebgp/vpn-ipv4 != 'false' or ./link-bandwidth/add-to-received-ebgp/vpn-ipv6 != 'false' or ./link-bandwidth/add-to-received-ebgp/label-ipv4 != 'false' or ./link-bandwidth/add-to-received-ebgp/label-ipv6 != 'false'" {
+                    error-message "All the add-to-received-ebgp families cannot be set to false";
+                }
+                must "./link-bandwidth/aggregate-used-paths/ipv4 != 'false' or not(./link-bandwidth/aggregate-used-paths) or ./link-bandwidth/aggregate-used-paths/ipv6 != 'false' or ./link-bandwidth/aggregate-used-paths/vpn-ipv4 != 'false' or ./link-bandwidth/aggregate-used-paths/vpn-ipv6 != 'false' or ./link-bandwidth/aggregate-used-paths/label-ipv4 != 'false' or ./link-bandwidth/aggregate-used-paths/label-ipv6 != 'false'" {
+                    error-message "All the aggregate-used-paths families cannot be set to false";
+                }
+                must "./link-bandwidth/send-to-ebgp/ipv4 != 'false' or not(./link-bandwidth/send-to-ebgp) or ./link-bandwidth/send-to-ebgp/ipv6 != 'false' or ./link-bandwidth/send-to-ebgp/vpn-ipv4 != 'false' or ./link-bandwidth/send-to-ebgp/vpn-ipv6 != 'false' or ./link-bandwidth/send-to-ebgp/label-ipv4 != 'false' or ./link-bandwidth/send-to-ebgp/label-ipv6 != 'false'" {
+                    error-message "All the send-to-ebgp families cannot be set to false";
+                }
+                must "./send-default/ipv4 != 'false' or not(./send-default) or ./send-default/ipv6 != 'false'" {
+                    error-message "All the send-default families cannot be set to false";
+                }
                 key "ip-address";
                 description "Enter the neighbor list instance";
 
@@ -3559,16 +4008,25 @@ submodule nokia-conf-router-bgp {
                 }
 
                 leaf default-route-target {
+                    must ". != 'false'" {
+                        error-message "default-route-target is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Send default RTC route (zero prefix length) to peers";
                 }
 
                 leaf aigp {
+                    must ". != 'false'" {
+                        error-message "aigp is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Add AIGP attribute to advertised routes";
                 }
 
                 leaf advertise-inactive {
+                    must ". != 'false'" {
+                        error-message "advertise-inactive is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Advertise an inactive BGP route to peers";
                 }
@@ -3581,26 +4039,41 @@ submodule nokia-conf-router-bgp {
                 }
 
                 leaf bfd-liveness {
+                    must ". != 'false'" {
+                        error-message "bfd-liveness is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Enable BFD";
                 }
 
                 leaf fast-external-failover {
+                    must ". != 'true'" {
+                        error-message "fast-external-failover is not allowed to be set to true";
+                    }
                     type boolean;
                     description "Drop external BGP session immediately when link fails";
                 }
 
                 leaf peer-ip-tracking {
+                    must ". != 'false'" {
+                        error-message "peer-ip-tracking is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Enable BGP peer tracking";
                 }
 
                 leaf split-horizon {
+                    must ". != 'false'" {
+                        error-message "split-horizon is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Prevent routes being reflected back to best-route peer";
                 }
 
                 leaf third-party-nexthop {
+                    must ". != 'false'" {
+                        error-message "third-party-nexthop is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Apply third-party next-hop processing to EBGP peers";
                 }
@@ -3618,6 +4091,9 @@ submodule nokia-conf-router-bgp {
                 }
 
                 leaf multipath-eligible {
+                    must ". != 'false'" {
+                        error-message "multipath-eligible is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Allow routes from this peer in multipath eligibility";
                 }
@@ -3663,6 +4139,9 @@ submodule nokia-conf-router-bgp {
                 }
 
                 leaf damping {
+                    must ". != 'false'" {
+                        error-message "damping is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Use BGP route damping to reduce route flap";
                 }
@@ -3686,6 +4165,14 @@ submodule nokia-conf-router-bgp {
                     description "Threshold for the global ASN in a received AS path";
                 }
 
+                leaf selective-label-ipv4-install {
+                    must ". != 'false'" {
+                        error-message "selective-label-ipv4-install is not allowed to be set to false";
+                    }
+                    type boolean;
+                    description "Enable/Disable selective download for bgp label-ipv4 routes.";
+                }
+
                 leaf min-route-advertisement {
                     type int16 {
                         range "1..255";
@@ -3694,6 +4181,9 @@ submodule nokia-conf-router-bgp {
                 }
 
                 leaf aggregator-id-zero {
+                    must ". != 'false'" {
+                        error-message "aggregator-id-zero is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Set router ID in the BGP AGGREGATOR attribute to zero";
                 }
@@ -3703,6 +4193,12 @@ submodule nokia-conf-router-bgp {
                         range "1..255";
                     }
                     description "Route preference for routes learned from all peers";
+                }
+
+                leaf block-prefix-sid {
+                    type boolean;
+                    default "false";
+                    description "Enables or disables the prefix SID attribute.";
                 }
 
                 leaf multihop {
@@ -3730,31 +4226,49 @@ submodule nokia-conf-router-bgp {
                 }
 
                 leaf client-reflect {
+                    must ". != 'true'" {
+                        error-message "client-reflect is not allowed to be set to true";
+                    }
                     type boolean;
                     description "Allow cluster RR to advertise routes to its clients";
                 }
 
                 leaf vpn-apply-export {
+                    must ". != 'false'" {
+                        error-message "vpn-apply-export is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Apply base-instance BGP export policies to VPN routes";
                 }
 
                 leaf vpn-apply-import {
+                    must ". != 'false'" {
+                        error-message "vpn-apply-import is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Apply base-instance BGP import policies to VPN routes";
                 }
 
                 leaf as-override {
+                    must ". != 'false'" {
+                        error-message "as-override is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Replace the peer's ASN with the local ASN in AS Path";
                 }
 
                 leaf asn-4-byte {
+                    must ". != 'true'" {
+                        error-message "asn-4-byte is not allowed to be set to true";
+                    }
                     type boolean;
                     description "Advertise the use of 4-byte ASNs";
                 }
 
                 leaf path-mtu-discovery {
+                    must ". != 'false'" {
+                        error-message "path-mtu-discovery is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Enable path MTU discovery";
                 }
@@ -3771,11 +4285,17 @@ submodule nokia-conf-router-bgp {
                 }
 
                 leaf next-hop-self {
+                    must ". != 'false'" {
+                        error-message "next-hop-self is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Advertise routes with local address as next-hop address";
                 }
 
                 leaf passive {
+                    must ". != 'false'" {
+                        error-message "passive is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Use passive mode for BGP communication";
                 }
@@ -3793,16 +4313,25 @@ submodule nokia-conf-router-bgp {
                 }
 
                 leaf capability-negotiation {
+                    must ". != 'true'" {
+                        error-message "capability-negotiation is not allowed to be set to true";
+                    }
                     type boolean;
                     description "Enable capability negotiation";
                 }
 
                 leaf enforce-first-as {
+                    must ". != 'false'" {
+                        error-message "enforce-first-as is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Enforce the configured peer AS value in received routes";
                 }
 
                 leaf initial-send-delay-zero {
+                    must ". != 'false'" {
+                        error-message "initial-send-delay-zero is not allowed to be set to false";
+                    }
                     type boolean;
                     description "Send BGP updates as soon as the session comes up";
                 }
@@ -4051,16 +4580,25 @@ submodule nokia-conf-router-bgp {
                     description "Enter the send-communities context";
 
                     leaf standard {
+                        must ". != 'true'" {
+                            error-message "send-communities/standard is not allowed to be set to true";
+                        }
                         type boolean;
                         description "Advertise the Communities attribute to peers";
                     }
 
                     leaf extended {
+                        must ". != 'true'" {
+                            error-message "send-communities/extended is not allowed to be set to true";
+                        }
                         type boolean;
                         description "Advertise the Extended Communities attribute to peers";
                     }
 
                     leaf large {
+                        must ". != 'true'" {
+                            error-message "send-communities/large is not allowed to be set to true";
+                        }
                         type boolean;
                         description "Advertise the Large Communities attribute to peers";
                     }
@@ -4071,6 +4609,9 @@ submodule nokia-conf-router-bgp {
                     description "Enter the error-handling context";
 
                     leaf update-fault-tolerance {
+                        must ". != 'false'" {
+                            error-message "error-handling is not allowed to be set to false";
+                        }
                         type boolean;
                         description "Tolerate non-critical errors in UPDATE messages";
                     }
@@ -4131,6 +4672,12 @@ submodule nokia-conf-router-bgp {
                     }
 
                     leaf minimum-hold-time {
+                        must ". = 0 or ../seconds" {
+                            error-message "hold-times-seconds should also be configured";
+                        }
+                        must ". <= ../seconds" {
+                            error-message "minimum hold-time should be less than actual hold-time";
+                        }
                         type int32 {
                             range "0|3..65536";
                         }
@@ -4270,6 +4817,12 @@ submodule nokia-conf-router-bgp {
                         description "Add support for the SR-policy-IPv4 family";
                     }
 
+                    leaf sr-policy-ipv6 {
+                        type boolean;
+                        default "false";
+                        description "Enable/disable family type sr-policy-ipv6.";
+                    }
+
                 } // container family
 
                 container send-default {
@@ -4289,6 +4842,9 @@ submodule nokia-conf-router-bgp {
                     }
 
                     leaf export-policy {
+                        must "../ipv4 != 'false' or ../ipv6 != 'false'" {
+                            error-message "export-policy cannot be set without either ipv4/ipv6";
+                        }
                         type types-sros:named-item-64;
                         description "Export policy name";
                     }
@@ -4349,6 +4905,12 @@ submodule nokia-conf-router-bgp {
                         description "Keep private ASN if it is the same as the BGP peer ASN";
                     }
 
+                    leaf replace {
+                        type boolean;
+                        default "false";
+                        description "Replace private ASN with global ASN before advertising";
+                    }
+
                 } // container remove-private
 
                 container cluster {
@@ -4360,13 +4922,19 @@ submodule nokia-conf-router-bgp {
                     }
 
                     leaf orr-location {
+                        must "../cluster-id" {
+                            error-message "configure cluster before specifying orr-location";
+                        }
                         type uint32 {
-                            range "1..16";
+                            range "1..255";
                         }
                         description "Optimal route reflection location for cluster ID";
                     }
 
                     leaf allow-local-fallback {
+                        must ". = 'false' or ../orr-location" {
+                            error-message "specify orr-location before enabling allow-local-fallback";
+                        }
                         type boolean;
                         default "false";
                         description "Allow fallback to RR topology";
@@ -4403,12 +4971,18 @@ submodule nokia-conf-router-bgp {
                     }
 
                     leaf private {
+                        must ". = 'false' or ../as-number" {
+                            error-message "private cannot be set without enabling local-as";
+                        }
                         type boolean;
                         default "false";
                         description "Hide the local ASN in sent paths learned from peering";
                     }
 
                     leaf prepend-global-as {
+                        must ". = 'true' or ../as-number" {
+                            error-message "prepend-global-as cannot be set without enabling local-as";
+                        }
                         type boolean;
                         default "true";
                         description "Prepend global ASN when advertising routes to BGP peer";
@@ -4619,6 +5193,15 @@ submodule nokia-conf-router-bgp {
                         description "Names of the BGP import policies";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                 } // container import
 
                 container export {
@@ -4636,6 +5219,15 @@ submodule nokia-conf-router-bgp {
                         max-elements 15;
                         ordered-by user;
                         description "BGP export policy name";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                 } // container export
@@ -4777,6 +5369,7 @@ submodule nokia-conf-router-bgp {
                         }
 
                         leaf without-no-export {
+                            must "../advertise-stale-to-all-neighbors != 'false' or . = 'false'";
                             type boolean;
                             default "false";
                             description "Advertise LLGR stale routes to non-LLGR peers";
@@ -4807,6 +5400,15 @@ submodule nokia-conf-router-bgp {
                                 description "Locally-configured stale routes override time";
                             }
 
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
                         } // list family
 
                     } // container long-lived
@@ -4822,6 +5424,9 @@ submodule nokia-conf-router-bgp {
                         description "Enter the extended-community context";
 
                         leaf accept-orf {
+                            must ". != 'false'" {
+                                error-message "accept-orf is not allowed to be set to false";
+                            }
                             type boolean;
                             description "Negotiate with peer to accept BGP ORF filters";
                         }
@@ -4852,6 +5457,9 @@ submodule nokia-conf-router-bgp {
                     description "Enter the monitor context";
 
                     leaf all-stations {
+                        must ". != 'true' or not(../station)" {
+                            error-message "all-stations must not be set when a station exists in the list";
+                        }
                         type boolean;
                         default "false";
                         description "Send BMP messages to all configured stations";
@@ -4861,6 +5469,15 @@ submodule nokia-conf-router-bgp {
                         type types-sros:admin-state;
                         default "disable";
                         description "Administrative state of BMP monitoring";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                     container route-monitoring {
@@ -4897,11 +5514,14 @@ submodule nokia-conf-router-bgp {
                 } // container monitor
 
                 list prefix-limit {
+                    must "./log-only = 'false' or not(./idle-timeout)" {
+                        error-message "cannot set both log-only and idle-timeout";
+                    }
                     key "family";
                     description "Enter the prefix-limit list instance";
 
                     leaf family {
-                        type types-bgp:ip-family-identifier-prefix-lim;
+                        type types-bgp:ip-family-identifier;
                         description "Address family to which the limit applies";
                     }
 

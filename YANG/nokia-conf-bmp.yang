@@ -49,6 +49,65 @@ submodule nokia-conf-bmp {
                 description "Administrative state of the BGP Monitoring Protocol operation";
             }
 
+            container collector {
+                description "Enter the collector context";
+
+                leaf admin-state {
+                    must ". != 'enable' or ../connection/ipv4/address or ../connection/ipv6/address" {
+                        error-message "ipv4-address or ipv6-address needs to be set when admin-state is enabled";
+                    }
+                    type types-sros:admin-state;
+                    sros-ext:auto-restart-to-modify;
+                    default "disable";
+                    description "Administrative state of the BMP collector.";
+                }
+
+                container connection {
+                    sros-ext:auto-restart-to-modify;
+                    description "Enter the connection context";
+
+                    container ipv4 {
+                        sros-ext:auto-restart-to-modify;
+                        description "Enter the ipv4 context";
+
+                        leaf address {
+                            type types-sros:ipv4-unicast-address;
+                            sros-ext:auto-restart-to-modify;
+                            description "IPv4 address.";
+                        }
+
+                        leaf port {
+                            type types-sros:tcp-udp-port-non-zero;
+                            sros-ext:auto-restart-to-modify;
+                            default "4210";
+                            description "IPv4 TCP port.";
+                        }
+
+                    } // container ipv4
+
+                    container ipv6 {
+                        sros-ext:auto-restart-to-modify;
+                        description "Enter the ipv6 context";
+
+                        leaf address {
+                            type types-sros:ipv6-unicast-address;
+                            sros-ext:auto-restart-to-modify;
+                            description "IPv6 address.";
+                        }
+
+                        leaf port {
+                            type types-sros:tcp-udp-port-non-zero;
+                            sros-ext:auto-restart-to-modify;
+                            default "4210";
+                            description "IPv6 TCP port.";
+                        }
+
+                    } // container ipv6
+
+                } // container connection
+
+            } // container collector
+
             list station {
                 key "name";
                 max-elements 8;
@@ -109,6 +168,9 @@ submodule nokia-conf-bmp {
                     }
 
                     leaf router-instance {
+                        must ". != 'management'" {
+                            error-message "management router is not allowed";
+                        }
                         type string;
                         default "Base";
                         description "Router instance used to reach the BMP station";
@@ -118,6 +180,12 @@ submodule nokia-conf-bmp {
                         description "Enter the station-address context";
 
                         leaf ip-address {
+                            must "../port" {
+                                error-message "ip-address and port need to be set or cleared at the same time";
+                            }
+                            must "not(../../local-address) or . != ../../local-address" {
+                                error-message "station ip-address cannot be the same as local-address";
+                            }
                             type types-sros:ip-unicast-address;
                             description "IP address of the BMP monitoring station";
                         }
@@ -169,6 +237,9 @@ submodule nokia-conf-bmp {
                 } // container connection
 
                 container family {
+                    must "./ipv4 != 'false' or ./ipv6 != 'false' or ./label-ipv4 != 'false' or ./label-ipv6 != 'false' or ./mcast-ipv4 != 'false' or ./mcast-ipv6 != 'false' or ./vpn-ipv4 != 'false' or ./vpn-ipv6 != 'false' or ./mcast-vpn-ipv4 != 'false' or ./mcast-vpn-ipv6 != 'false' or ./evpn != 'false' or ./l2-vpn != 'false'" {
+                        error-message "at least 1 family must be selected";
+                    }
                     description "Enter the family context";
 
                     leaf ipv4 {
@@ -198,13 +269,13 @@ submodule nokia-conf-bmp {
                     leaf mcast-ipv4 {
                         type boolean;
                         default "false";
-                        description "Enable/disable family type mcast-ipv4.";
+                        description "Support IPv4 multicast address family";
                     }
 
                     leaf mcast-ipv6 {
                         type boolean;
                         default "false";
-                        description "Enable/disable family type mcast-ipv6.";
+                        description "Support IPv6 multicast address family";
                     }
 
                     leaf vpn-ipv4 {
@@ -222,25 +293,25 @@ submodule nokia-conf-bmp {
                     leaf mcast-vpn-ipv4 {
                         type boolean;
                         default "false";
-                        description "Enable/disable family type mcast-vpn-ipv4.";
+                        description "Support IPv4 VPN multicast address family";
                     }
 
                     leaf mcast-vpn-ipv6 {
                         type boolean;
                         default "false";
-                        description "Enable/disable family type mcast-vpn-ipv6.";
+                        description "Support IPv6 VPN multicast address family";
                     }
 
                     leaf evpn {
                         type boolean;
                         default "false";
-                        description "Enable/disable family type evpn.";
+                        description "Support EVPN address family";
                     }
 
                     leaf l2-vpn {
                         type boolean;
                         default "false";
-                        description "Enable/disable family type l2-vpn.";
+                        description "Support L2 VPN address family";
                     }
 
                 } // container family

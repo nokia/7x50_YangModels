@@ -38,7 +38,7 @@ submodule nokia-conf-submgt-service-chaining {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-04-25";
+    revision "2019-10-09";
 
     grouping conf-submgt-service-chaining-isa-service-chaining {
         container isa-service-chaining {
@@ -50,6 +50,15 @@ submodule nokia-conf-submgt-service-chaining {
                     pattern "[0-9a-f][02468ace](:[0-9a-f]{2}){2}";
                 }
                 description "Unique MAC prefix per ISA and per outside service for all NAT-groups configured for Service Chaining";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
             }
 
             list evpn {
@@ -65,6 +74,15 @@ submodule nokia-conf-submgt-service-chaining {
                 }
 
                 leaf admin-state {
+                    must ". = 'disable' or (../bgp/route-target/import and ../bgp/route-target/export)" {
+                        error-message "Route target is not configured when EVPN becomes enabled";
+                    }
+                    must ". = 'disable' or ../export/vxlan/vni" {
+                        error-message "VXLAN is not configured when EVPN becomes enabled";
+                    }
+                    must ". = 'disable' or ../../mac-prefix or ../import-mode = 'bridged' or ../export/advertise-pools/admin-state != 'enable'" {
+                        error-message "MAC prefix is not configured when EVPN starts exporting";
+                    }
                     type types-sros:admin-state;
                     default "disable";
                     description "Administrative state of EVPN";
@@ -87,6 +105,9 @@ submodule nokia-conf-submgt-service-chaining {
                 }
 
                 leaf prefix-route-resolution {
+                    must "../import-mode != 'bridged' or . != 'non-recursive'" {
+                        error-message "Can't use non-recursive prefix-route-resolution when import-mode is bridged";
+                    }
                     type enumeration {
                         enum "recursive"                    { value 0; }
                         enum "non-recursive"                { value 1; }
@@ -94,6 +115,15 @@ submodule nokia-conf-submgt-service-chaining {
                     sros-ext:immutable;
                     default "recursive";
                     description "How prefix routes should be resolved";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
                 }
 
                 container bgp {
@@ -149,7 +179,7 @@ submodule nokia-conf-submgt-service-chaining {
                     } // container vxlan
 
                     container gateway-address-range {
-                        when "../../import-mode != 'bridged' and ../../prefix-route-resolution = 'recursive'";
+                        when "not(../../import-mode = 'bridged') and ../../prefix-route-resolution = 'recursive'";
                         presence "Gateway address range";
                         description "Enter the gateway-address-range context";
 
@@ -168,10 +198,13 @@ submodule nokia-conf-submgt-service-chaining {
                     } // container gateway-address-range
 
                     container advertise-pools {
-                        when "../../import-mode != 'bridged'";
+                        when "not(../../import-mode = 'bridged')";
                         description "Enter the advertise-pools context";
 
                         leaf admin-state {
+                            must ". != 'enable' or ../../gateway-address-range or ../../../prefix-route-resolution != 'recursive'" {
+                                error-message "Can't enable advertise-pools when gateway-address-range is not configured";
+                            }
                             type types-sros:admin-state;
                             default "disable";
                             description "Administrative state of NAT pool route advertisement";
@@ -213,6 +246,15 @@ submodule nokia-conf-submgt-service-chaining {
                     description "Text description";
                 }
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
                 list entry {
                     key "id";
                     max-elements 64;
@@ -232,6 +274,16 @@ submodule nokia-conf-submgt-service-chaining {
                     leaf description {
                         type types-sros:description;
                         description "Text description";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        sros-ext:auto-restart-to-modify;
+                        description "Apply a configuration group at this level";
                     }
 
                     container match {
@@ -261,6 +313,9 @@ submodule nokia-conf-submgt-service-chaining {
                         }
 
                         leaf foreign-port {
+                            must "../protocol != 'icmp'" {
+                                error-message "Foreign-port isn't allowed when protocol is ICMP";
+                            }
                             type types-sros:tcp-udp-port-non-zero;
                             sros-ext:auto-restart-to-modify;
                             description "Foreign TCP or UDP port to match in this VAS filter entry";
@@ -286,6 +341,16 @@ submodule nokia-conf-submgt-service-chaining {
                             sros-ext:auto-restart-to-modify;
                             default "accept";
                             description "Fail action when sf-ip is not resolved or no forward action specified";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            sros-ext:auto-restart-to-modify;
+                            description "Apply a configuration group at this level";
                         }
 
                         container forward {
@@ -314,6 +379,7 @@ submodule nokia-conf-submgt-service-chaining {
                                     pattern "[0-9a-fA-F]{2}([:\\- ][0-9a-fA-F]{2}){9}";
                                 }
                                 sros-ext:auto-restart-to-modify;
+                                default "00:00:00:00:00:00:00:00:00:00";
                                 description "ESI (Ethernet Segment Identifier) for the action in a VAS filter";
                             }
 
@@ -356,6 +422,9 @@ submodule nokia-conf-submgt-service-chaining {
                                     case opaque-data {
 
                                         leaf opaque-data {
+                                            must "../../svc-path/path-id or ../../svc-path/svc-index" {
+                                                error-message "Missing svc-path/svc-index when opaque-data exists";
+                                            }
                                             type string {
                                                 length "10|18|26|34";
                                             }
@@ -367,6 +436,9 @@ submodule nokia-conf-submgt-service-chaining {
                                     case insert-subscriber-id {
 
                                         leaf insert-subscriber-id {
+                                            must "../../svc-path/path-id or ../../svc-path/svc-index" {
+                                                error-message "Missing svc-path/svc-index when insert-subscriber-id exists";
+                                            }
                                             type empty;
                                             sros-ext:auto-restart-to-modify;
                                             description "Insert the subscriber-id in the NSH";

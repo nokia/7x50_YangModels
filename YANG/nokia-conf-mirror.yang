@@ -11,8 +11,6 @@ submodule nokia-conf-mirror {
     import nokia-types-subscriber-mgmt    { prefix "types-submgt"; }
 
     include nokia-conf-filter;
-    include nokia-conf-lag;
-    include nokia-conf-port;
     include nokia-conf-qos;
 
     sros-ext:sros-major-release "rel19";
@@ -42,7 +40,7 @@ submodule nokia-conf-mirror {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-08-19";
+    revision "2019-10-09";
 
     grouping conf-mirror {
         container mirror {
@@ -72,6 +70,9 @@ submodule nokia-conf-mirror {
                 }
 
                 leaf slice-size {
+                    must "../type != 'ip-only'" {
+                        error-message "can not set slice-size when mirror is ip-only";
+                    }
                     type uint32 {
                         range "128..9216";
                     }
@@ -79,6 +80,9 @@ submodule nokia-conf-mirror {
                 }
 
                 leaf include-port-id {
+                    must ". = 'false' or ../type = 'ppp'" {
+                        error-message "mirror type must be ppp to enable port-id mirroring";
+                    }
                     type boolean;
                     default "false";
                     description "Include port ID of the system in the packet";
@@ -168,6 +172,9 @@ submodule nokia-conf-mirror {
                                     }
 
                                     leaf instance {
+                                        must "'true' = ../group-name" {
+                                            error-message "Both port-redirect group-name and instance must be set to valid values";
+                                        }
                                         type types-services:qos-qgrp-instance-id;
                                         description "Port queue-group instance";
                                     }
@@ -271,7 +278,7 @@ submodule nokia-conf-mirror {
                         }
 
                         leaf control-word {
-                            when "../../../type != 'atm-sdu'";
+                            when "not(../../../type = 'atm-sdu')";
                             type boolean;
                             description "Enable the CW bit in label message";
                         }
@@ -329,6 +336,9 @@ submodule nokia-conf-mirror {
                             }
 
                             leaf icb {
+                                must ". = 'false' or ../name" {
+                                    error-message "Can not set ICB without endpoint.";
+                                }
                                 type boolean;
                                 default "false";
                                 description "Bind SDP as type Inter-Chassis Backup (ICB)";
@@ -356,7 +366,7 @@ submodule nokia-conf-mirror {
                     }
 
                     leaf control-word {
-                        when "../../type != 'atm-sdu'";
+                        when "not(../../type = 'atm-sdu')";
                         type boolean;
                         description "Set the CW bit in the label message";
                     }
@@ -408,16 +418,17 @@ submodule nokia-conf-mirror {
                         leaf precedence {
                             type types-services:sdp-precedence;
                             default "4";
-                            description
-                                "Precedence of this SDP bind when there are
-                                 multiple SDP binds attached to one service endpoint.";
+                            description "Precedence of this SDP bind when there are multiple SDP binds attached to one service endpoint";
                         }
 
                         leaf icb {
+                            must ". = 'false' or ../name" {
+                                error-message "Can not set ICB without endpoint.";
+                            }
                             type boolean;
                             sros-ext:auto-restart-to-modify;
                             default "false";
-                            description "Whether this SDP bind is an inter-chassis backup SDP bind.";
+                            description "Bind SDP as type Inter-Chassis Backup (ICB)";
                         }
 
                     } // container endpoint
@@ -442,6 +453,9 @@ submodule nokia-conf-mirror {
                         }
 
                         leaf direction-bit {
+                            must ". = 'false' or ../header-type = 'ip-udp-shim'" {
+                                error-message "layer3 encap direction-bit is only valid when header-type is ip-udp-shim";
+                            }
                             type boolean;
                             default "false";
                             description "Highest bit in Interception ID of shim header to show direction of mirrored traffic flow";
@@ -513,6 +527,244 @@ submodule nokia-conf-mirror {
                 } // list pcap
 
             } // list mirror-dest
+
+            list mirror-source {
+                key "service-name";
+                description "Enter the mirror-source list instance";
+
+                leaf service-name {
+                    type types-services:service-name;
+                    description "Service name";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "enable";
+                    description "Enable/disable mirror service.";
+                }
+
+                list port {
+                    must "./ingress = 'true' or ./egress = 'true'" {
+                        error-message "Must have ingress, egress or both";
+                    }
+                    key "port-id";
+                    description "Enter the port list instance";
+
+                    leaf port-id {
+                        type union {
+                            type types-sros:lag-interface-named;
+                            type types-sros:port;
+                        }
+                        description "Port identifier.";
+                    }
+
+                    leaf ingress {
+                        type boolean;
+                        default "false";
+                        description "Whether ingress packets will be mirrored or not.";
+                    }
+
+                    leaf egress {
+                        type boolean;
+                        default "false";
+                        description "Whether egress packets will be mirrored or not.";
+                    }
+
+                } // list port
+
+                list sap {
+                    must "./ingress = 'true' or ./egress = 'true'" {
+                        error-message "Must have ingress, egress or both";
+                    }
+                    key "sap-id";
+                    description "Enter the sap list instance";
+
+                    leaf sap-id {
+                        type types-sros:sap;
+                        description "SAP identifier.";
+                    }
+
+                    leaf ingress {
+                        type boolean;
+                        default "false";
+                        description "Whether ingress packets will be mirrored or not.";
+                    }
+
+                    leaf egress {
+                        type boolean;
+                        default "false";
+                        description "Whether egress packets will be mirrored or not.";
+                    }
+
+                } // list sap
+
+                list ip-filter {
+                    key "filter-name";
+                    description "Enter the ip-filter list instance";
+
+                    leaf filter-name {
+                        type leafref {
+                            path "../../../../filter/ip-filter/filter-name";
+                        }
+                        description "IP Filter name";
+                    }
+
+                    list entry {
+                        key "entry-id";
+                        min-elements 1;
+                        description "Add a list entry for entry";
+
+                        leaf entry-id {
+                            type uint32 {
+                                range "1..2097151";
+                            }
+                            description "IP Filter entry identifier";
+                        }
+
+                    } // list entry
+
+                } // list ip-filter
+
+                list ipv6-filter {
+                    key "filter-name";
+                    description "Enter the ipv6-filter list instance";
+
+                    leaf filter-name {
+                        type leafref {
+                            path "../../../../filter/ipv6-filter/filter-name";
+                        }
+                        description "IPv6 Filter name";
+                    }
+
+                    list entry {
+                        key "entry-id";
+                        min-elements 1;
+                        description "Add a list entry for entry";
+
+                        leaf entry-id {
+                            type uint32 {
+                                range "1..2097151";
+                            }
+                            description "IPv6 Filter entry identifier";
+                        }
+
+                    } // list entry
+
+                } // list ipv6-filter
+
+                list mac-filter {
+                    key "filter-name";
+                    description "Enter the mac-filter list instance";
+
+                    leaf filter-name {
+                        type leafref {
+                            path "../../../../filter/mac-filter/filter-name";
+                        }
+                        description "MAC Filter name";
+                    }
+
+                    list entry {
+                        key "entry-id";
+                        min-elements 1;
+                        description "Add a list entry for entry";
+
+                        leaf entry-id {
+                            type uint32 {
+                                range "1..2097151";
+                            }
+                            description "MAC Filter entry identifier";
+                        }
+
+                    } // list entry
+
+                } // list mac-filter
+
+                list subscriber {
+                    must "./ingress = 'true' or ./egress = 'true'" {
+                        error-message "Must have ingress, egress or both";
+                    }
+                    key "subscriber-id";
+                    description "Enter the subscriber list instance";
+
+                    leaf subscriber-id {
+                        type types-submgt:subscriber-id;
+                        description "Subscriber Identifier";
+                    }
+
+                    leaf-list fc {
+                        type enumeration {
+                            enum "be"                           { value 0; }
+                            enum "l2"                           { value 1; }
+                            enum "af"                           { value 2; }
+                            enum "l1"                           { value 3; }
+                            enum "h2"                           { value 4; }
+                            enum "ef"                           { value 5; }
+                            enum "h1"                           { value 6; }
+                            enum "nc"                           { value 7; }
+                        }
+                        max-elements 8;
+                        description "The forwarding classes traffic which should be mirrored";
+                    }
+
+                    leaf ingress {
+                        type boolean;
+                        default "false";
+                        description "Whether ingress packets will be mirrored or not.";
+                    }
+
+                    leaf egress {
+                        type boolean;
+                        default "false";
+                        description "Whether egress packets will be mirrored or not.";
+                    }
+
+                    leaf host-type {
+                        type enumeration {
+                            enum "ipoe"                         { value 2; }
+                            enum "ppp"                          { value 3; }
+                        }
+                        description "The host type to be mirrored.";
+                    }
+
+                    leaf ip-family {
+                        type enumeration {
+                            enum "ipv4"                         { value 2; }
+                            enum "ipv6"                         { value 3; }
+                        }
+                        description "The family of IP flows to be monitored for an IPoE type of host.";
+                    }
+
+                    choice host-identification {
+                        case sap-id {
+
+                            leaf sap-id {
+                                type types-sros:sap;
+                                description "Subscriber SAP identifier";
+                            }
+
+                            leaf mac-address {
+                                type yang:mac-address;
+                                description "The MAC address to be used to match the packets for the subscriber on the mirror source.";
+                            }
+
+                            leaf ip-address {
+                                type types-sros:ipv4-address;
+                                description "The IP address of the remote source or the far-end ESR which is allowed to be a source of packets.";
+                            }
+
+                        }
+                        case sla-profile {
+
+                            leaf sla-profile {
+                                type types-sros:named-item;
+                                description "The SLA profile Name";
+                            }
+
+                        }
+                    }
+                } // list subscriber
+
+            } // list mirror-source
 
         } // container mirror
 

@@ -39,7 +39,7 @@ submodule nokia-conf-submgt-wlangw {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-07-12";
+    revision "2019-09-26";
 
     grouping conf-submgt-wlangw-wlan-gw {
         container wlan-gw {
@@ -52,8 +52,26 @@ submodule nokia-conf-submgt-wlangw {
                 description "WLAN Gateway virtual chassis ID or dual homing key";
             }
 
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
             container queries {
                 description "Enter the queries context";
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
 
                 list ue {
                     key "name";
@@ -61,6 +79,9 @@ submodule nokia-conf-submgt-wlangw {
                     description "Enter the ue list instance";
 
                     leaf name {
+                        must ". != 'default'" {
+                            error-message "identifier is reserved for internal use";
+                        }
                         type types-sros:named-item;
                         description "Textual identification for the UE query";
                     }
@@ -80,6 +101,15 @@ submodule nokia-conf-submgt-wlangw {
                     leaf vlan {
                         type types-sros:qtag-full-range;
                         description "When specified, the query will only return UEs for which the VLAN tag is present in the traffic received from the UE";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                     container address {
@@ -108,6 +138,9 @@ submodule nokia-conf-submgt-wlangw {
                     } // container address
 
                     container connection-state {
+                        must "./data-triggered != 'false' or ./dhcp-triggered != 'false' or ./ip-assigned != 'false' or ./authorized-only != 'false' or ./ip-assigned-authorized != 'false' or ./already-signed-in != 'false' or ./portal != 'false' or ./dsm != 'false' or ./esm != 'false' or ./l2 != 'false' or ./gtp-authorized != 'false' or ./delete-pending != 'false' or ./cross-connect != 'false'" {
+                            error-message "At least one connection-state must be specified";
+                        }
                         presence
                             "Causes the query to only return UEs in the connection states
                              specified";
@@ -197,6 +230,9 @@ submodule nokia-conf-submgt-wlangw {
                         description "Enter the tunnel context";
 
                         leaf router-instance {
+                            must ". != 'management'" {
+                                error-message "the router-instance cannot be set to a management instance";
+                            }
                             type string;
                             description "When specified, the query will only return UEs on this tunnel router";
                         }
@@ -242,11 +278,20 @@ submodule nokia-conf-submgt-wlangw {
                 } // list ue
 
                 list tunnel {
+                    must "(not(./l2/sap) and not(./l2/inner-vlan) and not(./l2/outer-vlan)) or not(./encapsulation) or ./encapsulation/l2 != 'false'" {
+                        error-message "Filtering on l2/sap, l2/inner-vlan or l2/outer-vlan also requires a 'l2' encapsulation filter";
+                    }
+                    must "./ues/minimum <= ./ues/maximum" {
+                        error-message "maximum must be greater than or equal to minimum";
+                    }
                     key "name";
                     max-elements 1024;
                     description "Enter the tunnel list instance";
 
                     leaf name {
+                        must ". != 'default'" {
+                            error-message "identifier is reserved for internal use";
+                        }
                         type types-sros:named-item;
                         description "Textual identification for the tunnel query";
                     }
@@ -265,7 +310,19 @@ submodule nokia-conf-submgt-wlangw {
                         description "When specified, the query will only return tunnels where the learning of the Access Point MAC address had the specified result";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                     container encapsulation {
+                        must "./gre != 'false' or ./l2tp != 'false' or ./l2 != 'false' or ./vxlan != 'false'" {
+                            error-message "At least one encapsulation must be specified";
+                        }
                         presence
                             "Causes the query to only return tunnels where the encapsulation
                              type equals one of the specified types";
@@ -321,6 +378,9 @@ submodule nokia-conf-submgt-wlangw {
                         description "Enter the l3 context";
 
                         leaf router-instance {
+                            must ". != 'management'" {
+                                error-message "the router-instance cannot be set to a management instance";
+                            }
                             type string;
                             description "When specified, the query will only return tunnels on this router-instance";
                         }
@@ -360,6 +420,9 @@ submodule nokia-conf-submgt-wlangw {
                         }
 
                         container state {
+                            must "./migrant != 'false' or ./dsm != 'false' or ./esm != 'false' or ./l2 != 'false' or ./cross-connect != 'false'" {
+                                error-message "At least one UE state must be specified";
+                            }
                             presence
                                 "Filters UEs based on the state they are in. Minimum and
                                  maximum filters are applied after state filtering.";

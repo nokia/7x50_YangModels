@@ -42,10 +42,68 @@ submodule nokia-conf-lag {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-07-26";
+    revision "2019-10-16";
 
     grouping conf-lag {
         list lag {
+            must "not(./port-threshold/value) or ./standby-signaling != 'power-off'";
+            must "not(./weight-threshold/value) or ./standby-signaling != 'power-off'";
+            must "./lacp/system-id = '00:00:00:00:00:00' or ./mode = 'access'";
+            must "not(./lacp/system-priority) or ./mode = 'access'";
+            must "./standby-signaling = 'lacp' or not(./lacp)" {
+                error-message "standby-signaling {lag/standby-signaling} <-> lacp on lag {lag/lag-index}";
+            }
+            must "./standby-signaling != 'power-off' or ./selection-criteria/mode = 'best-port' or ./monitor-oper-group" {
+                error-message "{lag/standby-signaling} requires selection-criteria best-port or monitor-oper-group on lag {lag/lag-index}";
+            }
+            must "./selection-criteria/mode != 'best-port' or not(./lacp)" {
+                error-message "selection-criteria {selection-criteria/mode} <-> lacp on lag {lag/lag-index}";
+            }
+            must "not(./port-threshold/cost) or ./port-threshold/action = 'static-cost'" {
+                error-message "a cost value is only allowed when the threshold action is static-cost";
+            }
+            must "not(./weight-threshold/cost) or ./weight-threshold/action = 'static-cost'" {
+                error-message "a cost value is only allowed when the threshold action is static-cost";
+            }
+            must "./port-threshold/cost or ./port-threshold/action != 'static-cost'" {
+                error-message "a cost value is mandatory when the threshold action is static-cost";
+            }
+            must "./weight-threshold/cost or ./weight-threshold/action != 'static-cost'" {
+                error-message "a cost value is mandatory when the threshold action is static-cost";
+            }
+            must "./port-type != 'hsmda' or not(./port-weight-speed)" {
+                error-message "port-type {lag/port-type} <-> port-weight-speed on lag {lag/lag-index}";
+            }
+            must "./port-type != 'hsmda' or not(./per-link-hash)" {
+                error-message "port-type {lag/port-type} <-> per-link-hash [weighted] on lag {lag/lag-index}";
+            }
+            must "(./port-type != 'hsmda' and ./port-type != 'hs') or ./access/adapt-qos/include-egr-hash-cfg != 'true' or ./mode = 'network'" {
+                error-message "port-type {lag/port-type} <-> include-egr-hash-cfg on lag {lag/lag-index}";
+            }
+            must "./port-type != 'hsmda' or ./access/per-fp-egr-queuing != 'true'" {
+                error-message "port-type {lag/port-type} <-> access/per-fp-egr-queuing on lag {lag/lag-index}";
+            }
+            must "./access/adapt-qos/include-egr-hash-cfg = 'false' or ./mode != 'network'" {
+                error-message "mode {lag/mode} <-> include-egr-hash-cfg on lag {lag/lag-index}";
+            }
+            must "not(./access/bandwidth) or ./mode != 'network'" {
+                error-message "access bandwidth <-> mode {lag/mode} on lag {lag/lag-index}";
+            }
+            must "./access/booking-factor = 100 or ./mode != 'network'" {
+                error-message "access booking-factor <-> mode {lag/mode} on lag {lag/lag-index}";
+            }
+            must "./access/per-fp-ing-queuing = 'false' or ./mode != 'network'" {
+                error-message "access per-fp-ing-queuing <-> mode {lag/mode} on lag {lag/lag-index}";
+            }
+            must "./access/per-fp-egr-queuing = 'false' or ./mode != 'network'" {
+                error-message "access per-fp-egr-queuing <-> mode {lag/mode} on lag {lag/lag-index}";
+            }
+            must "./access/per-fp-egr-queuing = 'false' or ./port-type != 'hsmda'" {
+                error-message "access per-fp-egr-queuing <-> port-type {lag/port-type} on lag {lag/lag-index}";
+            }
+            must "./access/per-fp-sap-instance = 'false' or (./access/per-fp-ing-queuing != 'false' and ./access/per-fp-egr-queuing != 'false')" {
+                error-message "per-fp-sap-instance requires per-fp-ing-queuing true and per-fp-egr-queuing true on lag {lag/lag-index}";
+            }
             key "lag-index";
             description "Enter the lag list instance";
 
@@ -163,10 +221,20 @@ submodule nokia-conf-lag {
                 description "Operational group to monitor";
             }
 
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
             container port-threshold {
                 description "Enter the port-threshold context";
 
                 leaf value {
+                    must "../../lag-index <= 64 or . <= 31";
                     type int32 {
                         range "0..63";
                     }
@@ -347,6 +415,7 @@ submodule nokia-conf-lag {
                 description "Enter the weight-threshold context";
 
                 leaf value {
+                    must "../../lag-index <= 64 or . <= 31";
                     type int32 {
                         range "0..63";
                     }
@@ -372,6 +441,35 @@ submodule nokia-conf-lag {
 
             } // container weight-threshold
 
+            container hash-weight-threshold {
+                description "Enter the hash-weight-threshold context";
+
+                leaf value {
+                    type int32 {
+                        range "1..6400000";
+                    }
+                    description "Threshold value.";
+                }
+
+                leaf action {
+                    type enumeration {
+                        enum "down"                         { value 1; }
+                        enum "dynamic-cost"                 { value 2; }
+                        enum "static-cost"                  { value 3; }
+                    }
+                    default "down";
+                    description "Action to take.";
+                }
+
+                leaf cost {
+                    type uint32 {
+                        range "1..16777215";
+                    }
+                    description "Cost of the LAG if the action is equal to static-cost. The cost can be used by IGP such as OSPF and ISIS.";
+                }
+
+            } // container hash-weight-threshold
+
             container bfd-liveness {
                 description "Enter the bfd-liveness context";
 
@@ -382,6 +480,9 @@ submodule nokia-conf-lag {
                 }
 
                 container ipv4 {
+                    must "./admin-state = 'disable' or ./remote-ip-address";
+                    must "./admin-state = 'disable' or ./local-ip-address";
+                    must "./admin-state = 'disable' or not(./local-ip-address) or not(./remote-ip-address) or ./local-ip-address != ./remote-ip-address";
                     description "Enter the ipv4 context";
 
                     leaf bfd-on-distributing-only {
@@ -460,9 +561,21 @@ submodule nokia-conf-lag {
                         description "BFD destination address";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                 } // container ipv4
 
                 container ipv6 {
+                    must "./admin-state = 'disable' or ./remote-ip-address";
+                    must "./admin-state = 'disable' or ./local-ip-address";
+                    must "./admin-state = 'disable' or not(./local-ip-address) or not(./remote-ip-address) or ./local-ip-address != ./remote-ip-address";
                     description "Enter the ipv6 context";
 
                     leaf bfd-on-distributing-only {
@@ -541,6 +654,15 @@ submodule nokia-conf-lag {
                         description "BFD destination address";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                 } // container ipv6
 
             } // container bfd-liveness
@@ -549,6 +671,10 @@ submodule nokia-conf-lag {
                 description "Enter the eth-cfm context";
 
                 list mep {
+                    must "./grace/eth-ed/tx-eth-ed != 'true' or ./grace/eth-vsm-grace/tx-eth-vsm-grace != 'true'";
+                    must "./vlan != 'none' or not(./csf)" {
+                        error-message "csf only supported on primary-vlan port and lag MEPs";
+                    }
                     key "md-admin-name ma-admin-name mep-id";
                     description "Enter the mep list instance";
 
@@ -650,6 +776,15 @@ submodule nokia-conf-lag {
                         type types-eth-cfm:ccm-tlv-ignore-type;
                         max-elements 2;
                         description "TLV to ignore on reception";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                     container alarm-notification {
@@ -828,6 +963,15 @@ submodule nokia-conf-lag {
             } // container eth-cfm
 
             list port {
+                must "not(../port-weight-speed) or not(./hash-weight)" {
+                    error-message "hash-weight and port-weight-speed are mutual exclusive";
+                }
+                must "not(../weight-threshold/value) or not(./hash-weight)" {
+                    error-message "hash-weight and weight-threshold are mutual exclusive";
+                }
+                must "../port-type != 'hsmda' or not(./hash-weight)" {
+                    error-message "hash-weight is not supported on hsdma";
+                }
                 key "port-id";
                 description "Enter the port list instance";
 
@@ -873,6 +1017,15 @@ submodule nokia-conf-lag {
                     description "Flow hashing distribution between LAG ports";
                 }
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
             } // list port
 
             list link-map-profile {
@@ -900,6 +1053,15 @@ submodule nokia-conf-lag {
                     description "Failure mode of LAG link profile";
                 }
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
                 list link {
                     key "port-id";
                     description "Enter the link list instance";
@@ -919,6 +1081,15 @@ submodule nokia-conf-lag {
                         sros-ext:immutable;
                         mandatory true;
                         description "Type of the associated port for this entry";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                 } // list link

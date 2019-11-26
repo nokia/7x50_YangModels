@@ -7,6 +7,7 @@ submodule nokia-conf-router-gtm {
     import nokia-sros-yang-extensions     { prefix "sros-ext"; }
     import nokia-types-sros               { prefix "types-sros"; }
 
+    include nokia-conf-groups;
     include nokia-conf-router;
     include nokia-conf-router-mpls;
 
@@ -37,7 +38,7 @@ submodule nokia-conf-router-gtm {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-05-15";
+    revision "2019-09-30";
 
     grouping conf-router-gtm {
         container gtm {
@@ -50,10 +51,22 @@ submodule nokia-conf-router-gtm {
                 description "Configure multicast VPN.";
             }
 
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
             container provider-tunnel {
                 description "Enter the provider-tunnel context";
 
                 container inclusive {
+                    must "not(./rsvp) or ./rsvp/admin-state = 'disable' or ./rsvp/lsp-template" {
+                        error-message "Lsp-template missing";
+                    }
                     description "Enter the inclusive context";
 
                     container rsvp {
@@ -78,6 +91,9 @@ submodule nokia-conf-router-gtm {
                 } // container inclusive
 
                 container selective {
+                    must "not(./rsvp) or ./rsvp/admin-state = 'disable' or ./rsvp/lsp-template" {
+                        error-message "Lsp-template missing";
+                    }
                     description "Enter the selective context";
 
                     leaf data-delay-interval {
@@ -118,6 +134,9 @@ submodule nokia-conf-router-gtm {
                             }
 
                             leaf pe-threshold-add {
+                                must ". < ../pe-threshold-delete or (. = 65535 and . = 65535)" {
+                                    error-message "pe-threshold-delete should be greater than pe-threshold-add.";
+                                }
                                 type uint32 {
                                     range "1..65535";
                                 }
@@ -131,6 +150,15 @@ submodule nokia-conf-router-gtm {
                                 }
                                 default "65535";
                                 description "Configure threshold.";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
                             }
 
                         } // list group-prefix

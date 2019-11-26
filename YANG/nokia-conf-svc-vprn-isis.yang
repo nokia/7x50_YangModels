@@ -43,10 +43,31 @@ submodule nokia-conf-svc-vprn-isis {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-05-01";
+    revision "2019-10-11";
 
     grouping conf-svc-vprn-isis {
         list isis {
+            must "./iid-tlv = 'false' or ./standard-multi-instance = 'false'" {
+                error-message "Instance can have only iid-tlv-enable or standard-multi-instance configured.";
+            }
+            must "./all-l1isis != '00:00:00:00:00:00'" {
+                error-message "Invalid mac-address (00:00:00:00:00:00).";
+            }
+            must "./all-l1isis = '01:80:C2:00:00:14' or ./isis-instance != 0" {
+                error-message "Default Instance(0) uses IETF mac addresses which are hardcoded for all-l1isis.";
+            }
+            must "./isis-instance = 0 or ./iid-tlv != 'true' or ./all-l1isis != '01:80:C2:00:00:14'" {
+                error-message "Invalid parameter combination default all-l1isis mac address and iid-tlv enabled.";
+            }
+            must "./all-l2isis != '00:00:00:00:00:00'" {
+                error-message "Invalid mac-address (00:00:00:00:00:00).";
+            }
+            must "./all-l2isis = '01:80:C2:00:00:15' or ./isis-instance != 0" {
+                error-message "Default Instance(0) uses IETF mac addresses which are hardcoded for all-l2isis.";
+            }
+            must "./isis-instance = 0 or ./iid-tlv != 'true' or ./all-l2isis != '01:80:C2:00:00:15'" {
+                error-message "Invalid parameter combination default all-l2isis mac address and iid-tlv enabled.";
+            }
             key "isis-instance";
             description "Enter the isis list instance";
 
@@ -202,6 +223,9 @@ submodule nokia-conf-svc-vprn-isis {
             }
 
             leaf lsp-minimum-remaining-lifetime {
+                must ". >= ../lsp-lifetime" {
+                    error-message "MUST be greater than or equal to lsp-lifetime {lsp-lifetime}";
+                }
                 type uint32 {
                     range "350..65535";
                 }
@@ -299,6 +323,15 @@ submodule nokia-conf-svc-vprn-isis {
                 type types-isis:area-address;
                 max-elements 3;
                 description "Area address portion of NSAP address";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
             }
 
             container export-limit {
@@ -643,6 +676,9 @@ submodule nokia-conf-svc-vprn-isis {
                 }
 
                 leaf default-instance {
+                    must ". = 'false' or ../../isis-instance != 0" {
+                        error-message "Default-instance can't be enabled on ISIS instance 0";
+                    }
                     type boolean;
                     default "false";
                     description "Allow non-MI capable router to establish an adjacency and operate with a router in non-zero instance";
@@ -704,6 +740,15 @@ submodule nokia-conf-svc-vprn-isis {
                         range "1..max";
                     }
                     description "Route tag for IP address of interface";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
                 }
 
                 container loopfree-alternate {
@@ -879,6 +924,15 @@ submodule nokia-conf-svc-vprn-isis {
                         description "Value of the signal fail offset";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                 } // list level
 
             } // list interface
@@ -996,6 +1050,15 @@ submodule nokia-conf-svc-vprn-isis {
                     description "Use wide metrics advertisements in the LSPs";
                 }
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
             } // list level
 
             list link-group {
@@ -1012,7 +1075,19 @@ submodule nokia-conf-svc-vprn-isis {
                     description "Text description";
                 }
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
                 list level {
+                    must "./revert-members >= ./oper-members" {
+                        error-message "revert value:{revert-members} should be >= oper value:{oper-members}";
+                    }
                     key "level-number";
                     max-elements 2;
                     description "Enter the level list instance";
@@ -1054,6 +1129,15 @@ submodule nokia-conf-svc-vprn-isis {
                         description "Minimum number of operational links to return link group to normal state and remove offsets";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                     list member {
                         key "interface-name";
                         max-elements 8;
@@ -1091,6 +1175,15 @@ submodule nokia-conf-svc-vprn-isis {
                         range "1..max";
                     }
                     description "Route tag assigned to the summary address";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
                 }
 
             } // list summary-address

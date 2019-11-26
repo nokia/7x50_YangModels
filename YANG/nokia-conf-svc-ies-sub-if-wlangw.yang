@@ -46,7 +46,22 @@ submodule nokia-conf-svc-ies-sub-if-wlangw {
                  Gateway functions.";
             description "Enter the wlan-gw context";
 
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
             container pool-manager {
+                must "./watermarks/low < ./watermarks/high" {
+                    error-message "Low watermark must be less than high watermark";
+                }
+                must "./dhcp6-client/dhcpv4-nat/admin-state != 'enable' or not(../../fwd-subscriber-interface)" {
+                    error-message "This function is not available on retail subscriber interfaces";
+                }
                 description "Enter the pool-manager context";
 
                 leaf wlan-gw-group {
@@ -54,6 +69,15 @@ submodule nokia-conf-svc-ies-sub-if-wlangw {
                         path "../../../../../../isa/wlan-gw-group/id";
                     }
                     description "Identifier of the WLAN Gateway ISA group on which the prefixes are installed";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
                 }
 
                 container dhcp6-client {
@@ -96,6 +120,15 @@ submodule nokia-conf-svc-ies-sub-if-wlangw {
                         description "Enter the dhcpv4-nat context";
 
                         leaf admin-state {
+                            must ". != 'enable' or ../../../wlan-gw-group" {
+                                error-message "The wlan-gw-group is not configured yet";
+                            }
+                            must ". != 'enable' or ../../servers" {
+                                error-message "No DHCPv6 servers configured";
+                            }
+                            must ". != 'enable' or ../../../../../../../../subscriber-mgmt/wlan-gw/virtual-chassis-identifier" {
+                                error-message "No virtual-chassis-id configured";
+                            }
                             type types-sros:admin-state;
                             default "disable";
                             description "Administrative state of the DHCPv6 client entity";
@@ -115,9 +148,21 @@ submodule nokia-conf-svc-ies-sub-if-wlangw {
                     } // container dhcpv4-nat
 
                     container ia-na {
+                        must "./admin-state != 'enable' or ../../../../ipv6" {
+                            error-message "Cannot be enabled when no configuration is present for subscriber-interface/ipv6";
+                        }
                         description "Enter the ia-na context";
 
                         leaf admin-state {
+                            must ". != 'enable' or ../../../wlan-gw-group" {
+                                error-message "The wlan-gw-group is not configured yet";
+                            }
+                            must ". != 'enable' or ../../servers" {
+                                error-message "No DHCPv6 servers configured";
+                            }
+                            must ". != 'enable' or ../../../../../../../../subscriber-mgmt/wlan-gw/virtual-chassis-identifier" {
+                                error-message "No virtual-chassis-id configured";
+                            }
                             type types-sros:admin-state;
                             default "disable";
                             description "Administrative state of the DHCPv6 client entity";
@@ -137,9 +182,21 @@ submodule nokia-conf-svc-ies-sub-if-wlangw {
                     } // container ia-na
 
                     container slaac {
+                        must "./admin-state != 'enable' or ../../../../ipv6" {
+                            error-message "Cannot be enabled when no configuration is present for subscriber-interface/ipv6";
+                        }
                         description "Enter the slaac context";
 
                         leaf admin-state {
+                            must ". != 'enable' or ../../../wlan-gw-group" {
+                                error-message "The wlan-gw-group is not configured yet";
+                            }
+                            must ". != 'enable' or ../../servers" {
+                                error-message "No DHCPv6 servers configured";
+                            }
+                            must ". != 'enable' or ../../../../../../../../subscriber-mgmt/wlan-gw/virtual-chassis-identifier" {
+                                error-message "No virtual-chassis-id configured";
+                            }
                             type types-sros:admin-state;
                             default "disable";
                             description "Administrative state of the DHCPv6 client entity";
@@ -187,6 +244,15 @@ submodule nokia-conf-svc-ies-sub-if-wlangw {
                 description "Enter the redundancy context";
 
                 leaf admin-state {
+                    must ". = 'disable' or (../export and ../monitor)" {
+                        error-message "To enable WLAN-GW redundancy, both an export- and monitor-route needs to be configured";
+                    }
+                    must ". = 'disable' or not(../../../fwd-subscriber-interface)" {
+                        error-message "Cannot enable WLAN-GW redundancy in a subscriber interface with a forwarding interface";
+                    }
+                    must ". = 'disable' or ../../../admin-state = 'enable'" {
+                        error-message "WLAN-GW redundancy can only be enabled while the subscriber interface is admin up";
+                    }
                     type types-sros:admin-state;
                     default "disable";
                     description "Administrative state of redundancy";

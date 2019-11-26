@@ -43,7 +43,7 @@ submodule nokia-conf-card {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-07-19";
+    revision "2019-10-18";
 
     grouping conf-card {
         list card {
@@ -51,7 +51,7 @@ submodule nokia-conf-card {
             description "Enter the card list instance";
 
             leaf slot-number {
-                type types-card:card-slot;
+                type types-card:iom-card-slot;
                 description "IOM slot within a chassis";
             }
 
@@ -86,9 +86,19 @@ submodule nokia-conf-card {
             }
 
             leaf power-save {
+                must ". = 'false' or ../admin-state != 'enable'" {
+                    error-message "card admin-state must be 'disable' when power-save is true.";
+                }
                 type boolean;
                 default "false";
                 description "Keeps the card in a low-power, unloaded state when set.";
+            }
+
+            leaf filter-profile {
+                type types-card:filter-profile;
+                sros-ext:auto-restart-to-modify;
+                default "none";
+                description "The filter allocation profile for the card.";
             }
 
             leaf-list apply-groups {
@@ -136,6 +146,15 @@ submodule nokia-conf-card {
                     units "kilobps";
                     default "1000";
                     description "Rate of the slow queue threshold";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
                 }
 
                 container interval {
@@ -356,15 +375,45 @@ submodule nokia-conf-card {
                         description "Provisions action to be taken on the MDA when the event is detected.";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                 } // list event
 
                 container access {
                     description "Enter the access context";
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                     container egress {
                         description "Enter the egress context";
 
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
                         list pool {
+                            must "./name = 'default'" {
+                                error-message "Cannot create/delete buffer pools";
+                            }
                             key "name";
                             description "Enter the pool list instance";
 
@@ -382,6 +431,9 @@ submodule nokia-conf-card {
                             }
 
                             leaf red-alarm-threshold {
+                                must "not(../amber-alarm-threshold) or ../amber-alarm-threshold <= ." {
+                                    error-message "amber-alarm-threshold cannot be greater than red-alarm-threshold";
+                                }
                                 type uint32 {
                                     range "1..1000";
                                 }
@@ -394,6 +446,15 @@ submodule nokia-conf-card {
                                     path "../../../../../../qos/slope-policy/slope-policy-name";
                                 }
                                 description "Configure the slope policy.";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
                             }
 
                             container resv-cbs {
@@ -411,6 +472,9 @@ submodule nokia-conf-card {
                                     description "Enter the amber-alarm-action context";
 
                                     leaf step {
+                                        must "../../cbs" {
+                                            error-message "Adaptive CBS sizing step cannot be specified when reserved cbs is default";
+                                        }
                                         type uint32 {
                                             range "1..100";
                                         }
@@ -419,6 +483,15 @@ submodule nokia-conf-card {
                                     }
 
                                     leaf max {
+                                        must "../step" {
+                                            error-message "step and max both must be specified";
+                                        }
+                                        must "../../cbs" {
+                                            error-message "Adaptive CBS sizing max cannot be specified when reserved cbs is default";
+                                        }
+                                        must "not(../../cbs) or ../../cbs <= ." {
+                                            error-message "Maximum reserved CBS is less than reserved CBS";
+                                        }
                                         type uint32 {
                                             range "1..100";
                                         }
@@ -437,7 +510,19 @@ submodule nokia-conf-card {
                     container ingress {
                         description "Enter the ingress context";
 
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
                         list pool {
+                            must "./name = 'default'" {
+                                error-message "Cannot create/delete buffer pools";
+                            }
                             key "name";
                             description "Enter the pool list instance";
 
@@ -455,6 +540,9 @@ submodule nokia-conf-card {
                             }
 
                             leaf red-alarm-threshold {
+                                must "not(../amber-alarm-threshold) or ../amber-alarm-threshold <= ." {
+                                    error-message "amber-alarm-threshold cannot be greater than red-alarm-threshold";
+                                }
                                 type uint32 {
                                     range "1..1000";
                                 }
@@ -467,6 +555,15 @@ submodule nokia-conf-card {
                                     path "../../../../../../qos/slope-policy/slope-policy-name";
                                 }
                                 description "Slope policy name";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
                             }
 
                             container resv-cbs {
@@ -484,6 +581,9 @@ submodule nokia-conf-card {
                                     description "Enter the amber-alarm-action context";
 
                                     leaf step {
+                                        must "../../cbs" {
+                                            error-message "Adaptive CBS sizing step cannot be specified when reserved cbs is default";
+                                        }
                                         type uint32 {
                                             range "1..100";
                                         }
@@ -492,6 +592,15 @@ submodule nokia-conf-card {
                                     }
 
                                     leaf max {
+                                        must "../step" {
+                                            error-message "step and max both must be specified";
+                                        }
+                                        must "../../cbs" {
+                                            error-message "Adaptive CBS sizing max cannot be specified when reserved cbs is default";
+                                        }
+                                        must "not(../../cbs) or ../../cbs <= ." {
+                                            error-message "Maximum reserved CBS is less than reserved CBS";
+                                        }
                                         type uint32 {
                                             range "1..100";
                                         }
@@ -569,7 +678,19 @@ submodule nokia-conf-card {
                     container egress {
                         description "Enter the egress context";
 
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
                         list pool {
+                            must "./name = 'default'" {
+                                error-message "Cannot create/delete buffer pools";
+                            }
                             key "name";
                             description "Enter the pool list instance";
 
@@ -587,6 +708,9 @@ submodule nokia-conf-card {
                             }
 
                             leaf red-alarm-threshold {
+                                must "not(../amber-alarm-threshold) or ../amber-alarm-threshold <= ." {
+                                    error-message "amber-alarm-threshold cannot be greater than red-alarm-threshold";
+                                }
                                 type uint32 {
                                     range "1..1000";
                                 }
@@ -599,6 +723,15 @@ submodule nokia-conf-card {
                                     path "../../../../../../qos/slope-policy/slope-policy-name";
                                 }
                                 description "Configure the slope policy.";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
                             }
 
                             container resv-cbs {
@@ -616,6 +749,9 @@ submodule nokia-conf-card {
                                     description "Enter the amber-alarm-action context";
 
                                     leaf step {
+                                        must "../../cbs" {
+                                            error-message "Adaptive CBS sizing step cannot be specified when reserved cbs is default";
+                                        }
                                         type uint32 {
                                             range "1..100";
                                         }
@@ -624,6 +760,15 @@ submodule nokia-conf-card {
                                     }
 
                                     leaf max {
+                                        must "../step" {
+                                            error-message "step and max both must be specified";
+                                        }
+                                        must "../../cbs" {
+                                            error-message "Adaptive CBS sizing max cannot be specified when reserved cbs is default";
+                                        }
+                                        must "not(../../cbs) or ../../cbs <= ." {
+                                            error-message "Maximum reserved CBS is less than reserved CBS";
+                                        }
                                         type uint32 {
                                             range "1..100";
                                         }
@@ -661,6 +806,9 @@ submodule nokia-conf-card {
 
                         list pool {
                             status obsolete;
+                            must "./name = 'default'" {
+                                error-message "Cannot create/delete buffer pools";
+                            }
                             key "name";
                             description "Enter the pool list instance";
 
@@ -681,6 +829,9 @@ submodule nokia-conf-card {
 
                             leaf red-alarm-threshold {
                                 status obsolete;
+                                must "not(../amber-alarm-threshold) or ../amber-alarm-threshold <= ." {
+                                    error-message "amber-alarm-threshold cannot be greater than red-alarm-threshold";
+                                }
                                 type uint32 {
                                     range "1..1000";
                                 }
@@ -725,6 +876,9 @@ submodule nokia-conf-card {
 
                                     leaf step {
                                         status obsolete;
+                                        must "../../cbs" {
+                                            error-message "Adaptive CBS sizing step cannot be specified when reserved cbs is default";
+                                        }
                                         type uint32 {
                                             range "1..100";
                                         }
@@ -734,6 +888,15 @@ submodule nokia-conf-card {
 
                                     leaf max {
                                         status obsolete;
+                                        must "../step" {
+                                            error-message "step and max both must be specified";
+                                        }
+                                        must "../../cbs" {
+                                            error-message "Adaptive CBS sizing max cannot be specified when reserved cbs is default";
+                                        }
+                                        must "not(../../cbs) or ../../cbs <= ." {
+                                            error-message "Maximum reserved CBS is less than reserved CBS";
+                                        }
                                         type uint32 {
                                             range "1..100";
                                         }

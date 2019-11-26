@@ -10,6 +10,7 @@ submodule nokia-conf-router-ospf3 {
     import nokia-types-router             { prefix "types-router"; }
     import nokia-types-sros               { prefix "types-sros"; }
 
+    include nokia-conf-groups;
     include nokia-conf-ipsec;
     include nokia-conf-policy-options;
     include nokia-conf-router;
@@ -42,10 +43,13 @@ submodule nokia-conf-router-ospf3 {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-05-22";
+    revision "2019-08-27";
 
     grouping conf-router-ospf3 {
         list ospf3 {
+            must "../router-name = 'Base'" {
+                error-message "Protocol only supported in router Base";
+            }
             key "ospf-instance";
             max-elements 32;
             description "Enter the ospf3 list instance";
@@ -163,6 +167,15 @@ submodule nokia-conf-router-ospf3 {
                 sros-ext:auto-restart-to-modify;
                 default "sparse";
                 description "Extended LSA format in an OSPFv3 area";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
             }
 
             container external-db-overflow {
@@ -494,6 +507,9 @@ submodule nokia-conf-router-ospf3 {
             } // container asbr
 
             container segment-routing {
+                must "./prefix-sid-range or ./admin-state != 'enable'" {
+                    error-message "Must have prefix-sid-range when enabling segment routing";
+                }
                 description "Enter the segment-routing context";
 
                 leaf admin-state {
@@ -522,6 +538,15 @@ submodule nokia-conf-router-ospf3 {
                     description "Preference of SR tunnels created by the IGP instance";
                 }
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
                 container prefix-sid-range {
                     presence "Configure prefix-sid-range";
                     description "Enter the prefix-sid-range context";
@@ -548,7 +573,7 @@ submodule nokia-conf-router-ospf3 {
 
                             leaf max-index {
                                 type uint32 {
-                                    range "1..524287";
+                                    range "0..524287";
                                 }
                                 sros-ext:auto-restart-to-modify;
                                 default "1";
@@ -558,6 +583,40 @@ submodule nokia-conf-router-ospf3 {
                         }
                     }
                 } // container prefix-sid-range
+
+                container egress-statistics {
+                    description "Enter the egress-statistics context";
+
+                    leaf adj-sid {
+                        type boolean;
+                        default "false";
+                        description "Enable statistics on Adjacency SIDs";
+                    }
+
+                    leaf node-sid {
+                        type boolean;
+                        default "false";
+                        description "Enable statistics on Node SIDs";
+                    }
+
+                } // container egress-statistics
+
+                container ingress-statistics {
+                    description "Enter the ingress-statistics context";
+
+                    leaf adj-sid {
+                        type boolean;
+                        default "false";
+                        description "Enable statistics on Adjacency SIDs";
+                    }
+
+                    leaf node-sid {
+                        type boolean;
+                        default "false";
+                        description "Enable statistics on Node SIDs";
+                    }
+
+                } // container ingress-statistics
 
             } // container segment-routing
 
@@ -570,10 +629,43 @@ submodule nokia-conf-router-ospf3 {
                     description "Administrative state of the IGP shortcuts";
                 }
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
                 container tunnel-next-hop {
                     description "Enter the tunnel-next-hop context";
 
                     list family {
+                        must "../../../ospf-instance >= 32 or (./family-type != 'ipv4' and ./family-type != 'srv4')" {
+                            error-message "Given family is not supported in given OSPFv3 instance";
+                        }
+                        must "../../../ospf-instance <= 63 or (./family-type != 'ipv6' and ./family-type != 'srv6')" {
+                            error-message "Given family is not supported in given OSPFv3 instance";
+                        }
+                        must "./family-type != 'ipv6' or ./resolution != 'match-family-ip'" {
+                            error-message "Invalid resolution for ipv6 family";
+                        }
+                        must "./family-type != 'ipv4' or ./resolution != 'match-family-ip'" {
+                            error-message "Invalid resolution for ipv4 family";
+                        }
+                        must "./family-type != 'srv6' or (./resolution != 'filter' and ./resolution != 'any')" {
+                            error-message "Invalid resolution for srv6 family";
+                        }
+                        must "./family-type != 'srv6' or (./resolution-filter/rsvp != 'true' and ./resolution-filter/sr-te != 'true')" {
+                            error-message "invalid resolution-filter for srv6 family";
+                        }
+                        must "./family-type != 'srv4' or (./resolution != 'filter' and ./resolution != 'any')" {
+                            error-message "Invalid resolution for srv4 family";
+                        }
+                        must "./family-type != 'srv4' or (./resolution-filter/rsvp != 'true' and ./resolution-filter/sr-te != 'true')" {
+                            error-message "invalid resolution-filter for srv4 family";
+                        }
                         key "family-type";
                         description "Enter the family list instance";
 
@@ -585,6 +677,15 @@ submodule nokia-conf-router-ospf3 {
                         leaf resolution {
                             type types-sros:resolution-type;
                             description "Resolution state for IGP shortcut tunnels";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
                         }
 
                         container resolution-filter {
@@ -611,6 +712,18 @@ submodule nokia-conf-router-ospf3 {
             } // container igp-shortcut
 
             list area {
+                must "not(./stub) or not(./nssa)" {
+                    error-message "Cannot configure area as both stub and NSSA.";
+                }
+                must "./area-id != '0.0.0.0' or (not(./stub) and not(./nssa))" {
+                    error-message "Cannot configure backbone area 0.0.0.0 as stub or NSSA.";
+                }
+                must "./area-id != '0.0.0.0' or not(./export-policy)" {
+                    error-message "Export policy is not allowed in area 0.";
+                }
+                must "./area-id != '0.0.0.0' or not(./import-policy)" {
+                    error-message "Import policy is not allowed in area 0.";
+                }
                 key "area-id";
                 description "Enter the area list instance";
 
@@ -675,6 +788,15 @@ submodule nokia-conf-router-ospf3 {
                     description "Key rollover interval";
                 }
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
                 container stub {
                     presence "Configure this area as an OSPF stub area";
                     description "Enter the stub context";
@@ -726,6 +848,15 @@ submodule nokia-conf-router-ospf3 {
                             description "Advertise summarized range of addresses to other areas";
                         }
 
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
                     } // list area-range
 
                     container originate-default-route {
@@ -763,9 +894,36 @@ submodule nokia-conf-router-ospf3 {
                         description "Advertise summarized range of addresses to other areas";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                 } // list area-range
 
                 list interface {
+                    must "./interface-type != 'secondary' or ./loopfree-alternate/exclude != 'true'" {
+                        error-message "Cannot configure loopfree-alternate exclude on secondary interface.";
+                    }
+                    must "./interface-type != 'secondary' or not(./loopfree-alternate/policy-map/route-nh-template)" {
+                        error-message "Cannot configure route-nh-template on secondary interface.";
+                    }
+                    must "./dead-interval >= (./hello-interval + ./hello-interval)" {
+                        error-message "The dead-interval must be >=  2 * hello-interval";
+                    }
+                    must "./passive != 'false' or ./interface-name != 'system'" {
+                        error-message "Interface 'system' must be passive.";
+                    }
+                    must "./interface-type != 'secondary' or ./interface-name != 'system'" {
+                        error-message "Cannot configure interface system as secondary interface.";
+                    }
+                    must "./interface-type = 'non-broadcast' or not(./neighbor)" {
+                        error-message "Can only have neighbors configured if interface type is non-broadcast.";
+                    }
                     key "interface-name";
                     description "Enter the interface list instance";
 
@@ -877,6 +1035,15 @@ submodule nokia-conf-router-ospf3 {
                         description "Allow adjacency SID protection by LFA and remote LFA";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                     container bfd-liveness {
                         presence "Enable BFD";
                         description "Enter the bfd-liveness context";
@@ -975,6 +1142,9 @@ submodule nokia-conf-router-ospf3 {
                         description "Add a list entry for neighbor";
 
                         leaf address {
+                            must "../../interface-type = 'non-broadcast'" {
+                                error-message "Can only have neighbors configured if interface type is non-broadcast.";
+                            }
                             type types-sros:ip-address;
                             description "Neighbor link local address";
                         }
@@ -984,6 +1154,21 @@ submodule nokia-conf-router-ospf3 {
                 } // list interface
 
                 list virtual-link {
+                    must "./dead-interval >= (./hello-interval + ./hello-interval)" {
+                        error-message "The dead-interval must be >=  2 * hello-interval";
+                    }
+                    must "../../ospf-instance < 64" {
+                        error-message "Virtual link is not allowed in ospf3 address-family IPV4.";
+                    }
+                    must "../area-id = '0.0.0.0'" {
+                        error-message "Virtual link is only valid in area zero.";
+                    }
+                    must "./transit-area != '0.0.0.0'" {
+                        error-message "Virtual link transit area can not be zero.";
+                    }
+                    must "./router-id != '0.0.0.0'" {
+                        error-message "Virtual link far end can not be zero.";
+                    }
                     key "router-id transit-area";
                     description "Enter the virtual-link list instance";
 
@@ -1039,6 +1224,15 @@ submodule nokia-conf-router-ospf3 {
                         units "seconds";
                         default "1";
                         description "Time required to transmit an LSA on the interface, virtual link, or sham link";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                     container authentication {

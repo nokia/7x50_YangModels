@@ -40,7 +40,7 @@ submodule nokia-conf-qos {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-07-12";
+    revision "2019-10-11";
 
     grouping conf-qos {
         container qos {
@@ -72,6 +72,12 @@ submodule nokia-conf-qos {
                     }
 
                     leaf end {
+                        must "../start" {
+                            error-message "Start/End both must be specified";
+                        }
+                        must "../start <= . or not(../start)" {
+                            error-message "Start is greater than end";
+                        }
                         type types-qos:qos-policy-id {
                             range "2..65535";
                         }
@@ -109,6 +115,7 @@ submodule nokia-conf-qos {
                 }
 
                 leaf scope {
+                    must "../sap-ingress-policy-name != 'default' or . = 'template'";
                     type types-qos:item-scope;
                     default "template";
                     description "Scope of the policy";
@@ -159,6 +166,9 @@ submodule nokia-conf-qos {
                             description "Enter the range context";
 
                             leaf start {
+                                must "not(../end) or . <= ../end" {
+                                    error-message "Invalid Range : {start}..{end}";
+                                }
                                 type types-qos:entry-id;
                                 mandatory true;
                                 description "Starting entry at which the PCC-rule IP criteria entries are shared across several hosts";
@@ -222,6 +232,9 @@ submodule nokia-conf-qos {
                             description "Enter the policer-id-range context";
 
                             leaf start {
+                                must "not(../end) or . <= ../end" {
+                                    error-message "Invalid Range : {start}..{end}";
+                                }
                                 type types-qos:ingress-policer-id;
                                 mandatory true;
                                 description "Starting place at which dynamic policers, required for PCC-rule IP criteria entries, will be inserted";
@@ -239,6 +252,9 @@ submodule nokia-conf-qos {
                             description "Enter the arbiter-parent context";
 
                             leaf arbiter-name {
+                                must "../../stat-mode != 'no-stats'" {
+                                    error-message "Cannot have a parent arbiter assigned to a policer with a stat mode of no-stats";
+                                }
                                 type types-sros:named-item;
                                 description "Arbiter to which this policer feeds";
                             }
@@ -267,6 +283,9 @@ submodule nokia-conf-qos {
                     description "Enter the mac-criteria context";
 
                     leaf type {
+                        must ". = 'normal' or (../../ip-criteria/type != 'vxlan-vni' and ../../ipv6-criteria/type != 'vxlan-vni')" {
+                            error-message "type cannot be 'vid' when sap-ingress ip-criteria/type and/or ipv6-criteria/type is vxlan-vni'";
+                        }
                         type types-qos:mac-criteria-type;
                         sros-ext:immutable;
                         default "normal";
@@ -274,6 +293,9 @@ submodule nokia-conf-qos {
                     }
 
                     list entry {
+                        must "../../ip-criteria/type = 'normal' and ../../ipv6-criteria/type = 'normal'" {
+                            error-message "cannot create mac-criteria entry when sap-ingress ip-criteria/type and/or ipv6-criteria/type is 'vxlan-vid'";
+                        }
                         key "entry-id";
                         description "Enter the entry list instance";
 
@@ -297,6 +319,12 @@ submodule nokia-conf-qos {
                         }
 
                         container match {
+                            must "(not(./outer-tag/vlan) and ./outer-tag/mask = 4095 and not(./inner-tag/vlan) and ./inner-tag/mask = 4095) or ../../type != 'normal'" {
+                                error-message "On a normal filter no VID match criteria are allowed";
+                            }
+                            must "(not(./src-mac/address) and ./src-mac/mask = 'ff:ff:ff:ff:ff:ff' and not(./dst-mac/address) and ./dst-mac/mask = 'ff:ff:ff:ff:ff:ff' and not(./dot1p/priority) and ./dot1p/mask = 7 and not(./etype) and not(./llc-dsap/dsap) and ./llc-dsap/mask = 255 and not(./llc-ssap/ssap) and ./llc-ssap/mask = 255 and not(./snap-pid) and not(./snap-oui) and not(./atm-vci) and not(./llc-dsap/dsap)) or ../../type != 'vid'" {
+                                error-message "On a VID filter no basic criteria are allowed";
+                            }
                             description "Enter the match context";
 
                             leaf frame-type {
@@ -325,6 +353,7 @@ submodule nokia-conf-qos {
                             }
 
                             leaf atm-vci {
+                                must ". != 3 and . != 4";
                                 type types-qos:atm-vc-indentifier;
                                 description "ATM VC Identifier to match as part of the MAC match criteria";
                             }
@@ -487,6 +516,7 @@ submodule nokia-conf-qos {
                             }
 
                             leaf policer {
+                                must "../type != 'ignore-match'";
                                 type leafref {
                                     path "../../../../policer/policer-id";
                                 }
@@ -503,6 +533,9 @@ submodule nokia-conf-qos {
                     description "Enter the ip-criteria context";
 
                     leaf type {
+                        must ". = 'normal' or ../../mac-criteria/type != 'vid'" {
+                            error-message "type cannot be 'vxlan-vni' when sap-ingress mac-criteria/type is 'vid'";
+                        }
                         type types-qos:ip-filter-type;
                         sros-ext:immutable;
                         default "normal";
@@ -510,6 +543,10 @@ submodule nokia-conf-qos {
                     }
 
                     list entry {
+                        must "../../mac-criteria/type = 'normal'" {
+                            error-message "cannot create ip-criteria entry when sap-ingress mac-criteria/type is 'vid'";
+                        }
+                        must "not(../../mac-criteria/entry)";
                         key "entry-id";
                         description "Enter the entry list instance";
 
@@ -626,6 +663,9 @@ submodule nokia-conf-qos {
                                     case lt {
 
                                         leaf lt {
+                                            must ". != 0" {
+                                                error-message "Cannot be less than 0";
+                                            }
                                             type int32 {
                                                 range "0..65535";
                                             }
@@ -646,6 +686,9 @@ submodule nokia-conf-qos {
                                     case gt {
 
                                         leaf gt {
+                                            must ". != 65535" {
+                                                error-message "Cannot be more than 65535";
+                                            }
                                             type int32 {
                                                 range "0..65535";
                                             }
@@ -659,6 +702,12 @@ submodule nokia-conf-qos {
                                             description "Enter the range context";
 
                                             leaf start {
+                                                must "../end" {
+                                                    error-message "Both start and end needs to be set together";
+                                                }
+                                                must "not(../end) or . < ../end" {
+                                                    error-message "Invalid Range : {start}..{end}";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -685,6 +734,9 @@ submodule nokia-conf-qos {
                                     case lt {
 
                                         leaf lt {
+                                            must ". != 0" {
+                                                error-message "Cannot be less than 0";
+                                            }
                                             type int32 {
                                                 range "0..65535";
                                             }
@@ -705,6 +757,9 @@ submodule nokia-conf-qos {
                                     case gt {
 
                                         leaf gt {
+                                            must ". != 65535" {
+                                                error-message "Cannot be more than 65535";
+                                            }
                                             type int32 {
                                                 range "0..65535";
                                             }
@@ -718,6 +773,12 @@ submodule nokia-conf-qos {
                                             description "Enter the range context";
 
                                             leaf start {
+                                                must "../end" {
+                                                    error-message "Both start and end needs to be set together";
+                                                }
+                                                must "not(../end) or . < ../end" {
+                                                    error-message "Invalid Range : {start}..{end}";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -744,6 +805,7 @@ submodule nokia-conf-qos {
                                     case eq {
 
                                         leaf eq {
+                                            must "../../../../type = 'vxlan-vni'";
                                             type uint32 {
                                                 range "1..16777215";
                                             }
@@ -757,6 +819,13 @@ submodule nokia-conf-qos {
                                             description "Enter the range context";
 
                                             leaf start {
+                                                must "../end" {
+                                                    error-message "Both start and end needs to be set together";
+                                                }
+                                                must "not(../end) or . < ../end" {
+                                                    error-message "Invalid Range : {start}..{end}";
+                                                }
+                                                must "../../../../../type = 'vxlan-vni'";
                                                 type uint32 {
                                                     range "1..16777215";
                                                 }
@@ -800,6 +869,7 @@ submodule nokia-conf-qos {
                             }
 
                             leaf policer {
+                                must "../type != 'ignore-match'";
                                 type leafref {
                                     path "../../../../policer/policer-id";
                                 }
@@ -816,6 +886,9 @@ submodule nokia-conf-qos {
                     description "Enter the ipv6-criteria context";
 
                     leaf type {
+                        must ". = 'normal' or ../../mac-criteria/type != 'vid'" {
+                            error-message "type cannot be 'vxlan-vni' when sap-ingress mac-criteria/type is 'vid'";
+                        }
                         type types-qos:ip-filter-type;
                         sros-ext:immutable;
                         default "normal";
@@ -823,6 +896,10 @@ submodule nokia-conf-qos {
                     }
 
                     list entry {
+                        must "../../mac-criteria/type = 'normal'" {
+                            error-message "cannot create ipv6-criteria entry when sap-ingress mac-criteria/type is 'vid'";
+                        }
+                        must "not(../../mac-criteria/entry)";
                         key "entry-id";
                         description "Enter the entry list instance";
 
@@ -921,6 +998,9 @@ submodule nokia-conf-qos {
                                     case lt {
 
                                         leaf lt {
+                                            must ". != 0" {
+                                                error-message "Cannot be less than 0";
+                                            }
                                             type int32 {
                                                 range "0..65535";
                                             }
@@ -941,6 +1021,9 @@ submodule nokia-conf-qos {
                                     case gt {
 
                                         leaf gt {
+                                            must ". != 65535" {
+                                                error-message "Cannot be more than 65535";
+                                            }
                                             type int32 {
                                                 range "0..65535";
                                             }
@@ -954,6 +1037,12 @@ submodule nokia-conf-qos {
                                             description "Enter the range context";
 
                                             leaf start {
+                                                must "../end" {
+                                                    error-message "Both start and end needs to be set together";
+                                                }
+                                                must "not(../end) or . < ../end" {
+                                                    error-message "Invalid Range : {start}..{end}";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -980,6 +1069,9 @@ submodule nokia-conf-qos {
                                     case lt {
 
                                         leaf lt {
+                                            must ". != 0" {
+                                                error-message "Cannot be less than 0";
+                                            }
                                             type int32 {
                                                 range "0..65535";
                                             }
@@ -1000,6 +1092,9 @@ submodule nokia-conf-qos {
                                     case gt {
 
                                         leaf gt {
+                                            must ". != 65535" {
+                                                error-message "Cannot be more than 65535";
+                                            }
                                             type int32 {
                                                 range "0..65535";
                                             }
@@ -1013,6 +1108,12 @@ submodule nokia-conf-qos {
                                             description "Enter the range context";
 
                                             leaf start {
+                                                must "../end" {
+                                                    error-message "Both start and end needs to be set together";
+                                                }
+                                                must "not(../end) or . < ../end" {
+                                                    error-message "Invalid Range : {start}..{end}";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -1039,6 +1140,7 @@ submodule nokia-conf-qos {
                                     case eq {
 
                                         leaf eq {
+                                            must "../../../../type = 'vxlan-vni'";
                                             type uint32 {
                                                 range "1..16777215";
                                             }
@@ -1052,6 +1154,13 @@ submodule nokia-conf-qos {
                                             description "Enter the range context";
 
                                             leaf start {
+                                                must "../end" {
+                                                    error-message "Both start and end needs to be set together";
+                                                }
+                                                must "not(../end) or . < ../end" {
+                                                    error-message "Invalid Range : {start}..{end}";
+                                                }
+                                                must "../../../../../type = 'vxlan-vni'";
                                                 type uint32 {
                                                     range "1..16777215";
                                                 }
@@ -1095,6 +1204,7 @@ submodule nokia-conf-qos {
                             }
 
                             leaf policer {
+                                must "../type != 'ignore-match'";
                                 type leafref {
                                     path "../../../../policer/policer-id";
                                 }
@@ -1123,6 +1233,9 @@ submodule nokia-conf-qos {
                     }
 
                     leaf queue-type {
+                        must ". = 'auto-expedited' or (../queue-id != 1 and ../queue-id != 11)" {
+                            error-message "cannot be modified for system created object";
+                        }
                         type types-qos:queue-type;
                         sros-ext:immutable;
                         default "auto-expedited";
@@ -1130,6 +1243,9 @@ submodule nokia-conf-qos {
                     }
 
                     leaf queue-mode {
+                        must ". = 'priority' or (../queue-id != 1 and ../queue-id != 11)" {
+                            error-message "cannot be modified for system created object";
+                        }
                         type enumeration {
                             enum "priority"                     { value 1; }
                             enum "profile"                      { value 2; }
@@ -1188,6 +1304,9 @@ submodule nokia-conf-qos {
                     }
 
                     leaf packet-byte-offset {
+                        must "(. mod 2) = 0" {
+                            error-message "packet byte offset must be an even number";
+                        }
                         type types-qos:per-packet-offset {
                             range "-32..30";
                         }
@@ -1246,6 +1365,12 @@ submodule nokia-conf-qos {
                                     case police {
 
                                         leaf police {
+                                            must "../../queue-mode != 'profile'" {
+                                                error-message "cannot configure police on a profile mode queue";
+                                            }
+                                            must "../../cir-non-profiling = 'false'" {
+                                                error-message "cir-non-profiling and policed cannot both be set";
+                                            }
                                             type empty;
                                             description "Specifies that the out of profile traffic feeding into the physical queue instance should be dropped";
                                         }
@@ -1303,6 +1428,12 @@ submodule nokia-conf-qos {
                                     case police {
 
                                         leaf police {
+                                            must "../../queue-mode != 'profile'" {
+                                                error-message "cannot configure police on a profile mode queue";
+                                            }
+                                            must "../../cir-non-profiling = 'false'" {
+                                                error-message "cir-non-profiling and policed cannot both be set";
+                                            }
                                             type empty;
                                             description "Specifies that the out of profile traffic feeding into the physical queue instance should be dropped";
                                         }
@@ -1647,6 +1778,7 @@ submodule nokia-conf-qos {
                             }
 
                             leaf fp-redirect-group-multicast-policer {
+                                must "../multicast-policer";
                                 type empty;
                                 description "Broadcast policer to be used as defined in the FP (forwarding-plane)";
                             }
@@ -1699,6 +1831,7 @@ submodule nokia-conf-qos {
                             }
 
                             leaf fp-redirect-group-broadcast-policer {
+                                must "../broadcast-policer";
                                 type empty;
                                 description "Broadcast policer to be used as defined in the FP (forwarding-plane)";
                             }
@@ -1751,6 +1884,7 @@ submodule nokia-conf-qos {
                             }
 
                             leaf fp-redirect-group-unknown-policer {
+                                must "../unknown-policer";
                                 type empty;
                                 description "Broadcast policer to be used as defined in the FP (forwarding-plane)";
                             }
@@ -2028,6 +2162,9 @@ submodule nokia-conf-qos {
                     }
 
                     leaf max-avg {
+                        must "../start-avg <= ." {
+                            error-message "Start-avg = {start-avg}, Max-avg = {max-avg}";
+                        }
                         type uint32 {
                             range "0..100";
                         }
@@ -2059,6 +2196,9 @@ submodule nokia-conf-qos {
                     }
 
                     leaf max-avg {
+                        must "../start-avg <= ." {
+                            error-message "Start-avg = {start-avg}, Max-avg = {max-avg}";
+                        }
                         type uint32 {
                             range "0..100";
                         }
@@ -2090,6 +2230,9 @@ submodule nokia-conf-qos {
                     }
 
                     leaf max-avg {
+                        must "../start-avg <= ." {
+                            error-message "Start-avg = {start-avg}, Max-avg = {max-avg}";
+                        }
                         type uint32 {
                             range "0..100";
                         }
@@ -2121,6 +2264,9 @@ submodule nokia-conf-qos {
                     }
 
                     leaf max-avg {
+                        must "../start-avg <= ." {
+                            error-message "Start-avg = {start-avg}, Max-avg = {max-avg}";
+                        }
                         type uint32 {
                             range "0..100";
                         }
@@ -2140,6 +2286,7 @@ submodule nokia-conf-qos {
 
             list hsmda-slope-policy {
                 key "hsmda-slope-policy-name";
+                max-elements 511;
                 description "Enter the hsmda-slope-policy list instance";
 
                 leaf hsmda-slope-policy-name {
@@ -2180,6 +2327,9 @@ submodule nokia-conf-qos {
                     }
 
                     leaf max-depth {
+                        must "../start-depth <= ." {
+                            error-message "Start-depth = {start-depth}, Max-depth = {max-depth}";
+                        }
                         type decimal64 {
                             range "0.01..100.00";
                             fraction-digits 2;
@@ -2218,6 +2368,9 @@ submodule nokia-conf-qos {
                     }
 
                     leaf max-depth {
+                        must "../start-depth <= ." {
+                            error-message "Start-depth = {start-depth}, Max-depth = {max-depth}";
+                        }
                         type decimal64 {
                             range "0.01..100.00";
                             fraction-digits 2;
@@ -2241,6 +2394,7 @@ submodule nokia-conf-qos {
 
             list hsmda-wrr-policy {
                 key "hsmda-wrr-policy-name";
+                max-elements 31;
                 description "Enter the hsmda-wrr-policy list instance";
 
                 leaf hsmda-wrr-policy-name {
@@ -2263,6 +2417,7 @@ submodule nokia-conf-qos {
                 }
 
                 leaf schedule-using-class {
+                    must ". != 3 or ../include-queues != '1-2'";
                     type int32 {
                         range "1..3";
                     }
@@ -2291,6 +2446,7 @@ submodule nokia-conf-qos {
 
             list hsmda-pool-policy {
                 key "hsmda-pool-policy-name";
+                max-elements 31;
                 description "Enter the hsmda-pool-policy list instance";
 
                 leaf hsmda-pool-policy-name {
@@ -2325,6 +2481,7 @@ submodule nokia-conf-qos {
                     description "Enter the root-tier context";
 
                     list root-pool {
+                        must "(./root-pool-id != 1 and ./root-pool-id != 2) or ./allocation-weight != 0";
                         key "root-pool-id";
                         description "Enter the root-pool list instance";
 
@@ -2401,6 +2558,7 @@ submodule nokia-conf-qos {
 
             list hsmda-scheduler-policy {
                 key "hsmda-scheduler-policy-name";
+                max-elements 63;
                 description "Enter the hsmda-scheduler-policy list instance";
 
                 leaf hsmda-scheduler-policy-name {
@@ -2782,6 +2940,10 @@ submodule nokia-conf-qos {
                         }
 
                         leaf wrr-weight {
+                            must ". <= 4 or ../queue-id != 1" {
+                                error-message "4";
+                            }
+                            must ". = 1 or ../queue-id <= 3";
                             type types-qos:hsmda-wrr-weight;
                             default "1";
                             description "Weight value for the HSMDA queue";
@@ -2871,6 +3033,9 @@ submodule nokia-conf-qos {
                     }
 
                     leaf queue-type {
+                        must ". = 'auto-expedited' or (../queue-id != 1 and ../queue-id != 9)" {
+                            error-message "cannot be modified for system created object";
+                        }
                         type enumeration {
                             enum "expedited"                    { value 1; }
                             enum "auto-expedited"               { value 2; }
@@ -2907,24 +3072,28 @@ submodule nokia-conf-qos {
                     }
 
                     leaf hs-alt-port-class-pool {
+                        must ". = 'false' or ../queue-id <= 8";
                         type boolean;
                         default "false";
                         description "Use HS alternate class port pool buffer for traffic";
                     }
 
                     leaf hs-wrr-weight {
+                        must ". = 1 or ../queue-id <= 8";
                         type types-qos:hs-wrr-weight;
                         default "1";
                         description "Weighted Round Robin (WRR) weight to parent with this queue into the scheduler";
                     }
 
                     leaf hs-class-weight {
+                        must ". = 1 or ../queue-id <= 8";
                         type types-qos:hs-class-weight;
                         default "1";
                         description "Scheduling class weight";
                     }
 
                     leaf hs-mbs {
+                        must ". = 100.00 or ../queue-id <= 8";
                         type decimal64 {
                             range "0.00..100.00";
                             fraction-digits 2;
@@ -3423,6 +3592,9 @@ submodule nokia-conf-qos {
                             }
 
                             leaf active-min-only {
+                                must ". = 'false' or ../rate or ../percent" {
+                                    error-message "active-min-only cannot be enabled when add rate, percent are default values";
+                                }
                                 type boolean;
                                 default "false";
                                 description "Use increase in rate or percentage as minimum offered rate only for active queues or policers";
@@ -3493,6 +3665,12 @@ submodule nokia-conf-qos {
                             }
 
                             leaf active-min-only {
+                                must ". = 'false' or ../high-rate != 0" {
+                                    error-message "High rate hold time active-min-only cannot be enabled when high-rate-hold-time is default value";
+                                }
+                                must ". = 'false' or ../../add/active-min-only != 'false'" {
+                                    error-message "High rate hold time active-min-only can be enabled once admin rate active-min-only is enabled";
+                                }
                                 type boolean;
                                 default "false";
                                 description "Use specified increase value as minimum offered rate only for active queues or policers";
@@ -3662,6 +3840,7 @@ submodule nokia-conf-qos {
                     }
 
                     leaf weight {
+                        must "(../class-id != 0 and ../class-id != 1)";
                         type uint32 {
                             range "1..100";
                         }
@@ -3817,6 +3996,7 @@ submodule nokia-conf-qos {
                     }
 
                     leaf weight {
+                        must "(../class-id != 0 and ../class-id != 1)";
                         type uint32 {
                             range "1..100";
                         }
@@ -4065,6 +4245,7 @@ submodule nokia-conf-qos {
                         }
 
                         list queue {
+                            must "not(../policer)";
                             key "queue-id";
                             description "Enter the queue list instance";
 
@@ -4143,6 +4324,9 @@ submodule nokia-conf-qos {
                             }
 
                             leaf packet-byte-offset {
+                                must "(. mod 2) = 0" {
+                                    error-message "packet byte offset must be an even number";
+                                }
                                 type types-qos:per-packet-offset;
                                 default "0";
                                 description "Value of the adjustment on the size of each packet for queue accounting";
@@ -4252,6 +4436,12 @@ submodule nokia-conf-qos {
                                     case police {
 
                                         leaf police {
+                                            must "../../cir-non-profiling = 'false'" {
+                                                error-message "cir-non-profiling and policed cannot both be set";
+                                            }
+                                            must "../../queue-mode != 'profile'" {
+                                                error-message "queue-mode profile and policed cannot both be set";
+                                            }
                                             type empty;
                                             description "Specifies that the out of profile traffic feeding into the physical queue instance should be dropped";
                                         }
@@ -4381,6 +4571,9 @@ submodule nokia-conf-qos {
                                 description "Enter the arbiter-parent context";
 
                                 leaf arbiter-name {
+                                    must "../../stat-mode != 'no-stats'" {
+                                        error-message "Cannot have a parent arbiter assigned to a policer with a stat mode of no-stats";
+                                    }
                                     type types-sros:named-item;
                                     description "Arbiter to which this policer feeds";
                                 }
@@ -4453,6 +4646,7 @@ submodule nokia-conf-qos {
                         }
 
                         leaf queues-hqos-manageable {
+                            must ". != 'false' or not(../policer)";
                             type boolean;
                             default "true";
                             description "Manage queues through the Hierarchical QoS process";
@@ -4540,6 +4734,13 @@ submodule nokia-conf-qos {
                                 }
 
                                 leaf wrr-weight {
+                                    must ". <= 4 or ../queue-id != 1" {
+                                        error-message "4";
+                                    }
+                                    must "(. <= 32 or ../queue-id != 2) and (. <= 32 or ../queue-id != 3)" {
+                                        error-message "32";
+                                    }
+                                    must ". = 1 or ../queue-id <= 3";
                                     type types-qos:hsmda-wrr-weight;
                                     default "1";
                                     description "Weight value for the HSMDA queue";
@@ -4667,6 +4868,7 @@ submodule nokia-conf-qos {
                             }
 
                             leaf mbs {
+                                must ". = 'auto' or not(../queue-delay)";
                                 type union {
                                     type types-qos:bytes {
                                         range "0..1073741824";
@@ -4681,6 +4883,7 @@ submodule nokia-conf-qos {
                             }
 
                             leaf packet-byte-offset {
+                                must ". = 0 or ../../queues-hqos-manageable != 'false'";
                                 type types-qos:egress-per-packet-offset;
                                 default "0";
                                 description "Packet byte offset for addition of policing information";
@@ -4701,18 +4904,21 @@ submodule nokia-conf-qos {
                             }
 
                             leaf hs-alt-port-class-pool {
+                                must ". = 'false' or ../queue-id <= 8";
                                 type boolean;
                                 default "false";
                                 description "Use HS alternate class port pool buffer for traffic";
                             }
 
                             leaf hs-wrr-weight {
+                                must ". = 1 or ../queue-id <= 8";
                                 type types-qos:hs-wrr-weight;
                                 default "1";
                                 description "Weighted Round Robin (WRR) weight to parent with this queue into the scheduler";
                             }
 
                             leaf hs-class-weight {
+                                must ". = 1 or ../queue-id <= 8";
                                 type types-qos:hs-class-weight;
                                 default "1";
                                 description "Scheduling class weight";
@@ -4869,6 +5075,7 @@ submodule nokia-conf-qos {
                             } // container adaptation-rule
 
                             container wred-queue {
+                                must "(./mode != 'native' or ./usage = 'exceed-low') and (./mode != 'pool-per-queue' or ./usage = 'auto')";
                                 description "Enter the wred-queue context";
 
                                 leaf policy {
@@ -4950,6 +5157,7 @@ submodule nokia-conf-qos {
                         } // list queue
 
                         list policer {
+                            must "../egress-queue-group-name != 'policer-output-queues' and ../egress-queue-group-name != '_tmnx_nat_egr_q_grp' and ../egress-queue-group-name != '_tmnx_nat_egr_q_grp_v2' and ../egress-queue-group-name != '_tmnx_lns_esm_egr_q_grp'";
                             key "policer-id";
                             description "Enter the policer list instance";
 
@@ -5194,6 +5402,7 @@ submodule nokia-conf-qos {
                 }
 
                 leaf scope {
+                    must ". = 'template' or ../network-policy-name != 'default'";
                     type types-qos:item-scope;
                     default "template";
                     description "Scope of the policy";
@@ -5495,6 +5704,9 @@ submodule nokia-conf-qos {
                                         case lt {
 
                                             leaf lt {
+                                                must ". != 0" {
+                                                    error-message "Cannot be less than 0";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -5515,6 +5727,9 @@ submodule nokia-conf-qos {
                                         case gt {
 
                                             leaf gt {
+                                                must ". != 65535" {
+                                                    error-message "Cannot be more than 65535";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -5528,6 +5743,12 @@ submodule nokia-conf-qos {
                                                 description "Enter the range context";
 
                                                 leaf start {
+                                                    must "../end" {
+                                                        error-message "Both start and end needs to be set together";
+                                                    }
+                                                    must "not(../end) or . < ../end" {
+                                                        error-message "Invalid Range : {start}..{end}";
+                                                    }
                                                     type int32 {
                                                         range "0..65535";
                                                     }
@@ -5554,6 +5775,9 @@ submodule nokia-conf-qos {
                                         case lt {
 
                                             leaf lt {
+                                                must ". != 0" {
+                                                    error-message "Cannot be less than 0";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -5574,6 +5798,9 @@ submodule nokia-conf-qos {
                                         case gt {
 
                                             leaf gt {
+                                                must ". != 65535" {
+                                                    error-message "Cannot be more than 65535";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -5587,6 +5814,12 @@ submodule nokia-conf-qos {
                                                 description "Enter the range context";
 
                                                 leaf start {
+                                                    must "../end" {
+                                                        error-message "Both start and end needs to be set together";
+                                                    }
+                                                    must "not(../end) or . < ../end" {
+                                                        error-message "Invalid Range : {start}..{end}";
+                                                    }
                                                     type int32 {
                                                         range "0..65535";
                                                     }
@@ -5612,6 +5845,9 @@ submodule nokia-conf-qos {
                                 description "Enter the action context";
 
                                 leaf type {
+                                    must ". != 'accept' or (../fc and ../profile)" {
+                                        error-message "action cannot be set to accept without configuring fc and profile";
+                                    }
                                     type types-qos:criteria-action-type;
                                     default "ignore-match";
                                     description "Specified whether the criteria entry is active or in-active.";
@@ -5755,6 +5991,9 @@ submodule nokia-conf-qos {
                                         case lt {
 
                                             leaf lt {
+                                                must ". != 0" {
+                                                    error-message "Cannot be less than 0";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -5775,6 +6014,9 @@ submodule nokia-conf-qos {
                                         case gt {
 
                                             leaf gt {
+                                                must ". != 65535" {
+                                                    error-message "Cannot be more than 65535";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -5788,6 +6030,12 @@ submodule nokia-conf-qos {
                                                 description "Enter the range context";
 
                                                 leaf start {
+                                                    must "../end" {
+                                                        error-message "Both start and end needs to be set together";
+                                                    }
+                                                    must "not(../end) or . < ../end" {
+                                                        error-message "Invalid Range : {start}..{end}";
+                                                    }
                                                     type int32 {
                                                         range "0..65535";
                                                     }
@@ -5814,6 +6062,9 @@ submodule nokia-conf-qos {
                                         case lt {
 
                                             leaf lt {
+                                                must ". != 0" {
+                                                    error-message "Cannot be less than 0";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -5834,6 +6085,9 @@ submodule nokia-conf-qos {
                                         case gt {
 
                                             leaf gt {
+                                                must ". != 65535" {
+                                                    error-message "Cannot be more than 65535";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -5847,6 +6101,12 @@ submodule nokia-conf-qos {
                                                 description "Enter the range context";
 
                                                 leaf start {
+                                                    must "../end" {
+                                                        error-message "Both start and end needs to be set together";
+                                                    }
+                                                    must "not(../end) or . < ../end" {
+                                                        error-message "Invalid Range : {start}..{end}";
+                                                    }
                                                     type int32 {
                                                         range "0..65535";
                                                     }
@@ -5872,6 +6132,9 @@ submodule nokia-conf-qos {
                                 description "Enter the action context";
 
                                 leaf type {
+                                    must ". != 'accept' or (../fc and ../profile)" {
+                                        error-message "action cannot be set to accept without configuring fc and profile";
+                                    }
                                     type types-qos:criteria-action-type;
                                     default "ignore-match";
                                     description "Specified whether the criteria entry is active or in-active.";
@@ -5915,6 +6178,7 @@ submodule nokia-conf-qos {
                         description "Enter the dscp list instance";
 
                         leaf dscp-name {
+                            must "not(../../ip-criteria/entry) and not(../../ipv6-criteria/entry)";
                             type types-qos:dscp-name;
                             description "Specifies the Differentiated Services Code Point (DSCP) name for which mapping is done.";
                         }
@@ -5947,6 +6211,7 @@ submodule nokia-conf-qos {
                         description "Enter the prec list instance";
 
                         leaf prec-value {
+                            must "not(../../ip-criteria/entry) and not(../../ipv6-criteria/entry)";
                             type types-qos:precedence-value;
                             description "Precedence value for which mapping is performed";
                         }
@@ -6098,6 +6363,7 @@ submodule nokia-conf-qos {
                                 }
 
                                 leaf icmp-type {
+                                    must "../protocol = 1";
                                     type types-filter:ipv4-match-icmp-types;
                                     description "ICMP type to match.";
                                 }
@@ -6155,6 +6421,9 @@ submodule nokia-conf-qos {
                                         case lt {
 
                                             leaf lt {
+                                                must ". != 0" {
+                                                    error-message "Cannot be less than 0";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -6175,6 +6444,9 @@ submodule nokia-conf-qos {
                                         case gt {
 
                                             leaf gt {
+                                                must ". != 65535" {
+                                                    error-message "Cannot be more than 65535";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -6188,6 +6460,12 @@ submodule nokia-conf-qos {
                                                 description "Enter the range context";
 
                                                 leaf start {
+                                                    must "../end" {
+                                                        error-message "Both start and end needs to be set together";
+                                                    }
+                                                    must "not(../end) or . < ../end" {
+                                                        error-message "Invalid Range : {start}..{end}";
+                                                    }
                                                     type int32 {
                                                         range "0..65535";
                                                     }
@@ -6214,6 +6492,9 @@ submodule nokia-conf-qos {
                                         case lt {
 
                                             leaf lt {
+                                                must ". != 0" {
+                                                    error-message "Cannot be less than 0";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -6234,6 +6515,9 @@ submodule nokia-conf-qos {
                                         case gt {
 
                                             leaf gt {
+                                                must ". != 65535" {
+                                                    error-message "Cannot be more than 65535";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -6247,6 +6531,12 @@ submodule nokia-conf-qos {
                                                 description "Enter the range context";
 
                                                 leaf start {
+                                                    must "../end" {
+                                                        error-message "Both start and end needs to be set together";
+                                                    }
+                                                    must "not(../end) or . < ../end" {
+                                                        error-message "Invalid Range : {start}..{end}";
+                                                    }
                                                     type int32 {
                                                         range "0..65535";
                                                     }
@@ -6272,12 +6562,16 @@ submodule nokia-conf-qos {
                                 description "Enter the action context";
 
                                 leaf type {
+                                    must ". != 'accept' or ((../fc and ../profile) or ../port-redirect-group/queue or ../port-redirect-group/policer)" {
+                                        error-message "action cannot be set to accept without configuring fc and profile, or port-redirect-group/queue, or port-redirect-group/policer";
+                                    }
                                     type types-qos:criteria-action-type;
                                     default "ignore-match";
                                     description "Specified whether the criteria entry is active or in-active.";
                                 }
 
                                 leaf fc {
+                                    must "../profile";
                                     type types-sros:fc-name;
                                     description "Forwarding class";
                                 }
@@ -6358,6 +6652,7 @@ submodule nokia-conf-qos {
                                 }
 
                                 leaf icmp-type {
+                                    must "../next-header = 58";
                                     type types-filter:ipv6-match-icmp-types;
                                     description "ICMP type to match.";
                                 }
@@ -6415,6 +6710,9 @@ submodule nokia-conf-qos {
                                         case lt {
 
                                             leaf lt {
+                                                must ". != 0" {
+                                                    error-message "Cannot be less than 0";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -6435,6 +6733,9 @@ submodule nokia-conf-qos {
                                         case gt {
 
                                             leaf gt {
+                                                must ". != 65535" {
+                                                    error-message "Cannot be more than 65535";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -6448,6 +6749,12 @@ submodule nokia-conf-qos {
                                                 description "Enter the range context";
 
                                                 leaf start {
+                                                    must "../end" {
+                                                        error-message "Both start and end needs to be set together";
+                                                    }
+                                                    must "not(../end) or . < ../end" {
+                                                        error-message "Invalid Range : {start}..{end}";
+                                                    }
                                                     type int32 {
                                                         range "0..65535";
                                                     }
@@ -6474,6 +6781,9 @@ submodule nokia-conf-qos {
                                         case lt {
 
                                             leaf lt {
+                                                must ". != 0" {
+                                                    error-message "Cannot be less than 0";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -6494,6 +6804,9 @@ submodule nokia-conf-qos {
                                         case gt {
 
                                             leaf gt {
+                                                must ". != 65535" {
+                                                    error-message "Cannot be more than 65535";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -6507,6 +6820,12 @@ submodule nokia-conf-qos {
                                                 description "Enter the range context";
 
                                                 leaf start {
+                                                    must "../end" {
+                                                        error-message "Both start and end needs to be set together";
+                                                    }
+                                                    must "not(../end) or . < ../end" {
+                                                        error-message "Invalid Range : {start}..{end}";
+                                                    }
                                                     type int32 {
                                                         range "0..65535";
                                                     }
@@ -6532,12 +6851,16 @@ submodule nokia-conf-qos {
                                 description "Enter the action context";
 
                                 leaf type {
+                                    must ". != 'accept' or ((../fc and ../profile) or ../port-redirect-group/queue or ../port-redirect-group/policer)" {
+                                        error-message "action cannot be set to accept without configuring fc and profile, or port-redirect-group/queue, or port-redirect-group/policer";
+                                    }
                                     type types-qos:criteria-action-type;
                                     default "ignore-match";
                                     description "Specified whether the criteria entry is active or in-active.";
                                 }
 
                                 leaf fc {
+                                    must "../profile";
                                     type types-sros:fc-name;
                                     description "Forwarding class";
                                 }
@@ -6780,6 +7103,15 @@ submodule nokia-conf-qos {
                     type types-qos:item-scope;
                     default "template";
                     description "Scope of the policy.";
+                }
+
+                leaf stat-mode {
+                    type enumeration {
+                        enum "no-stats"                     { value 1; }
+                        enum "enqueued-with-discards"       { value 2; }
+                    }
+                    default "no-stats";
+                    description "Statistics mode of this policy.";
                 }
 
                 leaf-list apply-groups {
@@ -7487,6 +7819,9 @@ submodule nokia-conf-qos {
                 }
 
                 leaf parent-location {
+                    must ". != 'sla' or ../policers-hqos-manageable != 'true'" {
+                        error-message "Cannot simultaneously have the policy set to policers-hqos-manageable and parent-location set to sla";
+                    }
                     type enumeration {
                         enum "auto"                         { value 1; }
                         enum "sla"                          { value 2; }
@@ -7535,6 +7870,9 @@ submodule nokia-conf-qos {
                             description "Enter the range context";
 
                             leaf start {
+                                must "not(../end) or . <= ../end" {
+                                    error-message "Invalid Range : {start}..{end}";
+                                }
                                 type types-qos:entry-id;
                                 mandatory true;
                                 description "Specifies the starting entry at which the pcc-rule ip-criteria entries that are received from Diameter and that are shared across several hosts.";
@@ -7606,6 +7944,9 @@ submodule nokia-conf-qos {
                             description "Enter the policer-id-range context";
 
                             leaf start {
+                                must "not(../end) or . <= ../end" {
+                                    error-message "Invalid Range : {start}..{end}";
+                                }
                                 type types-qos:ingress-policer-id;
                                 mandatory true;
                                 description "Specifies the starting place at which dynamic policers required for the pcc-rule ip-criteria entries that are received from Diameter and that are shared across several hosts will be inserted.";
@@ -7623,6 +7964,9 @@ submodule nokia-conf-qos {
                             description "Enter the arbiter-parent context";
 
                             leaf arbiter-name {
+                                must "../../stat-mode != 'no-stats'" {
+                                    error-message "Cannot have a parent arbiter assigned to a policer with a stat mode of no-stats";
+                                }
                                 type types-sros:named-item;
                                 description "Arbiter to which this policer feeds";
                             }
@@ -7713,6 +8057,13 @@ submodule nokia-conf-qos {
                         }
 
                         leaf wrr-weight {
+                            must ". <= 4 or ../queue-id != 1" {
+                                error-message "4";
+                            }
+                            must "(. <= 32 or ../queue-id != 2) and (. <= 32 or ../queue-id != 3)" {
+                                error-message "32";
+                            }
+                            must ". = 1 or ../queue-id <= 3";
                             type types-qos:hsmda-wrr-weight;
                             default "1";
                             description "Weight value for the HSMDA queue";
@@ -7874,6 +8225,9 @@ submodule nokia-conf-qos {
                                 description "Enter the dscp context";
 
                                 leaf in-profile {
+                                    must "'true' = ../out-profile" {
+                                        error-message "dscp in-profile and out-profile must be both provisioned or unprovisioned";
+                                    }
                                     type types-qos:dscp-name;
                                     description "DSCP name for in-profile frames";
                                 }
@@ -7884,6 +8238,9 @@ submodule nokia-conf-qos {
                                 }
 
                                 leaf exceed-profile {
+                                    must "(../in-profile and ../out-profile)" {
+                                        error-message "exceed-profile must not be provisioned without in-profile and out-profile";
+                                    }
                                     type types-qos:dscp-name;
                                     description "DSCP name for exceed-profile frames";
                                 }
@@ -7897,6 +8254,9 @@ submodule nokia-conf-qos {
                                 description "Enter the prec context";
 
                                 leaf in-profile {
+                                    must "'true' = ../out-profile" {
+                                        error-message "prec in-profile and out-profile must be both provisioned or unprovisioned";
+                                    }
                                     type types-qos:precedence-value;
                                     description "Precedence value for in-profile frames";
                                 }
@@ -7907,6 +8267,9 @@ submodule nokia-conf-qos {
                                 }
 
                                 leaf exceed-profile {
+                                    must "(../in-profile and ../out-profile)" {
+                                        error-message "exceed-profile must not be provisioned without in-profile and out-profile";
+                                    }
                                     type types-qos:precedence-value;
                                     description "Precedence for exceed-profile frames";
                                 }
@@ -7947,6 +8310,7 @@ submodule nokia-conf-qos {
                                 description "Enter the queue-group-queue context";
 
                                 leaf queue-group-name {
+                                    must "not(../../hsmda/port-redirect-group-queue)";
                                     type leafref {
                                         path "../../../../queue-group-templates/egress/queue-group/egress-queue-group-name";
                                     }
@@ -8009,6 +8373,9 @@ submodule nokia-conf-qos {
                         description "Enter the dot1p context";
 
                         leaf in-profile {
+                            must "'true' = ../out-profile" {
+                                error-message "dot1p in-profile and out-profile must be both provisioned or unprovisioned";
+                            }
                             type types-qos:dot1p-priority;
                             description "Dot1p value for in-profile frames";
                         }
@@ -8019,6 +8386,9 @@ submodule nokia-conf-qos {
                         }
 
                         leaf exceed-profile {
+                            must "(../in-profile and ../out-profile)" {
+                                error-message "exceed-profile must not be provisioned without in-profile and out-profile";
+                            }
                             type types-qos:dot1p-priority;
                             description "Dot1p value for exceed-profile frames";
                         }
@@ -8029,6 +8399,9 @@ submodule nokia-conf-qos {
                         description "Enter the dot1p-inner context";
 
                         leaf in-profile {
+                            must "'true' = ../out-profile" {
+                                error-message "dot1p in-profile and out-profile must be both provisioned or unprovisioned";
+                            }
                             type types-qos:dot1p-priority;
                             description "Inner Dot1p value for in-profile frames";
                         }
@@ -8044,6 +8417,9 @@ submodule nokia-conf-qos {
                         description "Enter the dot1p-outer context";
 
                         leaf in-profile {
+                            must "'true' = ../out-profile" {
+                                error-message "dot1p in-profile and out-profile must be both provisioned or unprovisioned";
+                            }
                             type types-qos:dot1p-priority;
                             description "Outer Dot1p value for in-profile frames";
                         }
@@ -8054,6 +8430,9 @@ submodule nokia-conf-qos {
                         }
 
                         leaf exceed-profile {
+                            must "(../in-profile and ../out-profile)" {
+                                error-message "exceed-profile must not be provisioned without in-profile and out-profile";
+                            }
                             type types-qos:dot1p-priority;
                             description "Outer Dot1p value for exceed-profile frames";
                         }
@@ -8106,6 +8485,9 @@ submodule nokia-conf-qos {
                     }
 
                     leaf queue-type {
+                        must ". = 'auto-expedited' or ../queue-id != 1" {
+                            error-message "cannot be modified for system created object";
+                        }
                         type enumeration {
                             enum "expedited"                    { value 1; }
                             enum "auto-expedited"               { value 2; }
@@ -8182,18 +8564,21 @@ submodule nokia-conf-qos {
                     }
 
                     leaf hs-alt-port-class-pool {
+                        must ". = 'false' or ../queue-id <= 8";
                         type boolean;
                         default "false";
                         description "Use HS alternate class port pool buffer for traffic";
                     }
 
                     leaf hs-wrr-weight {
+                        must ". = 1 or ../queue-id <= 8";
                         type types-qos:hs-wrr-weight;
                         default "1";
                         description "Weighted Round Robin (WRR) weight to parent with this queue into the scheduler";
                     }
 
                     leaf hs-class-weight {
+                        must ". = 1 or ../queue-id <= 8";
                         type types-qos:hs-class-weight;
                         default "1";
                         description "Scheduling class weight";
@@ -8359,6 +8744,7 @@ submodule nokia-conf-qos {
                     } // container adaptation-rule
 
                     container wred-queue {
+                        must "(./mode != 'native' or ./usage = 'exceed-low') and (./mode != 'pool-per-queue' or ./usage = 'auto')";
                         description "Enter the wred-queue context";
 
                         leaf policy {
@@ -8484,6 +8870,7 @@ submodule nokia-conf-qos {
                     }
 
                     leaf exceed-pir {
+                        must ". = 'false' or ../../policers-hqos-manageable != 'true'";
                         type boolean;
                         default "false";
                         description "Allow forwarding of packets with an exceed-profile state and traffic exceeding the PIR";
@@ -8527,6 +8914,7 @@ submodule nokia-conf-qos {
                     }
 
                     leaf stat-mode {
+                        must ". != 'no-stats' or ../../policers-hqos-manageable != 'true'";
                         type types-qos:egress-policer-stat-mode;
                         default "minimal";
                         description "Mode of statistics collected by the policer";
@@ -8599,6 +8987,7 @@ submodule nokia-conf-qos {
                                 description "Enter the scheduler-parent context";
 
                                 leaf scheduler-name {
+                                    must "../../../policers-hqos-manageable = 'true'";
                                     type types-sros:named-item;
                                     mandatory true;
                                     description "Specifies the scheduler to which this queue would be feeding to.";
@@ -8634,6 +9023,7 @@ submodule nokia-conf-qos {
                         case port-parent {
 
                             container port-parent {
+                                must "../../policers-hqos-manageable = 'true'";
                                 presence "Specifies whether this queue is parented by port-level scheduler.";
                                 description "Enter the port-parent context";
 
@@ -8686,6 +9076,8 @@ submodule nokia-conf-qos {
                         description "Enter the arbiter-parent context";
 
                         leaf arbiter-name {
+                            must "../../stat-mode != 'no-stats'";
+                            must "../../../policers-hqos-manageable != 'true'";
                             type types-sros:named-item;
                             description "Arbiter to which this policer feeds";
                         }
@@ -8832,6 +9224,9 @@ submodule nokia-conf-qos {
                                     case lt {
 
                                         leaf lt {
+                                            must ". != 0" {
+                                                error-message "Cannot be less than 0";
+                                            }
                                             type int32 {
                                                 range "0..65535";
                                             }
@@ -8852,6 +9247,9 @@ submodule nokia-conf-qos {
                                     case gt {
 
                                         leaf gt {
+                                            must ". != 65535" {
+                                                error-message "Cannot be more than 65535";
+                                            }
                                             type int32 {
                                                 range "0..65535";
                                             }
@@ -8865,6 +9263,12 @@ submodule nokia-conf-qos {
                                             description "Enter the range context";
 
                                             leaf start {
+                                                must "../end" {
+                                                    error-message "Both start and end needs to be set together";
+                                                }
+                                                must "not(../end) or . < ../end" {
+                                                    error-message "Invalid Range : {start}..{end}";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -8891,6 +9295,9 @@ submodule nokia-conf-qos {
                                     case lt {
 
                                         leaf lt {
+                                            must ". != 0" {
+                                                error-message "Cannot be less than 0";
+                                            }
                                             type int32 {
                                                 range "0..65535";
                                             }
@@ -8911,6 +9318,9 @@ submodule nokia-conf-qos {
                                     case gt {
 
                                         leaf gt {
+                                            must ". != 65535" {
+                                                error-message "Cannot be more than 65535";
+                                            }
                                             type int32 {
                                                 range "0..65535";
                                             }
@@ -8924,6 +9334,12 @@ submodule nokia-conf-qos {
                                             description "Enter the range context";
 
                                             leaf start {
+                                                must "../end" {
+                                                    error-message "Both start and end needs to be set together";
+                                                }
+                                                must "not(../end) or . < ../end" {
+                                                    error-message "Invalid Range : {start}..{end}";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -9038,6 +9454,8 @@ submodule nokia-conf-qos {
                             }
 
                             leaf policer {
+                                must "../type != 'ignore-match'";
+                                must "not(../hsmda-counter-override)";
                                 type leafref {
                                     path "../../../../policer/policer-id";
                                 }
@@ -9045,12 +9463,14 @@ submodule nokia-conf-qos {
                             }
 
                             leaf port-redirect-group-queue {
+                                must ". = 'false' or ../queue";
                                 type boolean;
                                 default "false";
                                 description "Use the queue specified in egress access port queue-group instance";
                             }
 
                             leaf queue {
+                                must "../../../../policers-hqos-manageable != 'true'";
                                 type int32 {
                                     range "0..8";
                                 }
@@ -9058,6 +9478,8 @@ submodule nokia-conf-qos {
                             }
 
                             leaf use-fc-mapped-queue {
+                                must ". = 'false' or (not(../queue) and ../port-redirect-group-queue = 'false')";
+                                must ". = 'false' or ../../../../policers-hqos-manageable != 'true'";
                                 type boolean;
                                 default "false";
                                 description "Redirect policer output to the configured queues";
@@ -9117,6 +9539,9 @@ submodule nokia-conf-qos {
                                     case lt {
 
                                         leaf lt {
+                                            must ". != 0" {
+                                                error-message "Cannot be less than 0";
+                                            }
                                             type int32 {
                                                 range "0..65535";
                                             }
@@ -9137,6 +9562,9 @@ submodule nokia-conf-qos {
                                     case gt {
 
                                         leaf gt {
+                                            must ". != 65535" {
+                                                error-message "Cannot be more than 65535";
+                                            }
                                             type int32 {
                                                 range "0..65535";
                                             }
@@ -9150,6 +9578,12 @@ submodule nokia-conf-qos {
                                             description "Enter the range context";
 
                                             leaf start {
+                                                must "../end" {
+                                                    error-message "Both start and end needs to be set together";
+                                                }
+                                                must "not(../end) or . < ../end" {
+                                                    error-message "Invalid Range : {start}..{end}";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -9176,6 +9610,9 @@ submodule nokia-conf-qos {
                                     case lt {
 
                                         leaf lt {
+                                            must ". != 0" {
+                                                error-message "Cannot be less than 0";
+                                            }
                                             type int32 {
                                                 range "0..65535";
                                             }
@@ -9196,6 +9633,9 @@ submodule nokia-conf-qos {
                                     case gt {
 
                                         leaf gt {
+                                            must ". != 65535" {
+                                                error-message "Cannot be more than 65535";
+                                            }
                                             type int32 {
                                                 range "0..65535";
                                             }
@@ -9209,6 +9649,12 @@ submodule nokia-conf-qos {
                                             description "Enter the range context";
 
                                             leaf start {
+                                                must "../end" {
+                                                    error-message "Both start and end needs to be set together";
+                                                }
+                                                must "not(../end) or . < ../end" {
+                                                    error-message "Invalid Range : {start}..{end}";
+                                                }
                                                 type int32 {
                                                     range "0..65535";
                                                 }
@@ -9303,6 +9749,8 @@ submodule nokia-conf-qos {
                             }
 
                             leaf policer {
+                                must "../type != 'ignore-match'";
+                                must "not(../hsmda-counter-override)";
                                 type leafref {
                                     path "../../../../policer/policer-id";
                                 }
@@ -9310,12 +9758,14 @@ submodule nokia-conf-qos {
                             }
 
                             leaf port-redirect-group-queue {
+                                must ". = 'false' or ../queue";
                                 type boolean;
                                 default "false";
                                 description "Use the queue specified in egress access port queue-group instance";
                             }
 
                             leaf queue {
+                                must "../../../../policers-hqos-manageable != 'true'";
                                 type int32 {
                                     range "0..8";
                                 }
@@ -9323,6 +9773,8 @@ submodule nokia-conf-qos {
                             }
 
                             leaf use-fc-mapped-queue {
+                                must ". = 'false' or (not(../queue) and ../port-redirect-group-queue = 'false')";
+                                must ". = 'false' or ../../../../policers-hqos-manageable != 'true'";
                                 type boolean;
                                 default "false";
                                 description "Redirect policer output to the configured queues";
@@ -9378,6 +9830,10 @@ submodule nokia-conf-qos {
                     }
 
                     leaf parent-location {
+                        must ". = 'auto' or ../tier-id = 1" {
+                            error-message "Configuration of parent-location only allowed in tier 1";
+                        }
+                        must "../tier-id != 1 or . = 'auto' or ../../frame-based-accounting = 'false'";
                         type enumeration {
                             enum "auto"                         { value 1; }
                             enum "sub"                          { value 2; }
@@ -9411,6 +9867,9 @@ submodule nokia-conf-qos {
                         }
 
                         leaf limit-unused-bandwidth {
+                            must ". = 'false' or ../../tier-id = 1" {
+                                error-message "Configuration of limit-unused-bandwidth only allowed in tier 1";
+                            }
                             type boolean;
                             default "false";
                             description "Enable aggregate rate overrun protection";
@@ -9433,6 +9892,7 @@ submodule nokia-conf-qos {
                                     description "Enter the scheduler-parent context";
 
                                     leaf scheduler-name {
+                                        must "../../../tier-id != 1 or ../../../parent-location != 'auto'";
                                         type string {
                                             length "1..32";
                                         }
@@ -9979,6 +10439,7 @@ submodule nokia-conf-qos {
                         }
 
                         leaf allocation-weight {
+                            must ". != 0 or ../root-pool-id != 1";
                             type uint32 {
                                 range "0..100";
                             }
@@ -10470,11 +10931,17 @@ submodule nokia-conf-qos {
                         description "Enter the maps-to context";
 
                         leaf fc {
+                            must "../profile" {
+                                error-message "cannot set fc to non-default when profile is set to default";
+                            }
                             type types-sros:fc-name;
                             description "Name of forwarding class to be remapped";
                         }
 
                         leaf profile {
+                            must "../fc" {
+                                error-message "cannot set profile to non-default when fc is set to default";
+                            }
                             type types-qos:egress-profile;
                             description "Packet Profile that needs to be remapped.";
                         }

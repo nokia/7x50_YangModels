@@ -36,7 +36,7 @@ submodule nokia-conf-port-otu {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-05-01";
+    revision "2019-07-28";
 
     grouping conf-port-otu {
         container otu {
@@ -68,6 +68,9 @@ submodule nokia-conf-port-otu {
             }
 
             leaf sf-threshold {
+                must ". >= ../sd-threshold" {
+                    error-message "sf-threshold must be less than sd-threshold";
+                }
                 type uint32 {
                     range "3..6";
                 }
@@ -79,6 +82,15 @@ submodule nokia-conf-port-otu {
                 type types-port:otu-sf-sd-method;
                 default "fec";
                 description "Method used to determine the signal fail and signal degrade alarms";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
             }
 
             container report-alarm {
@@ -213,6 +225,18 @@ submodule nokia-conf-port-otu {
             } // container report-alarm
 
             container fine-granularity-ber {
+                must "(./signal-degrade/raise/threshold = 7 and ./signal-degrade/raise/multiplier = 10 and ./signal-failure/raise/threshold = 5 and ./signal-failure/raise/multiplier = 10) or ((./signal-failure/raise/threshold != ./signal-degrade/raise/threshold or ./signal-failure/raise/multiplier > ./signal-degrade/raise/multiplier) and (./signal-failure/raise/threshold = ./signal-degrade/raise/threshold or ./signal-failure/raise/threshold <= ./signal-degrade/raise/threshold))" {
+                    error-message "signal-failure must be greater than signal-degrade";
+                }
+                must "(./signal-degrade/raise/threshold = 7 and ./signal-degrade/raise/multiplier = 10 and ./signal-degrade/clear/threshold = 8 and ./signal-degrade/clear/multiplier = 10) or ((./signal-degrade/raise/threshold != ./signal-degrade/clear/threshold or ./signal-degrade/raise/multiplier > ./signal-degrade/clear/multiplier) and (./signal-degrade/raise/threshold = ./signal-degrade/clear/threshold or ./signal-degrade/raise/threshold <= ./signal-degrade/clear/threshold))" {
+                    error-message "signal-degrade raise must be greater than clear";
+                }
+                must "(./signal-failure/raise/threshold = 5 and ./signal-failure/raise/multiplier = 10 and ./signal-failure/clear/threshold = 6 and ./signal-failure/clear/multiplier = 10) or ((./signal-failure/raise/threshold != ./signal-failure/clear/threshold or ./signal-failure/raise/multiplier > ./signal-failure/clear/multiplier) and (./signal-failure/raise/threshold = ./signal-failure/clear/threshold or ./signal-failure/raise/threshold <= ./signal-failure/clear/threshold))" {
+                    error-message "signal-failure raise must be greater than clear";
+                }
+                must "(./signal-degrade/clear/threshold = 8 and ./signal-degrade/clear/multiplier = 10 and ./signal-failure/clear/threshold = 6 and ./signal-failure/clear/multiplier = 10) or ((./signal-failure/clear/threshold != ./signal-degrade/clear/threshold or ./signal-failure/clear/multiplier > ./signal-degrade/clear/multiplier) and (./signal-failure/clear/threshold = ./signal-degrade/clear/threshold or ./signal-failure/clear/threshold <= ./signal-degrade/clear/threshold))" {
+                    error-message "signal-failure clear must be greater than signal-degrade clear";
+                }
                 description "Enter the fine-granularity-ber context";
 
                 container signal-degrade {

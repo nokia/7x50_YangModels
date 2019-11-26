@@ -7,6 +7,7 @@ submodule nokia-conf-router-pcep {
     import nokia-sros-yang-extensions     { prefix "sros-ext"; }
     import nokia-types-sros               { prefix "types-sros"; }
 
+    include nokia-conf-groups;
 
     sros-ext:sros-major-release "rel19";
 
@@ -40,7 +41,19 @@ submodule nokia-conf-router-pcep {
     grouping conf-router-pcep {
         container pcep {
             when "../router-name = 'Base'";
+            must "not(./pce) or not(./pcc)" {
+                error-message "Pcc or Pce, only one of them can be configured";
+            }
             description "Enter the pcep context";
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
 
             container pcc {
                 presence "Configure Path Computation Client (PCC) parameters";
@@ -83,6 +96,9 @@ submodule nokia-conf-router-pcep {
                 }
 
                 leaf dead-timer {
+                    must ". >= ../keepalive" {
+                        error-message "Deadtimer cannot be less than keepalive";
+                    }
                     type uint32 {
                         range "1..255";
                     }
@@ -110,10 +126,22 @@ submodule nokia-conf-router-pcep {
                     description "Configure max sr te pce init LSP";
                 }
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
                 container state-timer {
                     description "Enter the state-timer context";
 
                     leaf timer {
+                        must ". > ../../redelegation-timer" {
+                            error-message "state-timer cannot be less than redelegation-timer";
+                        }
                         type uint32 {
                             range "1..3600";
                         }
@@ -158,6 +186,15 @@ submodule nokia-conf-router-pcep {
                         description "The value indicates the preference value of this peer. If higher preference PCE is unavailable or not connected, PCE with the next preference is used.";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                 } // list peer
 
             } // container pcc
@@ -197,6 +234,9 @@ submodule nokia-conf-router-pcep {
                 }
 
                 leaf dead-timer {
+                    must ". >= ../keepalive" {
+                        error-message "Deadtimer cannot be less than keepalive";
+                    }
                     type uint32 {
                         range "1..255";
                     }
@@ -204,6 +244,15 @@ submodule nokia-conf-router-pcep {
                     sros-ext:auto-restart-to-modify;
                     default "120";
                     description "Configure dead timer";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
                 }
 
             } // container pce

@@ -44,7 +44,7 @@ submodule nokia-conf-cflowd {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-04-18";
+    revision "2019-08-16";
 
     grouping conf-cflowd {
         container cflowd {
@@ -70,6 +70,18 @@ submodule nokia-conf-cflowd {
                 type boolean;
                 default "false";
                 description "Perform Cflowd analysis on the inner IP packet within a GRE packet";
+            }
+
+            leaf analyze-l2tp-traffic {
+                type boolean;
+                default "false";
+                description "Perform Cflowd analysis on the inner header within an L2TP packet.";
+            }
+
+            leaf analyze-v4overv6-traffic {
+                type boolean;
+                default "false";
+                description "Perform Cflowd analysis on the inner IPv4 packet within an IPv6 packet.";
             }
 
             leaf cache-size {
@@ -134,6 +146,15 @@ submodule nokia-conf-cflowd {
                 description "Export flow data using virtual router interface indexes";
             }
 
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
             leaf rate {
                 status obsolete;
                 type uint32 {
@@ -164,6 +185,15 @@ submodule nokia-conf-cflowd {
                     description "The cflowd sampling rate for this profile";
                 }
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
             } // list sample-profile
 
             list collector {
@@ -190,6 +220,9 @@ submodule nokia-conf-cflowd {
                 }
 
                 leaf autonomous-system-type {
+                    must ". = 'origin' or (../version != 9 and ../version != 10)" {
+                        error-message "autonomous-system-type can be set only for version 5 or 8.";
+                    }
                     type enumeration {
                         enum "origin"                       { value 1; }
                         enum "peer"                         { value 2; }
@@ -227,7 +260,19 @@ submodule nokia-conf-cflowd {
                     description "Flow data collector version";
                 }
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
                 container aggregation {
+                    must "(./as-matrix = 'false' and ./protocol-port = 'false' and ./source-prefix = 'false' and ./destination-prefix = 'false' and ./source-destination-prefix = 'false' and ./raw = 'false') or ../version = 8" {
+                        error-message "aggregation can be set only for version 8";
+                    }
                     description "Enter the aggregation context";
 
                     leaf as-matrix {
@@ -273,6 +318,9 @@ submodule nokia-conf-cflowd {
                     description "Enter the export-filter context";
 
                     container family {
+                        must "(./ipv4 = 'false' and ./ipv6 = 'false' and ./mcast-ipv4 = 'false' and ./mcast-ipv6 = 'false' and ./mpls = 'false') or (../../version = 9 or ../../version = 10)" {
+                            error-message "export-filter family can be set only for collector versions 9 or 10";
+                        }
                         description "Enter the family context";
 
                         leaf ipv4 {
@@ -300,6 +348,9 @@ submodule nokia-conf-cflowd {
                         }
 
                         leaf l2-ip {
+                            must ". = 'false' or ../../../version = 10" {
+                                error-message "export-filter family Layer 2 IP can be set only for collector version 10";
+                            }
                             type boolean;
                             default "false";
                             description "Filter Layer 2 IP flow data from being sent to the associated collector";
@@ -318,6 +369,9 @@ submodule nokia-conf-cflowd {
                         description "Add a list entry for router";
 
                         leaf router-instance {
+                            must ". != 'management'" {
+                                error-message "not valid on management router";
+                            }
                             type string;
                             description "Router instance ID";
                         }
@@ -332,6 +386,9 @@ submodule nokia-conf-cflowd {
                             description "Add a list entry for router";
 
                             leaf router-name {
+                                must ". != 'management'" {
+                                    error-message "not valid on management router";
+                                }
                                 type leafref {
                                     path "../../../../../../router/router-name";
                                 }

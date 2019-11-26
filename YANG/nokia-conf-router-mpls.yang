@@ -44,10 +44,16 @@ submodule nokia-conf-router-mpls {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-08-23";
+    revision "2019-07-08";
 
     grouping conf-router-mpls {
         container mpls {
+            must "./least-fill-min-thd <= ./least-fill-reoptim-thd" {
+                error-message "Least fill min threshold cannot be higher than reoptimzation threshold";
+            }
+            must "../router-name = 'Base'" {
+                error-message "Only allowed to configure MPLS on router Base";
+            }
             presence "Enables mpls functionality on this router.";
             description "Enter the mpls context";
 
@@ -140,6 +146,14 @@ submodule nokia-conf-router-mpls {
                 description "Maximum number of LSPs to be associated with a bypass tunnel";
             }
 
+            leaf max-bypass-plr-associations {
+                type uint32 {
+                    range "1..16";
+                }
+                default "16";
+                description "The maximum number separate dynamic bypass to create for each Point of Local Repair (PLR).";
+            }
+
             leaf mbb-prefer-current-hops {
                 type boolean;
                 default "false";
@@ -227,14 +241,6 @@ submodule nokia-conf-router-mpls {
                 description "Enable/disable use of user SRLG database.";
             }
 
-            leaf sr-te-resignal-timer {
-                type uint32 {
-                    range "30..10080";
-                }
-                units "minutes";
-                description "The resignal timer for SR-TE LSPs.";
-            }
-
             leaf-list apply-groups {
                 type leafref {
                     path "../../../groups/group/name";
@@ -243,6 +249,33 @@ submodule nokia-conf-router-mpls {
                 ordered-by user;
                 description "Apply a configuration group at this level";
             }
+
+            container lsp-self-ping {
+                description "Enter the lsp-self-ping context";
+
+                leaf interval {
+                    type uint32 {
+                        range "1..10";
+                    }
+                    default "1";
+                    description "Configure mpls lsp self ping interval.";
+                }
+
+                leaf rsvp-te {
+                    type boolean;
+                    default "false";
+                    description "Configure mpls lsp self ping rsvp-te.";
+                }
+
+                leaf timeout {
+                    type uint32 {
+                        range "3..3600";
+                    }
+                    default "300";
+                    description "Configure mpls lsp self ping timeout.";
+                }
+
+            } // container lsp-self-ping
 
             container auto-bandwidth-multipliers {
                 description "Enter the auto-bandwidth-multipliers context";
@@ -256,6 +289,9 @@ submodule nokia-conf-router-mpls {
                 }
 
                 leaf adjust-multiplier {
+                    must "../sample-multiplier <= ." {
+                        error-message "Autobandwidth sample multiplier is greater than adjust multiplier";
+                    }
                     type uint32 {
                         range "1..16383";
                     }
@@ -411,6 +447,9 @@ submodule nokia-conf-router-mpls {
                     }
 
                     leaf admin-state {
+                        must ". = 'disable' or ../pop or ../swap" {
+                            error-message "Either 'pop' or 'swap' must be enabled to enable admin-state";
+                        }
                         type types-sros:admin-state;
                         sros-ext:auto-restart-to-modify;
                         default "disable";
@@ -582,24 +621,6 @@ submodule nokia-conf-router-mpls {
                         description "Index to identify a particular hop";
                     }
 
-                    leaf ip-address {
-                        type types-sros:ip-address;
-                        sros-ext:immutable;
-                        sros-ext:auto-restart-to-modify;
-                        mandatory true;
-                        description "IPv4 address of this hop";
-                    }
-
-                    leaf type {
-                        type enumeration {
-                            enum "strict"                       { value 1; }
-                            enum "loose"                        { value 2; }
-                        }
-                        sros-ext:auto-restart-to-modify;
-                        mandatory true;
-                        description "Tunnel hop type";
-                    }
-
                     leaf-list apply-groups {
                         type leafref {
                             path "../../../../../groups/group/name";
@@ -610,11 +631,77 @@ submodule nokia-conf-router-mpls {
                         description "Apply a configuration group at this level";
                     }
 
+                    choice hop-info {
+                        mandatory true;
+                        case hop-ip-address {
+
+                            leaf ip-address {
+                                must "../type" {
+                                    error-message "Must set both type and ip-address";
+                                }
+                                type types-sros:ip-address;
+                                sros-ext:immutable;
+                                sros-ext:auto-restart-to-modify;
+                                description "IPv4 address of this hop";
+                            }
+
+                            leaf type {
+                                must "../ip-address" {
+                                    error-message "Must set both type and ip-address";
+                                }
+                                type enumeration {
+                                    enum "strict"                       { value 1; }
+                                    enum "loose"                        { value 2; }
+                                }
+                                sros-ext:auto-restart-to-modify;
+                                description "Tunnel hop type";
+                            }
+
+                        }
+                        case hop-sid {
+
+                            leaf sid-label {
+                                type uint32 {
+                                    range "32..1048575";
+                                }
+                                sros-ext:auto-restart-to-modify;
+                                description "Configure the MPLS label for this tunnel hop.";
+                            }
+
+                        }
+                    }
                 } // list hop
 
             } // list path
 
             list lsp-template {
+                must "./backup-class-type = 0 or ./class-type != ./backup-class-type" {
+                    error-message "Backup-class-type cannot be same as the main class-type";
+                }
+                must "./fast-reroute/frr-method = 'facility'" {
+                    error-message "Only facility fast-reroute method is supported for templates";
+                }
+                must "(./type != 'p2mp-rsvp' and ./type != 'p2p-rsvp-one-hop' and ./type != 'p2p-sr-te-one-hop') or ./fast-reroute/node-protect = 'false'" {
+                    error-message "Cannot enable node-protect for this template type";
+                }
+                must "./admin-state != 'enable' or ./default-path" {
+                    error-message "default-path must be configured if admin-state is enabled";
+                }
+                must "./igp-shortcut/admin-state != 'disable' or not(./igp-shortcut/lfa-type)" {
+                    error-message "Cannot set lfa-type if igp-shortcut is disabled";
+                }
+                must "./igp-shortcut/admin-state != 'disable' or not(./igp-shortcut/relative-metric)" {
+                    error-message "Cannot set relative-metric if igp-shortcut is disabled";
+                }
+                must "(./type != 'p2p-sr-te-one-hop' and ./type != 'p2p-sr-te-mesh' and ./type != 'p2p-sr-te-pce-init') or ./bfd/failure-action != 'down'" {
+                    error-message "Cannot configure this failure-action for this lsp-template type";
+                }
+                must "(./type = 'p2p-sr-te-one-hop' or ./type = 'p2p-sr-te-mesh' or ./type = 'p2p-sr-te-pce-init') or ./bfd/failure-action != 'failover-or-down'" {
+                    error-message "Cannot configure this failure-action for this lsp-template type";
+                }
+                must "not(./auto-bandwidth) or ./adaptive != 'false'" {
+                    error-message "Cannot set template with auto-bandwidth enable and adaptive disable";
+                }
                 key "template-name";
                 max-elements 4096;
                 description "Enter the lsp-template list instance";
@@ -655,10 +742,7 @@ submodule nokia-conf-router-mpls {
 
                 leaf bandwidth {
                     when "not(../type) or ../type = 'p2mp-rsvp' or ../type = 'p2p-rsvp-one-hop' or ../type = 'p2p-rsvp-mesh'";
-                    type uint32 {
-                        range "0..100000";
-                    }
-                    units "megabps";
+                    type types-mpls:lsp-bandwidth;
                     default "0";
                     description "Specify bandwidth in mbps for LSP instances created using this LSP template.";
                 }
@@ -667,7 +751,6 @@ submodule nokia-conf-router-mpls {
                     when "not(../type) or ../type = 'p2p-rsvp-one-hop' or ../type = 'p2p-rsvp-mesh' or ../type = 'p2p-sr-te-one-hop' or ../type = 'p2p-sr-te-mesh' or ../type = 'p2p-sr-te-pce-init'";
                     type boolean;
                     sros-ext:auto-restart-to-modify;
-                    default "true";
                     description "Enable/disable use of RSVP LSP for IPv4 BGP routes.";
                 }
 
@@ -825,6 +908,9 @@ submodule nokia-conf-router-mpls {
 
                 leaf record {
                     when "not(../type) or ../type = 'p2mp-rsvp' or ../type = 'p2p-rsvp-one-hop' or ../type = 'p2p-rsvp-mesh'";
+                    must ". != 'false' or not(../fast-reroute)" {
+                        error-message "record must be true if fast-reroute is configured";
+                    }
                     type boolean;
                     sros-ext:auto-restart-to-modify;
                     default "true";
@@ -833,6 +919,12 @@ submodule nokia-conf-router-mpls {
 
                 leaf record-label {
                     when "not(../type) or ../type = 'p2mp-rsvp' or ../type = 'p2p-rsvp-one-hop' or ../type = 'p2p-rsvp-mesh'";
+                    must ". != 'true' or ../record != 'false'" {
+                        error-message "record must be true if record-label is true";
+                    }
+                    must ". != 'false' or not(../fast-reroute) or ../fast-reroute/frr-method != 'facility'" {
+                        error-message "record-label must be true if fast-reroute is configured and fast-reroute method is facility";
+                    }
                     type boolean;
                     sros-ext:auto-restart-to-modify;
                     default "true";
@@ -891,6 +983,13 @@ submodule nokia-conf-router-mpls {
                     sros-ext:auto-restart-to-modify;
                     default "false";
                     description "Enable/disable label compression for LSP path.";
+                }
+
+                leaf lsp-self-ping {
+                    when "not(../type) or ../type = 'p2p-rsvp-one-hop' or ../type = 'p2p-rsvp-mesh'";
+                    type types-sros:bool-with-inherit;
+                    sros-ext:auto-restart-to-modify;
+                    description "Configure lsp self ping application for this LSP or LSP template.";
                 }
 
                 leaf-list include-admin-group {
@@ -964,6 +1063,7 @@ submodule nokia-conf-router-mpls {
                                 description "Enter the forwarding-set context";
 
                                 leaf policy {
+                                    must "'true' = ../set";
                                     type leafref {
                                         path "../../../../class-forwarding-policy/policy-name";
                                     }
@@ -997,7 +1097,10 @@ submodule nokia-conf-router-mpls {
                     }
 
                     leaf use-te-metric {
-                        when "../../type != 'p2p-sr-te-pce-init'";
+                        when "not(../../type = 'p2p-sr-te-pce-init')";
+                        must "../admin-state != 'false' or . != 'true'" {
+                            error-message "Cannot enable use-te-metric because cspf is disabled";
+                        }
                         type boolean;
                         sros-ext:auto-restart-to-modify;
                         default "false";
@@ -1012,6 +1115,9 @@ submodule nokia-conf-router-mpls {
                     description "Enter the priority context";
 
                     leaf setup-priority {
+                        must ". = 7 or (../../type = 'p2p-rsvp-mesh' or ../../type = 'p2p-rsvp-one-hop')" {
+                            error-message "Cannot configure setup priority for this LSP template";
+                        }
                         type types-mpls:priority;
                         sros-ext:auto-restart-to-modify;
                         default "7";
@@ -1019,6 +1125,10 @@ submodule nokia-conf-router-mpls {
                     }
 
                     leaf hold-priority {
+                        must ". <= ../setup-priority";
+                        must ". = 0 or (../../type = 'p2p-rsvp-mesh' or ../../type = 'p2p-rsvp-one-hop')" {
+                            error-message "Cannot configure hold priority for this LSP template";
+                        }
                         type types-mpls:priority;
                         sros-ext:auto-restart-to-modify;
                         default "0";
@@ -1042,6 +1152,9 @@ submodule nokia-conf-router-mpls {
                     }
 
                     leaf propagate-admin-group {
+                        must "../frr-method != 'one-to-one' or . != 'true'" {
+                            error-message "propagate-admin-group not supported for one-to-one fast-reroute method";
+                        }
                         type boolean;
                         default "false";
                         description "Enable signaling of the primary LSP path admin-group constraints in the FRR object at ingress";
@@ -1115,6 +1228,9 @@ submodule nokia-conf-router-mpls {
                     }
 
                     leaf additional-frr-labels {
+                        must ". = 1 or (../../type = 'p2p-sr-te-mesh' or ../../type = 'p2p-sr-te-one-hop' or ../../type = 'p2p-sr-te-pce-init')" {
+                            error-message "Cannot configure additional-frr-labels for this LSP Template type";
+                        }
                         type uint32 {
                             range "0..4";
                         }
@@ -1148,20 +1264,17 @@ submodule nokia-conf-router-mpls {
                     description "Enter the auto-bandwidth context";
 
                     leaf max-bandwidth {
-                        type uint32 {
-                            range "0..100000";
-                        }
-                        units "megabps";
+                        type types-mpls:lsp-bandwidth;
                         sros-ext:auto-restart-to-modify;
                         default "100000";
                         description "Maximum bandwidth of auto-bandwidth to request for the LSP";
                     }
 
                     leaf min-bandwidth {
-                        type uint32 {
-                            range "0..100000";
+                        must ". <= ../max-bandwidth" {
+                            error-message "Autobandwidth min-bandwidth exceeds max-bandwidth";
                         }
-                        units "megabps";
+                        type types-mpls:lsp-bandwidth;
                         sros-ext:auto-restart-to-modify;
                         default "0";
                         description "Minimum bandwidth of auto-bandwidth to request for the LSP";
@@ -1226,10 +1339,7 @@ submodule nokia-conf-router-mpls {
                         }
 
                         leaf bw {
-                            type uint32 {
-                                range "0..100000";
-                            }
-                            units "megabps";
+                            type types-mpls:lsp-bandwidth;
                             sros-ext:auto-restart-to-modify;
                             default "0";
                             description "Minimum difference in absolute bandwidth between LSP bandwidth reservation and max average data rate";
@@ -1249,10 +1359,7 @@ submodule nokia-conf-router-mpls {
                         }
 
                         leaf bw {
-                            type uint32 {
-                                range "0..100000";
-                            }
-                            units "megabps";
+                            type types-mpls:lsp-bandwidth;
                             sros-ext:auto-restart-to-modify;
                             default "0";
                             description "Minimum difference in absolute bandwidth between LSP bandwidth reservation and max average data rate";
@@ -1265,6 +1372,9 @@ submodule nokia-conf-router-mpls {
                         description "Enter the multipliers context";
 
                         leaf sample-multiplier {
+                            must ". <= ../adjust-multiplier" {
+                                error-message "Autobandwidth sample multiplier is greater than adjust multiplier";
+                            }
                             type uint32 {
                                 range "1..511";
                             }
@@ -1295,10 +1405,9 @@ submodule nokia-conf-router-mpls {
                         }
 
                         leaf bw {
-                            type uint32 {
-                                range "1..100000";
+                            type types-mpls:lsp-bandwidth {
+                                range "1..6400000";
                             }
-                            units "megabps";
                             sros-ext:auto-restart-to-modify;
                             description "Minimum difference in absolute bandwidth between the LSP bandwidth and the sampled data rate";
                         }
@@ -1327,10 +1436,9 @@ submodule nokia-conf-router-mpls {
                         }
 
                         leaf bw {
-                            type uint32 {
-                                range "1..100000";
+                            type types-mpls:lsp-bandwidth {
+                                range "1..6400000";
                             }
-                            units "megabps";
                             sros-ext:auto-restart-to-modify;
                             description "Minimum difference in absolute bandwidth between the LSP bandwidth and the sampled data rate";
                         }
@@ -1349,12 +1457,13 @@ submodule nokia-conf-router-mpls {
                 } // container auto-bandwidth
 
                 container egress-statistics {
-                    when "not(../type) or ../type = 'p2mp-rsvp' or ../type = 'p2p-rsvp-one-hop' or ../type = 'p2p-rsvp-mesh'";
+                    when "not(../type) or ../type = 'p2mp-rsvp' or ../type = 'p2p-rsvp-one-hop' or ../type = 'p2p-rsvp-mesh' or ../type = 'p2p-sr-te-mesh' or ../type = 'p2p-sr-te-one-hop' or ../type = 'p2p-sr-te-pce-init'";
                     presence "Configures LSP template Egress statistics.";
                     sros-ext:auto-restart-to-modify;
                     description "Enter the egress-statistics context";
 
                     leaf collect-stats {
+                        when "not(../../type) or ../../type = 'p2mp-rsvp' or ../../type = 'p2p-rsvp-one-hop' or ../../type = 'p2p-rsvp-mesh'";
                         type boolean;
                         sros-ext:auto-restart-to-modify;
                         default "false";
@@ -1362,6 +1471,7 @@ submodule nokia-conf-router-mpls {
                     }
 
                     leaf accounting-policy {
+                        when "not(../../type) or ../../type = 'p2mp-rsvp' or ../../type = 'p2p-rsvp-one-hop' or ../../type = 'p2p-rsvp-mesh'";
                         type leafref {
                             path "../../../../../log/accounting-policy/policy-id";
                         }
@@ -1377,6 +1487,9 @@ submodule nokia-conf-router-mpls {
                     description "Enter the bfd context";
 
                     leaf bfd-liveness {
+                        must ". = 'false' or ../bfd-template" {
+                            error-message "BFD can be enabled only if bfd-template is configured";
+                        }
                         type boolean;
                         default "false";
                         description "Enable BFD";
@@ -1401,10 +1514,13 @@ submodule nokia-conf-router-mpls {
                         }
                         units "seconds";
                         default "60";
-                        description "Configure the time interval for periodic LSP ping for BFD bootstrapping.";
+                        description "Interval for periodic LSP ping for BFD bootstrapping";
                     }
 
                     leaf failure-action {
+                        must ". = 'none' or ../bfd-template or (../../type = 'p2p-sr-te-one-hop' or ../../type = 'p2p-sr-te-mesh' or ../../type = 'p2p-sr-te-pce-init')" {
+                            error-message "failure-action is valid only if bfd-template is configured";
+                        }
                         type enumeration {
                             enum "none"                         { value 0; }
                             enum "down"                         { value 1; }
@@ -1430,6 +1546,21 @@ submodule nokia-conf-router-mpls {
             } // list lsp-template
 
             list lsp {
+                must "./rsvp-resv-style != 'ff' or ./type != 'p2mp-rsvp'" {
+                    error-message "FF style not supported for P2MP LSP";
+                }
+                must "./cspf or ./pce-computation != 'true'" {
+                    error-message "Cannot enable pce-computation because cspf is disabled";
+                }
+                must "./type != 'p2p-sr-te' or (./bfd/failure-action != 'failover' and ./bfd/failure-action != 'down')" {
+                    error-message "Cannot configure this failure-action for this LSP type";
+                }
+                must "./type = 'p2p-sr-te' or ./bfd/failure-action != 'failover-or-down'" {
+                    error-message "Cannot configure this failure-action for this LSP type";
+                }
+                must "not(./auto-bandwidth) or ./adaptive != 'false'" {
+                    error-message "Cannot set LSP with auto-bandwidth enable and adaptive disable";
+                }
                 key "lsp-name";
                 description "Enter the lsp list instance";
 
@@ -1439,6 +1570,9 @@ submodule nokia-conf-router-mpls {
                 }
 
                 leaf type {
+                    must ". = 'p2p-rsvp' or . = 'p2p-rsvp-bypass' or . = 'p2mp-rsvp' or . = 'p2p-sr-te' or . = 'p2p-static-mpls-tp'" {
+                        error-message "Invalid LSP type";
+                    }
                     type enumeration {
                         enum "p2p-rsvp"                     { value 2; }
                         enum "p2p-static-mpls"              { value 3; }
@@ -1682,6 +1816,12 @@ submodule nokia-conf-router-mpls {
                     description "Enable/disable label compression for LSP path.";
                 }
 
+                leaf lsp-self-ping {
+                    when "not(../type) or ../type = 'p2p-rsvp'";
+                    type types-sros:bool-with-inherit;
+                    description "Configure lsp self ping application for this LSP or LSP template.";
+                }
+
                 leaf-list include-admin-group {
                     when "not(../type) or ../type = 'p2p-rsvp' or ../type = 'p2p-rsvp-bypass' or ../type = 'p2mp-rsvp' or ../type = 'p2p-sr-te'";
                     type leafref {
@@ -1746,6 +1886,7 @@ submodule nokia-conf-router-mpls {
                                 description "Enter the forwarding-set context";
 
                                 leaf policy {
+                                    must "'true' = ../set";
                                     type leafref {
                                         path "../../../../class-forwarding-policy/policy-name";
                                     }
@@ -1837,6 +1978,9 @@ submodule nokia-conf-router-mpls {
                     }
 
                     leaf node-protect {
+                        must "../../type != 'p2mp-rsvp' or . != 'true'" {
+                            error-message "node-protect must be false for this LSP type.";
+                        }
                         type boolean;
                         description "Enable node and link protection for the specified LSP";
                     }
@@ -1885,19 +2029,16 @@ submodule nokia-conf-router-mpls {
                     description "Enter the auto-bandwidth context";
 
                     leaf max-bandwidth {
-                        type uint32 {
-                            range "0..100000";
-                        }
-                        units "megabps";
+                        type types-mpls:lsp-bandwidth;
                         default "100000";
                         description "Maximum bandwidth of auto-bandwidth to request for the LSP";
                     }
 
                     leaf min-bandwidth {
-                        type uint32 {
-                            range "0..100000";
+                        must ". <= ../max-bandwidth" {
+                            error-message "Autobandwidth min-bandwidth exceeds max-bandwidth";
                         }
-                        units "megabps";
+                        type types-mpls:lsp-bandwidth;
                         default "0";
                         description "Minimum bandwidth of auto-bandwidth to request for the LSP";
                     }
@@ -1954,10 +2095,7 @@ submodule nokia-conf-router-mpls {
                         }
 
                         leaf bw {
-                            type uint32 {
-                                range "0..100000";
-                            }
-                            units "megabps";
+                            type types-mpls:lsp-bandwidth;
                             default "0";
                             description "Minimum difference in absolute bandwidth between LSP bandwidth reservation and max average data rate";
                         }
@@ -1974,10 +2112,7 @@ submodule nokia-conf-router-mpls {
                         }
 
                         leaf bw {
-                            type uint32 {
-                                range "0..100000";
-                            }
-                            units "megabps";
+                            type types-mpls:lsp-bandwidth;
                             default "0";
                             description "Minimum difference in absolute bandwidth between LSP bandwidth reservation and max average data rate";
                         }
@@ -1988,6 +2123,9 @@ submodule nokia-conf-router-mpls {
                         description "Enter the multipliers context";
 
                         leaf sample-multiplier {
+                            must ". <= ../adjust-multiplier" {
+                                error-message "Autobandwidth sample multiplier is greater than adjust multiplier";
+                            }
                             type uint32 {
                                 range "1..511";
                             }
@@ -2014,10 +2152,9 @@ submodule nokia-conf-router-mpls {
                         }
 
                         leaf bw {
-                            type uint32 {
-                                range "1..100000";
+                            type types-mpls:lsp-bandwidth {
+                                range "1..6400000";
                             }
-                            units "megabps";
                             description "Minimum difference in absolute bandwidth between the LSP bandwidth and the sampled data rate";
                         }
 
@@ -2042,10 +2179,9 @@ submodule nokia-conf-router-mpls {
                         }
 
                         leaf bw {
-                            type uint32 {
-                                range "1..100000";
+                            type types-mpls:lsp-bandwidth {
+                                range "1..6400000";
                             }
-                            units "megabps";
                             description "Minimum difference in absolute bandwidth between the LSP bandwidth and the sampled data rate";
                         }
 
@@ -2074,17 +2210,19 @@ submodule nokia-conf-router-mpls {
                 } // container auto-bandwidth
 
                 container egress-statistics {
-                    when "../type = 'p2p-rsvp' or ../type = 'p2mp-rsvp' or not(../type) or ../type = 'p2p-static-mpls-tp'";
+                    when "../type = 'p2p-rsvp' or ../type = 'p2mp-rsvp' or not(../type) or ../type = 'p2p-static-mpls-tp' or ../type = 'p2p-sr-te'";
                     presence "Enable/disable LSP egress statistics.";
                     description "Enter the egress-statistics context";
 
                     leaf collect-stats {
+                        when "not(../../type) or ../../type = 'p2p-rsvp' or ../../type = 'p2mp-rsvp' or ../../type = 'p2p-static-mpls-tp'";
                         type boolean;
                         default "false";
                         description "Collect statistics";
                     }
 
                     leaf accounting-policy {
+                        when "not(../../type) or ../../type = 'p2p-rsvp' or ../../type = 'p2mp-rsvp' or ../../type = 'p2p-static-mpls-tp'";
                         type leafref {
                             path "../../../../../log/accounting-policy/policy-id";
                         }
@@ -2092,6 +2230,7 @@ submodule nokia-conf-router-mpls {
                     }
 
                     leaf admin-state {
+                        when "not(../../type) or ../../type = 'p2p-rsvp' or ../../type = 'p2mp-rsvp' or ../../type = 'p2p-static-mpls-tp' or ../../type = 'p2p-sr-te'";
                         type types-sros:admin-state;
                         default "disable";
                         description "Administrative state of ingress statistics for LSP";
@@ -2148,6 +2287,9 @@ submodule nokia-conf-router-mpls {
                     description "Enter the bfd context";
 
                     leaf bfd-liveness {
+                        must ". = 'false' or ../bfd-template" {
+                            error-message "BFD can be enabled only if bfd-template is configured";
+                        }
                         type boolean;
                         default "false";
                         description "Enable BFD";
@@ -2172,10 +2314,13 @@ submodule nokia-conf-router-mpls {
                         }
                         units "seconds";
                         default "60";
-                        description "Configure the time interval for periodic LSP ping for BFD bootstrapping.";
+                        description "Interval for periodic LSP ping for BFD bootstrapping";
                     }
 
                     leaf failure-action {
+                        must ". = 'none' or ../bfd-template or ../../type = 'p2p-sr-te'" {
+                            error-message "failure-action is valid only if bfd-template is configured";
+                        }
                         type enumeration {
                             enum "none"                         { value 0; }
                             enum "down"                         { value 1; }
@@ -2230,6 +2375,15 @@ submodule nokia-conf-router-mpls {
 
                 list primary {
                     when "not(../type) or ../type = 'p2p-rsvp' or ../type = 'p2p-rsvp-bypass' or ../type = 'p2p-sr-te'";
+                    must "not(./bfd/bfd-template) or (not(../bfd/bfd-template) and ../bfd/lsp-ping-interval = 60)" {
+                        error-message "BFD can be configured for LSP or for primary path but not both";
+                    }
+                    must "./bfd/lsp-ping-interval = 60 or (not(../bfd/bfd-template) and ../bfd/lsp-ping-interval = 60)" {
+                        error-message "BFD can be configured for LSP or for primary path but not both";
+                    }
+                    must "./record != 'false' or not(../fast-reroute)" {
+                        error-message "record must be true if fast-reroute is configured";
+                    }
                     key "path-name";
                     max-elements 1;
                     description "Enter the primary list instance";
@@ -2255,10 +2409,7 @@ submodule nokia-conf-router-mpls {
 
                     leaf bandwidth {
                         when "not(../../type) or ../../type = 'p2p-rsvp' or ../../type = 'p2mp-rsvp' or ../../type = 'p2p-sr-te'";
-                        type uint32 {
-                            range "0..100000";
-                        }
-                        units "megabps";
+                        type types-mpls:lsp-bandwidth;
                         default "0";
                         description "Amount of bandwidth to be reserved.";
                     }
@@ -2280,6 +2431,9 @@ submodule nokia-conf-router-mpls {
 
                     leaf record-label {
                         when "not(../../type) or ../../type = 'p2p-rsvp' or ../../type = 'p2p-rsvp-bypass' or ../../type = 'p2mp-rsvp'";
+                        must ". != 'true' or ../record != 'false'" {
+                            error-message "record must be true if record-label is true";
+                        }
                         type boolean;
                         default "true";
                         description "Enable/disable recording of labels at each node or instance.";
@@ -2293,6 +2447,12 @@ submodule nokia-conf-router-mpls {
 
                     leaf backup-class-type {
                         when "not(../../type) or ../../type = 'p2p-rsvp'";
+                        must "../class-type != ." {
+                            error-message "Backup-class-type cannot be same as the main class-type";
+                        }
+                        must "../class-type or ../../class-type != ." {
+                            error-message "LSP class-type cannot be same as the backup-class-type";
+                        }
                         type types-mpls:class-type;
                         description "Class-type for the LSP or LSP path";
                     }
@@ -2311,12 +2471,19 @@ submodule nokia-conf-router-mpls {
                         description "Enter the priority context";
 
                         leaf setup-priority {
+                            must ". = 7 or (../../../type = 'p2p-rsvp' or ../../../type = 'p2p-sr-te')" {
+                                error-message "Cannot configure setup priority for this LSP path";
+                            }
                             type types-mpls:priority;
                             default "7";
                             description "Setup priority when insufficient bandwidth is available to set up LSP";
                         }
 
                         leaf hold-priority {
+                            must ". <= ../setup-priority";
+                            must ". = 0 or (../../../type = 'p2p-rsvp' or ../../../type = 'p2p-sr-te')" {
+                                error-message "Cannot configure hold priority for this LSP path";
+                            }
                             type types-mpls:priority;
                             default "0";
                             description "Hold priority when insufficient bandwidth is available to set up LSP";
@@ -2365,6 +2532,9 @@ submodule nokia-conf-router-mpls {
                         description "Enter the bfd context";
 
                         leaf bfd-liveness {
+                            must ". = 'false' or ../bfd-template" {
+                                error-message "BFD can be enabled only if bfd-template is configured";
+                            }
                             type boolean;
                             default "false";
                             description "Enable BFD";
@@ -2389,7 +2559,7 @@ submodule nokia-conf-router-mpls {
                             }
                             units "seconds";
                             default "60";
-                            description "Configure the time interval for periodic LSP ping for BFD bootstrapping.";
+                            description "Interval for periodic LSP ping for BFD bootstrapping";
                         }
 
                         leaf wait-for-up-timer {
@@ -2408,6 +2578,12 @@ submodule nokia-conf-router-mpls {
 
                 list secondary {
                     when "not(../type) or ../type = 'p2p-rsvp' or ../type = 'p2p-sr-te'";
+                    must "not(./bfd/bfd-template) or (not(../bfd/bfd-template) and ../bfd/lsp-ping-interval = 60)" {
+                        error-message "BFD can be configured for LSP or for secondary path but not both";
+                    }
+                    must "./bfd/lsp-ping-interval = 60 or (not(../bfd/bfd-template) and ../bfd/lsp-ping-interval = 60)" {
+                        error-message "BFD can be configured for LSP or for secondary path but not both";
+                    }
                     key "path-name";
                     max-elements 8;
                     description "Enter the secondary list instance";
@@ -2433,10 +2609,7 @@ submodule nokia-conf-router-mpls {
 
                     leaf bandwidth {
                         when "not(../../type) or ../../type = 'p2p-rsvp' or ../../type = 'p2mp-rsvp' or ../../type = 'p2p-sr-te'";
-                        type uint32 {
-                            range "0..100000";
-                        }
-                        units "megabps";
+                        type types-mpls:lsp-bandwidth;
                         default "0";
                         description "Amount of bandwidth to be reserved.";
                     }
@@ -2458,6 +2631,9 @@ submodule nokia-conf-router-mpls {
 
                     leaf record-label {
                         when "not(../../type) or ../../type = 'p2p-rsvp' or ../../type = 'p2p-rsvp-bypass' or ../../type = 'p2mp-rsvp'";
+                        must ". != 'true' or ../record != 'false'" {
+                            error-message "record must be true if record-label is true";
+                        }
                         type boolean;
                         default "true";
                         description "Enable/disable recording of labels at each node or instance.";
@@ -2471,8 +2647,11 @@ submodule nokia-conf-router-mpls {
 
                     leaf path-preference {
                         when "not(../../type) or ../../type = 'p2p-rsvp' or ../../type = 'p2p-sr-te'";
+                        must "../standby != 'false' or . = 255" {
+                            error-message "Cannot configure preference for secondary path";
+                        }
                         type int32 {
-                            range "0..255";
+                            range "1..255";
                         }
                         default "255";
                         description "Path preference for the secondary standby path";
@@ -2506,12 +2685,19 @@ submodule nokia-conf-router-mpls {
                         description "Enter the priority context";
 
                         leaf setup-priority {
+                            must ". = 7 or (../../../type = 'p2p-rsvp' or ../../../type = 'p2p-sr-te')" {
+                                error-message "Cannot configure setup priority for this LSP path";
+                            }
                             type types-mpls:priority;
                             default "7";
                             description "Setup priority when insufficient bandwidth is available to set up LSP";
                         }
 
                         leaf hold-priority {
+                            must ". <= ../setup-priority";
+                            must ". = 0 or (../../../type = 'p2p-rsvp' or ../../../type = 'p2p-sr-te')" {
+                                error-message "Cannot configure hold priority for this LSP path";
+                            }
                             type types-mpls:priority;
                             default "0";
                             description "Hold priority when insufficient bandwidth is available to set up LSP";
@@ -2560,6 +2746,9 @@ submodule nokia-conf-router-mpls {
                         description "Enter the bfd context";
 
                         leaf bfd-liveness {
+                            must ". = 'false' or ../bfd-template" {
+                                error-message "BFD can be enabled only if bfd-template is configured";
+                            }
                             type boolean;
                             default "false";
                             description "Enable BFD";
@@ -2584,7 +2773,7 @@ submodule nokia-conf-router-mpls {
                             }
                             units "seconds";
                             default "60";
-                            description "Configure the time interval for periodic LSP ping for BFD bootstrapping.";
+                            description "Interval for periodic LSP ping for BFD bootstrapping";
                         }
 
                         leaf wait-for-up-timer {
@@ -2603,6 +2792,9 @@ submodule nokia-conf-router-mpls {
 
                 list primary-p2mp-instance {
                     when "not(../type) or ../type = 'p2mp-rsvp'";
+                    must "./record != 'false' or not(../fast-reroute)" {
+                        error-message "record must be true if fast-reroute is configured";
+                    }
                     key "instance-name";
                     max-elements 1;
                     description "Enter the primary-p2mp-instance list instance";
@@ -2626,10 +2818,7 @@ submodule nokia-conf-router-mpls {
 
                     leaf bandwidth {
                         when "not(../../type) or ../../type = 'p2p-rsvp' or ../../type = 'p2mp-rsvp' or ../../type = 'p2p-sr-te'";
-                        type uint32 {
-                            range "0..100000";
-                        }
-                        units "megabps";
+                        type types-mpls:lsp-bandwidth;
                         default "0";
                         description "Amount of bandwidth to be reserved.";
                     }
@@ -2651,6 +2840,9 @@ submodule nokia-conf-router-mpls {
 
                     leaf record-label {
                         when "not(../../type) or ../../type = 'p2p-rsvp' or ../../type = 'p2p-rsvp-bypass' or ../../type = 'p2mp-rsvp'";
+                        must ". != 'true' or ../record != 'false'" {
+                            error-message "record must be true if record-label is true";
+                        }
                         type boolean;
                         default "true";
                         description "Enable/disable recording of labels at each node or instance.";
@@ -2743,6 +2935,9 @@ submodule nokia-conf-router-mpls {
             } // list lsp
 
             list auto-lsp {
+                must "./one-hop != 'false' or ./policy" {
+                    error-message "either one-hop or policy must be configured";
+                }
                 key "template-name";
                 max-elements 500;
                 description "Enter the auto-lsp list instance";
@@ -2807,6 +3002,7 @@ submodule nokia-conf-router-mpls {
                 }
 
                 leaf admin-state {
+                    must ". = 'disable' or ../push";
                     type types-sros:admin-state;
                     sros-ext:auto-restart-to-modify;
                     default "disable";
@@ -2899,6 +3095,9 @@ submodule nokia-conf-router-mpls {
                 }
 
                 list forwarding-policy {
+                    must "./binding-label or not(./ingress-statistics)" {
+                        error-message "Binding-label must be configured if ingress-statistics is enabled";
+                    }
                     key "policy-name";
                     max-elements 65536;
                     description "Enter the forwarding-policy list instance";
@@ -2944,6 +3143,9 @@ submodule nokia-conf-router-mpls {
                     }
 
                     leaf metric {
+                        must "../endpoint" {
+                            error-message "metric can only be set with endpoint policy";
+                        }
                         type uint32 {
                             range "1..16777215";
                         }
@@ -2951,6 +3153,9 @@ submodule nokia-conf-router-mpls {
                     }
 
                     leaf tunnel-table-pref {
+                        must "../endpoint or . = 255" {
+                            error-message "tunnel-table-pref can only be set with endpoint policy";
+                        }
                         type uint32 {
                             range "1..255";
                         }
@@ -2968,6 +3173,9 @@ submodule nokia-conf-router-mpls {
                     }
 
                     list next-hop-group {
+                        must "./resolution-type != 'indirect' or not(../egress-statistics)" {
+                            error-message "Cannot configure egress-statistics for forwarding-policy if resolution-type is not direct";
+                        }
                         key "index";
                         max-elements 32;
                         description "Enter the next-hop-group list instance";
@@ -3042,6 +3250,9 @@ submodule nokia-conf-router-mpls {
                                 }
 
                                 leaf label {
+                                    must ". != 3" {
+                                        error-message "Cannot configure Implicit NULL label value";
+                                    }
                                     type uint32 {
                                         range "1..1048575";
                                     }
@@ -3063,6 +3274,12 @@ submodule nokia-conf-router-mpls {
                         } // container primary-next-hop
 
                         container backup-next-hop {
+                            must "../primary-next-hop" {
+                                error-message "Cannot configure backup-next-hop when primary-next-hop is not configured";
+                            }
+                            must "not(../primary-next-hop) or ../primary-next-hop/next-hop or not(./next-hop)" {
+                                error-message "Cannot configure backup-next-hop next-hop when primary-next-hop next-hop is not configured";
+                            }
                             presence "Configure backup next-hop.";
                             description "Enter the backup-next-hop context";
 
@@ -3093,6 +3310,9 @@ submodule nokia-conf-router-mpls {
                                 }
 
                                 leaf label {
+                                    must ". != 3" {
+                                        error-message "Cannot configure Implicit NULL label value";
+                                    }
                                     type uint32 {
                                         range "1..1048575";
                                     }
@@ -3342,6 +3562,9 @@ submodule nokia-conf-router-mpls {
             } // container ingress-statistics
 
             container aux-stats {
+                must "./sr != 'false'" {
+                    error-message "At least one protocol must be configured if auxiliary statistics collection is enabled";
+                }
                 presence "Configure aux-stats.";
                 description "Enter the aux-stats context";
 
@@ -3352,6 +3575,25 @@ submodule nokia-conf-router-mpls {
                 }
 
             } // container aux-stats
+
+            container sr-te-resignal {
+                description "Enter the sr-te-resignal context";
+
+                leaf resignal-timer {
+                    type uint32 {
+                        range "30..10080";
+                    }
+                    units "minutes";
+                    description "The resignal timer for SR-TE LSPs.";
+                }
+
+                leaf resignal-on-igp-event {
+                    type boolean;
+                    default "false";
+                    description "Enable/disable re-optimization of SR-TE LSPs triggered by IGP events.";
+                }
+
+            } // container sr-te-resignal
 
             uses conf-router-mpls-transport-profile-mpls-tp;
         } // container mpls

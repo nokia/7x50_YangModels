@@ -9,6 +9,7 @@ submodule nokia-conf-router-nat {
     import nokia-types-sros               { prefix "types-sros"; }
 
     include nokia-conf-filter;
+    include nokia-conf-groups;
     include nokia-conf-isa;
     include nokia-conf-service;
     include nokia-conf-svc-nat;
@@ -47,6 +48,15 @@ submodule nokia-conf-router-nat {
             when "../router-name = 'Base'";
             presence "NAT";
             description "Enter the nat context";
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
 
             container inside {
                 description "Enter the inside context";
@@ -105,12 +115,24 @@ submodule nokia-conf-router-nat {
                                 description "NAT policy";
                             }
 
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
                         } // list destination-prefix
 
                         container deterministic {
                             description "Enter the deterministic context";
 
                             list policy-map {
+                                must "../../max-subscriber-limit" {
+                                    error-message "max-subscriber-limit not set";
+                                }
                                 key "source-prefix";
                                 description "Enter the policy-map list instance";
 
@@ -135,6 +157,15 @@ submodule nokia-conf-router-nat {
                                     description "Administrative state of this prefix";
                                 }
 
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
                                 list map {
                                     key "from to";
                                     description "Enter the map list instance";
@@ -154,6 +185,15 @@ submodule nokia-conf-router-nat {
                                         sros-ext:immutable;
                                         mandatory true;
                                         description "IPv6 address range that is mapped to outside IPv4 address";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
                                     }
 
                                 } // list map
@@ -187,6 +227,9 @@ submodule nokia-conf-router-nat {
                         }
 
                         list endpoint {
+                            must "not(./ip-fragmentation) or ./tunnel-mtu >= 1232" {
+                                error-message " it has to be greater or equal to 1232";
+                            }
                             key "address";
                             max-elements 128;
                             description "Enter the endpoint list instance";
@@ -215,12 +258,24 @@ submodule nokia-conf-router-nat {
                                 description "Reassembly of IPv6 payload datagrams";
                             }
 
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
                         } // list endpoint
 
                         container deterministic {
                             description "Enter the deterministic context";
 
                             list policy-map {
+                                must "../../max-subscriber-limit" {
+                                    error-message "max-subscriber-limit not set";
+                                }
                                 key "source-prefix";
                                 description "Enter the policy-map list instance";
 
@@ -245,6 +300,15 @@ submodule nokia-conf-router-nat {
                                     description "Administrative state of this prefix";
                                 }
 
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
                                 list map {
                                     key "from to";
                                     description "Enter the map list instance";
@@ -266,6 +330,15 @@ submodule nokia-conf-router-nat {
                                         description "IPv6 address range that is mapped to outside IPv4 address";
                                     }
 
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
                                 } // list map
 
                             } // list policy-map
@@ -275,6 +348,9 @@ submodule nokia-conf-router-nat {
                     } // container dual-stack-lite
 
                     container nat64 {
+                        must "../nat-policy" {
+                            error-message "The service has no nat-policy configured";
+                        }
                         presence "NAT64";
                         description "Enter the nat64 context";
 
@@ -322,6 +398,15 @@ submodule nokia-conf-router-nat {
                             description "IPv6 prefix length for the NAT64 subscribers";
                         }
 
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
                         container tos {
                             description "Enter the tos context";
 
@@ -359,6 +444,18 @@ submodule nokia-conf-router-nat {
                     } // container nat64
 
                     container subscriber-identification {
+                        must "./attribute/vendor != 'standard' or ./attribute/type = 'user-name' or ./attribute/type = 'class' or ./attribute/type = 'station-id'" {
+                            error-message "vendor 'standard' does not support the specified attribute";
+                        }
+                        must "./attribute/vendor != 'nokia' or ./attribute/type = 'alc-sub-string'" {
+                            error-message "vendor 'nokia' does not support the specified attribute";
+                        }
+                        must "./attribute/vendor != '3gpp' or ./attribute/type = 'imsi' or ./attribute/type = 'imei'" {
+                            error-message "vendor '3gpp' does not support the specified attribute";
+                        }
+                        must "./admin-state != 'enable' or (./radius-proxy-server/router-instance and ./radius-proxy-server/server)" {
+                            error-message "must have the radius-proxy-server configured";
+                        }
                         description "Enter the subscriber-identification context";
 
                         leaf admin-state {
@@ -376,6 +473,15 @@ submodule nokia-conf-router-nat {
                             type boolean;
                             default "false";
                             description "Drop traffic from unidentified flows";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
                         }
 
                         container attribute {
@@ -419,6 +525,9 @@ submodule nokia-conf-router-nat {
                         description "Enter the dnat-only context";
 
                         leaf source-prefix-list {
+                            must "../../nat-policy" {
+                                error-message "default nat-policy not set";
+                            }
                             type leafref {
                                 path "../../../../../../service/nat/prefix-list/name";
                             }
@@ -518,6 +627,33 @@ submodule nokia-conf-router-nat {
                 } // container dnat-only
 
                 list pool {
+                    must "(not(./watermarks/high) and not(./watermarks/low)) or ./admin-state != 'enable' or ./l2-aware/external-assignment != 'true'" {
+                        error-message "watermarks in combination with external-assignment";
+                    }
+                    must "./port-reservation/port-blocks = 1 or ./applications/agnostic != 'true'" {
+                        error-message "port-reservation in combination with agnostic";
+                    }
+                    must "./port-forwarding/range-end != 0 or ./applications/agnostic != 'false'" {
+                        error-message "port-forwarding range-end out of the valid range";
+                    }
+                    must "./port-forwarding/range-end = 0 or ./applications/agnostic != 'true'" {
+                        error-message "port-forwarding in combination with agnostic";
+                    }
+                    must "./port-forwarding/dynamic-block-reservation = 'false' or ./applications/agnostic != 'true'" {
+                        error-message "port-forwarding in combination with agnostic";
+                    }
+                    must "./large-scale/subscriber-limit = 1 or ./applications/agnostic != 'true'" {
+                        error-message "subscriber-limit not 1 in combination with agnostic";
+                    }
+                    must "./port-forwarding/dynamic-block-reservation = 'false' or ./type != 'wlan-gw-anchor'" {
+                        error-message "port-forwarding in a wlan-gw-anchor pool";
+                    }
+                    must "not(./large-scale/deterministic/port-reservation) or ./port-forwarding/dynamic-block-reservation = 'false'" {
+                        error-message "dynamic-block-reservation in a deterministic pool";
+                    }
+                    must "./large-scale/redundancy/admin-state != 'enable' or ./admin-state = 'enable'" {
+                        error-message "Redundancy can only be enabled while the pool is enabled";
+                    }
                     key "name";
                     max-elements 1024;
                     description "Enter the pool list instance";
@@ -552,11 +688,23 @@ submodule nokia-conf-router-nat {
                         description "Administrative state of the outside NAT pool";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                     choice isa {
                         mandatory true;
                         case nat {
 
                             leaf nat-group {
+                                must "../type != 'wlan-gw-anchor'" {
+                                    error-message "A pool of type wlan-gw-anchor can only be assigned a wlan-gw-group, not a nat-group.";
+                                }
                                 type leafref {
                                     path "../../../../../isa/nat-group/id";
                                 }
@@ -597,7 +745,7 @@ submodule nokia-conf-router-nat {
                         description "Enter the port-forwarding context";
 
                         leaf dynamic-block-reservation {
-                            when "../../type != 'l2-aware'";
+                            when "not(../../type = 'l2-aware')";
                             type boolean;
                             sros-ext:isa-auto-clear-on-modify;
                             default "false";
@@ -649,6 +797,9 @@ submodule nokia-conf-router-nat {
                         description "Enter the watermarks context";
 
                         leaf high {
+                            must "not(../low) or . > ../low" {
+                                error-message "The high watermark must be strictly greater than the low watermark";
+                            }
                             type types-sros:percent;
                             mandatory true;
                             description "Percentage for high watermark";
@@ -675,6 +826,12 @@ submodule nokia-conf-router-nat {
                         }
 
                         container redundancy {
+                            must "not(./export-route) or ./export-route != ./monitor-route" {
+                                error-message "redundancy monitor and export routes are equal";
+                            }
+                            must "./admin-state = 'disable' or (./export-route and ./monitor-route)" {
+                                error-message "To enable dual-homing, both export- and monitor-route need to be configured";
+                            }
                             description "Enter the redundancy context";
 
                             choice redundancy {
@@ -685,6 +842,9 @@ submodule nokia-conf-router-nat {
                                         description "Enter the follow context";
 
                                         leaf router-instance {
+                                            must "'true' = ../name" {
+                                                error-message "nat-pool requires both name and router to be set simultaneously";
+                                            }
                                             type string;
                                             description "The virtual router instance of the pool.";
                                         }
@@ -746,6 +906,9 @@ submodule nokia-conf-router-nat {
                     } // container l2-aware
 
                     list address-range {
+                        must "not(../large-scale/deterministic/port-reservation) or ./drain = 'false'" {
+                            error-message "The pool is in deterministic mode";
+                        }
                         key "start end";
                         max-elements 4096;
                         description "Enter the address-range list instance";
@@ -769,6 +932,15 @@ submodule nokia-conf-router-nat {
                             type boolean;
                             default "false";
                             description "Start or stop draining this NAT address range";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
                         }
 
                     } // list address-range

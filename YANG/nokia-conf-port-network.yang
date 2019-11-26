@@ -37,16 +37,28 @@ submodule nokia-conf-port-network {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-05-01";
+    revision "2019-10-09";
 
     grouping conf-port-network {
         container network {
             description "Enter the network context";
 
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
             container egress {
                 description "Enter the egress context";
 
                 list pool {
+                    must "./name = 'default'" {
+                        error-message "Cannot create/delete buffer pools";
+                    }
                     key "name";
                     description "Enter the pool list instance";
 
@@ -64,6 +76,9 @@ submodule nokia-conf-port-network {
                     }
 
                     leaf red-alarm-threshold {
+                        must "not(../amber-alarm-threshold) or ../amber-alarm-threshold <= ." {
+                            error-message "amber-alarm-threshold cannot be greater than red-alarm-threshold";
+                        }
                         type uint32 {
                             range "1..1000";
                         }
@@ -76,6 +91,15 @@ submodule nokia-conf-port-network {
                             path "../../../../../qos/slope-policy/slope-policy-name";
                         }
                         description "Slope policy for high and low priority RED slope parameters and time average factor";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                     container resv-cbs {
@@ -99,6 +123,9 @@ submodule nokia-conf-port-network {
                             description "Enter the amber-alarm-action context";
 
                             leaf step {
+                                must "../../cbs != 'auto'" {
+                                    error-message "Adaptive CBS sizing step cannot be specified when reserved cbs is default";
+                                }
                                 type uint32 {
                                     range "1..100";
                                 }
@@ -107,6 +134,12 @@ submodule nokia-conf-port-network {
                             }
 
                             leaf max {
+                                must "../step" {
+                                    error-message "step and max both must be specified";
+                                }
+                                must "../../cbs != 'auto'" {
+                                    error-message "Adaptive CBS sizing max cannot be specified when reserved cbs is default";
+                                }
                                 type uint32 {
                                     range "1..100";
                                 }

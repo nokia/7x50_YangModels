@@ -56,6 +56,9 @@ submodule nokia-conf-pxc {
                 }
 
                 leaf admin-state {
+                    must ". = 'disable' or ../port-id" {
+                        error-message "port-id must be set first";
+                    }
                     type types-sros:admin-state;
                     default "disable";
                     description "Administrative state of PXC";
@@ -85,14 +88,26 @@ submodule nokia-conf-pxc {
             description "Enter the fwd-path-ext context";
 
             container sdp-id-range {
+                must "./start <= ./end" {
+                    error-message "End value must be greater than start value";
+                }
+                must "(./end - ./start) <= 127" {
+                    error-message "Maximum range of sdp-id's can be 128";
+                }
                 description "Enter the sdp-id-range context";
 
                 leaf start {
+                    must "../end" {
+                        error-message "missing 'end' value";
+                    }
                     type types-services:sdp-id;
                     description "Start of range";
                 }
 
                 leaf end {
+                    must "../start" {
+                        error-message "missing 'start' value";
+                    }
                     type types-services:sdp-id;
                     description "End of range";
                 }
@@ -132,6 +147,7 @@ submodule nokia-conf-pxc {
                         case lag {
 
                             leaf xc-lag-a {
+                                must "../xc-lag-b";
                                 type leafref {
                                     path "../../../../lag/lag-index";
                                 }
@@ -139,6 +155,7 @@ submodule nokia-conf-pxc {
                             }
 
                             leaf xc-lag-b {
+                                must "../xc-lag-a";
                                 type leafref {
                                     path "../../../../lag/lag-index";
                                 }
@@ -153,22 +170,28 @@ submodule nokia-conf-pxc {
                     description "Enter the application context";
 
                     leaf pw-port {
+                        must ". = 'false' or (not(../vxlan-termination) and ../sub-mgmt-extension = 'false')";
                         type boolean;
                         default "false";
                         description "Use FPE to set up FPE PW cross-connect";
                     }
 
                     leaf sub-mgmt-extension {
+                        must ". = 'false' or (../pw-port = 'false' and not(../vxlan-termination))";
                         type boolean;
                         default "false";
                         description "Reserve FPE for hybrid access bonding";
                     }
 
                     container vxlan-termination {
+                        must "(../pw-port = 'false' and ../sub-mgmt-extension = 'false')";
                         presence "VXLAN termination information.";
                         description "Enter the vxlan-termination context";
 
                         leaf router-instance {
+                            must ". = 'Base' or (. != 'management' and . != 'vpls-management')" {
+                                error-message "router-instance not valid";
+                            }
                             type string;
                             default "Base";
                             description "Routing context that provides reachability to the tunnel configured";

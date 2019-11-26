@@ -79,17 +79,17 @@ submodule nokia-conf-ipsec {
                         type uint32 {
                             range "1..8";
                         }
-                        description "Certificate profile entry ID.";
+                        description "Certificate profile entry ID";
                     }
 
                     leaf cert {
                         type types-security:pki-file-name;
-                        description "The certificate file to be used with this certificate profile entry.";
+                        description "Certificate file name for the certificate profile entry";
                     }
 
                     leaf key {
                         type types-security:pki-file-name;
-                        description "The key-pair file to be used for X.509 certificate authentication with this certificate profile entry.";
+                        description "File name of imported key used for authentication";
                     }
 
                     leaf rsa-signature {
@@ -98,7 +98,7 @@ submodule nokia-conf-ipsec {
                             enum "pss"                          { value 2; }
                         }
                         default "pkcs1";
-                        description "The RSA signature algorithm.";
+                        description "Signature scheme for the RSA key";
                     }
 
                     container send-chain {
@@ -109,7 +109,7 @@ submodule nokia-conf-ipsec {
                                 path "../../../../../system/security/pki/ca-profile/ca-profile-name";
                             }
                             max-elements 7;
-                            description "The CA profile to the send chain.";
+                            description "CA certificate to send to the peer";
                         }
 
                     } // container send-chain
@@ -129,6 +129,9 @@ submodule nokia-conf-ipsec {
                 }
 
                 leaf admin-state {
+                    must ". != 'enable' or (../match-list/idi != 'false' or ../match-list/peer-ip-prefix != 'false')" {
+                        error-message "cannot enable client DB without specifying IPsec client matching IDi or Peer IP prefix";
+                    }
                     type types-sros:admin-state;
                     sros-ext:auto-restart-to-modify;
                     default "disable";
@@ -148,14 +151,14 @@ submodule nokia-conf-ipsec {
                         type boolean;
                         sros-ext:auto-restart-to-modify;
                         default "false";
-                        description "Identification Initiator (IDi) type.";
+                        description "Use IDi type in the IPsec client matching process";
                     }
 
                     leaf peer-ip-prefix {
                         type boolean;
                         sros-ext:auto-restart-to-modify;
                         default "false";
-                        description "Peer IP prefix type.";
+                        description "Use the peer's tunnel IP address in matching process";
                     }
 
                 } // container match-list
@@ -169,10 +172,25 @@ submodule nokia-conf-ipsec {
                         type uint32 {
                             range "1..8000";
                         }
-                        description "The unique ID of this database client.";
+                        description "Client ID";
                     }
 
                     leaf admin-state {
+                        must ". != 'enable' or (../../match-list/idi != 'false' or ../../match-list/peer-ip-prefix != 'false')" {
+                            error-message "Cannot enable the client record: Database match criteria have not been set";
+                        }
+                        must ". != 'enable' or (../../match-list/idi != 'true' or ../identification/idi)" {
+                            error-message "cannot enable client record: Ike ID is required for this database";
+                        }
+                        must ". != 'enable' or (../../match-list/idi != 'false' or not(../identification/idi))" {
+                            error-message "cannot enable client record: Ike ID is not allowed for this database";
+                        }
+                        must ". != 'enable' or (../../match-list/peer-ip-prefix != 'true' or ../identification/peer-ip-prefix)" {
+                            error-message "cannot enable client record: Peer IP is required for this database";
+                        }
+                        must ". != 'enable' or (../../match-list/peer-ip-prefix != 'false' or not(../identification/peer-ip-prefix))" {
+                            error-message "cannot enable client record: Peer IP is not allowed for this database";
+                        }
                         type types-sros:admin-state;
                         sros-ext:auto-restart-to-modify;
                         default "disable";
@@ -182,25 +200,25 @@ submodule nokia-conf-ipsec {
                     leaf client-name {
                         type types-sros:named-item;
                         sros-ext:auto-restart-to-modify;
-                        description "The unique name of this database client.";
+                        description "Client name";
                     }
 
                     leaf private-interface {
                         type types-sros:named-item;
                         sros-ext:auto-restart-to-modify;
-                        description "The private interface name.";
+                        description "Private interface name used for tunnel setup";
                     }
 
                     leaf private-service-name {
                         type types-services:service-name;
                         sros-ext:auto-restart-to-modify;
-                        description "The private service name.";
+                        description "Name of the private service used for tunnel setup";
                     }
 
                     leaf ts-list {
                         type types-sros:named-item;
                         sros-ext:auto-restart-to-modify;
-                        description "The Traffic-Selector (TS) list.";
+                        description "Traffic selector list used by the tunnel";
                     }
 
                     leaf tunnel-template {
@@ -208,7 +226,7 @@ submodule nokia-conf-ipsec {
                             range "1..2048";
                         }
                         sros-ext:auto-restart-to-modify;
-                        description "Tunnel template ID.";
+                        description "Tunnel template ID";
                     }
 
                     container credential {
@@ -220,7 +238,7 @@ submodule nokia-conf-ipsec {
                                 length "1..115";
                             }
                             sros-ext:auto-restart-to-modify;
-                            description "The pre-shared key for this database client.";
+                            description "Pre-shared key used to authenticate peers";
                         }
 
                     } // container credential
@@ -241,7 +259,7 @@ submodule nokia-conf-ipsec {
                                     leaf any {
                                         type boolean;
                                         sros-ext:auto-restart-to-modify;
-                                        description "Any IDi value will be accepted by the system.";
+                                        description "Accept any IDi value as a match";
                                     }
 
                                 }
@@ -250,7 +268,7 @@ submodule nokia-conf-ipsec {
                                     leaf ipv4-prefix {
                                         type types-sros:ipv4-prefix;
                                         sros-ext:auto-restart-to-modify;
-                                        description "Use a specific valid IPv4 prefix as an IDi.";
+                                        description "IPv4 prefix used as the match criteria for the IDi";
                                     }
 
                                 }
@@ -259,7 +277,7 @@ submodule nokia-conf-ipsec {
                                     leaf ipv4-prefix-any {
                                         type boolean;
                                         sros-ext:auto-restart-to-modify;
-                                        description "Use any valid IPv4 prefix as an IDi.";
+                                        description "Accept any valid IPv4 prefix as a match for the IDi";
                                     }
 
                                 }
@@ -268,7 +286,7 @@ submodule nokia-conf-ipsec {
                                     leaf ipv6-prefix {
                                         type types-sros:ipv6-prefix;
                                         sros-ext:auto-restart-to-modify;
-                                        description "Use a specific valid IPv6 prefix as an IDi.";
+                                        description "IPv6 prefix used as the match criteria for the IDi";
                                     }
 
                                 }
@@ -277,7 +295,7 @@ submodule nokia-conf-ipsec {
                                     leaf ipv6-prefix-any {
                                         type boolean;
                                         sros-ext:auto-restart-to-modify;
-                                        description "Use any valid IPv6 prefix as an IDi.";
+                                        description "Accept any valid IPv6 prefix as a match for the IDi";
                                     }
 
                                 }
@@ -286,7 +304,7 @@ submodule nokia-conf-ipsec {
                                     leaf fqdn {
                                         type types-sros:display-string-or-empty;
                                         sros-ext:auto-restart-to-modify;
-                                        description "Use Fully Qualified Domain Name (FQDN) as an IDi.";
+                                        description "FQDN used as the match criteria for the IDi";
                                     }
 
                                 }
@@ -295,7 +313,7 @@ submodule nokia-conf-ipsec {
                                     leaf fqdn-suffix {
                                         type types-sros:display-string-or-empty;
                                         sros-ext:auto-restart-to-modify;
-                                        description "Use FQDN suffix as an IDi.";
+                                        description "FQDN suffix used as the match criteria for the IDi";
                                     }
 
                                 }
@@ -304,7 +322,7 @@ submodule nokia-conf-ipsec {
                                     leaf rfc822 {
                                         type types-sros:display-string-or-empty;
                                         sros-ext:auto-restart-to-modify;
-                                        description "Use Email address (RFC 822) as an IDi.";
+                                        description "Email address (RFC 822) used as match criteria for IDi";
                                     }
 
                                 }
@@ -313,7 +331,7 @@ submodule nokia-conf-ipsec {
                                     leaf rfc822-suffix {
                                         type types-sros:display-string-or-empty;
                                         sros-ext:auto-restart-to-modify;
-                                        description "Use Email address domain (RFC 822) as an IDi.";
+                                        description "Email address domain (RFC 822) as IDi match criteria";
                                     }
 
                                 }
@@ -332,7 +350,7 @@ submodule nokia-conf-ipsec {
                                     leaf ipv4-only {
                                         type boolean;
                                         sros-ext:auto-restart-to-modify;
-                                        description "Use any valid peer IPv4 prefix.";
+                                        description "Accept any valid IPv4 address as a match";
                                     }
 
                                 }
@@ -341,7 +359,7 @@ submodule nokia-conf-ipsec {
                                     leaf ipv6-only {
                                         type boolean;
                                         sros-ext:auto-restart-to-modify;
-                                        description "Use any valid peer IPv6 prefix.";
+                                        description "Accept any valid IPv6 address as a match";
                                     }
 
                                 }
@@ -350,7 +368,7 @@ submodule nokia-conf-ipsec {
                                     leaf ip-prefix {
                                         type types-sros:ip-prefix;
                                         sros-ext:auto-restart-to-modify;
-                                        description "Use a specific valid IP prefix.";
+                                        description "IP prefix used as the match criteria";
                                     }
 
                                 }
@@ -387,7 +405,7 @@ submodule nokia-conf-ipsec {
                 leaf match-peer-id-to-cert {
                     type boolean;
                     default "false";
-                    description "Checking whether the IKE peer's ID matches the peer's certificate when performing certificate authentication.";
+                    description "Check IKE peer's ID during certificate authentication";
                 }
 
                 leaf-list ike-transform {
@@ -395,7 +413,7 @@ submodule nokia-conf-ipsec {
                         path "../../ike-transform/id";
                     }
                     max-elements 4;
-                    description "IKE transform for this IKE policy.";
+                    description "IKE transform instance associated with the IKE policy";
                 }
 
                 choice ike-version {
@@ -411,7 +429,7 @@ submodule nokia-conf-ipsec {
                                     enum "plain-psk-xauth"              { value 4; }
                                 }
                                 default "psk";
-                                description "The authentication method used with this IKE policy for the remote peer.";
+                                description "Authentication method used with the IKE policy";
                             }
 
                             leaf own-auth-method {
@@ -419,7 +437,7 @@ submodule nokia-conf-ipsec {
                                     enum "symmetric"                    { value 0; }
                                 }
                                 default "symmetric";
-                                description "The authentication method used with this IKE policy for its own side.";
+                                description "Authentication method used with policy on its own side";
                             }
 
                             leaf ike-mode {
@@ -428,13 +446,13 @@ submodule nokia-conf-ipsec {
                                     enum "aggressive"                   { value 2; }
                                 }
                                 default "main";
-                                description "The mode of operation, which determines the number of messages used to IKE establish the session.";
+                                description "Mode of operation";
                             }
 
                             leaf ph1-responder-delete-notify {
                                 type boolean;
                                 default "true";
-                                description "Sending a delete message to the peer, as a responder, when an IKEv1 phase 1 is expired or removed";
+                                description "Send delete notification for IKEv1 phase 1 removal";
                             }
 
                         } // container ike-version-1
@@ -457,7 +475,7 @@ submodule nokia-conf-ipsec {
                                     enum "auto-eap"                     { value 10; }
                                 }
                                 default "psk";
-                                description "The authentication method used with this IKE policy for the remote peer.";
+                                description "Authentication method used with the IKE policy";
                             }
 
                             leaf own-auth-method {
@@ -468,7 +486,7 @@ submodule nokia-conf-ipsec {
                                     enum "eap-only"                     { value 8; }
                                 }
                                 default "symmetric";
-                                description "The authentication method used with this IKE policy for its own side.";
+                                description "Authentication method used with IKE policy on own side";
                             }
 
                             leaf auto-eap-method {
@@ -478,7 +496,7 @@ submodule nokia-conf-ipsec {
                                     enum "psk-or-cert"                  { value 3; }
                                 }
                                 default "cert";
-                                description "The auto Extensible Authentication Protocol (EAP) method for remote peer used with this IKE policy. It is only meaningful when the auth-method equals to 'auto-eap-radius'.";
+                                description "Authentication method";
                             }
 
                             leaf own-auto-eap-method {
@@ -487,13 +505,13 @@ submodule nokia-conf-ipsec {
                                     enum "cert"                         { value 2; }
                                 }
                                 default "cert";
-                                description "The auto Extensible Authentication Protocol (EAP) method used with this IKE policy on its own side.";
+                                description "Authentication method";
                             }
 
                             leaf send-idr-after-eap-success {
                                 type boolean;
                                 default "true";
-                                description "Add the IDr payload in the last IKE authentication response after the EAP success";
+                                description "Send IDr payload in last IKE authentication response";
                             }
 
                             container ikev2-fragment {
@@ -506,7 +524,7 @@ submodule nokia-conf-ipsec {
                                     }
                                     units "octets";
                                     default "1500";
-                                    description "The MTU size of the IKEv2 fragmentation.";
+                                    description "MTU of the IKEv2 messages";
                                 }
 
                                 leaf reassembly-timeout {
@@ -515,7 +533,7 @@ submodule nokia-conf-ipsec {
                                     }
                                     units "seconds";
                                     default "2";
-                                    description "The maximum number of seconds to wait to receive all fragments of an IKEv2 message for reassembly.";
+                                    description "Timeout for reassembly of IKEv2 message fragments";
                                 }
 
                             } // container ikev2-fragment
@@ -529,6 +547,9 @@ submodule nokia-conf-ipsec {
                     description "Enter the limit-init-exchange context";
 
                     leaf admin-state {
+                        must ". = 'enable' or ../reduced-max-exchange-timeout = 2" {
+                            error-message "In order to disable admin-state, reduced-max-exchange-timeout must be set to the default value.";
+                        }
                         type types-sros:admin-state;
                         default "enable";
                         description "Administrative state of limiting initial IKE exchanges";
@@ -545,7 +566,7 @@ submodule nokia-conf-ipsec {
                         }
                         units "seconds";
                         default "2";
-                        description "The maximum timeout for the in-progress initial IKE exchange. The value of 'disabled' means that there is no reduction of the current exchange timeout which is 120 seconds.";
+                        description "Max timeout for the in-progress initial IKE exchange";
                     }
 
                 } // container limit-init-exchange
@@ -557,7 +578,7 @@ submodule nokia-conf-ipsec {
                     leaf reply-only {
                         type boolean;
                         default "false";
-                        description "Reply to DPD keep alive requests only.";
+                        description "Initiate DPD request for incoming ESP or IKE packets";
                     }
 
                     leaf interval {
@@ -566,7 +587,7 @@ submodule nokia-conf-ipsec {
                         }
                         units "seconds";
                         default "30";
-                        description "The DPD interval.";
+                        description "DPD interval";
                     }
 
                     leaf max-retries {
@@ -574,7 +595,7 @@ submodule nokia-conf-ipsec {
                             range "2..5";
                         }
                         default "3";
-                        description "The maximum number of retires before the peer is determined dead.";
+                        description "Maximum number of retries before the tunnel is removed";
                     }
 
                 } // container dpd
@@ -614,7 +635,7 @@ submodule nokia-conf-ipsec {
                             range "1..64";
                         }
                         default "3";
-                        description "The maximum number of consecutive failed authentication attempts from the same remote client.";
+                        description "Maximum failed authentications allowed in the duration";
                     }
 
                     leaf duration {
@@ -623,7 +644,7 @@ submodule nokia-conf-ipsec {
                         }
                         units "minutes";
                         default "5";
-                        description "The maximum duration that the system can afford failed-attempts number of failed authentication attempts from the same remote client.";
+                        description "Time interval in which failed attempts must be exceeded";
                     }
 
                     leaf block {
@@ -637,7 +658,7 @@ submodule nokia-conf-ipsec {
                         }
                         units "minutes";
                         default "10";
-                        description "The maximum time period that the system drops IKE packets after the maximum number of consecutive failed authentication attempts reaches failed-attempts within duration minutes.";
+                        description "Time a client is blocked for failed authentications";
                     }
 
                     leaf max-port-per-ip {
@@ -645,7 +666,7 @@ submodule nokia-conf-ipsec {
                             range "1..32000";
                         }
                         default "16";
-                        description "The maximum number of port that can be lockout under the same IP address.";
+                        description "Max number of ports allowed behind the same IP address";
                     }
 
                 } // container lockout
@@ -756,12 +777,14 @@ submodule nokia-conf-ipsec {
                 }
 
                 leaf esp-auth-algorithm {
+                    must ". != 'null' or ../esp-encryption-algorithm != 'null'";
                     type types-ipsec:auth-algorithms;
                     default "sha-1";
                     description "The authentication algorithm for this IPsec transform.";
                 }
 
                 leaf esp-encryption-algorithm {
+                    must "../esp-auth-algorithm != 'null' or . != 'null'";
                     type types-ipsec:encryption-algorithms;
                     default "aes-128";
                     description "The encryption algorithm for this IPsec transform.";
@@ -956,6 +979,12 @@ submodule nokia-conf-ipsec {
                                                         case port-range {
 
                                                             container port-range {
+                                                                must "./begin <= ./end" {
+                                                                    error-message "begin should be less than or equal to end";
+                                                                }
+                                                                must "./begin != 0 or ./end != 65535" {
+                                                                    error-message "please use id/protocol-id-with-any-port to set the port range to any.";
+                                                                }
                                                                 presence "The accepted begin and end ports.";
                                                                 description "Enter the port-range context";
 
@@ -999,6 +1028,12 @@ submodule nokia-conf-ipsec {
                                                         case port-range {
 
                                                             container port-range {
+                                                                must "./begin <= ./end" {
+                                                                    error-message "begin should be less than or equal to end";
+                                                                }
+                                                                must "./begin != 0 or ./end != 65535" {
+                                                                    error-message "please use id/protocol-id-with-any-port to set the port range to any.";
+                                                                }
                                                                 presence "The accepted begin and end ports.";
                                                                 description "Enter the port-range context";
 
@@ -1042,6 +1077,12 @@ submodule nokia-conf-ipsec {
                                                         case port-range {
 
                                                             container port-range {
+                                                                must "./begin <= ./end" {
+                                                                    error-message "begin should be less than or equal to end";
+                                                                }
+                                                                must "./begin != 0 or ./end != 65535" {
+                                                                    error-message "please use id/protocol-id-with-any-port to set the port range to any.";
+                                                                }
                                                                 presence "The accepted begin and end ports.";
                                                                 description "Enter the port-range context";
 
@@ -1085,6 +1126,12 @@ submodule nokia-conf-ipsec {
                                                         case port-range {
 
                                                             container port-range {
+                                                                must "./begin-icmp-type <= ./end-icmp-type and (./begin-icmp-type != ./end-icmp-type or ./begin-icmp-code <= ./end-icmp-code)" {
+                                                                    error-message "((begin-icmp-type * 256) + begin-icmp-code) should be less than or equal to ((end-icmp-type * 256) + end-icmp-code)";
+                                                                }
+                                                                must "./begin-icmp-type != 0 or ./end-icmp-type != 255 or ./begin-icmp-code != 0 or ./end-icmp-code != 255" {
+                                                                    error-message "please use id/protocol-id-with-any-port to set the icmp type and code range to any.";
+                                                                }
                                                                 presence "The accepted begin and end ICMP ports (type and code).";
                                                                 description "Enter the port-range context";
 
@@ -1144,6 +1191,12 @@ submodule nokia-conf-ipsec {
                                                         case port-range {
 
                                                             container port-range {
+                                                                must "./begin-icmp-type <= ./end-icmp-type and (./begin-icmp-type != ./end-icmp-type or ./begin-icmp-code <= ./end-icmp-code)" {
+                                                                    error-message "((begin-icmp-type * 256) + begin-icmp-code) should be less than or equal to ((end-icmp-type * 256) + end-icmp-code)";
+                                                                }
+                                                                must "./begin-icmp-type != 0 or ./end-icmp-type != 255 or ./begin-icmp-code != 0 or ./end-icmp-code != 255" {
+                                                                    error-message "please use id/protocol-id-with-any-port to set the icmp type and code range to any.";
+                                                                }
                                                                 presence "The accepted begin and end ICMP ports (type and code).";
                                                                 description "Enter the port-range context";
 
@@ -1203,6 +1256,12 @@ submodule nokia-conf-ipsec {
                                                         case port-range {
 
                                                             container port-range {
+                                                                must "./begin <= ./end" {
+                                                                    error-message "begin should be less than or equal to end";
+                                                                }
+                                                                must "./begin != 0 or ./end != 255" {
+                                                                    error-message "please use id/protocol-id-with-any-port to set the port range to any.";
+                                                                }
                                                                 presence "The accepted begin and end MIPv6 ports (mobility header type).";
                                                                 description "Enter the port-range context";
 
@@ -1351,6 +1410,12 @@ submodule nokia-conf-ipsec {
                                                         case port-range {
 
                                                             container port-range {
+                                                                must "./begin <= ./end" {
+                                                                    error-message "begin should be less than or equal to end";
+                                                                }
+                                                                must "./begin != 0 or ./end != 65535" {
+                                                                    error-message "please use id/protocol-id-with-any-port to set the port range to any.";
+                                                                }
                                                                 presence "The accepted begin and end ports.";
                                                                 description "Enter the port-range context";
 
@@ -1394,6 +1459,12 @@ submodule nokia-conf-ipsec {
                                                         case port-range {
 
                                                             container port-range {
+                                                                must "./begin <= ./end" {
+                                                                    error-message "begin should be less than or equal to end";
+                                                                }
+                                                                must "./begin != 0 or ./end != 65535" {
+                                                                    error-message "please use id/protocol-id-with-any-port to set the port range to any.";
+                                                                }
                                                                 presence "The accepted begin and end ports.";
                                                                 description "Enter the port-range context";
 
@@ -1437,6 +1508,12 @@ submodule nokia-conf-ipsec {
                                                         case port-range {
 
                                                             container port-range {
+                                                                must "./begin <= ./end" {
+                                                                    error-message "begin should be less than or equal to end";
+                                                                }
+                                                                must "./begin != 0 or ./end != 65535" {
+                                                                    error-message "please use id/protocol-id-with-any-port to set the port range to any.";
+                                                                }
                                                                 presence "The accepted begin and end ports.";
                                                                 description "Enter the port-range context";
 
@@ -1480,6 +1557,12 @@ submodule nokia-conf-ipsec {
                                                         case port-range {
 
                                                             container port-range {
+                                                                must "./begin-icmp-type <= ./end-icmp-type and (./begin-icmp-type != ./end-icmp-type or ./begin-icmp-code <= ./end-icmp-code)" {
+                                                                    error-message "((begin-icmp-type * 256) + begin-icmp-code) should be less than or equal to ((end-icmp-type * 256) + end-icmp-code)";
+                                                                }
+                                                                must "./begin-icmp-type != 0 or ./end-icmp-type != 255 or ./begin-icmp-code != 0 or ./end-icmp-code != 255" {
+                                                                    error-message "please use id/protocol-id-with-any-port to set the icmp type and code range to any.";
+                                                                }
                                                                 presence "The accepted begin and end ICMP ports (type and code).";
                                                                 description "Enter the port-range context";
 
@@ -1539,6 +1622,12 @@ submodule nokia-conf-ipsec {
                                                         case port-range {
 
                                                             container port-range {
+                                                                must "./begin-icmp-type <= ./end-icmp-type and (./begin-icmp-type != ./end-icmp-type or ./begin-icmp-code <= ./end-icmp-code)" {
+                                                                    error-message "((begin-icmp-type * 256) + begin-icmp-code) should be less than or equal to ((end-icmp-type * 256) + end-icmp-code)";
+                                                                }
+                                                                must "./begin-icmp-type != 0 or ./end-icmp-type != 255 or ./begin-icmp-code != 0 or ./end-icmp-code != 255" {
+                                                                    error-message "please use id/protocol-id-with-any-port to set the icmp type and code range to any.";
+                                                                }
                                                                 presence "The accepted begin and end ICMP ports (type and code).";
                                                                 description "Enter the port-range context";
 
@@ -1598,6 +1687,12 @@ submodule nokia-conf-ipsec {
                                                         case port-range {
 
                                                             container port-range {
+                                                                must "./begin <= ./end" {
+                                                                    error-message "begin should be less than or equal to end";
+                                                                }
+                                                                must "./begin != 0 or ./end != 255" {
+                                                                    error-message "please use id/protocol-id-with-any-port to set the port range to any.";
+                                                                }
                                                                 presence "The accepted begin and end MIPv6 ports (mobility header type).";
                                                                 description "Enter the port-range context";
 
@@ -1752,6 +1847,9 @@ submodule nokia-conf-ipsec {
                         description "Enter the pkt-too-big context";
 
                         leaf admin-state {
+                            must ". = 'enable' or (../interval = 10 and ../message-count = 100)" {
+                                error-message "In order to disable admin-state, interval and message-count must be set to the default values.";
+                            }
                             type types-sros:admin-state;
                             default "enable";
                             description "Adminstrative state of the generation of ICMPv6 Packet Too Big messages";
@@ -1827,6 +1925,7 @@ submodule nokia-conf-ipsec {
                     }
 
                     container update-interval {
+                        must "./jitter <= (./value * 60)";
                         description "Enter the update-interval context";
 
                         leaf value {

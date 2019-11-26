@@ -38,7 +38,7 @@ submodule nokia-conf-port-eth-egress {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-06-18";
+    revision "2019-08-20";
 
     grouping conf-port-eth-egress {
         container egress {
@@ -59,6 +59,9 @@ submodule nokia-conf-port-eth-egress {
             }
 
             leaf monitor-port-scheduler {
+                must ". = 'false' or ../port-scheduler-policy/policy-name" {
+                    error-message "No egress port-scheduler-policy is configured.";
+                }
                 type boolean;
                 default "false";
                 description "Enable/disable monitoring of egress scheduler on the Ethernet port.";
@@ -203,8 +206,90 @@ submodule nokia-conf-port-eth-egress {
                     type leafref {
                         path "../../../../../qos/hs-scheduler-policy/name";
                     }
-                    description "HS port pool policy";
+                    description "HS scheduler policy name";
                 }
+
+                container overrides {
+                    presence "Enable hs-scheduler-overrides.";
+                    description "Enter the overrides context";
+
+                    leaf max-rate {
+                        type types-qos:hs-pir-rate-override;
+                        units "megabps";
+                        description "Configure the maximum rate.";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    list group {
+                        key "group-id";
+                        description "Enter the group list instance";
+
+                        leaf group-id {
+                            type uint32 {
+                                range "1";
+                            }
+                            description "Specifies the group identifier.";
+                        }
+
+                        leaf rate {
+                            type types-qos:hs-pir-rate-override;
+                            units "megabps";
+                            description "Configure a group rate.";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                    } // list group
+
+                    list scheduling-class {
+                        key "class-number";
+                        description "Enter the scheduling-class list instance";
+
+                        leaf class-number {
+                            type uint32 {
+                                range "1..6";
+                            }
+                            description "The unique value of the class.";
+                        }
+
+                        leaf rate {
+                            type types-qos:hs-pir-rate-override;
+                            units "megabps";
+                            description "Configure the rate of the scheduling class.";
+                        }
+
+                        leaf weight {
+                            type types-qos:hs-wrr-weight-override;
+                            description "Configure the weight of the scheduling class.";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                    } // list scheduling-class
+
+                } // container overrides
 
             } // container hs-scheduler-policy
 
@@ -219,6 +304,7 @@ submodule nokia-conf-port-eth-egress {
                 }
 
                 container overrides {
+                    must "../policy-name";
                     presence "Enable port-scheduler-overrides.";
                     description "Enter the overrides context";
 
@@ -328,6 +414,94 @@ submodule nokia-conf-port-eth-egress {
                 } // container overrides
 
             } // container port-scheduler-policy
+
+            list hs-secondary-shaper {
+                key "secondary-shaper-name";
+                description "Enter the hs-secondary-shaper list instance";
+
+                leaf secondary-shaper-name {
+                    type types-sros:named-item;
+                    description "Specifies the expanded secondary shaper name on the egress side.";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                container aggregate {
+                    description "Enter the aggregate context";
+
+                    leaf low-burst-max-class {
+                        type uint32 {
+                            range "1..6";
+                        }
+                        default "6";
+                        description "Specify the low burst max class.";
+                    }
+
+                    leaf rate {
+                        type union {
+                            type int32 {
+                                range "1..100000000";
+                            }
+                            type enumeration {
+                                enum "max"                          { value -1; }
+                            }
+                        }
+                        units "kilobps";
+                        default "max";
+                        description "Specify the aggregate rate.";
+                    }
+
+                } // container aggregate
+
+                list class {
+                    key "class-number";
+                    description "Enter the class list instance";
+
+                    leaf class-number {
+                        type uint32 {
+                            range "1..6";
+                        }
+                        description "The unique value of the class.";
+                    }
+
+                    leaf rate {
+                        type union {
+                            type int32 {
+                                range "1..100000000";
+                            }
+                            type enumeration {
+                                enum "max"                          { value -1; }
+                            }
+                        }
+                        units "kilobps";
+                        default "max";
+                        description "Specify the aggregate rate";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                } // list class
+
+            } // list hs-secondary-shaper
 
         } // container egress
 

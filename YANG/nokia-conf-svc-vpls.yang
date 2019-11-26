@@ -61,10 +61,28 @@ submodule nokia-conf-svc-vpls {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-06-21";
+    revision "2019-10-18";
 
     grouping conf-svc-vpls {
         list vpls {
+            must "./pbb/i-vpls-mac-flush/tldp/send-to-bvpls/all-from-me = 'false' or ./pbb-type = 'i-vpls'" {
+                error-message "backbone flush configuration supported only on i-vpls's";
+            }
+            must "./pbb/i-vpls-mac-flush/tldp/send-to-bvpls/all-but-mine = 'false' or ./pbb-type = 'i-vpls'" {
+                error-message "send to bvpls configuration supported only on i-vpls's";
+            }
+            must "not(./pbb/source-bmac/address) or ./pbb-type = 'b-vpls'" {
+                error-message "source bmac configuration supported only on b-vpls's";
+            }
+            must "./pbb/source-bmac/use-es-bmac-lsb = 'false' or ./pbb-type = 'b-vpls'" {
+                error-message "use-es-bmac-lsb supported only on b-vpls's";
+            }
+            must "./pbb/source-bmac/use-mclag-bmac-lsb = 'false' or ./pbb-type = 'b-vpls'" {
+                error-message "use-mclag-bmac-lsb supported only on b-vpls's";
+            }
+            must "not(./capture-sap) or not(./routed-vpls)" {
+                error-message "Capture-saps are not supported with routed-vpls";
+            }
             key "service-name";
             description "Enter the vpls list instance";
 
@@ -114,10 +132,23 @@ submodule nokia-conf-svc-vpls {
             }
 
             leaf etree {
+                must ". = 'false' or ../pbb-type != 'b-vpls'" {
+                    error-message "configuration not supported on b-vpls";
+                }
+                must ". = 'false' or not(../routed-vpls)" {
+                    error-message "configuration not supported on routed-vpls";
+                }
                 type boolean;
                 sros-ext:immutable;
                 default "false";
                 description "Use VPLS as an E-Tree VPLS";
+            }
+
+            leaf m-vpls {
+                type boolean;
+                sros-ext:immutable;
+                default "false";
+                description "Specify whether this is a management VPLS";
             }
 
             leaf pbb-type {
@@ -143,6 +174,18 @@ submodule nokia-conf-svc-vpls {
             }
 
             leaf shcv-policy-ipv4 {
+                must "not(../routed-vpls)" {
+                    error-message "configuration not supported on routed-vpls";
+                }
+                must "../pbb-type != 'b-vpls'" {
+                    error-message "configuration not supported on b-vpls";
+                }
+                must "../pbb-type != 'i-vpls'" {
+                    error-message "configuration not supported on i-vpls";
+                }
+                must "not(../bgp-evpn)" {
+                    error-message "Not supported with bgp-evpn";
+                }
                 type leafref {
                     path "../../../subscriber-mgmt/shcv-policy/name";
                 }
@@ -166,67 +209,6 @@ submodule nokia-conf-svc-vpls {
                 description "Apply a configuration group at this level";
             }
 
-            container stp {
-                description "Enter the stp context";
-
-                leaf admin-state {
-                    type types-sros:admin-state;
-                    default "disable";
-                    description "Enable/disable spanning tree protocol (STP)";
-                }
-
-                leaf forward-delay {
-                    type int32 {
-                        range "4..30";
-                    }
-                    default "15";
-                    description "Configure forward-delay";
-                }
-
-                leaf hello-time {
-                    type int32 {
-                        range "1..10";
-                    }
-                    default "2";
-                    description "Configure hello-time";
-                }
-
-                leaf hold-count {
-                    type int32 {
-                        range "1..20";
-                    }
-                    default "6";
-                    description "Configure BPDU transmit hold count";
-                }
-
-                leaf maximum-age {
-                    type int32 {
-                        range "6..40";
-                    }
-                    default "20";
-                    description "Configure maximum STP information age";
-                }
-
-                leaf mode {
-                    type enumeration {
-                        enum "rstp"                         { value 2; }
-                        enum "comp-dot1w"                   { value 3; }
-                        enum "dot1w"                        { value 4; }
-                    }
-                    default "rstp";
-                    description "Configure protocol version";
-                }
-
-                leaf priority {
-                    type int32 {
-                        range "0..65535";
-                    }
-                    default "32768";
-                    description "Configure STP bridge priority";
-                }
-
-            } // container stp
-
             container fdb {
                 description "Enter the fdb context";
 
@@ -238,6 +220,12 @@ submodule nokia-conf-svc-vpls {
 
                 leaf mac-subnet-length {
                     when "not(../../pbb-type)";
+                    must ". = 48 or not(../../routed-vpls)" {
+                        error-message "configuration not supported on routed-vpls";
+                    }
+                    must ". = 48 or not(../../bgp-evpn)" {
+                        error-message "Not supported with bgp-evpn";
+                    }
                     type int32 {
                         range "24..48";
                     }
@@ -246,7 +234,10 @@ submodule nokia-conf-svc-vpls {
                 }
 
                 leaf selective-learning {
-                    when "../../pbb-type != 'b-vpls'";
+                    when "not(../../pbb-type = 'b-vpls')";
+                    must ". = 'false' or not(../../routed-vpls)" {
+                        error-message "configuration not supported on routed-vpls";
+                    }
                     type boolean;
                     default "false";
                     description "Selective learning status.";
@@ -446,6 +437,12 @@ submodule nokia-conf-svc-vpls {
                         }
 
                         leaf monitor {
+                            must ". = 'none' or (not(../blackhole) and not(../endpoint) and not(../mesh-sdp))" {
+                                error-message "monitor not supported with blackhole or endpoint or mesh-sdp";
+                            }
+                            must ". = 'none' or ../../../../bgp-evpn" {
+                                error-message "supported only with bgp-evpn";
+                            }
                             type enumeration {
                                 enum "none"                         { value 0; }
                                 enum "forward-status"               { value 1; }
@@ -502,6 +499,12 @@ submodule nokia-conf-svc-vpls {
                             case blackhole {
 
                                 leaf blackhole {
+                                    must "../../../../pbb-type != 'b-vpls'" {
+                                        error-message "configuration not supported on b-vpls";
+                                    }
+                                    must "../../../../bgp-evpn" {
+                                        error-message "supported only with bgp-evpn";
+                                    }
                                     type empty;
                                     sros-ext:immutable;
                                     description "Create a static FDB entry for the MAC address to black-hole traffic";
@@ -530,6 +533,9 @@ submodule nokia-conf-svc-vpls {
                 description "Enter the mfib context";
 
                 container table {
+                    must "./high-wmark >= ./low-wmark" {
+                        error-message "high-wmark must be higher than or equal to the low-wmark";
+                    }
                     description "Enter the table context";
 
                     leaf high-wmark {
@@ -591,7 +597,15 @@ submodule nokia-conf-svc-vpls {
                 }
 
                 list instance {
-                    when "../../etree = 'false'";
+                    must "(./assisted-replication/leaf = 'false' and not(./assisted-replication/replicator)) or not(../../pim-snooping)" {
+                        error-message "pim-snooping not supported with assisted replication";
+                    }
+                    must "(./assisted-replication/leaf = 'false' and not(./assisted-replication/replicator)) or ../../igmp-snooping/admin-state = 'disable'" {
+                        error-message "igmp-snooping not supported with assisted replication";
+                    }
+                    must "(./assisted-replication/leaf = 'false' and not(./assisted-replication/replicator)) or ../../mld-snooping/admin-state = 'disable'" {
+                        error-message "mld-snooping not supported with assisted replication";
+                    }
                     key "vxlan-instance";
                     description "Enter the instance list instance";
 
@@ -611,6 +625,9 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf source-vtep-security {
+                        must ". = 'false' or (../assisted-replication/leaf = 'false' and not(../assisted-replication/replicator))" {
+                            error-message "source-vtep-security not supported with assisted replication";
+                        }
                         type boolean;
                         default "false";
                         description "Enable/disable source vtep security";
@@ -680,6 +697,12 @@ submodule nokia-conf-svc-vpls {
                                     description "Enter the network context";
 
                                     leaf policy-name {
+                                        must "(../fp-redirect-group/instance and ../fp-redirect-group/group-name)" {
+                                            error-message "policy-name, fp-redirect-group/group-name, and fp-redirect-group/instance must be specified together";
+                                        }
+                                        must "(../../../../../assisted-replication/leaf = 'false' and not(../../../../../assisted-replication/replicator))" {
+                                            error-message "assisted-replication and policy-name are incompatible";
+                                        }
                                         type leafref {
                                             path "../../../../../../../../../qos/network/network-policy-name";
                                         }
@@ -690,6 +713,9 @@ submodule nokia-conf-svc-vpls {
                                         description "Enter the fp-redirect-group context";
 
                                         leaf group-name {
+                                            must "(../instance and ../../policy-name)" {
+                                                error-message "policy-name, fp-redirect-group/group-name, and fp-redirect-group/instance must be specified together";
+                                            }
                                             type leafref {
                                                 path "../../../../../../../../../../qos/queue-group-templates/ingress/queue-group/ingress-queue-group-name";
                                             }
@@ -697,6 +723,9 @@ submodule nokia-conf-svc-vpls {
                                         }
 
                                         leaf instance {
+                                            must "(../group-name and ../../policy-name)" {
+                                                error-message "policy-name, fp-redirect-group/group-name, and fp-redirect-group/instance must be specified together";
+                                            }
                                             type types-services:qos-qgrp-instance-id;
                                             description "Instance of the forwarding-plane ingress Queue Group for this SDP binding";
                                         }
@@ -712,6 +741,66 @@ submodule nokia-conf-svc-vpls {
                     } // container network
 
                     list egress-vtep {
+                        must "not(../../../mcr-default-gtw/ip) and ../../../mcr-default-gtw/mac = '00:00:00:00:00:00'" {
+                            error-message "vxlan instance egress-vtep not supported with multi-chassis-ring configuration";
+                        }
+                        must "../../../mac-flush/tldp/propagate = 'false'" {
+                            error-message "vxlan instance egress-vtep not supported with mac-flush propagate configuration";
+                        }
+                        must "not(../../../bgp-ad)" {
+                            error-message "configuration incompatible with bgp-ad";
+                        }
+                        must "not(../../../bgp-vpls)" {
+                            error-message "configuration incompatible with bgp-vpls";
+                        }
+                        must "not(../../../endpoint)" {
+                            error-message "configuration incompatible with end-points";
+                        }
+                        must "not(../../../gsmp) or ../../../gsmp/admin-state = 'disable'" {
+                            error-message "configuration incompatible with gsmp configuration";
+                        }
+                        must "not(../../../shcv-policy-ipv4)" {
+                            error-message "configuration incompatible with shcv configuration";
+                        }
+                        must "not(../../../igmp-host-tracking) or ../../../igmp-host-tracking/admin-state = 'disable'" {
+                            error-message "configuration incompatible with igmp-host-tracking enabled";
+                        }
+                        must "../../../igmp-snooping/admin-state = 'disable'" {
+                            error-message "configuration incompatible with igmp-snooping enabled";
+                        }
+                        must "../../../fdb/mac-move/admin-state = 'disable'" {
+                            error-message "configuration incompatible with fdb mac-move";
+                        }
+                        must "../../../fdb/mac-subnet-length = 48" {
+                            error-message "configuration incompatible with fdb mac-subnet-length";
+                        }
+                        must "../../../mld-snooping/admin-state = 'disable'" {
+                            error-message "configuration incompatible with mld-snooping enabled";
+                        }
+                        must "../../../igmp-snooping/mvr/admin-state = 'disable'" {
+                            error-message "configuration incompatible with igmp-snooping mvr enabled";
+                        }
+                        must "../../../mld-snooping/mvr/admin-state = 'disable'" {
+                            error-message "configuration incompatible with mld-snooping mvr enabled";
+                        }
+                        must "not(../../../interface)" {
+                            error-message "configuration incompatible with vpls interface configuration";
+                        }
+                        must "not(../../../pim-snooping)" {
+                            error-message "configuration incompatible with pim-snooping configuration";
+                        }
+                        must "not(../../../proxy-arp)" {
+                            error-message "configuration incompatible with proxy-arp";
+                        }
+                        must "not(../../../proxy-nd)" {
+                            error-message "configuration incompatible with proxy-nd";
+                        }
+                        must "not(../../../bgp-mh-site)" {
+                            error-message "configuration incompatible with bgp-mh sites";
+                        }
+                        must "not(../../../wlan-gw) or ../../../wlan-gw/admin-state = 'disable'" {
+                            error-message "configuration incompatible with wlan-gw configuration";
+                        }
                         key "ip-address";
                         description "Add a list entry for egress-vtep";
 
@@ -745,6 +834,12 @@ submodule nokia-conf-svc-vpls {
                             description "Enter the mac-learning context";
 
                             leaf learning {
+                                must ". = 'false' or not(../../../assisted-replication/replicator)" {
+                                    error-message "mac-learning not supported with assisted replication replicator";
+                                }
+                                must ". = 'false' or ../../protected-src-mac-violation-action or not(../../../../../bgp-evpn)" {
+                                    error-message "mac learning on vxlan instance on bgp evpn service requires protected-src-mac-violation-action";
+                                }
                                 type boolean;
                                 default "false";
                                 description "Enable/disable learning of new MAC addresses";
@@ -775,6 +870,9 @@ submodule nokia-conf-svc-vpls {
                         description "Enter the mld-snooping context";
 
                         leaf mrouter-port {
+                            must ". != 'true' or ../../../../mcast-ipv6-snooping-scope != 'sg-based'" {
+                                error-message "not allowed when mcast-ipv6-snooping-scope is sg-based";
+                            }
                             type boolean;
                             default "false";
                             description "Configure as a multicast router port.";
@@ -787,11 +885,16 @@ submodule nokia-conf-svc-vpls {
             } // container vxlan
 
             container proxy-arp {
-                when "not(../pbb-type)";
                 presence "Enable proxy arp configuration information.";
                 description "Enter the proxy-arp context";
 
                 leaf admin-state {
+                    must ". = 'disable' or not(../../routed-vpls)" {
+                        error-message "configuration not supported on routed-vpls";
+                    }
+                    must ". = 'disable' or not(../../shcv-policy-ipv4)" {
+                        error-message "enabled proxy configuration conflicts with shcv configuration.";
+                    }
                     type types-sros:admin-state;
                     default "disable";
                     description "Administrative state of the proxy";
@@ -919,6 +1022,9 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf static-blackhole {
+                        must ". = 'false' or ../anti-spoof-mac" {
+                            error-message "static-blackhole configuration requires anti-spoof-mac to be configured.";
+                        }
                         type boolean;
                         sros-ext:auto-restart-to-modify;
                         default "false";
@@ -1002,11 +1108,16 @@ submodule nokia-conf-svc-vpls {
             } // container proxy-arp
 
             container proxy-nd {
-                when "not(../pbb-type)";
                 presence "Enable proxy nd configuration information.";
                 description "Enter the proxy-nd context";
 
                 leaf admin-state {
+                    must ". = 'disable' or not(../../routed-vpls)" {
+                        error-message "configuration not supported on routed-vpls";
+                    }
+                    must ". = 'disable' or not(../../shcv-policy-ipv4)" {
+                        error-message "enabled proxy configuration conflicts with shcv configuration.";
+                    }
                     type types-sros:admin-state;
                     default "disable";
                     description "Administrative state of the proxy";
@@ -1151,6 +1262,9 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf static-blackhole {
+                        must ". = 'false' or ../anti-spoof-mac" {
+                            error-message "static-blackhole configuration requires anti-spoof-mac to be configured.";
+                        }
                         type boolean;
                         sros-ext:auto-restart-to-modify;
                         default "false";
@@ -1243,18 +1357,32 @@ submodule nokia-conf-svc-vpls {
             } // container proxy-nd
 
             container routed-vpls {
-                when "../pbb-type != 'b-vpls'";
                 presence "Enable to allow IP interface binding information.";
                 description "Enter the routed-vpls context";
 
                 leaf vxlan-ipv4-tep-ecmp {
+                    must ". = 'false' or not(../../pbb-type)" {
+                        error-message "vxlan-ipv4-tep-ecmp not supported on pbb services";
+                    }
                     type boolean;
                     default "false";
                     description "Use ECMP on VXLAN IPv4 destinations for R-VPLS services";
                 }
 
+                leaf evpn-mpls-ecmp {
+                    type boolean;
+                    default "false";
+                    description "Enable/disable ECMP behavior on R-VPLS services";
+                }
+
                 container multicast {
                     description "Enter the multicast context";
+
+                    leaf ip-multicast-ecmp {
+                        type boolean;
+                        default "false";
+                        description "ECMP behaviour for multicast traffic on bgp-evpn mpls and vxlan";
+                    }
 
                     leaf-list apply-groups {
                         type leafref {
@@ -1317,26 +1445,54 @@ submodule nokia-conf-svc-vpls {
                 description "Enter the load-balancing context";
 
                 leaf per-service-hashing {
+                    must ". = 'false' or not(../../routed-vpls)" {
+                        error-message "configuration not supported on routed-vpls";
+                    }
                     type boolean;
                     default "false";
                     description "Enable/disable per service hashing.";
                 }
 
                 leaf spi-load-balancing {
-                    when "../../pbb-type != 'b-vpls'";
+                    when "not(../../pbb-type = 'b-vpls')";
                     type boolean;
                     default "false";
                     description "Allow use of SPI (Security Parameter Index) in hashing for ESP/AH encrypted IPv4/IPv6 traffic";
                 }
 
                 leaf teid-load-balancing {
-                    when "../../pbb-type != 'b-vpls'";
+                    when "not(../../pbb-type = 'b-vpls')";
                     type boolean;
                     default "false";
                     description "Include TEID in hashing algorithm for GTP-U/C encapsulated traffic";
                 }
 
             } // container load-balancing
+
+            container mac-protect {
+                description "Enter the mac-protect context";
+
+                list mac {
+                    must "not(../../bgp-evpn)" {
+                        error-message "Not supported with bgp-evpn";
+                    }
+                    must "../../pbb-type != 'b-vpls'" {
+                        error-message "Not allowed on b-vpls service";
+                    }
+                    key "mac-address";
+                    description "Add a list entry for mac";
+
+                    leaf mac-address {
+                        must ". != '00:00:00:00:00:00'" {
+                            error-message "Invalid MAC address - cannot be all zeros.";
+                        }
+                        type yang:mac-address;
+                        description "The address of the protected MAC.";
+                    }
+
+                } // list mac
+
+            } // container mac-protect
 
             container pbb {
                 description "Enter the pbb context";
@@ -1664,6 +1820,133 @@ submodule nokia-conf-svc-vpls {
 
             } // container pbb
 
+            container stp {
+                description "Enter the stp context";
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of STP";
+                }
+
+                leaf forward-delay {
+                    type int32 {
+                        range "4..30";
+                    }
+                    default "15";
+                    description "Configure forward-delay";
+                }
+
+                leaf hello-time {
+                    type int32 {
+                        range "1..10";
+                    }
+                    default "2";
+                    description "Configure hello-time";
+                }
+
+                leaf hold-count {
+                    type int32 {
+                        range "1..20";
+                    }
+                    default "6";
+                    description "Configure BPDU transmit hold count";
+                }
+
+                leaf maximum-age {
+                    type int32 {
+                        range "6..40";
+                    }
+                    default "20";
+                    description "Configure maximum STP information age";
+                }
+
+                leaf mode {
+                    type enumeration {
+                        enum "rstp"                         { value 2; }
+                        enum "comp-dot1w"                   { value 3; }
+                        enum "dot1w"                        { value 4; }
+                        enum "mstp"                         { value 5; }
+                        enum "pmstp"                        { value 6; }
+                    }
+                    default "rstp";
+                    description "Configure protocol version";
+                }
+
+                leaf mst-maximum-hops {
+                    type int32 {
+                        range "1..40";
+                    }
+                    default "20";
+                    description "Configure the max number of hops in a MSTP region";
+                }
+
+                leaf mst-name {
+                    type types-sros:named-item;
+                    description "Configure the MST region name";
+                }
+
+                leaf mst-revision {
+                    type int32 {
+                        range "0..65535";
+                    }
+                    description "Configure MST configuration revision";
+                }
+
+                leaf priority {
+                    type int32 {
+                        range "0..65535";
+                    }
+                    default "32768";
+                    description "Configure STP bridge priority";
+                }
+
+                list mst-instance {
+                    when "../../m-vpls = 'true'";
+                    key "mst-inst-number";
+                    description "Enter the mst-instance list instance";
+
+                    leaf mst-inst-number {
+                        type uint32 {
+                            range "1..4094";
+                        }
+                        description "Multiple Spanning Tree Instance number";
+                    }
+
+                    leaf mst-priority {
+                        type int32 {
+                            range "0|4096|8192|12288|16384|20480|24576|28672|32768|36864|40960|45056|49152|53248|57344|61440";
+                        }
+                        default "32768";
+                        description "Priority of multiple spanning tree instance for this service.";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    list vlan-range {
+                        key "range";
+                        description "Add a list entry for vlan-range";
+
+                        leaf range {
+                            type string {
+                                pattern "((([1-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))(\\.\\.(([1-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4])))?)";
+                            }
+                            description "Range of vlans that are associated with the Mvpls SAP.";
+                        }
+
+                    } // list vlan-range
+
+                } // list mst-instance
+
+            } // container stp
+
             list bgp {
                 key "bgp-instance";
                 description "Enter the bgp list instance";
@@ -1723,6 +2006,9 @@ submodule nokia-conf-svc-vpls {
                 } // container route-target
 
                 list pw-template-binding {
+                    must "../bgp-instance = 1" {
+                        error-message "not allowed on non-default bgp instances";
+                    }
                     key "pw-template-name";
                     max-elements 100;
                     description "Enter the pw-template-binding list instance";
@@ -1747,6 +2033,9 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf bfd-liveness {
+                        must ". = 'false' or ../bfd-template" {
+                            error-message "no bfd-template configured";
+                        }
                         type boolean;
                         default "false";
                         description "Enable BFD";
@@ -1794,7 +2083,12 @@ submodule nokia-conf-svc-vpls {
             } // list bgp
 
             container igmp-snooping {
-                when "../pbb-type != 'b-vpls'";
+                must "./admin-state != 'enable' or not(../routed-vpls) or ../pbb-type != 'i-vpls'" {
+                    error-message "routed-vpls and pbb-type i-vpls are configured";
+                }
+                must "./admin-state != 'enable' or not(../vxlan) or not(../vxlan/source-vtep)" {
+                    error-message "configuration incompatible with vxlan source-vtep";
+                }
                 description "Enter the igmp-snooping context";
 
                 leaf admin-state {
@@ -1846,10 +2140,16 @@ submodule nokia-conf-svc-vpls {
                 }
 
                 container mvr {
-                    when "../../pbb-type != 'i-vpls'";
+                    when "not(../../pbb-type = 'i-vpls')";
                     description "Enter the mvr context";
 
                     leaf admin-state {
+                        must ". != 'enable' or not(../../../routed-vpls)" {
+                            error-message "not allowed on a routed VPLS";
+                        }
+                        must ". = 'disable' or not(../../../bgp-evpn)" {
+                            error-message "Not supported with bgp-evpn";
+                        }
                         type types-sros:admin-state;
                         default "disable";
                         description "Administrative state of MVR";
@@ -1870,7 +2170,15 @@ submodule nokia-conf-svc-vpls {
             } // container igmp-snooping
 
             container mld-snooping {
-                when "../pbb-type != 'b-vpls'";
+                must "./admin-state != 'enable' or not(../routed-vpls) or ../pbb-type != 'i-vpls'" {
+                    error-message "routed-vpls and pbb-type i-vpls are configured";
+                }
+                must "./admin-state != 'enable' or ../mcast-ipv6-snooping-scope != 'sg-based'" {
+                    error-message "not allowed when mcast-ipv6-snooping-scope is sg-based";
+                }
+                must "./admin-state != 'enable' or not(../vxlan) or not(../vxlan/source-vtep)" {
+                    error-message "configuration incompatible with vxlan source-vtep";
+                }
                 description "Enter the mld-snooping context";
 
                 leaf admin-state {
@@ -1922,10 +2230,16 @@ submodule nokia-conf-svc-vpls {
                 }
 
                 container mvr {
-                    when "../../pbb-type != 'i-vpls'";
+                    when "not(../../pbb-type = 'i-vpls')";
                     description "Enter the mvr context";
 
                     leaf admin-state {
+                        must ". != 'enable' or not(../../../routed-vpls)" {
+                            error-message "not allowed on a routed VPLS";
+                        }
+                        must ". = 'disable' or not(../../../bgp-evpn)" {
+                            error-message "Not supported with bgp-evpn";
+                        }
                         type types-sros:admin-state;
                         default "disable";
                         description "Administrative state of MVR";
@@ -1946,7 +2260,11 @@ submodule nokia-conf-svc-vpls {
             } // container mld-snooping
 
             container pim-snooping {
-                when "../pbb-type != 'b-vpls'";
+                must "../pbb-type != 'i-vpls' or not(../routed-vpls)";
+                must "../pbb-type != 'b-vpls'";
+                must "not(../vxlan) or not(../vxlan/source-vtep)" {
+                    error-message "configuration incompatible with vxlan source-vtep";
+                }
                 presence "Enable PIM on this service.";
                 description "Enter the pim-snooping context";
 
@@ -1996,7 +2314,9 @@ submodule nokia-conf-svc-vpls {
                 } // container ipv4
 
                 container ipv6 {
-                    when "../../pbb-type != 'i-vpls'";
+                    when "not(../../pbb-type = 'i-vpls')";
+                    must "./admin-state != 'enable' or ../../pbb-type != 'i-vpls'";
+                    must "./admin-state != 'enable' or ../../etree != 'true'";
                     description "Enter the ipv6 context";
 
                     leaf admin-state {
@@ -2019,11 +2339,17 @@ submodule nokia-conf-svc-vpls {
             } // container pim-snooping
 
             container bgp-ad {
-                when "../pbb-type != 'i-vpls' and ../etree = 'false'";
+                must "./admin-state = 'disable' or not(../provider-tunnel) or ../provider-tunnel/inclusive/owner != 'bgp-vpls' or ../provider-tunnel/inclusive/admin-state = 'disable'" {
+                    error-message "bgp-vpls in use with provider-tunnel";
+                }
                 presence "Enable BGP AD information.";
                 description "Enter the bgp-ad context";
 
                 leaf admin-state {
+                    must ". = 'disable' or ../vpls-id";
+                    must ". = 'disable' or ../../fdb/mac-subnet-length = 48" {
+                        error-message "not supported with mac-subnet-length";
+                    }
                     type types-sros:admin-state;
                     default "disable";
                     description "Administrative state of BGP AD";
@@ -2053,7 +2379,9 @@ submodule nokia-conf-svc-vpls {
             } // container bgp-ad
 
             container bgp-evpn {
-                when "../pbb-type != 'i-vpls'";
+                must "not(../endpoint)" {
+                    error-message "bgp-evpn not supported with end-points";
+                }
                 presence "Enable BGP EVPN information.";
                 description "Enter the bgp-evpn context";
 
@@ -2070,7 +2398,7 @@ submodule nokia-conf-svc-vpls {
                 }
 
                 leaf incl-mcast-orig-ip {
-                    when "../../pbb-type != 'b-vpls'";
+                    when "not(../../pbb-type = 'b-vpls')";
                     type types-sros:ipv4-unicast-address;
                     description "Originating IP address";
                 }
@@ -2103,7 +2431,7 @@ submodule nokia-conf-svc-vpls {
                         }
 
                         leaf unknown-mac {
-                            when "../../../../pbb-type != 'b-vpls'";
+                            when "not(../../../../pbb-type = 'b-vpls')";
                             type boolean;
                             default "false";
                             description "Enable/disable the advertisement of MEP, MIP, and VMEP MAC addresses over the BGP EVPN.";
@@ -2122,6 +2450,9 @@ submodule nokia-conf-svc-vpls {
                         }
 
                         leaf include-direct-interface-host {
+                            must ". = 'false' or ../advertise != 'false'" {
+                                error-message "advertise must be enabled.";
+                            }
                             type boolean;
                             default "false";
                             description "BGP EVPN IP route advertisement";
@@ -2160,7 +2491,7 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf blackhole {
-                        when "../../../pbb-type != 'b-vpls' and not(../../../routed-vpls)";
+                        when "not(../../../pbb-type = 'b-vpls') and not(../../../routed-vpls)";
                         type boolean;
                         default "false";
                         description "Enable black hole dup MAC configuration";
@@ -2194,6 +2525,9 @@ submodule nokia-conf-svc-vpls {
                     description "Enter the isid-route-target context";
 
                     list range {
+                        must "../../../pbb-type = 'b-vpls'" {
+                            error-message "Service is not a b-vpls.";
+                        }
                         key "start";
                         max-elements 8192;
                         description "Enter the range list instance";
@@ -2261,6 +2595,9 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf admin-state {
+                        must ". != 'enable' or not(../../../routed-vpls) or ../../../../../system/ip/allow-qinq-network-interface = 'false'" {
+                            error-message "routed evpn vxlan not supported with allow-qinq-network-interface";
+                        }
                         type types-sros:admin-state;
                         default "disable";
                         description "Administrative state of VXLAN auto-bindings creation";
@@ -2292,7 +2629,17 @@ submodule nokia-conf-svc-vpls {
                         description "Maximum ECMP routes information.";
                     }
 
+                    leaf oper-group {
+                        type leafref {
+                            path "../../../../oper-group/name";
+                        }
+                        description "Operational-Group identifier.";
+                    }
+
                     leaf mh-mode {
+                        must ". = 'access' or ../routes/auto-disc/advertise != 'false'" {
+                            error-message "mh-mode network requires routes auto-disc advertise configuration";
+                        }
                         type enumeration {
                             enum "access"                       { value 0; }
                             enum "network"                      { value 1; }
@@ -2342,13 +2689,16 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf admin-state {
+                        must ". != 'enable' or ../../../etree != 'true' or ../../../../system/bgp/evpn/etree-leaf-label != 'false'" {
+                            error-message "Evpn etree leaf label needs to be configured when evpn-mpls is enabled in an etree service";
+                        }
                         type types-sros:admin-state;
                         default "disable";
                         description "Administrative state of BGP EVPN MPLS";
                     }
 
                     leaf force-vc-forwarding {
-                        when "../../../pbb-type != 'b-vpls' and not(../../../routed-vpls)";
+                        when "not(../../../pbb-type = 'b-vpls') and not(../../../routed-vpls)";
                         type types-services:bgp-evpn-force-vc-forwarding;
                         description "VC forwarding action";
                     }
@@ -2392,6 +2742,13 @@ submodule nokia-conf-svc-vpls {
                         description "Default route tag to match against export policies: value as 0xXX.";
                     }
 
+                    leaf oper-group {
+                        type leafref {
+                            path "../../../../oper-group/name";
+                        }
+                        description "Operational-Group identifier.";
+                    }
+
                     leaf-list apply-groups {
                         type leafref {
                             path "../../../../../groups/group/name";
@@ -2433,6 +2790,12 @@ submodule nokia-conf-svc-vpls {
                             type boolean;
                             default "false";
                             description "Enable/disable enforcement of strict tunnel tagging";
+                        }
+
+                        leaf ecmp {
+                            type types-router:mpls-ecmp;
+                            default "1";
+                            description "Maximum ECMP routes information";
                         }
 
                         container resolution-filter {
@@ -2498,9 +2861,50 @@ submodule nokia-conf-svc-vpls {
                                 description "Use tunnels from RibApi gRPC service for BGP next hop";
                             }
 
+                            leaf sr-ospf3 {
+                                type boolean;
+                                default "false";
+                                description "Use segment routing ospf3 for next hop resolution.";
+                            }
+
                         } // container resolution-filter
 
                     } // container auto-bind-tunnel
+
+                    container route-next-hop {
+                        description "Enter the route-next-hop context";
+
+                        choice tag {
+                            default "ipv4";
+                            case ipv4 {
+
+                                leaf system-ipv4 {
+                                    type empty;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Use system IPv4 address";
+                                }
+
+                            }
+                            case ipv6 {
+
+                                leaf system-ipv6 {
+                                    type empty;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Use system IPv6 address";
+                                }
+
+                            }
+                            case explicit {
+
+                                leaf ip-address {
+                                    type types-sros:ip-address;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Use specific unicast IPv4/IPv6 address";
+                                }
+
+                            }
+                        }
+                    } // container route-next-hop
 
                     container fdb {
                         description "Enter the fdb context";
@@ -2517,11 +2921,23 @@ submodule nokia-conf-svc-vpls {
             } // container bgp-evpn
 
             container bgp-vpls {
-                when "../pbb-type != 'i-vpls' and ../etree = 'false'";
+                when "not(../pbb-type = 'i-vpls') and ../etree = 'false'";
+                must "./admin-state = 'disable' or not(../provider-tunnel) or ../provider-tunnel/inclusive/owner != 'bgp-ad' or ../provider-tunnel/inclusive/admin-state = 'disable'" {
+                    error-message "bgp-ad in use with provider-tunnel";
+                }
                 presence "Enable BGP-VPLS for the service.";
                 description "Enter the bgp-vpls context";
 
                 leaf admin-state {
+                    must ". = 'disable' or not(../../bgp-evpn)" {
+                        error-message "Not supported with bgp-evpn";
+                    }
+                    must ". = 'disable' or ../../fdb/mac-subnet-length = 48" {
+                        error-message "not supported with mac-subnet-length";
+                    }
+                    must ". = 'disable' or not(../../routed-vpls)" {
+                        error-message "configuration not supported on routed-vpls";
+                    }
                     type types-sros:admin-state;
                     default "disable";
                     description "Administrative state of the BGP-VPLS instance";
@@ -2550,6 +2966,12 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf id {
+                        must "../name" {
+                            error-message "Can not set until name is set.";
+                        }
+                        must "not(../../maximum-ve-id) or . <= ../../maximum-ve-id" {
+                            error-message "ve id is bigger than configured maximum-ve-id";
+                        }
                         type types-services:ve-id;
                         description "VPLS edge identifier";
                     }
@@ -2559,6 +2981,9 @@ submodule nokia-conf-svc-vpls {
             } // container bgp-vpls
 
             list endpoint {
+                must "../pbb-type != 'i-vpls'" {
+                    error-message "configuration not supported on an i-vpls";
+                }
                 key "name";
                 max-elements 10;
                 description "Enter the endpoint list instance";
@@ -2616,6 +3041,9 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf maximum-mac-addresses {
+                        must "../../../pbb-type != 'b-vpls'" {
+                            error-message "configuration not supported on b-vpls";
+                        }
                         type types-services:max-mac-addr;
                         description "Maximum learned and static entries for this end point";
                     }
@@ -2651,6 +3079,18 @@ submodule nokia-conf-svc-vpls {
 
                 leaf residential {
                     when "not(../../pbb-type) and not(../../routed-vpls)";
+                    must ". = 'false' or not(../../proxy-arp)" {
+                        error-message "Not supported with proxy-arp";
+                    }
+                    must ". = 'false' or not(../../proxy-nd)" {
+                        error-message "Not supported with proxy-nd";
+                    }
+                    must ". = 'false' or ../../fdb/mac-subnet-length = 48" {
+                        error-message "not supported with mac-subnet-length";
+                    }
+                    must ". = 'false' or not(../../bgp-evpn)" {
+                        error-message "Not supported with bgp-evpn";
+                    }
                     type boolean;
                     sros-ext:immutable;
                     default "false";
@@ -2673,17 +3113,32 @@ submodule nokia-conf-svc-vpls {
                         description "Enter the saps context";
 
                         leaf auto-learn-mac-protect {
+                            must ". = 'false' or (../../../../pbb-type != 'i-vpls' and ../../../../pbb-type != 'b-vpls')" {
+                                error-message "configuration not supported on pbb services";
+                            }
                             type boolean;
                             default "false";
                             description "Populate automatically MAC protect list with MAC addresses learned on SDP with split horizon group";
                         }
 
                         leaf protected-src-mac-violation-action {
+                            must "../../../../pbb-type != 'b-vpls'" {
+                                error-message "not supported on b-vpls services";
+                            }
+                            must ". != 'discard' or ../../../../pbb-type != 'i-vpls'" {
+                                error-message "protected-src-mac-violation-action discard not supported on i-vpls service";
+                            }
                             type types-services:sap-protected-src-mac-violation-action;
                             description "Action to take whenever a relearn request for a protected MAC is received";
                         }
 
                         leaf discard-unprotected-dest-mac {
+                            must ". = 'false' or not(../../../../bgp-evpn)" {
+                                error-message "not supported on bgp-evpn services";
+                            }
+                            must ". = 'false' or ../../../../pbb-type != 'b-vpls'" {
+                                error-message "configuration not supported on b-vpls services";
+                            }
                             type boolean;
                             default "false";
                             description "Enable/disable unprotected dest MAC restriction";
@@ -2708,6 +3163,7 @@ submodule nokia-conf-svc-vpls {
                 }
 
                 list mep {
+                    must "./grace/eth-ed/tx-eth-ed != 'true' or ./grace/eth-vsm-grace/tx-eth-vsm-grace != 'true'";
                     key "md-admin-name ma-admin-name mep-id";
                     description "Enter the mep list instance";
 
@@ -2914,11 +3370,17 @@ submodule nokia-conf-svc-vpls {
                 description "Enter the mcr-default-gtw context";
 
                 leaf ip {
+                    must "not(../../bgp-evpn)" {
+                        error-message "Not supported with bgp-evpn";
+                    }
                     type types-sros:ipv4-unicast-address;
                     description "Multi-chassis ring default gateway IP address";
                 }
 
                 leaf mac {
+                    must ". = '00:00:00:00:00:00' or not(../../bgp-evpn)" {
+                        error-message "Not supported with bgp-evpn";
+                    }
                     type yang:mac-address;
                     default "00:00:00:00:00:00";
                     description "Multi-chassis ring default gateway MAC address";
@@ -2936,6 +3398,12 @@ submodule nokia-conf-svc-vpls {
             } // container mcr-default-gtw
 
             list spoke-sdp {
+                must "./vc-type != 'vlan' or ./force-vc-forwarding != 'vlan'" {
+                    error-message "vc-type and force-vc-forwarding configuration is incompatible";
+                }
+                must "(../stp/mode != 'mstp' and ../stp/mode != 'pmstp') or ../m-vpls != 'true'" {
+                    error-message "spoke-sdp not allowed in m-vpls running mstp";
+                }
                 key "sdp-bind-id";
                 description "Enter the spoke-sdp list instance";
 
@@ -3005,6 +3473,12 @@ submodule nokia-conf-svc-vpls {
 
                 leaf etree-root-leaf-tag {
                     when "../../etree = 'true'";
+                    must ". = 'false' or ../vc-type = 'vlan'" {
+                        error-message "Invalid configuration. vc-type must be vlan when etree-root-leaf-tag is enabled";
+                    }
+                    must ". = 'false' or not(../../bgp-evpn)" {
+                        error-message "Not supported with bgp-evpn";
+                    }
                     type boolean;
                     sros-ext:immutable;
                     default "false";
@@ -3013,6 +3487,7 @@ submodule nokia-conf-svc-vpls {
 
                 leaf etree-leaf {
                     when "../../etree = 'true'";
+                    must ". = 'false' or ../etree-root-leaf-tag = 'false'";
                     type boolean;
                     sros-ext:immutable;
                     default "false";
@@ -3027,6 +3502,7 @@ submodule nokia-conf-svc-vpls {
                 }
 
                 leaf vc-type {
+                    must ". = 'ether' or . = 'vlan'";
                     type types-services:vpls-sdp-bind-vc-type;
                     sros-ext:auto-restart-to-modify;
                     default "ether";
@@ -3034,6 +3510,12 @@ submodule nokia-conf-svc-vpls {
                 }
 
                 leaf bpdu-translation {
+                    must "not(../../bgp-evpn)" {
+                        error-message "Not supported with bgp-evpn";
+                    }
+                    must "../../stp/admin-state = 'disable'" {
+                        error-message "vpls stp is not supported when service uses bpdu-translation";
+                    }
                     type types-services:bpdu-translation;
                     description "Bpdu translation.";
                 }
@@ -3045,6 +3527,7 @@ submodule nokia-conf-svc-vpls {
                 }
 
                 leaf block-on-mesh-failure {
+                    must ". = 'false' or ../stp/admin-state != 'enable'";
                     type boolean;
                     default "false";
                     description "Enable blocking after all configured SDPs or endpoints are in operationally down state";
@@ -3118,6 +3601,9 @@ submodule nokia-conf-svc-vpls {
                         description "Enter the filter context";
 
                         leaf mac {
+                            must "(not(../ip) and not(../ipv6))" {
+                                error-message "another filter is already configured";
+                            }
                             type leafref {
                                 path "../../../../../../filter/mac-filter/filter-name";
                             }
@@ -3147,6 +3633,9 @@ submodule nokia-conf-svc-vpls {
                             description "Enter the network context";
 
                             leaf policy-name {
+                                must "(../fp-redirect-group/instance and ../fp-redirect-group/group-name)" {
+                                    error-message "network-policy-name/fp-redirect-group/instance must be specified together";
+                                }
                                 type leafref {
                                     path "../../../../../../../qos/network/network-policy-name";
                                 }
@@ -3157,6 +3646,9 @@ submodule nokia-conf-svc-vpls {
                                 description "Enter the fp-redirect-group context";
 
                                 leaf group-name {
+                                    must "(../instance and ../../policy-name)" {
+                                        error-message "network-policy-name/fp-redirect-group/instance must be specified together";
+                                    }
                                     type leafref {
                                         path "../../../../../../../../qos/queue-group-templates/ingress/queue-group/ingress-queue-group-name";
                                     }
@@ -3164,6 +3656,9 @@ submodule nokia-conf-svc-vpls {
                                 }
 
                                 leaf instance {
+                                    must "(../group-name and ../../policy-name)" {
+                                        error-message "network-policy-name/fp-redirect-group/instance must be specified together";
+                                    }
                                     type types-services:qos-qgrp-instance-id;
                                     description "Instance of the forwarding-plane ingress Queue Group for this SDP binding";
                                 }
@@ -3189,6 +3684,9 @@ submodule nokia-conf-svc-vpls {
                         description "Enter the filter context";
 
                         leaf mac {
+                            must "(not(../ip) and not(../ipv6))" {
+                                error-message "another filter is already configured";
+                            }
                             type leafref {
                                 path "../../../../../../filter/mac-filter/filter-name";
                             }
@@ -3218,6 +3716,9 @@ submodule nokia-conf-svc-vpls {
                             description "Enter the network context";
 
                             leaf policy-name {
+                                must "(../port-redirect-group/instance and ../port-redirect-group/group-name)" {
+                                    error-message "network-policy-name/port-redirect-group/instance must be specified together";
+                                }
                                 type leafref {
                                     path "../../../../../../../qos/network/network-policy-name";
                                 }
@@ -3228,6 +3729,9 @@ submodule nokia-conf-svc-vpls {
                                 description "Enter the port-redirect-group context";
 
                                 leaf group-name {
+                                    must "(../instance and ../../policy-name)" {
+                                        error-message "network-policy-name/port-redirect-group/instance must be specified together";
+                                    }
                                     type leafref {
                                         path "../../../../../../../../qos/queue-group-templates/egress/queue-group/egress-queue-group-name";
                                     }
@@ -3235,6 +3739,9 @@ submodule nokia-conf-svc-vpls {
                                 }
 
                                 leaf instance {
+                                    must "(../group-name and ../../policy-name)" {
+                                        error-message "network-policy-name/port-redirect-group/instance must be specified together";
+                                    }
                                     type types-services:qos-qgrp-instance-id;
                                     description "Instance of the port egress Queue Group for this SDP binding.";
                                 }
@@ -3267,6 +3774,7 @@ submodule nokia-conf-svc-vpls {
                     description "Enter the endpoint context";
 
                     leaf name {
+                        must "../../stp/admin-state != 'enable'";
                         type leafref {
                             path "../../../../vpls[service-name=current()/../../../service-name]/endpoint/name";
                         }
@@ -3296,6 +3804,7 @@ submodule nokia-conf-svc-vpls {
                         case mac {
 
                             leaf mac-monitoring {
+                                must "../policy-id";
                                 type empty;
                                 description "Monitor MAC for CPU protection";
                             }
@@ -3308,11 +3817,17 @@ submodule nokia-conf-svc-vpls {
                                 description "Enter the eth-cfm-monitoring context";
 
                                 leaf aggregate {
+                                    must "../../policy-id" {
+                                        error-message "no cpu-protection policy-id";
+                                    }
                                     type empty;
                                     description "Apply rate limit to the sum of the per peer packet rates";
                                 }
 
                                 leaf car {
+                                    must "../../policy-id" {
+                                        error-message "no cpu-protection policy-id";
+                                    }
                                     type empty;
                                     description "Eth-CFM packets to be ignored when enforcing overall rate";
                                 }
@@ -3335,6 +3850,9 @@ submodule nokia-conf-svc-vpls {
                 } // container pw-status
 
                 container bfd-liveness {
+                    must "../bfd-template" {
+                        error-message "bfd-liveness requires a valid bfd-template";
+                    }
                     presence "Enable BFD liveness information.";
                     description "Enter the bfd-liveness context";
 
@@ -3379,23 +3897,41 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf mac-pinning {
+                        must ". = 'false' or not(../../../bgp-evpn)" {
+                            error-message "not supported on bgp-evpn services";
+                        }
                         type boolean;
                         default "false";
                         description "MAC address pinning in active status";
                     }
 
                     leaf maximum-mac-addresses {
+                        must "../../../pbb-type != 'b-vpls'" {
+                            error-message "configuration not supported on b-vpls";
+                        }
                         type types-services:max-mac-addr;
                         description "Maximum MAC entries in the FDB from this SDP";
                     }
 
                     leaf auto-learn-mac-protect {
+                        must ". = 'false' or (../../../pbb-type != 'i-vpls' and ../../../pbb-type != 'b-vpls')" {
+                            error-message "configuration not supported on pbb services";
+                        }
                         type boolean;
                         default "false";
                         description "Populate automatically MAC protect list with source MAC addresses learned on SDP";
                     }
 
                     leaf protected-src-mac-violation-action {
+                        must "../../../pbb-type != 'i-vpls'" {
+                            error-message "configuration not supported on i-vpls";
+                        }
+                        must "../../../pbb-type != 'b-vpls'" {
+                            error-message "not supported on b-vpls services";
+                        }
+                        must ". != 'discard' or ../../../pbb-type != 'i-vpls'" {
+                            error-message "protected-src-mac-violation-action discard not supported on i-vpls service";
+                        }
                         type types-services:sdp-protected-src-mac-violation-action;
                         description "Action when a relearn request for a protected MAC is received on the SDP";
                     }
@@ -3477,6 +4013,12 @@ submodule nokia-conf-svc-vpls {
                     description "Enter the l2pt context";
 
                     container termination {
+                        must "../../../stp/admin-state = 'disable'" {
+                            error-message "vpls stp is not supported when service uses l2pt-termination";
+                        }
+                        must "not(../../../bgp-evpn)" {
+                            error-message "not supported with bgp-evpn";
+                        }
                         presence "Enable L2PT termination on managed VLANs";
                         description "Enter the termination context";
 
@@ -3530,11 +4072,51 @@ submodule nokia-conf-svc-vpls {
                     description "Enter the dhcp context";
 
                     leaf description {
+                        must "not(../../../routed-vpls)" {
+                            error-message "configuration not supported on routed-vpls";
+                        }
+                        must "not(../../../bgp-evpn)" {
+                            error-message "Not supported with bgp-evpn";
+                        }
+                        must "not(../../../proxy-arp)" {
+                            error-message "Not supported with proxy-arp";
+                        }
+                        must "not(../../../proxy-nd)" {
+                            error-message "Not supported with proxy-nd";
+                        }
+                        must "../../../pbb-type != 'b-vpls'" {
+                            error-message "configuration not supported on b-vpls";
+                        }
+                        must "../../../pbb-type != 'i-vpls'" {
+                            error-message "configuration not supported on i-vpls";
+                        }
                         type types-sros:description;
                         description "Text description";
                     }
 
                     leaf snoop {
+                        must ". != 'true' or ../../force-vc-forwarding != 'vlan'";
+                        must ". = 'false' or ../../../fdb/mac-subnet-length = 48" {
+                            error-message "not supported with mac-subnet-length";
+                        }
+                        must ". = 'false' or not(../../../routed-vpls)" {
+                            error-message "configuration not supported on routed-vpls";
+                        }
+                        must ". = 'false' or not(../../../bgp-evpn)" {
+                            error-message "Not supported with bgp-evpn";
+                        }
+                        must ". = 'false' or not(../../../proxy-arp)" {
+                            error-message "Not supported with proxy-arp";
+                        }
+                        must ". = 'false' or not(../../../proxy-nd)" {
+                            error-message "Not supported with proxy-nd";
+                        }
+                        must ". = 'false' or ../../../pbb-type != 'b-vpls'" {
+                            error-message "configuration not supported on b-vpls";
+                        }
+                        must ". = 'false' or ../../../pbb-type != 'i-vpls'" {
+                            error-message "configuration not supported on i-vpls";
+                        }
                         type boolean;
                         default "false";
                         description "Allow DHCP snooping of DHCP messages on the SAP or SDP";
@@ -3552,7 +4134,6 @@ submodule nokia-conf-svc-vpls {
                 } // container dhcp
 
                 container igmp-snooping {
-                    when "../../pbb-type != 'b-vpls'";
                     description "Enter the igmp-snooping context";
 
                     leaf router-alert-check {
@@ -3585,6 +4166,9 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf query-response-interval {
+                        must "../query-interval > ." {
+                            error-message "query-response-interval must be less than query-interval";
+                        }
                         type uint32 {
                             range "1..1023";
                         }
@@ -3623,6 +4207,9 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf send-queries {
+                        must ". != 'true' or ../mrouter-port != 'true'" {
+                            error-message "mrouter-port and send-queries are mutually exclusive";
+                        }
                         type boolean;
                         default "false";
                         description "Generate IGMP general queries";
@@ -3658,6 +4245,9 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     container mcac {
+                        must "(not(./interface-policy) and not(./policy)) or (../../../pbb-type != 'i-vpls' and ../../../pbb-type != 'b-vpls')" {
+                            error-message "mcac parameter not allowed in i-vpls or b-vpls";
+                        }
                         description "Enter the mcac context";
 
                         leaf interface-policy {
@@ -3675,6 +4265,9 @@ submodule nokia-conf-svc-vpls {
                         }
 
                         container bandwidth {
+                            must "(./total = 'unlimited' and ./mandatory = 'unlimited') or (../../../../pbb-type != 'i-vpls' and ../../../../pbb-type != 'b-vpls')" {
+                                error-message "mcac parameter not allowed in i-vpls or b-vpls";
+                            }
                             description "Enter the bandwidth context";
 
                             leaf total {
@@ -3683,6 +4276,12 @@ submodule nokia-conf-svc-vpls {
                             }
 
                             leaf mandatory {
+                                must "../total != 'unlimited' or . = 'unlimited'" {
+                                    error-message "mandatory bandwidth cannot be set without total bandwidth";
+                                }
+                                must "../total = 'unlimited' or . != 'unlimited'" {
+                                    error-message "total bandwidth cannot be set without mandatory bandwidth";
+                                }
                                 type types-mcast-cac:bandwidth-limit;
                                 description "Pre-reserved bandwidth for all mandatory channels";
                             }
@@ -3744,7 +4343,9 @@ submodule nokia-conf-svc-vpls {
                 } // container igmp-snooping
 
                 container mld-snooping {
-                    when "../../pbb-type != 'b-vpls'";
+                    must "./mrouter-port != 'true' or ../../mcast-ipv6-snooping-scope != 'sg-based'" {
+                        error-message "not allowed when mcast-ipv6-snooping-scope is sg-based";
+                    }
                     description "Enter the mld-snooping context";
 
                     leaf router-alert-check {
@@ -3777,6 +4378,9 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf query-response-interval {
+                        must "../query-interval > ." {
+                            error-message "query-response-interval must be less than query-interval";
+                        }
                         type uint32 {
                             range "1..1023";
                         }
@@ -3815,6 +4419,9 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf send-queries {
+                        must ". != 'true' or ../mrouter-port != 'true'" {
+                            error-message "mrouter-port and send-queries are mutually exclusive";
+                        }
                         type boolean;
                         default "false";
                         description "Generate IGMP general queries";
@@ -3839,6 +4446,9 @@ submodule nokia-conf-svc-vpls {
                         description "Enter the static context";
 
                         list group {
+                            must "../../../../mcast-ipv6-snooping-scope != 'sg-based'" {
+                                error-message "not allowed when mcast-ipv6-snooping-scope is sg-based";
+                            }
                             key "group-address";
                             description "Enter the group list instance";
 
@@ -3888,10 +4498,13 @@ submodule nokia-conf-svc-vpls {
                 } // container mld-snooping
 
                 container pim-snooping {
-                    when "../../pbb-type != 'b-vpls'";
                     description "Enter the pim-snooping context";
 
                     leaf maximum-number-groups {
+                        must "../../../pim-snooping";
+                        must "../../../pbb-type != 'b-vpls'" {
+                            error-message "this is not supported on a b-vpls.";
+                        }
                         type uint32 {
                             range "1..16000";
                         }
@@ -3910,6 +4523,12 @@ submodule nokia-conf-svc-vpls {
                 } // container pim-snooping
 
                 container eth-cfm {
+                    must "./collect-lmm-stats = 'false' or not(./collect-lmm-fc-stats/fc)" {
+                        error-message "collect-lmm-stats and collect-lmm-fc-stats cannot both be enabled";
+                    }
+                    must "./collect-lmm-stats = 'false' or not(./collect-lmm-fc-stats/fc-in-profile)" {
+                        error-message "collect-lmm-stats and collect-lmm-fc-stats cannot both be enabled";
+                    }
                     description "Enter the eth-cfm context";
 
                     leaf collect-lmm-stats {
@@ -3959,6 +4578,16 @@ submodule nokia-conf-svc-vpls {
                     } // container collect-lmm-fc-stats
 
                     list mep {
+                        must "./grace/eth-ed/tx-eth-ed != 'true' or ./grace/eth-vsm-grace/tx-eth-vsm-grace != 'true'";
+                        must "./primary-vlan = 'false' or not(./csf)" {
+                            error-message "csf and primary-vlan are mutually exclusive";
+                        }
+                        must "not(./fault-propagation) or ./primary-vlan = 'false'" {
+                            error-message "fault-propagation and primary-vlan are mutually exclusive";
+                        }
+                        must "not(./fault-propagation) or ./direction = 'down'" {
+                            error-message "fault-propagation can only be enabled on UP MEPs in an EPIPE service";
+                        }
                         key "md-admin-name ma-admin-name mep-id";
                         description "Enter the mep list instance";
 
@@ -4245,9 +4874,59 @@ submodule nokia-conf-svc-vpls {
 
                 } // container eth-cfm
 
+                container static-isid {
+                    description "Enter the static-isid context";
+
+                    list range {
+                        when "../../../pbb-type = 'b-vpls'";
+                        must "not(./start) or ./end >= ./start" {
+                            error-message "The end range value must be greater or equal than the start range value";
+                        }
+                        must "../../../bgp-evpn" {
+                            error-message "supported only with bgp-evpn";
+                        }
+                        key "range-id";
+                        description "Enter the range list instance";
+
+                        leaf range-id {
+                            type uint32 {
+                                range "1..8191";
+                            }
+                            description "The range identifier for static ISID.";
+                        }
+
+                        leaf start {
+                            type types-services:isid-no-zero;
+                            description "The low value of the range for this entry.";
+                        }
+
+                        leaf end {
+                            type types-services:isid-no-zero;
+                            description "The high value of the range for this entry.";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                    } // list range
+
+                } // container static-isid
+
             } // list spoke-sdp
 
             list mesh-sdp {
+                must "./vc-type != 'vlan' or ./force-vc-forwarding != 'vlan'" {
+                    error-message "vc-type and force-vc-forwarding configuration is incompatible";
+                }
+                must "../pbb-type != 'i-vpls'" {
+                    error-message "configuration not supported on an i-vpls";
+                }
                 key "sdp-bind-id";
                 description "Enter the mesh-sdp list instance";
 
@@ -4302,6 +4981,12 @@ submodule nokia-conf-svc-vpls {
 
                 leaf etree-root-leaf-tag {
                     when "../../etree = 'true'";
+                    must ". = 'false' or ../vc-type = 'vlan'" {
+                        error-message "Invalid configuration. vc-type must be vlan when etree-root-leaf-tag is enabled";
+                    }
+                    must ". = 'false' or not(../../bgp-evpn)" {
+                        error-message "Not supported with bgp-evpn";
+                    }
                     type boolean;
                     sros-ext:immutable;
                     default "false";
@@ -4310,6 +4995,7 @@ submodule nokia-conf-svc-vpls {
 
                 leaf etree-leaf {
                     when "../../etree = 'true'";
+                    must ". = 'false' or ../etree-root-leaf-tag = 'false'";
                     type boolean;
                     sros-ext:immutable;
                     default "false";
@@ -4376,6 +5062,9 @@ submodule nokia-conf-svc-vpls {
                         description "Enter the filter context";
 
                         leaf mac {
+                            must "(not(../ip) and not(../ipv6))" {
+                                error-message "another filter is already configured";
+                            }
                             type leafref {
                                 path "../../../../../../filter/mac-filter/filter-name";
                             }
@@ -4405,6 +5094,9 @@ submodule nokia-conf-svc-vpls {
                             description "Enter the network context";
 
                             leaf policy-name {
+                                must "(../fp-redirect-group/instance and ../fp-redirect-group/group-name)" {
+                                    error-message "network-policy-name/fp-redirect-group/instance must be specified together";
+                                }
                                 type leafref {
                                     path "../../../../../../../qos/network/network-policy-name";
                                 }
@@ -4415,6 +5107,9 @@ submodule nokia-conf-svc-vpls {
                                 description "Enter the fp-redirect-group context";
 
                                 leaf group-name {
+                                    must "(../instance and ../../policy-name)" {
+                                        error-message "network-policy-name/fp-redirect-group/instance must be specified together";
+                                    }
                                     type leafref {
                                         path "../../../../../../../../qos/queue-group-templates/ingress/queue-group/ingress-queue-group-name";
                                     }
@@ -4422,6 +5117,9 @@ submodule nokia-conf-svc-vpls {
                                 }
 
                                 leaf instance {
+                                    must "(../group-name and ../../policy-name)" {
+                                        error-message "network-policy-name/fp-redirect-group/instance must be specified together";
+                                    }
                                     type types-services:qos-qgrp-instance-id;
                                     description "Instance of the forwarding-plane ingress Queue Group for this SDP binding";
                                 }
@@ -4447,6 +5145,9 @@ submodule nokia-conf-svc-vpls {
                         description "Enter the filter context";
 
                         leaf mac {
+                            must "(not(../ip) and not(../ipv6))" {
+                                error-message "another filter is already configured";
+                            }
                             type leafref {
                                 path "../../../../../../filter/mac-filter/filter-name";
                             }
@@ -4476,6 +5177,9 @@ submodule nokia-conf-svc-vpls {
                             description "Enter the network context";
 
                             leaf policy-name {
+                                must "(../port-redirect-group/instance and ../port-redirect-group/group-name)" {
+                                    error-message "network-policy-name/port-redirect-group/instance must be specified together";
+                                }
                                 type leafref {
                                     path "../../../../../../../qos/network/network-policy-name";
                                 }
@@ -4486,6 +5190,9 @@ submodule nokia-conf-svc-vpls {
                                 description "Enter the port-redirect-group context";
 
                                 leaf group-name {
+                                    must "(../instance and ../../policy-name)" {
+                                        error-message "network-policy-name/port-redirect-group/instance must be specified together";
+                                    }
                                     type leafref {
                                         path "../../../../../../../../qos/queue-group-templates/egress/queue-group/egress-queue-group-name";
                                     }
@@ -4493,6 +5200,9 @@ submodule nokia-conf-svc-vpls {
                                 }
 
                                 leaf instance {
+                                    must "(../group-name and ../../policy-name)" {
+                                        error-message "network-policy-name/port-redirect-group/instance must be specified together";
+                                    }
                                     type types-services:qos-qgrp-instance-id;
                                     description "Instance of the port egress Queue Group for this SDP binding.";
                                 }
@@ -4535,6 +5245,7 @@ submodule nokia-conf-svc-vpls {
                         case mac {
 
                             leaf mac-monitoring {
+                                must "../policy-id";
                                 type empty;
                                 description "Monitor MAC for CPU protection";
                             }
@@ -4547,11 +5258,17 @@ submodule nokia-conf-svc-vpls {
                                 description "Enter the eth-cfm-monitoring context";
 
                                 leaf aggregate {
+                                    must "../../policy-id" {
+                                        error-message "no cpu-protection policy-id";
+                                    }
                                     type empty;
                                     description "Apply rate limit to the sum of the per peer packet rates";
                                 }
 
                                 leaf car {
+                                    must "../../policy-id" {
+                                        error-message "no cpu-protection policy-id";
+                                    }
                                     type empty;
                                     description "Eth-CFM packets to be ignored when enforcing overall rate";
                                 }
@@ -4563,6 +5280,9 @@ submodule nokia-conf-svc-vpls {
                 } // container cpu-protection
 
                 container bfd-liveness {
+                    must "../bfd-template" {
+                        error-message "bfd-liveness requires a valid bfd-template";
+                    }
                     presence "Enable BFD liveness information.";
                     description "Enter the bfd-liveness context";
 
@@ -4578,18 +5298,30 @@ submodule nokia-conf-svc-vpls {
                     description "Enter the fdb context";
 
                     leaf mac-pinning {
+                        must ". = 'false' or not(../../../bgp-evpn)" {
+                            error-message "not supported on bgp-evpn services";
+                        }
                         type boolean;
                         default "false";
                         description "MAC address pinning in active status";
                     }
 
                     leaf auto-learn-mac-protect {
+                        must ". = 'false' or (../../../pbb-type != 'i-vpls' and ../../../pbb-type != 'b-vpls')" {
+                            error-message "configuration not supported on pbb services";
+                        }
                         type boolean;
                         default "false";
                         description "Enable/disable of automatic marking of MACs as protected";
                     }
 
                     leaf protected-src-mac-violation-action {
+                        must "../../../pbb-type != 'b-vpls'" {
+                            error-message "not supported on b-vpls services";
+                        }
+                        must ". != 'discard' or ../../../pbb-type != 'i-vpls'" {
+                            error-message "protected-src-mac-violation-action discard not supported on i-vpls service";
+                        }
                         type types-services:sdp-protected-src-mac-violation-action;
                         description "Action to take whenever a relearn request for a protected MAC is received";
                     }
@@ -4601,11 +5333,51 @@ submodule nokia-conf-svc-vpls {
                     description "Enter the dhcp context";
 
                     leaf description {
+                        must "not(../../../routed-vpls)" {
+                            error-message "configuration not supported on routed-vpls";
+                        }
+                        must "not(../../../bgp-evpn)" {
+                            error-message "Not supported with bgp-evpn";
+                        }
+                        must "not(../../../proxy-arp)" {
+                            error-message "Not supported with proxy-arp";
+                        }
+                        must "not(../../../proxy-nd)" {
+                            error-message "Not supported with proxy-nd";
+                        }
+                        must "../../../pbb-type != 'b-vpls'" {
+                            error-message "configuration not supported on b-vpls";
+                        }
+                        must "../../../pbb-type != 'i-vpls'" {
+                            error-message "configuration not supported on i-vpls";
+                        }
                         type types-sros:description;
                         description "Text description";
                     }
 
                     leaf snoop {
+                        must ". != 'true' or ../../force-vc-forwarding != 'vlan'";
+                        must ". = 'false' or ../../../fdb/mac-subnet-length = 48" {
+                            error-message "not supported with mac-subnet-length";
+                        }
+                        must ". = 'false' or not(../../../routed-vpls)" {
+                            error-message "configuration not supported on routed-vpls";
+                        }
+                        must ". = 'false' or not(../../../bgp-evpn)" {
+                            error-message "Not supported with bgp-evpn";
+                        }
+                        must ". = 'false' or not(../../../proxy-arp)" {
+                            error-message "Not supported with proxy-arp";
+                        }
+                        must ". = 'false' or not(../../../proxy-nd)" {
+                            error-message "Not supported with proxy-nd";
+                        }
+                        must ". = 'false' or ../../../pbb-type != 'b-vpls'" {
+                            error-message "configuration not supported on b-vpls";
+                        }
+                        must ". = 'false' or ../../../pbb-type != 'i-vpls'" {
+                            error-message "configuration not supported on i-vpls";
+                        }
                         type boolean;
                         default "false";
                         description "Allow DHCP snooping of DHCP messages on the SAP or SDP";
@@ -4623,7 +5395,6 @@ submodule nokia-conf-svc-vpls {
                 } // container dhcp
 
                 container igmp-snooping {
-                    when "../../pbb-type != 'b-vpls'";
                     description "Enter the igmp-snooping context";
 
                     leaf router-alert-check {
@@ -4656,6 +5427,9 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf query-response-interval {
+                        must "../query-interval > ." {
+                            error-message "query-response-interval must be less than query-interval";
+                        }
                         type uint32 {
                             range "1..1023";
                         }
@@ -4694,6 +5468,9 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf send-queries {
+                        must ". != 'true' or ../mrouter-port != 'true'" {
+                            error-message "mrouter-port and send-queries are mutually exclusive";
+                        }
                         type boolean;
                         default "false";
                         description "Generate IGMP general queries";
@@ -4729,6 +5506,9 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     container mcac {
+                        must "(not(./interface-policy) and not(./policy)) or (../../../pbb-type != 'i-vpls' and ../../../pbb-type != 'b-vpls')" {
+                            error-message "mcac parameter not allowed in i-vpls or b-vpls";
+                        }
                         description "Enter the mcac context";
 
                         leaf interface-policy {
@@ -4746,6 +5526,9 @@ submodule nokia-conf-svc-vpls {
                         }
 
                         container bandwidth {
+                            must "(./total = 'unlimited' and ./mandatory = 'unlimited') or (../../../../pbb-type != 'i-vpls' and ../../../../pbb-type != 'b-vpls')" {
+                                error-message "mcac parameter not allowed in i-vpls or b-vpls";
+                            }
                             description "Enter the bandwidth context";
 
                             leaf total {
@@ -4754,6 +5537,12 @@ submodule nokia-conf-svc-vpls {
                             }
 
                             leaf mandatory {
+                                must "../total != 'unlimited' or . = 'unlimited'" {
+                                    error-message "mandatory bandwidth cannot be set without total bandwidth";
+                                }
+                                must "../total = 'unlimited' or . != 'unlimited'" {
+                                    error-message "total bandwidth cannot be set without mandatory bandwidth";
+                                }
                                 type types-mcast-cac:bandwidth-limit;
                                 description "Pre-reserved bandwidth for all mandatory channels";
                             }
@@ -4815,7 +5604,9 @@ submodule nokia-conf-svc-vpls {
                 } // container igmp-snooping
 
                 container mld-snooping {
-                    when "../../pbb-type != 'b-vpls'";
+                    must "./mrouter-port != 'true' or ../../mcast-ipv6-snooping-scope != 'sg-based'" {
+                        error-message "not allowed when mcast-ipv6-snooping-scope is sg-based";
+                    }
                     description "Enter the mld-snooping context";
 
                     leaf router-alert-check {
@@ -4848,6 +5639,9 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf query-response-interval {
+                        must "../query-interval > ." {
+                            error-message "query-response-interval must be less than query-interval";
+                        }
                         type uint32 {
                             range "1..1023";
                         }
@@ -4886,6 +5680,9 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf send-queries {
+                        must ". != 'true' or ../mrouter-port != 'true'" {
+                            error-message "mrouter-port and send-queries are mutually exclusive";
+                        }
                         type boolean;
                         default "false";
                         description "Generate IGMP general queries";
@@ -4910,6 +5707,9 @@ submodule nokia-conf-svc-vpls {
                         description "Enter the static context";
 
                         list group {
+                            must "../../../../mcast-ipv6-snooping-scope != 'sg-based'" {
+                                error-message "not allowed when mcast-ipv6-snooping-scope is sg-based";
+                            }
                             key "group-address";
                             description "Enter the group list instance";
 
@@ -4959,6 +5759,12 @@ submodule nokia-conf-svc-vpls {
                 } // container mld-snooping
 
                 container eth-cfm {
+                    must "./collect-lmm-stats = 'false' or not(./collect-lmm-fc-stats/fc)" {
+                        error-message "collect-lmm-stats and collect-lmm-fc-stats cannot both be enabled";
+                    }
+                    must "./collect-lmm-stats = 'false' or not(./collect-lmm-fc-stats/fc-in-profile)" {
+                        error-message "collect-lmm-stats and collect-lmm-fc-stats cannot both be enabled";
+                    }
                     description "Enter the eth-cfm context";
 
                     leaf collect-lmm-stats {
@@ -5008,6 +5814,16 @@ submodule nokia-conf-svc-vpls {
                     } // container collect-lmm-fc-stats
 
                     list mep {
+                        must "./grace/eth-ed/tx-eth-ed != 'true' or ./grace/eth-vsm-grace/tx-eth-vsm-grace != 'true'";
+                        must "./primary-vlan = 'false' or not(./csf)" {
+                            error-message "csf and primary-vlan are mutually exclusive";
+                        }
+                        must "not(./fault-propagation) or ./primary-vlan = 'false'" {
+                            error-message "fault-propagation and primary-vlan are mutually exclusive";
+                        }
+                        must "not(./fault-propagation) or ./direction = 'down'" {
+                            error-message "fault-propagation can only be enabled on UP MEPs in an EPIPE service";
+                        }
                         key "md-admin-name ma-admin-name mep-id";
                         description "Enter the mep list instance";
 
@@ -5301,11 +6117,16 @@ submodule nokia-conf-svc-vpls {
                 description "Enter the bgp-mh-site list instance";
 
                 leaf site-name {
+                    must "../../pbb-type != 'i-vpls' or ../../etree != 'true'" {
+                        error-message "not allowed with etree i-vpls service";
+                    }
                     type types-sros:named-item;
                     description "Name for the specific site";
                 }
 
                 leaf admin-state {
+                    must ". = 'disable' or ../id";
+                    must ". = 'disable' or ../sap or ../spoke-sdp or ../mesh-sdp-binds or ../shg-name";
                     type types-sros:admin-state;
                     default "disable";
                     description "Administrative state of the VPLS BGP multi-homing site";
@@ -5379,6 +6200,9 @@ submodule nokia-conf-svc-vpls {
                     case mesh-sdp {
 
                         leaf mesh-sdp-binds {
+                            must "../../pbb-type != 'i-vpls'" {
+                                error-message "mesh-sdp-binds not allowed in i-vpls service";
+                            }
                             type empty;
                             description "Specify if a mesh-sdp-binding is associated with this site";
                         }
@@ -5424,6 +6248,21 @@ submodule nokia-conf-svc-vpls {
                 }
 
                 leaf anti-spoof {
+                    must ". != 'next-hop-ip-and-mac-addr'" {
+                        error-message "next-hop-ip-and-mac-addr not supported";
+                    }
+                    must "not(../../bgp-evpn)" {
+                        error-message "Not supported with bgp-evpn";
+                    }
+                    must "../../pbb-type != 'b-vpls'" {
+                        error-message "configuration not supported on b-vpls";
+                    }
+                    must "../../pbb-type != 'i-vpls'" {
+                        error-message "configuration not supported on i-vpls";
+                    }
+                    must "../../fdb/mac-subnet-length = 48" {
+                        error-message "mac-subnet-length is not default";
+                    }
                     type types-services:anti-spoof-option;
                     description "Type of anti-spoof filtering";
                 }
@@ -5435,6 +6274,12 @@ submodule nokia-conf-svc-vpls {
                 }
 
                 leaf calling-station-id {
+                    must "../../pbb-type != 'b-vpls'" {
+                        error-message "configuration not supported on b-vpls";
+                    }
+                    must "../../pbb-type != 'i-vpls'" {
+                        error-message "configuration not supported on i-vpls";
+                    }
                     type types-sros:string-not-all-spaces {
                         length "1..64";
                     }
@@ -5442,7 +6287,10 @@ submodule nokia-conf-svc-vpls {
                 }
 
                 leaf cflowd {
-                    when "../../pbb-type != 'b-vpls'";
+                    when "not(../../pbb-type = 'b-vpls')";
+                    must ". = 'false' or not(../../routed-vpls)" {
+                        error-message "configuration not supported on routed-vpls";
+                    }
                     type boolean;
                     default "false";
                     description "Enable Cflowd collection and analysis on this SAP";
@@ -5462,12 +6310,30 @@ submodule nokia-conf-svc-vpls {
                 }
 
                 leaf host-admin-state {
+                    must ". = 'enable' or ../../pbb-type != 'b-vpls'" {
+                        error-message "configuration not supported on b-vpls";
+                    }
+                    must ". = 'enable' or ../../pbb-type != 'i-vpls'" {
+                        error-message "configuration not supported on i-vpls";
+                    }
+                    must ". = 'enable' or ../../fdb/mac-subnet-length = 48" {
+                        error-message "mac-subnet-length is not default";
+                    }
                     type types-sros:admin-state;
                     default "enable";
                     description "Administrative state of hosts";
                 }
 
                 leaf host-lockout-policy {
+                    must "../../pbb-type != 'b-vpls'" {
+                        error-message "configuration not supported on b-vpls";
+                    }
+                    must "../../pbb-type != 'i-vpls'" {
+                        error-message "configuration not supported on i-vpls";
+                    }
+                    must "../../fdb/mac-subnet-length = 48" {
+                        error-message "mac-subnet-length is not default";
+                    }
                     type leafref {
                         path "../../../../subscriber-mgmt/host-lockout-policy/name";
                     }
@@ -5475,6 +6341,12 @@ submodule nokia-conf-svc-vpls {
                 }
 
                 leaf multi-service-site {
+                    must "(not(../egress/qos/scheduler-policy/policy-name) and not(../ingress/qos/scheduler-policy/policy-name))" {
+                        error-message "Cannot set multi-service-site with ingress/egress scheduler policy";
+                    }
+                    must "(not(../egress/qos/policer-control-policy/policy-name) and not(../ingress/qos/policer-control-policy/policy-name))" {
+                        error-message "Cannot set multi-service-site with ingress/egress policer-control policy";
+                    }
                     type types-sros:named-item;
                     description "Multi service site name";
                 }
@@ -5496,6 +6368,7 @@ submodule nokia-conf-svc-vpls {
 
                 leaf etree-leaf {
                     when "../../etree = 'true'";
+                    must ". = 'false' or ../etree-root-leaf-tag = 'false'";
                     type boolean;
                     sros-ext:immutable;
                     default "false";
@@ -5504,11 +6377,32 @@ submodule nokia-conf-svc-vpls {
 
                 leaf arp-reply-agent {
                     when "not(../../pbb-type)";
+                    must "not(../../bgp-evpn)" {
+                        error-message "Not supported with bgp-evpn";
+                    }
+                    must "../../fdb/mac-subnet-length = 48" {
+                        error-message "mac-subnet-length is not default";
+                    }
+                    must "not(../../proxy-arp)" {
+                        error-message "Not supported with proxy-arp";
+                    }
+                    must "not(../../proxy-nd)" {
+                        error-message "Not supported with proxy-nd";
+                    }
+                    must "not(../../routed-vpls)" {
+                        error-message "configuration not supported on routed-vpls";
+                    }
                     type types-services:arp-reply-agent;
                     description "Enable arp-reply-agent function";
                 }
 
                 leaf bpdu-translation {
+                    must "not(../../bgp-evpn)" {
+                        error-message "Not supported with bgp-evpn";
+                    }
+                    must "../../stp/admin-state = 'disable'" {
+                        error-message "vpls stp is not supported when service uses bpdu-translation";
+                    }
                     type types-services:bpdu-translation;
                     description "Bpdu translation on this SAP";
                 }
@@ -5520,6 +6414,15 @@ submodule nokia-conf-svc-vpls {
                 }
 
                 leaf radius-auth-policy {
+                    must "../../pbb-type != 'b-vpls'" {
+                        error-message "configuration not supported on b-vpls";
+                    }
+                    must "../../pbb-type != 'i-vpls'" {
+                        error-message "configuration not supported on i-vpls";
+                    }
+                    must "not(../../routed-vpls)" {
+                        error-message "configuration not supported on routed-vpls";
+                    }
                     type leafref {
                         path "../../../../subscriber-mgmt/radius-authentication-policy/name";
                     }
@@ -5527,6 +6430,24 @@ submodule nokia-conf-svc-vpls {
                 }
 
                 leaf shcv-policy-ipv4 {
+                    must "not(../../routed-vpls)" {
+                        error-message "configuration not supported on routed-vpls";
+                    }
+                    must "not(../../bgp-evpn)" {
+                        error-message "Not supported with bgp-evpn";
+                    }
+                    must "../../pbb-type != 'b-vpls'" {
+                        error-message "configuration not supported on b-vpls";
+                    }
+                    must "../../pbb-type != 'i-vpls'" {
+                        error-message "configuration not supported on i-vpls";
+                    }
+                    must "not(../../proxy-arp) or ../../proxy-arp/admin-state = 'disable'" {
+                        error-message "Not supported with proxy-arp enabled";
+                    }
+                    must "not(../../proxy-nd) or ../../proxy-nd/admin-state = 'disable'" {
+                        error-message "Not supported with proxy-nd enabled";
+                    }
                     type leafref {
                         path "../../../../subscriber-mgmt/shcv-policy/name";
                     }
@@ -5633,7 +6554,7 @@ submodule nokia-conf-svc-vpls {
                                                 enum "auto"                         { value -1; }
                                             }
                                         }
-                                        units "kilobps";
+                                        units "kilobytes";
                                         description "CBS";
                                     }
 
@@ -5646,6 +6567,7 @@ submodule nokia-conf-svc-vpls {
                                                 enum "auto"                         { value -1; }
                                             }
                                         }
+                                        units "bytes";
                                         description "MBS";
                                     }
 
@@ -6054,6 +6976,12 @@ submodule nokia-conf-svc-vpls {
                         description "Enter the filter context";
 
                         leaf mac {
+                            must "(not(../ip) and not(../ipv6))" {
+                                error-message "another filter is already configured";
+                            }
+                            must "not(../../../../routed-vpls)" {
+                                error-message "configuration not supported on routed-vpls";
+                            }
                             type leafref {
                                 path "../../../../../../filter/mac-filter/filter-name";
                             }
@@ -6061,6 +6989,9 @@ submodule nokia-conf-svc-vpls {
                         }
 
                         leaf ip {
+                            must "../../../../pbb-type != 'b-vpls'" {
+                                error-message "configuration not supported on b-vpls";
+                            }
                             type leafref {
                                 path "../../../../../../filter/ip-filter/filter-name";
                             }
@@ -6068,6 +6999,9 @@ submodule nokia-conf-svc-vpls {
                         }
 
                         leaf ipv6 {
+                            must "../../../../pbb-type != 'b-vpls'" {
+                                error-message "configuration not supported on b-vpls";
+                            }
                             type leafref {
                                 path "../../../../../../filter/ipv6-filter/filter-name";
                             }
@@ -6077,13 +7011,30 @@ submodule nokia-conf-svc-vpls {
                     } // container filter
 
                     container qtag-manipulation {
-                        when "../../../pbb-type != 'b-vpls' and ../../../pbb-type != 'i-vpls'";
                         description "Enter the qtag-manipulation context";
 
                         choice tags {
                             case push-dot1q-vlan {
 
                                 leaf push-dot1q-vlan {
+                                    must "../../../stp/admin-state != 'enable'" {
+                                        error-message "not allowed when sap has stp enabled";
+                                    }
+                                    must "not(../../../../routed-vpls)" {
+                                        error-message "configuration not supported on routed-vpls";
+                                    }
+                                    must "not(../../../../bgp-ad) or ../../../../bgp-ad/admin-state = 'disable'" {
+                                        error-message "Not supported with bgp-ad enabled.";
+                                    }
+                                    must "not(../../../../igmp-snooping) or ../../../../igmp-snooping/admin-state = 'disable'" {
+                                        error-message "Not supported with igmp-snooping enabled.";
+                                    }
+                                    must "not(../../../../mld-snooping) or ../../../../mld-snooping/admin-state = 'disable'" {
+                                        error-message "Not supported with mld-snooping enabled.";
+                                    }
+                                    must "not(../../../../bgp-vpls) or ../../../../bgp-vpls/admin-state = 'disable'" {
+                                        error-message "Not allowed when bgp-vpls is enabled";
+                                    }
                                     type types-services:qtag-manipulation-info;
                                     description "VLAN translation information";
                                 }
@@ -6098,6 +7049,18 @@ submodule nokia-conf-svc-vpls {
                     description "Enter the egress context";
 
                     leaf dest-mac-rewrite {
+                        must "not(../../../routed-vpls)" {
+                            error-message "configuration not supported on routed-vpls";
+                        }
+                        must "../../../pbb-type != 'b-vpls'" {
+                            error-message "configuration not supported on b-vpls";
+                        }
+                        must "../../../pbb-type != 'i-vpls'" {
+                            error-message "configuration not supported on i-vpls";
+                        }
+                        must "../../../etree != 'true'" {
+                            error-message "etree saps";
+                        }
                         type types-sros:mac-unicast-address-no-zero;
                         description "Destination MAC overwrite for unicast";
                     }
@@ -6142,6 +7105,7 @@ submodule nokia-conf-svc-vpls {
                                 description "Enter the overrides context";
 
                                 leaf hs-secondary-shaper {
+                                    must ". != 'default'";
                                     type types-sros:named-item;
                                     description "HS Secondary Shaper";
                                 }
@@ -6196,6 +7160,10 @@ submodule nokia-conf-svc-vpls {
                                         }
 
                                         leaf wrr-weight {
+                                            must ". <= 4 or ../queue-id != 1" {
+                                                error-message "4";
+                                            }
+                                            must "(../queue-id != 4 and ../queue-id != 5 and ../queue-id != 6 and ../queue-id != 7 and ../queue-id != 8)";
                                             type types-qos:hsmda-wrr-weight-override;
                                             description "Weight value for the HSMDA queue";
                                         }
@@ -6266,7 +7234,7 @@ submodule nokia-conf-svc-vpls {
                                                 enum "auto"                         { value -1; }
                                             }
                                         }
-                                        units "kilobytes";
+                                        units "bytes";
                                         description "MBS";
                                     }
 
@@ -6778,6 +7746,12 @@ submodule nokia-conf-svc-vpls {
                         description "Enter the filter context";
 
                         leaf mac {
+                            must "(not(../ip) and not(../ipv6))" {
+                                error-message "another filter is already configured";
+                            }
+                            must "not(../../../../routed-vpls)" {
+                                error-message "configuration not supported on routed-vpls";
+                            }
                             type leafref {
                                 path "../../../../../../filter/mac-filter/filter-name";
                             }
@@ -6785,6 +7759,9 @@ submodule nokia-conf-svc-vpls {
                         }
 
                         leaf ip {
+                            must "../../../../pbb-type != 'b-vpls'" {
+                                error-message "configuration not supported on b-vpls";
+                            }
                             type leafref {
                                 path "../../../../../../filter/ip-filter/filter-name";
                             }
@@ -6792,6 +7769,9 @@ submodule nokia-conf-svc-vpls {
                         }
 
                         leaf ipv6 {
+                            must "../../../../pbb-type != 'b-vpls'" {
+                                error-message "configuration not supported on b-vpls";
+                            }
                             type leafref {
                                 path "../../../../../../filter/ipv6-filter/filter-name";
                             }
@@ -6852,6 +7832,7 @@ submodule nokia-conf-svc-vpls {
                         case mac {
 
                             leaf mac-monitoring {
+                                must "../policy-id";
                                 type empty;
                                 description "Monitor MAC for CPU protection";
                             }
@@ -6864,11 +7845,17 @@ submodule nokia-conf-svc-vpls {
                                 description "Enter the eth-cfm-monitoring context";
 
                                 leaf aggregate {
+                                    must "../../policy-id" {
+                                        error-message "no cpu-protection policy-id";
+                                    }
                                     type empty;
                                     description "Apply rate limit to the sum of the per peer packet rates";
                                 }
 
                                 leaf car {
+                                    must "../../policy-id" {
+                                        error-message "no cpu-protection policy-id";
+                                    }
                                     type empty;
                                     description "Eth-CFM packets to be ignored when enforcing overall rate";
                                 }
@@ -6908,6 +7895,9 @@ submodule nokia-conf-svc-vpls {
 
                 container etree-root-leaf-tag {
                     when "../../etree = 'true'";
+                    must "not(../../bgp-evpn)" {
+                        error-message "not supported with bgp-evpn";
+                    }
                     presence "Enable E-tree root leaf tag status.";
                     description "Enter the etree-root-leaf-tag context";
 
@@ -6979,7 +7969,6 @@ submodule nokia-conf-svc-vpls {
                 } // container igmp-host-tracking
 
                 container igmp-snooping {
-                    when "../../pbb-type != 'b-vpls'";
                     description "Enter the igmp-snooping context";
 
                     leaf router-alert-check {
@@ -7012,6 +8001,9 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf query-response-interval {
+                        must "../query-interval > ." {
+                            error-message "query-response-interval must be less than query-interval";
+                        }
                         type uint32 {
                             range "1..1023";
                         }
@@ -7050,6 +8042,9 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf send-queries {
+                        must ". != 'true' or ../mrouter-port != 'true'" {
+                            error-message "mrouter-port and send-queries are mutually exclusive";
+                        }
                         type boolean;
                         default "false";
                         description "Generate IGMP general queries";
@@ -7085,6 +8080,12 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     container mcac {
+                        must "not(./interface-policy) or (../../../pbb-type != 'i-vpls' and ../../../pbb-type != 'b-vpls')" {
+                            error-message "not allowed in i-vpls or b-vpls";
+                        }
+                        must "not(./policy) or (../../../pbb-type != 'i-vpls' and ../../../pbb-type != 'b-vpls')" {
+                            error-message "not allowed in i-vpls or b-vpls";
+                        }
                         description "Enter the mcac context";
 
                         leaf interface-policy {
@@ -7102,6 +8103,9 @@ submodule nokia-conf-svc-vpls {
                         }
 
                         container mc-constraints {
+                            must "./use-lag-port-weight = 'false' or (../../../../pbb-type != 'i-vpls' and ../../../../pbb-type != 'b-vpls')" {
+                                error-message "mcac parameter not allowed in i-vpls or b-vpls";
+                            }
                             description "Enter the mc-constraints context";
 
                             leaf use-lag-port-weight {
@@ -7111,6 +8115,9 @@ submodule nokia-conf-svc-vpls {
                             }
 
                             list level {
+                                must "not(./bandwidth) or (../../../../../pbb-type != 'i-vpls' and ../../../../../pbb-type != 'b-vpls')" {
+                                    error-message "mcac parameter not allowed in i-vpls or b-vpls";
+                                }
                                 key "level-id";
                                 description "Enter the level list instance";
 
@@ -7139,6 +8146,9 @@ submodule nokia-conf-svc-vpls {
                             } // list level
 
                             list number-down {
+                                must "not(./level) or (../../../../../pbb-type != 'i-vpls' and ../../../../../pbb-type != 'b-vpls')" {
+                                    error-message "mcac parameter not allowed in i-vpls or b-vpls";
+                                }
                                 key "number-lag-port-down";
                                 description "Enter the number-down list instance";
 
@@ -7169,6 +8179,9 @@ submodule nokia-conf-svc-vpls {
                         } // container mc-constraints
 
                         container bandwidth {
+                            must "(./total = 'unlimited' and ./mandatory = 'unlimited') or (../../../../pbb-type != 'i-vpls' and ../../../../pbb-type != 'b-vpls')" {
+                                error-message "mcac parameter not allowed in i-vpls or b-vpls";
+                            }
                             description "Enter the bandwidth context";
 
                             leaf total {
@@ -7177,6 +8190,12 @@ submodule nokia-conf-svc-vpls {
                             }
 
                             leaf mandatory {
+                                must "../total != 'unlimited' or . = 'unlimited'" {
+                                    error-message "mandatory bandwidth cannot be set without total bandwidth";
+                                }
+                                must "../total = 'unlimited' or . != 'unlimited'" {
+                                    error-message "total bandwidth cannot be set without mandatory bandwidth";
+                                }
                                 type types-mcast-cac:bandwidth-limit;
                                 description "Pre-reserved bandwidth for all mandatory channels";
                             }
@@ -7186,10 +8205,22 @@ submodule nokia-conf-svc-vpls {
                     } // container mcac
 
                     container mvr {
-                        when "../../../pbb-type != 'i-vpls'";
+                        when "not(../../../pbb-type = 'i-vpls')";
                         description "Enter the mvr context";
 
                         leaf from-vpls {
+                            must "../../mrouter-port != 'true'" {
+                                error-message "mrouter-port and from-vpls are mutually exclusive";
+                            }
+                            must ". != ../../../../service-name" {
+                                error-message "from-vpls cannot be the own vpls";
+                            }
+                            must "not(../../../../routed-vpls)" {
+                                error-message "configuration not supported on routed-vpls";
+                            }
+                            must "not(../../../../bgp-evpn)" {
+                                error-message "Not supported with bgp-evpn";
+                            }
                             type leafref {
                                 path "../../../../service-name";
                             }
@@ -7197,6 +8228,18 @@ submodule nokia-conf-svc-vpls {
                         }
 
                         leaf to-sap {
+                            must "../../mrouter-port != 'true'" {
+                                error-message "mvr to-sap cannot be mrouter-port";
+                            }
+                            must ". != ../../../sap-id" {
+                                error-message "mvr to-sap cannot be parent sap";
+                            }
+                            must "not(../../../../routed-vpls)" {
+                                error-message "configuration not supported on routed-vpls";
+                            }
+                            must "not(../../../../bgp-evpn)" {
+                                error-message "Not supported with bgp-evpn";
+                            }
                             type types-sros:sap;
                             description "Multicast channels copied to SAP";
                         }
@@ -7256,7 +8299,9 @@ submodule nokia-conf-svc-vpls {
                 } // container igmp-snooping
 
                 container mld-snooping {
-                    when "../../pbb-type != 'b-vpls'";
+                    must "./mrouter-port != 'true' or ../../mcast-ipv6-snooping-scope != 'sg-based'" {
+                        error-message "not allowed when mcast-ipv6-snooping-scope is sg-based";
+                    }
                     description "Enter the mld-snooping context";
 
                     leaf router-alert-check {
@@ -7289,6 +8334,9 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf query-response-interval {
+                        must "../query-interval > ." {
+                            error-message "query-response-interval must be less than query-interval";
+                        }
                         type uint32 {
                             range "1..1023";
                         }
@@ -7327,6 +8375,9 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf send-queries {
+                        must ". != 'true' or ../mrouter-port != 'true'" {
+                            error-message "mrouter-port and send-queries are mutually exclusive";
+                        }
                         type boolean;
                         default "false";
                         description "Generate IGMP general queries";
@@ -7348,10 +8399,22 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     container mvr {
-                        when "../../../pbb-type != 'i-vpls'";
+                        when "not(../../../pbb-type = 'i-vpls')";
                         description "Enter the mvr context";
 
                         leaf from-vpls {
+                            must "../../mrouter-port != 'true'" {
+                                error-message "mrouter-port and from-vpls are mutually exclusive";
+                            }
+                            must ". != ../../../../service-name" {
+                                error-message "from-vpls cannot be the own vpls";
+                            }
+                            must "not(../../../../routed-vpls)" {
+                                error-message "configuration not supported on routed-vpls";
+                            }
+                            must "not(../../../../bgp-evpn)" {
+                                error-message "Not supported with bgp-evpn";
+                            }
                             type leafref {
                                 path "../../../../service-name";
                             }
@@ -7359,6 +8422,18 @@ submodule nokia-conf-svc-vpls {
                         }
 
                         leaf to-sap {
+                            must "../../mrouter-port != 'true'" {
+                                error-message "mvr to-sap cannot be mrouter-port";
+                            }
+                            must ". != ../../../sap-id" {
+                                error-message "mvr to-sap cannot be parent sap";
+                            }
+                            must "not(../../../../routed-vpls)" {
+                                error-message "configuration not supported on routed-vpls";
+                            }
+                            must "not(../../../../bgp-evpn)" {
+                                error-message "Not supported with bgp-evpn";
+                            }
                             type types-sros:sap;
                             description "The SAP to which the multicast channels are copied";
                         }
@@ -7369,6 +8444,9 @@ submodule nokia-conf-svc-vpls {
                         description "Enter the static context";
 
                         list group {
+                            must "../../../../mcast-ipv6-snooping-scope != 'sg-based'" {
+                                error-message "not allowed when mcast-ipv6-snooping-scope is sg-based";
+                            }
                             key "group-address";
                             description "Enter the group list instance";
 
@@ -7418,10 +8496,13 @@ submodule nokia-conf-svc-vpls {
                 } // container mld-snooping
 
                 container pim-snooping {
-                    when "../../pbb-type != 'b-vpls'";
                     description "Enter the pim-snooping context";
 
                     leaf maximum-number-groups {
+                        must "../../../pim-snooping";
+                        must "../../../pbb-type != 'b-vpls'" {
+                            error-message "this is not supported on a b-vpls.";
+                        }
                         type uint32 {
                             range "1..16000";
                         }
@@ -7491,12 +8572,55 @@ submodule nokia-conf-svc-vpls {
                         description "Configure virtual port number";
                     }
 
+                    list mst-instance {
+                        when "../../../m-vpls = 'true'";
+                        key "mst-inst-number";
+                        description "Enter the mst-instance list instance";
+
+                        leaf mst-inst-number {
+                            type leafref {
+                                path "../../../../stp/mst-instance/mst-inst-number";
+                            }
+                            description "Multiple Spanning Tree Instance number";
+                        }
+
+                        leaf mst-path-cost {
+                            type types-services:stp-path-cost;
+                            default "10";
+                            description "MSTI path cost.";
+                        }
+
+                        leaf mst-port-priority {
+                            type int32 {
+                                range "0|16|32|48|64|80|96|112|128|144|160|176|192|208|224|240";
+                            }
+                            default "128";
+                            description "MSTI port priority. The value of the port priority field which is contained in the most significant 4 bits of the 16-bit Port ID associated with this SAP and MSTI.";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                    } // list mst-instance
+
                 } // container stp
 
                 container l2pt {
                     description "Enter the l2pt context";
 
                     container termination {
+                        must "../../../stp/admin-state = 'disable'" {
+                            error-message "vpls stp is not supported when service uses l2pt-termination";
+                        }
+                        must "not(../../../bgp-evpn)" {
+                            error-message "not supported with bgp-evpn";
+                        }
                         presence "Enable L2PT termination on managed VLANs";
                         description "Enter the termination context";
 
@@ -7543,6 +8667,54 @@ submodule nokia-conf-svc-vpls {
 
                     } // container termination
 
+                    container force-boundary {
+                        when "../../../m-vpls = 'true'";
+                        presence "Enable Force L2PT termination on managed VLANs";
+                        description "Enter the force-boundary context";
+
+                        container protocols {
+                            description "Enter the protocols context";
+
+                            leaf stp {
+                                type boolean;
+                                default "true";
+                                description "Enable/disable spanning tree protocols stp/mstp/pvst/rstp.";
+                            }
+
+                            leaf cdp {
+                                type boolean;
+                                default "false";
+                                description "Enable Cisco discovery protocol";
+                            }
+
+                            leaf vtp {
+                                type boolean;
+                                default "false";
+                                description "Enable/disable virtual trunk protocol.";
+                            }
+
+                            leaf dtp {
+                                type boolean;
+                                default "false";
+                                description "Enable dynamic trunking protocol";
+                            }
+
+                            leaf pagp {
+                                type boolean;
+                                default "false";
+                                description "Enable/disable port aggregation protocol.";
+                            }
+
+                            leaf udld {
+                                type boolean;
+                                default "false";
+                                description "Enable/disable unidirectional link detection.";
+                            }
+
+                        } // container protocols
+
+                    } // container force-boundary
+
                 } // container l2pt
 
                 container fdb {
@@ -7561,28 +8733,49 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     leaf mac-pinning {
+                        must ". = 'false' or not(../../../bgp-evpn)" {
+                            error-message "not supported on bgp-evpn services";
+                        }
                         type boolean;
                         default "false";
                         description "Enable MAC address pinning on this SAP";
                     }
 
                     leaf maximum-mac-addresses {
+                        must "../../../pbb-type != 'b-vpls'" {
+                            error-message "configuration not supported on b-vpls";
+                        }
                         type types-services:max-mac-addr;
                         description "Maximum number of MAC entries in the FDB";
                     }
 
                     leaf auto-learn-mac-protect {
+                        must ". = 'false' or (../../../pbb-type != 'i-vpls' and ../../../pbb-type != 'b-vpls')" {
+                            error-message "configuration not supported on pbb services";
+                        }
                         type boolean;
                         default "false";
                         description "Enable automatic update of MAC protect list";
                     }
 
                     leaf protected-src-mac-violation-action {
+                        must "../../../pbb-type != 'b-vpls'" {
+                            error-message "not supported on b-vpls services";
+                        }
+                        must ". != 'discard' or ../../../pbb-type != 'i-vpls'" {
+                            error-message "protected-src-mac-violation-action discard not supported on i-vpls service";
+                        }
                         type types-services:sap-protected-src-mac-violation-action;
                         description "Action to take whenever a relearn request for a protected MAC is received";
                     }
 
                     leaf discard-unprotected-dest-mac {
+                        must ". = 'false' or not(../../../bgp-evpn)" {
+                            error-message "not supported on bgp-evpn services";
+                        }
+                        must ". = 'false' or ../../../pbb-type != 'b-vpls'" {
+                            error-message "configuration not supported on b-vpls services";
+                        }
                         type boolean;
                         default "false";
                         description "Enable/disable unprotected dest MAC restriction";
@@ -7666,12 +8859,18 @@ submodule nokia-conf-svc-vpls {
                         description "Enter the router context";
 
                         leaf group {
+                            must "../router-instance" {
+                                error-message "l2tpv3 router-instance not set";
+                            }
                             type types-sros:named-item;
                             sros-ext:auto-restart-to-modify;
                             description "Tunnel group name.";
                         }
 
                         leaf router-instance {
+                            must "../group" {
+                                error-message "l2tpv3 group not set";
+                            }
                             type types-sros:router-instance-base-vprn-loose;
                             sros-ext:auto-restart-to-modify;
                             description "Router instance hosting the l2tpv3 session.";
@@ -7702,6 +8901,12 @@ submodule nokia-conf-svc-vpls {
                     description "Enter the arp-host context";
 
                     leaf admin-state {
+                        must ". = 'disable' or not(../../../bgp-evpn)" {
+                            error-message "Not supported with bgp-evpn";
+                        }
+                        must ". = 'disable' or not(../../../routed-vpls)" {
+                            error-message "configuration not supported on routed-vpls";
+                        }
                         type types-sros:admin-state;
                         default "disable";
                         description "Administrative state of ARP hosts";
@@ -7740,6 +8945,12 @@ submodule nokia-conf-svc-vpls {
                     description "Enter the dhcp context";
 
                     leaf admin-state {
+                        must ". != 'enable' or not(../../ingress/qtag-manipulation/push-dot1q-vlan)" {
+                            error-message "This function is not allowed when vlan-translation is enabled";
+                        }
+                        must ". = 'disable' or ../../../fdb/mac-subnet-length = 48" {
+                            error-message "not supported with mac-subnet-length";
+                        }
                         type types-sros:admin-state;
                         default "disable";
                         description "Administrative state of DHCP";
@@ -7791,6 +9002,9 @@ submodule nokia-conf-svc-vpls {
                             }
 
                             leaf radius-override {
+                                must ". != 'true' or ../value" {
+                                    error-message "A lease-time value is required for radius-override to be set";
+                                }
                                 type boolean;
                                 default "false";
                                 description "Use lease time information provided by RADIUS server";
@@ -7953,6 +9167,15 @@ submodule nokia-conf-svc-vpls {
                 } // container dhcp
 
                 container static-host {
+                    must "not(./ipv4) or not(../../pbb-type)" {
+                        error-message "Static-hosts are not supported with pbb";
+                    }
+                    must "not(./ipv4) or not(../../bgp-evpn)" {
+                        error-message "Static-hosts are not supported with bgp-evpn";
+                    }
+                    must "not(./ipv4) or not(../ingress/qtag-manipulation/push-dot1q-vlan)" {
+                        error-message "Static-hosts and push-dot1q-vlan are mutual exclusive";
+                    }
                     description "Enter the static-host context";
 
                     list ipv4 {
@@ -7960,16 +9183,31 @@ submodule nokia-conf-svc-vpls {
                         description "Enter the ipv4 list instance";
 
                         leaf ip {
+                            must ". != '0.0.0.0' or ../mac != '00:00:00:00:00:00'" {
+                                error-message "Static host needs at least 1 address (IP or MAC)";
+                            }
+                            must ". != '0.0.0.0' or (../../../anti-spoof != 'source-ip-addr' and ../../../anti-spoof != 'source-ip-and-mac-addr' and ../../../anti-spoof != 'next-hop-ip-and-mac-addr')" {
+                                error-message "Zero IP address conflicts with anti-spoof configuration";
+                            }
                             type types-sros:ipv4-address;
                             description "IP address";
                         }
 
                         leaf mac {
+                            must ". != '00:00:00:00:00:00' or ../../../anti-spoof != 'source-mac-addr'" {
+                                error-message "Zero MAC address conflicts with anti-spoof configuration";
+                            }
                             type types-sros:mac-unicast-address;
                             description "MAC address";
                         }
 
                         leaf admin-state {
+                            must ". != 'enable' or not(../../../arp-reply-agent) or ../ip != '0.0.0.0'" {
+                                error-message "Hosts must have an IP address when arp-reply-agent is enabled";
+                            }
+                            must ". != 'enable' or ../../../../fdb/mac-subnet-length = 48" {
+                                error-message "Unsupported in combination with mac-subnet-length";
+                            }
                             type types-sros:admin-state;
                             default "disable";
                             description "Administrative state of the static host";
@@ -8041,7 +9279,37 @@ submodule nokia-conf-svc-vpls {
                 } // container static-host
 
                 container sub-sla-mgmt {
-                    when "../../pbb-type != 'b-vpls' and ../../pbb-type != 'i-vpls'";
+                    when "not(../../pbb-type = 'b-vpls') and not(../../pbb-type = 'i-vpls')";
+                    must "./admin-state != 'enable' or ../anti-spoof = 'source-ip-and-mac-addr' or ../anti-spoof = 'next-hop-ip-and-mac-addr'" {
+                        error-message "sub-sla-mgmt configuration incompatible with anti-spoofing type";
+                    }
+                    must "not(../../bgp-evpn) or ./admin-state = 'disable'" {
+                        error-message "sub-sla-mgmt configuration incompatible with bgp-evpn";
+                    }
+                    must "not(../../proxy-arp) or ../../proxy-arp/admin-state != 'enable' or ./admin-state != 'enable'" {
+                        error-message "sub-sla-mgmt configuration incompatible with proxy-arp";
+                    }
+                    must "not(../../proxy-nd) or ../../proxy-nd/admin-state != 'enable' or ./admin-state != 'enable'" {
+                        error-message "sub-sla-mgmt configuration incompatible with proxy-nd";
+                    }
+                    must "./admin-state != 'enable' or (not(../ingress/filter/ipv6) and not(../egress/filter/ipv6))" {
+                        error-message "IPv6 filter cannot be configured with subscriber management enabled";
+                    }
+                    must "./admin-state != 'enable' or ../../fdb/mac-subnet-length = 48" {
+                        error-message "subscriber management is not supported in a subnetted VPLS";
+                    }
+                    must "./admin-state != 'enable' or not(../../routed-vpls)" {
+                        error-message "subscriber management is not supported with routed-vpls";
+                    }
+                    must "./admin-state != 'enable' or ../../load-balancing/per-service-hashing != 'true'" {
+                        error-message "subscriber management is not supported with per-service-hashing enabled";
+                    }
+                    must "./admin-state != 'enable' or not(../ingress/qtag-manipulation/push-dot1q-vlan)" {
+                        error-message "subscriber management is not supported with vlan-translation enabled";
+                    }
+                    must "./admin-state != 'enable' or (not(../ingress/filter/mac) and not(../egress/filter/mac))" {
+                        error-message "mac filter cannot be configured with subscriber management enabled";
+                    }
                     description "Enter the sub-sla-mgmt context";
 
                     leaf admin-state {
@@ -8193,6 +9461,12 @@ submodule nokia-conf-svc-vpls {
                 } // container sub-sla-mgmt
 
                 container eth-cfm {
+                    must "./collect-lmm-stats = 'false' or not(./collect-lmm-fc-stats/fc)" {
+                        error-message "collect-lmm-stats and collect-lmm-fc-stats cannot both be enabled";
+                    }
+                    must "./collect-lmm-stats = 'false' or not(./collect-lmm-fc-stats/fc-in-profile)" {
+                        error-message "collect-lmm-stats and collect-lmm-fc-stats cannot both be enabled";
+                    }
                     description "Enter the eth-cfm context";
 
                     leaf collect-lmm-stats {
@@ -8242,6 +9516,16 @@ submodule nokia-conf-svc-vpls {
                     } // container collect-lmm-fc-stats
 
                     list mep {
+                        must "./grace/eth-ed/tx-eth-ed != 'true' or ./grace/eth-vsm-grace/tx-eth-vsm-grace != 'true'";
+                        must "./primary-vlan = 'false' or not(./csf)" {
+                            error-message "csf and primary-vlan are mutually exclusive";
+                        }
+                        must "not(./fault-propagation) or ./primary-vlan = 'false'" {
+                            error-message "fault-propagation and primary-vlan are mutually exclusive";
+                        }
+                        must "not(./fault-propagation) or ./direction = 'down'" {
+                            error-message "fault-propagation can only be enabled on UP MEPs in an EPIPE service";
+                        }
                         key "md-admin-name ma-admin-name mep-id";
                         description "Enter the mep list instance";
 
@@ -8533,6 +9817,9 @@ submodule nokia-conf-svc-vpls {
                     description "Enter the mc-ring context";
 
                     leaf ring-node {
+                        must "not(../../../bgp-evpn)" {
+                            error-message "Not supported with bgp-evpn";
+                        }
                         type types-sros:named-item;
                         mandatory true;
                         description "Name for the ring node associated with this SAP";
@@ -8549,10 +9836,78 @@ submodule nokia-conf-svc-vpls {
 
                 } // container mc-ring
 
+                container static-isid {
+                    description "Enter the static-isid context";
+
+                    list range {
+                        when "../../../pbb-type = 'b-vpls'";
+                        must "not(./start) or ./end >= ./start" {
+                            error-message "The end range value must be greater or equal than the start range value";
+                        }
+                        must "../../../bgp-evpn" {
+                            error-message "supported only with bgp-evpn";
+                        }
+                        key "range-id";
+                        description "Enter the range list instance";
+
+                        leaf range-id {
+                            type uint32 {
+                                range "1..8191";
+                            }
+                            description "The range identifier for static ISID.";
+                        }
+
+                        leaf start {
+                            type types-services:isid-no-zero;
+                            description "The low value of the range for this entry.";
+                        }
+
+                        leaf end {
+                            type types-services:isid-no-zero;
+                            description "The high value of the range for this entry.";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                    } // list range
+
+                } // container static-isid
+
+                container managed-vlan-list {
+                    when "../../m-vpls = 'true'";
+                    description "Enter the managed-vlan-list context";
+
+                    list range {
+                        key "vlan-range";
+                        description "Add a list entry for range";
+
+                        leaf vlan-range {
+                            type string {
+                                pattern "((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))(\\.\\.(([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4])))?)|(default-sap)";
+                            }
+                            description "Range of vlans that are associated with the Mvpls SAP.";
+                        }
+
+                    } // list range
+
+                } // container managed-vlan-list
+
             } // list sap
 
             list capture-sap {
-                when "not(../pbb-type) and ../etree = 'false'";
+                must "not(../bgp-evpn)" {
+                    error-message "Not supported with bgp-evpn";
+                }
+                must "../fdb/mac-subnet-length = 48" {
+                    error-message "configuration incompatible with fdb mac-subnet-length";
+                }
                 key "sap-id";
                 description "Enter the capture-sap list instance";
 
@@ -8600,6 +9955,9 @@ submodule nokia-conf-svc-vpls {
                 }
 
                 leaf nasreq-auth-policy {
+                    must "not(../radius-auth-policy)" {
+                        error-message "Nasreq and radius authentication are mutual exclusive";
+                    }
                     type leafref {
                         path "../../../../subscriber-mgmt/diameter-nasreq-policy/name";
                     }
@@ -8659,6 +10017,7 @@ submodule nokia-conf-svc-vpls {
                         case mac {
 
                             leaf mac-monitoring {
+                                must "../policy-id";
                                 type empty;
                                 description "Monitor MAC for CPU protection";
                             }
@@ -8671,12 +10030,27 @@ submodule nokia-conf-svc-vpls {
                     description "Enter the trigger-packet context";
 
                     leaf arp {
+                        must ". = 'false' or not(../../../routed-vpls)" {
+                            error-message "configuration not supported on routed-vpls";
+                        }
+                        must ". = 'false' or not(../../../bgp-evpn)" {
+                            error-message "Not supported with bgp-evpn";
+                        }
+                        must ". = 'false' or not(../../../proxy-arp)" {
+                            error-message "Not supported with proxy-arp";
+                        }
+                        must ". = 'false' or not(../../../proxy-nd)" {
+                            error-message "Not supported with proxy-nd";
+                        }
                         type boolean;
                         default "false";
                         description "ARP packet";
                     }
 
                     leaf data {
+                        must ". != 'true' or ../arp != 'true'" {
+                            error-message "Trigger-packet arp and data are mutual exclusive";
+                        }
                         type boolean;
                         default "false";
                         description "Data packet";
@@ -8850,7 +10224,13 @@ submodule nokia-conf-svc-vpls {
             } // list capture-sap
 
             list interface {
-                when "../pbb-type != 'b-vpls' and ../pbb-type != 'i-vpls' and not(../routed-vpls)";
+                when "not(../pbb-type = 'b-vpls') and not(../pbb-type = 'i-vpls') and not(../routed-vpls)";
+                must "not(../bgp-evpn)" {
+                    error-message "Not supported with bgp-evpn";
+                }
+                must "../fdb/mac-subnet-length = 48" {
+                    error-message "configuration incompatible with fdb mac-subnet-length";
+                }
                 key "interface-name";
                 description "Enter the interface list instance";
 
@@ -8871,6 +10251,9 @@ submodule nokia-conf-svc-vpls {
                 }
 
                 leaf mac {
+                    must ". != '00:00:00:00:00:00'" {
+                        error-message "Mac-address with all zeros is not allowed";
+                    }
                     type types-sros:mac-unicast-address;
                     description "MAC address for the interface";
                 }
@@ -8976,6 +10359,12 @@ submodule nokia-conf-svc-vpls {
                             }
 
                             leaf mac-address {
+                                must ". != '00:00:00:00:00:00'" {
+                                    error-message "mac-address with all zeros is not allowed";
+                                }
+                                must ". != 'ff:ff:ff:ff:ff:ff'" {
+                                    error-message "broadcast mac-address is not allowed";
+                                }
                                 type yang:mac-address;
                                 mandatory true;
                                 description "Media-dependent physical address";
@@ -8999,10 +10388,12 @@ submodule nokia-conf-svc-vpls {
             } // list interface
 
             container igmp-host-tracking {
-                when "not(../pbb-type) and not(../routed-vpls)";
                 description "Enter the igmp-host-tracking context";
 
                 leaf admin-state {
+                    must ". = 'disable' or not(../../bgp-evpn)" {
+                        error-message "Not supported with bgp-evpn";
+                    }
                     type types-sros:admin-state;
                     default "disable";
                     description "Administrative state of IGMP host tracking";
@@ -9032,12 +10423,18 @@ submodule nokia-conf-svc-vpls {
                 description "Enter the wlan-gw context";
 
                 leaf admin-state {
+                    must ". = 'disable' or (../../pbb-type != 'b-vpls' and ../../pbb-type != 'i-vpls' and not(../../routed-vpls))" {
+                        error-message "This type of VPLS cannot be used as l2-service in a WLAN-GW vlan range";
+                    }
                     type types-sros:admin-state;
                     default "disable";
                     description "Administrative state of WLAN-GW";
                 }
 
                 leaf description {
+                    must "(../../pbb-type != 'b-vpls' and ../../pbb-type != 'i-vpls' and not(../../routed-vpls))" {
+                        error-message "This type of VPLS cannot be used as l2-service in a WLAN-GW vlan range";
+                    }
                     type types-sros:description;
                     description "Text description";
                 }
@@ -9058,6 +10455,9 @@ submodule nokia-conf-svc-vpls {
                 description "Enter the gsmp context";
 
                 leaf admin-state {
+                    must ". = 'disable' or not(../../bgp-evpn)" {
+                        error-message "Not supported with bgp-evpn";
+                    }
                     type types-sros:admin-state;
                     default "disable";
                     description "Administrative state of GSMP";
@@ -9231,6 +10631,27 @@ submodule nokia-conf-svc-vpls {
                 }
 
                 container inclusive {
+                    must "./admin-state = 'disable' or ./owner" {
+                        error-message "no owner configured for the provider tunnel";
+                    }
+                    must "./admin-state = 'disable' or not(../../mesh-sdp)" {
+                        error-message "mesh-sdp bindings are configured in service";
+                    }
+                    must "./admin-state = 'disable' or ./owner != 'bgp-evpn-mpls' or ../../etree = 'false'" {
+                        error-message "owner bgp-evpn-mpls not supported in etree service";
+                    }
+                    must "./admin-state = 'disable' or ./owner != 'bgp-ad' or ../../bgp-ad" {
+                        error-message "bgp-ad must be configured when the provider tunnel with owner bgp-ad is enabled";
+                    }
+                    must "./admin-state = 'disable' or ./owner != 'bgp-ad' or not(../../bgp-ad) or ../../bgp-ad/admin-state != 'disable'" {
+                        error-message "bgp-ad must be enabled when the provider tunnel with owner bgp-ad is enabled";
+                    }
+                    must "./admin-state = 'disable' or ./owner != 'bgp-vpls' or ../../bgp-vpls" {
+                        error-message "bgp-vpls must be configured when the provider tunnel with owner bgp-vpls is enabled";
+                    }
+                    must "./admin-state = 'disable' or ./owner != 'bgp-vpls' or not(../../bgp-vpls) or ../../bgp-vpls/admin-state != 'disable'" {
+                        error-message "bgp-vpls must be enabled when the provider tunnel with owner bgp-vpls is enabled";
+                    }
                     sros-ext:auto-restart-to-modify;
                     description "Enter the inclusive context";
 
@@ -9300,6 +10721,73 @@ submodule nokia-conf-svc-vpls {
                 } // container inclusive
 
             } // container provider-tunnel
+
+            container isid-policy {
+                description "Enter the isid-policy context";
+
+                list entry {
+                    when "../../pbb-type = 'b-vpls'";
+                    must "./advertise-local != 'false' or ./use-def-mcast != 'false'" {
+                        error-message "advertise-local or use-def-mcast option must be specified";
+                    }
+                    must "(./range/start or not(./range/end)) and (not(./range/start) or ./range/end)" {
+                        error-message "both range values need to be specified";
+                    }
+                    must "../../bgp-evpn" {
+                        error-message "supported only with bgp-evpn";
+                    }
+                    key "range-entry-id";
+                    description "Enter the entry list instance";
+
+                    leaf range-entry-id {
+                        type uint32 {
+                            range "1..8191";
+                        }
+                        description "Range identifier for the ISID policy.";
+                    }
+
+                    leaf advertise-local {
+                        type boolean;
+                        default "true";
+                        description "Local advertisement of the range.";
+                    }
+
+                    leaf use-def-mcast {
+                        type boolean;
+                        default "false";
+                        description "Use default multicast tree to propagate ISIS range.";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container range {
+                        must "not(./start) or ./end >= ./start" {
+                            error-message "The end range value must be greater or equal than the start range value";
+                        }
+                        description "Enter the range context";
+
+                        leaf start {
+                            type types-services:isid-no-zero;
+                            description "The low value of the range for this entry.";
+                        }
+
+                        leaf end {
+                            type types-services:isid-no-zero;
+                            description "The high value of the range for this entry.";
+                        }
+
+                    } // container range
+
+                } // list entry
+
+            } // container isid-policy
 
         } // list vpls
 

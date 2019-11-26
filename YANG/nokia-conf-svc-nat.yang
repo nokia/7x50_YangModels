@@ -46,7 +46,19 @@ submodule nokia-conf-svc-nat {
         container nat {
             description "Enter the nat context";
 
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
             list firewall-policy {
+                must "./session-limits/reserved <= ./session-limits/max" {
+                    error-message "The reserved value cannot exceed the maximum value";
+                }
                 key "name";
                 max-elements 2048;
                 description "Enter the firewall-policy list instance";
@@ -66,6 +78,15 @@ submodule nokia-conf-svc-nat {
                     description "Filtering";
                 }
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
                 choice address-location {
                     case l2-outside {
 
@@ -81,6 +102,9 @@ submodule nokia-conf-svc-nat {
                             description "Enter the domain context";
 
                             leaf router-instance {
+                                must "'true' = ../name" {
+                                    error-message "firewall-domain requires both name and router to be set simultaneously";
+                                }
                                 type string;
                                 description "Virtual router instance";
                             }
@@ -210,6 +234,9 @@ submodule nokia-conf-svc-nat {
                         description "Enter the watermarks context";
 
                         leaf high {
+                            must "not(../low) or . > ../low" {
+                                error-message "The high watermark must be strictly greater than the low watermark";
+                            }
                             type types-sros:percent;
                             mandatory true;
                             description "Percentage for high watermark";
@@ -396,7 +423,22 @@ submodule nokia-conf-svc-nat {
                     description "Prefix list for the application";
                 }
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
                 list prefix {
+                    must "../application != 'dnat-only-subscribers' or not(./nat-policy)" {
+                        error-message "nat-policies are not supported with dnat-only prefixes";
+                    }
+                    must "../application != 'l2-aware-dest-to-policy' or ./nat-policy" {
+                        error-message "Nat policy is mandatory when creating l2aware prefix";
+                    }
                     key "ip-prefix";
                     max-elements 1024;
                     description "Enter the prefix list instance";
@@ -415,11 +457,26 @@ submodule nokia-conf-svc-nat {
                         description "NAT policy for LSN";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                 } // list prefix
 
             } // list prefix-list
 
             list pcp-server-policy {
+                must "./version/maximum >= ./version/minimum" {
+                    error-message "The minimum value must be lower than the maximum";
+                }
+                must "./lifetime/maximum > ./lifetime/minimum" {
+                    error-message "The minimum value must be lower than the maximum";
+                }
                 key "name";
                 description "Enter the pcp-server-policy list instance";
 
@@ -439,6 +496,15 @@ submodule nokia-conf-svc-nat {
                     }
                     default "64";
                     description "Maximum length of mapping descriptions made by the PCP servers";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
                 }
 
                 container lifetime {
@@ -474,6 +540,9 @@ submodule nokia-conf-svc-nat {
                     }
 
                     leaf maximum {
+                        must ". <= 2" {
+                            error-message "maximum version allowed is 2";
+                        }
                         type uint16 {
                             range "1..255";
                         }
@@ -604,6 +673,15 @@ submodule nokia-conf-svc-nat {
                         description "Severity level in the PRI part of the syslog messages";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                     container include {
                         description "Enter the include context";
 
@@ -640,6 +718,9 @@ submodule nokia-conf-svc-nat {
                     } // container include
 
                     list collector {
+                        must "./admin-state != 'enable' or ./ipv4-source-address" {
+                            error-message "in order to be administratively enabled, the collector must have a valid ipv4-source-address configured";
+                        }
                         key "router-instance ip-address";
                         max-elements 2;
                         description "Enter the collector list instance";
@@ -671,6 +752,15 @@ submodule nokia-conf-svc-nat {
                             description "IPv4 source address";
                         }
 
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
                     } // list collector
 
                 } // list export-policy
@@ -678,6 +768,9 @@ submodule nokia-conf-svc-nat {
             } // container syslog
 
             list classifier {
+                must "./default/action/dnat != 'true' or ./default/action/dnat-ip-address or ./default/dnat-ip-address" {
+                    error-message "A dnat ip address must be specified";
+                }
                 key "name";
                 max-elements 8;
                 description "Enter the classifier list instance";
@@ -690,6 +783,15 @@ submodule nokia-conf-svc-nat {
                 leaf description {
                     type types-sros:description;
                     description "Text description";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
                 }
 
                 container default {
@@ -736,6 +838,12 @@ submodule nokia-conf-svc-nat {
                 } // container default
 
                 list entry {
+                    must "./match/dst-port-range/start <= ./match/dst-port-range/end" {
+                        error-message "Start port must be smaller than end port";
+                    }
+                    must "./action/dnat != 'true' or ./action/dnat-ip-address or ../default/dnat-ip-address" {
+                        error-message "A dnat ip address must be specified";
+                    }
                     key "id";
                     max-elements 32;
                     description "Enter the entry list instance";
@@ -750,6 +858,15 @@ submodule nokia-conf-svc-nat {
                     leaf description {
                         type types-sros:description;
                         description "Text description";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                     container action {
@@ -824,6 +941,45 @@ submodule nokia-conf-svc-nat {
             } // list classifier
 
             list nat-policy {
+                must "not(./port-limits/reserved) or (not(./dnat-only/router-instance) and not(./dnat-only/nat-group) and not(./dnat-only/wlan-gw-group))" {
+                    error-message "Cannot set the number of sessions reserved for prioritized sessions.";
+                }
+                must "(not(./port-limits/watermarks/high) and not(./port-limits/watermarks/high)) or (not(./dnat-only/router-instance) and not(./dnat-only/nat-group) and not(./dnat-only/wlan-gw-group))" {
+                    error-message "Cannot set the port usage watermark of this policy.";
+                }
+                must "not(./port-limits/forwarding) or (not(./dnat-only/router-instance) and not(./dnat-only/nat-group) and not(./dnat-only/wlan-gw-group))" {
+                    error-message "Port forwarding limit is not set to zero.";
+                }
+                must "./block-limit = 1 or (not(./dnat-only/router-instance) and not(./dnat-only/nat-group) and not(./dnat-only/wlan-gw-group))" {
+                    error-message "Block-limit limit is not set to one.";
+                }
+                must "./alg/ftp != 'true' or (not(./dnat-only/router-instance) and not(./dnat-only/nat-group) and not(./dnat-only/wlan-gw-group))" {
+                    error-message "The nat-policy has ALGs enabled.";
+                }
+                must "./alg/pptp != 'true' or (not(./dnat-only/router-instance) and not(./dnat-only/nat-group) and not(./dnat-only/wlan-gw-group))" {
+                    error-message "The nat-policy has ALGs enabled.";
+                }
+                must "./alg/rtsp != 'true' or (not(./dnat-only/router-instance) and not(./dnat-only/nat-group) and not(./dnat-only/wlan-gw-group))" {
+                    error-message "The nat-policy has ALGs enabled.";
+                }
+                must "./alg/sip != 'true' or (not(./dnat-only/router-instance) and not(./dnat-only/nat-group) and not(./dnat-only/wlan-gw-group))" {
+                    error-message "The nat-policy has ALGs enabled.";
+                }
+                must "not(./dnat/classifier) or ./l2-outside != 'true'" {
+                    error-message "classifier and l2-outside are mutually exclusive.";
+                }
+                must "not(./flow-log-policy/syslog) or ./l2-outside != 'true'" {
+                    error-message "nat-syslog and l2-outside are mutually exclusive.";
+                }
+                must "./port-forwarding-range-end = 1023 or ./l2-outside" {
+                    error-message "Port-forwarding-range-end without l2-outside.";
+                }
+                must "./block-limit = 1 or ./l2-outside != 'true'" {
+                    error-message "Block-limit is not set to one.";
+                }
+                must "./session-limits/reserved <= ./session-limits/max" {
+                    error-message "The reserved value cannot exceed the maximum value";
+                }
                 key "name";
                 max-elements 2048;
                 description "Enter the nat-policy list instance";
@@ -839,6 +995,9 @@ submodule nokia-conf-svc-nat {
                 }
 
                 leaf block-limit {
+                    must ". <= 40" {
+                        error-message "The value is not in the valid range";
+                    }
                     type uint16 {
                         range "1..40";
                     }
@@ -859,6 +1018,15 @@ submodule nokia-conf-svc-nat {
                     description "End of the port forwarding range";
                 }
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
                 choice address-location {
                     case pool {
 
@@ -866,6 +1034,9 @@ submodule nokia-conf-svc-nat {
                             description "Enter the pool context";
 
                             leaf router-instance {
+                                must "'true' = ../name" {
+                                    error-message "nat-pool requires both name and router to be set simultaneously";
+                                }
                                 type string;
                                 sros-ext:isa-auto-clear-on-modify;
                                 description "The virtual router instance of the pool.";
@@ -1015,6 +1186,9 @@ submodule nokia-conf-svc-nat {
                         description "Enter the watermarks context";
 
                         leaf high {
+                            must "not(../low) or . > ../low" {
+                                error-message "The high watermark must be strictly greater than the low watermark";
+                            }
                             type types-sros:percent;
                             mandatory true;
                             description "Percentage for high watermark";
@@ -1111,6 +1285,9 @@ submodule nokia-conf-svc-nat {
                         description "Enter the watermarks context";
 
                         leaf high {
+                            must "not(../low) or . > ../low" {
+                                error-message "The high watermark must be strictly greater than the low watermark";
+                            }
                             type types-sros:percent;
                             mandatory true;
                             description "Percentage for high watermark";
@@ -1265,7 +1442,9 @@ submodule nokia-conf-svc-nat {
                 description "Enter the deterministic-script context";
 
                 leaf location {
-                    type types-sros:ftp-tftp-url;
+                    type types-sros:ftp-tftp-url {
+                        length "1..180";
+                    }
                     description "URL for the generated script.";
                 }
 
@@ -1275,6 +1454,9 @@ submodule nokia-conf-svc-nat {
                 description "Enter the map-t context";
 
                 list domain {
+                    must "./admin-state != 'enable' or ./dmr-prefix" {
+                        error-message "in order to be administratively enabled, the map-t domain must have a valid dmr-prefix configured";
+                    }
                     key "name";
                     max-elements 31;
                     description "Enter the domain list instance";
@@ -1316,6 +1498,15 @@ submodule nokia-conf-svc-nat {
                         description "The value to adjust the TCP Maximum Segment Size (MSS) option";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                     container ip-fragmentation {
                         description "Enter the ip-fragmentation context";
 
@@ -1328,6 +1519,12 @@ submodule nokia-conf-svc-nat {
                     } // container ip-fragmentation
 
                     list mapping-rule {
+                        must "./admin-state != 'enable' or ./ipv4-prefix" {
+                            error-message "in order to be administratively enabled, the map-t rule must have a valid ipv4-prefix configured";
+                        }
+                        must "./admin-state != 'enable' or ./rule-prefix" {
+                            error-message "in order to be administratively enabled, the map-t rule must have a valid rule-prefix configured";
+                        }
                         key "rule-name";
                         max-elements 256;
                         description "Enter the mapping-rule list instance";
@@ -1372,6 +1569,15 @@ submodule nokia-conf-svc-nat {
                             type types-sros:admin-state;
                             default "disable";
                             description "Administrative state of the MAP rule";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
                         }
 
                     } // list mapping-rule

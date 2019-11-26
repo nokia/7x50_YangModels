@@ -48,11 +48,20 @@ submodule nokia-conf-filter {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-05-19";
+    revision "2019-10-18";
 
     grouping conf-filter {
         container filter {
             description "Enter the filter context";
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
 
             list redirect-policy {
                 key "redirect-policy-name";
@@ -75,6 +84,9 @@ submodule nokia-conf-filter {
                 }
 
                 leaf router-instance {
+                    must ". != 'management' and . != 'vpls-management'" {
+                        error-message "management and vpls-management are not allowed";
+                    }
                     type string;
                     description "Routing context to use for route lookup";
                 }
@@ -89,6 +101,15 @@ submodule nokia-conf-filter {
                     type boolean;
                     default "false";
                     description "The value of the object indicates whether to send tFilterRPActiveDestChangeEvent notification for this redirect policy active destination changes.";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
                 }
 
                 list destination {
@@ -119,6 +140,15 @@ submodule nokia-conf-filter {
                         description "Priority for this destination";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                     container ping-test {
                         presence "Ping-test configuration.";
                         sros-ext:auto-restart-to-modify;
@@ -126,7 +156,7 @@ submodule nokia-conf-filter {
 
                         leaf source-address {
                             type types-sros:ip-address;
-                            description "The value indicates the source IP address to use in the ping test. The value should be a router local address to make sure the reply reaches the CPM.";
+                            description "Source address to use in the IP packet of the ping test";
                         }
 
                         leaf interval {
@@ -164,6 +194,15 @@ submodule nokia-conf-filter {
                             description "Time for the system to be held down if this test has marked it unreachable";
                         }
 
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
                     } // container ping-test
 
                     container unicast-rt-test {
@@ -183,13 +222,22 @@ submodule nokia-conf-filter {
 
                 leaf binding-name {
                     type types-sros:named-item;
-                    description "The redirect-policy-binding identifier.";
+                    description "Binding name";
                 }
 
                 leaf binding-operator {
                     type types-filter:filter-binding-operator;
                     default "and";
                     description "The value of the this object indicates the logical operator to use when combining result of different destinations' tests.";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
                 }
 
                 list redirect-policy {
@@ -203,6 +251,15 @@ submodule nokia-conf-filter {
                         description "The redirect-policy identifier.";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                     list destination {
                         key "destination-address";
                         min-elements 1;
@@ -212,7 +269,7 @@ submodule nokia-conf-filter {
                             type leafref {
                                 path "../../../../redirect-policy[redirect-policy-name=current()/../../redirect-policy-name]/destination/destination-address";
                             }
-                            description "IP address and type of the destination.";
+                            description "IP address of redirect policy destination to binding";
                         }
 
                     } // list destination
@@ -222,6 +279,9 @@ submodule nokia-conf-filter {
             } // list redirect-policy-binding
 
             list log {
+                must "not(./destination/syslog/syslog-id) or ./log-id != 101" {
+                    error-message "Syslog destination is invalid for the default filter 101";
+                }
                 key "log-id";
                 description "Enter the log list instance";
 
@@ -239,6 +299,15 @@ submodule nokia-conf-filter {
                     type types-sros:admin-state;
                     default "enable";
                     description "Administrative state of filter logging";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
                 }
 
                 container destination {
@@ -308,6 +377,15 @@ submodule nokia-conf-filter {
             container match-list {
                 description "Enter the match-list context";
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
                 list ip-prefix-list {
                     key "prefix-list-name";
                     description "Enter the ip-prefix-list list instance";
@@ -320,6 +398,15 @@ submodule nokia-conf-filter {
                     leaf description {
                         type types-sros:description;
                         description "Text description";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                     container apply-path {
@@ -351,10 +438,20 @@ submodule nokia-conf-filter {
                             }
 
                             leaf router-instance {
+                                must ". != 'management' and . != 'vpls-management'";
                                 type string;
                                 sros-ext:immutable;
                                 default "Base";
                                 description "Target routing instance";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
                             }
 
                         } // list bgp-peers
@@ -368,7 +465,7 @@ submodule nokia-conf-filter {
 
                         leaf ip-prefix {
                             type types-sros:ipv4-prefix;
-                            description "Add IP prefix to the list.";
+                            description "IPv4 prefix to be added to the prefix list";
                         }
 
                     } // list prefix
@@ -380,7 +477,7 @@ submodule nokia-conf-filter {
 
                         leaf ip-prefix {
                             type types-sros:ipv4-prefix;
-                            description "Add IP prefix to the list.";
+                            description "IPv4 prefix to be added to the prefix list";
                         }
 
                     } // list prefix-exclude
@@ -401,6 +498,15 @@ submodule nokia-conf-filter {
                         description "Text description";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                     container apply-path {
                         description "Enter the apply-path context";
 
@@ -430,10 +536,20 @@ submodule nokia-conf-filter {
                             }
 
                             leaf router-instance {
+                                must ". != 'management' and . != 'vpls-management'";
                                 type string;
                                 sros-ext:immutable;
                                 default "Base";
                                 description "Target routing instance";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
                             }
 
                         } // list bgp-peers
@@ -481,6 +597,15 @@ submodule nokia-conf-filter {
                         description "Text description";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                     list port {
                         key "value";
                         description "Add a list entry for port";
@@ -495,6 +620,7 @@ submodule nokia-conf-filter {
                     } // list port
 
                     list range {
+                        must "./start < ./end";
                         key "start end";
                         description "Add a list entry for range";
 
@@ -519,6 +645,51 @@ submodule nokia-conf-filter {
             } // container match-list
 
             list ip-filter {
+                must "not(./subscriber-mgmt/host-specific-entry/filter-rule/range) or not(./subscriber-mgmt/host-specific-entry/filter-rule/range/end) or not(./subscriber-mgmt/host-specific-entry/filter-rule/range/start) or ./subscriber-mgmt/host-specific-entry/filter-rule/range/end >= ./subscriber-mgmt/host-specific-entry/filter-rule/range/start" {
+                    error-message "start must be less than end for filter-rule";
+                }
+                must "not(./subscriber-mgmt/host-specific-entry/filter-rule/range) or not(./subscriber-mgmt/host-specific-entry/filter-rule/range/end) or not(./subscriber-mgmt/host-specific-entry/filter-rule/range/start) or (./subscriber-mgmt/host-specific-entry/filter-rule/range/end - ./subscriber-mgmt/host-specific-entry/filter-rule/range/start) <= 65534" {
+                    error-message "Filter-rule range can't contain more than 65535 entries";
+                }
+                must "not(./subscriber-mgmt/host-specific-entry/credit-control/range) or not(./subscriber-mgmt/host-specific-entry/credit-control/range/start) or not(./subscriber-mgmt/host-specific-entry/credit-control/range/end) or ./subscriber-mgmt/host-specific-entry/credit-control/range/end >= ./subscriber-mgmt/host-specific-entry/credit-control/range/start" {
+                    error-message "start must be less than end for credit-control";
+                }
+                must "not(./subscriber-mgmt/host-specific-entry/credit-control/range) or not(./subscriber-mgmt/host-specific-entry/credit-control/range/start) or not(./subscriber-mgmt/host-specific-entry/credit-control/range/end) or (./subscriber-mgmt/host-specific-entry/credit-control/range/end - ./subscriber-mgmt/host-specific-entry/credit-control/range/start) <= 65534" {
+                    error-message "Credit-control range can't contain more than 65535 entries";
+                }
+                must "./subscriber-mgmt/host-specific-entry/watermark/high = 0 or ./subscriber-mgmt/host-specific-entry/watermark/high >= ./subscriber-mgmt/host-specific-entry/watermark/low" {
+                    error-message "The low watermark must be less than or equal to the high watermark";
+                }
+                must "not(./subscriber-mgmt/shared-entry/filter-rule/range) or not(./subscriber-mgmt/shared-entry/filter-rule/range/start) or not(./subscriber-mgmt/shared-entry/filter-rule/range/end) or ./subscriber-mgmt/shared-entry/filter-rule/range/end >= ./subscriber-mgmt/shared-entry/filter-rule/range/start" {
+                    error-message "start must be less than end for shared filter-rule";
+                }
+                must "not(./subscriber-mgmt/shared-entry/filter-rule/range) or not(./subscriber-mgmt/shared-entry/filter-rule/range/start) or not(./subscriber-mgmt/shared-entry/filter-rule/range/end) or (./subscriber-mgmt/shared-entry/filter-rule/range/end - ./subscriber-mgmt/shared-entry/filter-rule/range/start) <= 65534" {
+                    error-message "Filter-rule range can't contain more than 65535 entries";
+                }
+                must "not(./subscriber-mgmt/shared-entry/pcc-rule/range) or not(./subscriber-mgmt/shared-entry/pcc-rule/range/start) or not(./subscriber-mgmt/shared-entry/pcc-rule/range/end) or ./subscriber-mgmt/shared-entry/pcc-rule/range/end >= ./subscriber-mgmt/shared-entry/pcc-rule/range/start" {
+                    error-message "start must be less than end for shared pcc-rule";
+                }
+                must "not(./subscriber-mgmt/shared-entry/pcc-rule/range) or not(./subscriber-mgmt/shared-entry/pcc-rule/range/start) or not(./subscriber-mgmt/shared-entry/pcc-rule/range/end) or (./subscriber-mgmt/shared-entry/pcc-rule/range/end - ./subscriber-mgmt/shared-entry/pcc-rule/range/start) <= 65534" {
+                    error-message "Pcc-rule range can't contain more than 65535 entries";
+                }
+                must "not(./subscriber-mgmt/shared-entry/watermark) or not(./subscriber-mgmt/shared-entry/watermark/low) or not(./subscriber-mgmt/shared-entry/watermark/high) or ./subscriber-mgmt/shared-entry/watermark/high > ./subscriber-mgmt/shared-entry/watermark/low" {
+                    error-message "The low watermark must be less than the high watermark";
+                }
+                must "./scope != 'embedded' or (./subscriber-mgmt/host-specific-entry/filter-rule/range = 'false' and ./subscriber-mgmt/host-specific-entry/credit-control/range = 'false' and ./subscriber-mgmt/shared-entry/filter-rule/range = 'false' and ./subscriber-mgmt/shared-entry/pcc-rule/range = 'false')";
+                must "./scope != 'system' or (./subscriber-mgmt/host-specific-entry/filter-rule/range = 'false' and ./subscriber-mgmt/host-specific-entry/credit-control/range = 'false' and ./subscriber-mgmt/shared-entry/filter-rule/range = 'false' and ./subscriber-mgmt/shared-entry/pcc-rule/range = 'false')";
+                must "(./scope = 'template' or ./scope = 'exclusive') or ./chain-to-system-filter = 'false'" {
+                    error-message "filter scope must be 'exclusive' or 'template'";
+                }
+                must "./scope != 'system' or ./type != 'src-mac'" {
+                    error-message "filter scope system and type src-mac are mutually exclusive";
+                }
+                must "./chain-to-system-filter = 'false' or ./type != 'src-mac'" {
+                    error-message "chain-to-system-filter and type src-mac are mutually exclusive";
+                }
+                must "./scope != 'embedded' or (not(./embed/filter) and not(./embed/flowspec) and not(./embed/openflow))";
+                must "./type = 'normal' or (not(./embed/flowspec) and not(./embed/openflow))" {
+                    error-message "filter type normal is required";
+                }
                 key "filter-name";
                 description "Enter the ip-filter list instance";
 
@@ -526,7 +697,9 @@ submodule nokia-conf-filter {
                     type types-filter:filter-name {
                         pattern "(([1-9]|[1-9][0-9]|[1-9][0-9][0-9]|[1-9][0-9][0-9][0-9]|[1-5][0-9][0-9][0-9][0-9]|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])|(([^f0-9_ ]|f($|[^S]|S($|[^p]|p($|[^e]|e($|[^c]|c($|[^\\-]|-($|[^0-9]+)))))))\\P{C}*))";
                     }
-                    description "Name of the object to associate";
+                    description
+                        "The value of this object specifies the name to associate
+                         with this filter.";
                 }
 
                 leaf default-action {
@@ -567,6 +740,15 @@ submodule nokia-conf-filter {
                     type types-filter:filter-id;
                     sros-ext:immutable;
                     description "IP filter ID";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
                 }
 
                 container subscriber-mgmt {
@@ -722,12 +904,68 @@ submodule nokia-conf-filter {
                 } // container subscriber-mgmt
 
                 list entry {
+                    must "./match/packet-length/range = 'false' or ./match/packet-length/range/start < ./match/packet-length/range/end" {
+                        error-message "End must be greater than start";
+                    }
+                    must "./match/port/range = 'false' or ./match/port/range/start < ./match/port/range/end" {
+                        error-message "End must be greater than start";
+                    }
+                    must "./match/src-port/range = 'false' or ./match/src-port/range/start < ./match/src-port/range/end" {
+                        error-message "End must be greater than start";
+                    }
+                    must "./match/dst-port/range = 'false' or ./match/dst-port/range/start < ./match/dst-port/range/end" {
+                        error-message "End must be greater than start";
+                    }
+                    must "not(./log) or not(./egress-pbr)";
+                    must "./filter-sample = 'false' or not(./egress-pbr)";
+                    must "./interface-sample = 'true' or not(./egress-pbr)";
+                    must "./match/src-mac = 'false' or ../type = 'src-mac'" {
+                        error-message "Not compatible match criteria and filter type";
+                    }
+                    must "not(./egress-pbr) or ../scope != 'system'" {
+                        error-message "system";
+                    }
+                    must "./match/ip-option = 'false' or ../type != 'packet-length'" {
+                        error-message "Not compatible match criteria and filter type";
+                    }
+                    must "./match/ip-option = 'false' or ../type != 'src-mac'" {
+                        error-message "Not compatible match criteria and filter type";
+                    }
+                    must "not(./match/option-present) or ../type != 'src-mac'" {
+                        error-message "Not compatible match criteria and filter type";
+                    }
+                    must "not(./match/multiple-option) or ../type != 'src-mac'" {
+                        error-message "Not compatible match criteria and filter type";
+                    }
+                    must "not(./match/src-route-option) or ../type != 'src-mac'" {
+                        error-message "Not compatible match criteria and filter type";
+                    }
+                    must "not(./match/option-present) or ../type != 'packet-length'" {
+                        error-message "Not compatible match criteria and filter type";
+                    }
+                    must "not(./match/multiple-option) or ../type != 'packet-length'" {
+                        error-message "Not compatible match criteria and filter type";
+                    }
+                    must "not(./match/src-route-option) or ../type != 'packet-length'" {
+                        error-message "Not compatible match criteria and filter type";
+                    }
+                    must "not(./match/dscp) or ../type != 'src-mac'" {
+                        error-message "Not compatible match criteria and filter type";
+                    }
+                    must "not(./match/dscp) or ../type != 'packet-length'" {
+                        error-message "Not compatible match criteria and filter type";
+                    }
                     key "entry-id";
                     description "Enter the entry list instance";
 
                     leaf entry-id {
                         type types-filter:entry-id;
-                        description "Secondary index for this entry";
+                        description
+                            "This is the secondary index for the entry. Filters can have multiple entries. Each
+                             entry is identified by the respective filter-id and entry-id.
+
+                             Refer to the description of entry-id for more info on the allowed values for this
+                             object.";
                     }
 
                     leaf description {
@@ -771,47 +1009,58 @@ submodule nokia-conf-filter {
                         description "Sample matching traffic if IP interface is set to cflowd interface mode";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                     container match {
                         description "Enter the match context";
 
                         leaf protocol {
                             type types-sros:ipv4-match-protocol;
-                            description "IP protocol to match.";
+                            description "IP protocol used as an IP filter match criterion";
                         }
 
                         leaf dscp {
                             type types-qos:dscp-name;
-                            description "Specifies the DSCP to be matched on the packet.";
+                            description "DSCP used as an IP filter match criterion";
                         }
 
                         leaf fragment {
                             type enumeration {
                                 enum "false"                        { value 2; }
                                 enum "true"                         { value 3; }
+                                enum "first-only"                   { value 4; }
+                                enum "non-first-only"               { value 5; }
                             }
-                            description "If not default, matches fragmented/unfragmented packets as per value of the object.";
+                            description "Match criterion for fragmented packets";
                         }
 
                         leaf multiple-option {
                             type boolean;
-                            description "If enabled, matches multiple options as per the value of the object.";
+                            description "Match based on presence of multiple options in header";
                         }
 
                         leaf option-present {
                             type boolean;
-                            description "Matches the presence of IP options in the IPv4 packet. Padding and EOOL are also considered as IP options. Up to six IP options are matched against.";
+                            description "Match on the presence of any IP option in the packet";
                         }
 
                         leaf src-route-option {
                             type boolean;
-                            description "This leaf specifies, when enabled, that this filter should match if a (strict or loose) source route option is present/not present at any location within the IP header, as per the value of this object.";
+                            description "Match based on presence of source route option";
                         }
 
                         choice port-selector {
                             case src-dst-port {
 
                                 container src-port {
-                                    description "Enter the src-port context";
+                                    description "Specifies source port match criteria.";
 
                                     choice port {
                                         case eq {
@@ -820,7 +1069,7 @@ submodule nokia-conf-filter {
                                                 type uint16 {
                                                     range "0..65535";
                                                 }
-                                                description "Equal to specified value";
+                                                description "Condition on equality to specified value.";
                                             }
 
                                         }
@@ -830,7 +1079,7 @@ submodule nokia-conf-filter {
                                                 type uint16 {
                                                     range "1..65535";
                                                 }
-                                                description "Less than specified value";
+                                                description "Condition on being less than the specified value.";
                                             }
 
                                         }
@@ -840,7 +1089,7 @@ submodule nokia-conf-filter {
                                                 type uint16 {
                                                     range "0..65534";
                                                 }
-                                                description "Greater than specified value";
+                                                description "Condition on being greater than the specified value.";
                                             }
 
                                         }
@@ -848,14 +1097,14 @@ submodule nokia-conf-filter {
 
                                             container range {
                                                 presence "Enables port range matching.";
-                                                description "Enter the range context";
+                                                description "Specifies port range.";
 
                                                 leaf start {
                                                     type uint16 {
                                                         range "0..65534";
                                                     }
                                                     mandatory true;
-                                                    description "Lower bound port to match";
+                                                    description "Specifies lower bound port to match.";
                                                 }
 
                                                 leaf end {
@@ -863,7 +1112,7 @@ submodule nokia-conf-filter {
                                                         range "1..65535";
                                                     }
                                                     mandatory true;
-                                                    description "Lower bound port to match";
+                                                    description "Specifies upper bound port to match.";
                                                 }
 
                                             } // container range
@@ -875,7 +1124,7 @@ submodule nokia-conf-filter {
                                                 type leafref {
                                                     path "../../../../../match-list/port-list/port-list-name";
                                                 }
-                                                description "Parameter port-list as match criterion";
+                                                description "Specifies the port-list used as match criterion.";
                                             }
 
                                         }
@@ -883,7 +1132,7 @@ submodule nokia-conf-filter {
                                 } // container src-port
 
                                 container dst-port {
-                                    description "Enter the dst-port context";
+                                    description "Specifies destination port match criteria.";
 
                                     choice port {
                                         case eq {
@@ -892,7 +1141,7 @@ submodule nokia-conf-filter {
                                                 type uint16 {
                                                     range "0..65535";
                                                 }
-                                                description "Equal to specified value";
+                                                description "Condition on equality to specified value.";
                                             }
 
                                         }
@@ -902,7 +1151,7 @@ submodule nokia-conf-filter {
                                                 type uint16 {
                                                     range "1..65535";
                                                 }
-                                                description "Less than specified value";
+                                                description "Condition on being less than the specified value.";
                                             }
 
                                         }
@@ -912,7 +1161,7 @@ submodule nokia-conf-filter {
                                                 type uint16 {
                                                     range "0..65534";
                                                 }
-                                                description "Greater than specified value";
+                                                description "Condition on being greater than the specified value.";
                                             }
 
                                         }
@@ -920,14 +1169,14 @@ submodule nokia-conf-filter {
 
                                             container range {
                                                 presence "Enables port range matching.";
-                                                description "Enter the range context";
+                                                description "Specifies port range.";
 
                                                 leaf start {
                                                     type uint16 {
                                                         range "0..65534";
                                                     }
                                                     mandatory true;
-                                                    description "Lower bound port to match";
+                                                    description "Specifies lower bound port to match.";
                                                 }
 
                                                 leaf end {
@@ -935,7 +1184,7 @@ submodule nokia-conf-filter {
                                                         range "1..65535";
                                                     }
                                                     mandatory true;
-                                                    description "Lower bound port to match";
+                                                    description "Specifies upper bound port to match.";
                                                 }
 
                                             } // container range
@@ -947,7 +1196,7 @@ submodule nokia-conf-filter {
                                                 type leafref {
                                                     path "../../../../../match-list/port-list/port-list-name";
                                                 }
-                                                description "Parameter port-list as match criterion";
+                                                description "Specifies the port-list used as match criterion.";
                                             }
 
                                         }
@@ -958,7 +1207,7 @@ submodule nokia-conf-filter {
                             case port {
 
                                 container port {
-                                    description "Enter the port context";
+                                    description "Specifies port match criteria.";
 
                                     choice port {
                                         case eq {
@@ -967,7 +1216,7 @@ submodule nokia-conf-filter {
                                                 type uint16 {
                                                     range "0..65535";
                                                 }
-                                                description "Equal to specified value";
+                                                description "Condition on equality to specified value.";
                                             }
 
                                         }
@@ -977,7 +1226,7 @@ submodule nokia-conf-filter {
                                                 type uint16 {
                                                     range "1..65535";
                                                 }
-                                                description "Less than specified value";
+                                                description "Condition on being less than the specified value.";
                                             }
 
                                         }
@@ -987,7 +1236,7 @@ submodule nokia-conf-filter {
                                                 type uint16 {
                                                     range "0..65534";
                                                 }
-                                                description "Greater than specified value";
+                                                description "Condition on being greater than the specified value.";
                                             }
 
                                         }
@@ -995,14 +1244,14 @@ submodule nokia-conf-filter {
 
                                             container range {
                                                 presence "Enables port range matching.";
-                                                description "Enter the range context";
+                                                description "Specifies port range.";
 
                                                 leaf start {
                                                     type uint16 {
                                                         range "0..65534";
                                                     }
                                                     mandatory true;
-                                                    description "Lower bound port to match";
+                                                    description "Specifies lower bound port to match.";
                                                 }
 
                                                 leaf end {
@@ -1010,7 +1259,7 @@ submodule nokia-conf-filter {
                                                         range "1..65535";
                                                     }
                                                     mandatory true;
-                                                    description "Lower bound port to match";
+                                                    description "Specifies upper bound port to match.";
                                                 }
 
                                             } // container range
@@ -1022,7 +1271,7 @@ submodule nokia-conf-filter {
                                                 type leafref {
                                                     path "../../../../../match-list/port-list/port-list-name";
                                                 }
-                                                description "Parameter port-list as match criterion";
+                                                description "Specifies the port-list used as match criterion.";
                                             }
 
                                         }
@@ -1130,6 +1379,9 @@ submodule nokia-conf-filter {
                             }
 
                             leaf mask {
+                                must ". = 'ff:ff:ff:ff:ff:ff' or . != '00:00:00:00:00:00'" {
+                                    error-message "The MAC address mask cannot be 00:00:00:00:00:00.";
+                                }
                                 type yang:mac-address;
                                 default "ff:ff:ff:ff:ff:ff";
                                 description "MAC address mask";
@@ -1144,8 +1396,12 @@ submodule nokia-conf-filter {
                                 case code {
 
                                     leaf code {
+                                        must "../../protocol = 1";
                                         type types-filter:ipv4-match-icmp-codes;
-                                        description "ICMP code value to match. ICMP code and ICMP type must both be set to enable ICMP matching.";
+                                        description
+                                            "Icmp code to be matched. This object complements the
+                                             object icmp-type. Both of them need to be set to
+                                             actually enable ICMP matching.";
                                     }
 
                                 }
@@ -1154,8 +1410,12 @@ submodule nokia-conf-filter {
                                 case type {
 
                                     leaf type {
+                                        must "../../protocol = 1";
                                         type types-filter:ipv4-match-icmp-types;
-                                        description "ICMP type value to match. ICMP code and ICMP type must both be set to enable ICMP matching.";
+                                        description
+                                            "Icmp type to be matched. This object complements the
+                                             object icmp-code. Both of them need to be set to
+                                             actually enable ICMP matching.";
                                     }
 
                                 }
@@ -1166,46 +1426,55 @@ submodule nokia-conf-filter {
                             description "Enter the tcp-flags context";
 
                             leaf ack {
+                                must "../../protocol = 6";
                                 type boolean;
                                 description "Match TCP ACK as per value of the ACK TCP flag bit";
                             }
 
                             leaf syn {
+                                must "../../protocol = 6";
                                 type boolean;
                                 description "Match TCP SYN as per value of the SYN TCP flag bit";
                             }
 
                             leaf fin {
+                                must "../../protocol = 6";
                                 type boolean;
                                 description "Match TCP FIN as per value of the FIN TCP flag bit";
                             }
 
                             leaf rst {
+                                must "../../protocol = 6";
                                 type boolean;
                                 description "Match TCP RST as per value of the RST TCP flag bit";
                             }
 
                             leaf psh {
+                                must "../../protocol = 6";
                                 type boolean;
                                 description "Match TCP PSH as per value of the PSH TCP flag bit";
                             }
 
                             leaf urg {
+                                must "../../protocol = 6";
                                 type boolean;
                                 description "Match TCP URG as per value of the URG TCP flag bit";
                             }
 
                             leaf ece {
+                                must "../../protocol = 6";
                                 type boolean;
                                 description "Match TCP ECE as per value of the ECE TCP flag bit";
                             }
 
                             leaf cwr {
+                                must "../../protocol = 6";
                                 type boolean;
                                 description "Match TCP CWR as per value of the CWR TCP flag bit";
                             }
 
                             leaf ns {
+                                must "../../protocol = 6";
                                 type boolean;
                                 description "Match TCP NS as per value of the NS TCP flag bit";
                             }
@@ -1269,12 +1538,57 @@ submodule nokia-conf-filter {
                     } // container match
 
                     container action {
+                        must "not(./fc) or ./accept" {
+                            error-message "Action accept is required";
+                        }
+                        must "./drop-when = 'false' or ./accept" {
+                            error-message "Action accept is required";
+                        }
+                        must "./rate-limit = 'false' or ./accept" {
+                            error-message "Action accept is required";
+                        }
+                        must "./drop-when = 'false' or ./rate-limit = 'false'" {
+                            error-message "Not allowed action combination. Drop-when and rate-limit";
+                        }
+                        must "./drop-when = 'false' or ./remark = 'false'" {
+                            error-message "Not allowed action combination. Drop-when and remark";
+                        }
+                        must "./rate-limit = 'false' or ./remark = 'false'" {
+                            error-message "Not allowed action combination. Rate-limit and remark";
+                        }
+                        must "./rate-limit/packet-length/range = 'false' or ./rate-limit/packet-length/range/start < ./rate-limit/packet-length/range/end" {
+                            error-message "End must be greater than start";
+                        }
+                        must "./rate-limit/ttl/range = 'false' or ./rate-limit/ttl/range/start < ./rate-limit/ttl/range/end" {
+                            error-message "End must be greater than start";
+                        }
+                        must "./drop-when/packet-length/range = 'false' or ./drop-when/packet-length/range/start < ./drop-when/packet-length/range/end" {
+                            error-message "End must be greater than start";
+                        }
+                        must "./drop-when/ttl/range = 'false' or ./drop-when/ttl/range/start < ./drop-when/ttl/range/end" {
+                            error-message "End must be greater than start";
+                        }
+                        must "(./rate-limit/pattern/offset-type != 'data' and ./drop-when/pattern/offset-type != 'data' and ./accept-when/pattern/offset-type != 'data') or (../match/protocol = -2 or ../match/protocol = 6 or ../match/protocol = 17)" {
+                            error-message "conditional actions with pattern offset-type 'data' can only be configured with entry match protocol 'tcp', 'udp' or 'tcp-udp'";
+                        }
+                        must "./drop-when/packet-length = 'false' or ../../type != 'packet-length'" {
+                            error-message "Filter type packet-length is mutually exclusive with conditional action packet-length";
+                        }
                         presence "Action to be taken on a packet matching the IP filter entry match criteria.";
                         description "Enter the action context";
 
                         leaf fc {
                             type types-sros:fc-name;
                             description "Class name to be forwarded for matching packets";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
                         }
 
                         choice action {
@@ -1349,7 +1663,7 @@ submodule nokia-conf-filter {
                                                     type types-sros:ipv4-address;
                                                     sros-ext:immutable;
                                                     mandatory true;
-                                                    description "Specifies the IP address of the service function toward which traffic is steered.";
+                                                    description "IP address of the service function to forward traffic";
                                                 }
 
                                                 leaf esi-value {
@@ -1374,7 +1688,7 @@ submodule nokia-conf-filter {
                                                     }
                                                     sros-ext:immutable;
                                                     mandatory true;
-                                                    description "Specifies the routing context used for route lookup.";
+                                                    description "Routing context for lookup to derive VPRN service label";
                                                 }
 
                                             } // container esi-l3
@@ -1383,6 +1697,9 @@ submodule nokia-conf-filter {
                                         case router {
 
                                             leaf router-instance {
+                                                must ". != 'management' and . != 'vpls-management'" {
+                                                    error-message "management and vpls-management are not allowed";
+                                                }
                                                 type string;
                                                 sros-ext:immutable;
                                                 description "Specifies the routing context used for route lookup.";
@@ -1446,10 +1763,13 @@ submodule nokia-conf-filter {
                                                             }
 
                                                             leaf router-instance {
+                                                                must ". != 'management' and . != 'vpls-management'" {
+                                                                    error-message "management and vpls-management are not allowed";
+                                                                }
                                                                 type string;
                                                                 sros-ext:immutable;
                                                                 mandatory true;
-                                                                description "Specifies the routing context used for route lookup.";
+                                                                description "Routing context for route lookup for forwarding packets";
                                                             }
 
                                                             leaf address {
@@ -1485,13 +1805,13 @@ submodule nokia-conf-filter {
                                                         path "../../../../../../../service/vpls/service-name";
                                                     }
                                                     mandatory true;
-                                                    description "VPLS the sdp-bind-id belongs to.";
+                                                    description "VPLS associated with the SDP";
                                                 }
 
                                                 leaf sdp-bind-id {
                                                     type types-services:sdp-bind-id;
                                                     mandatory true;
-                                                    description "A packet matching the entry will be forwarded using the specified SDP.";
+                                                    description "VPLS SDP bind ID used to forward matching packets";
                                                 }
 
                                             } // container sdp
@@ -1508,7 +1828,7 @@ submodule nokia-conf-filter {
                                                         path "../../../../../../../service/vpls/service-name";
                                                     }
                                                     mandatory true;
-                                                    description "VPLS the sdp-bind-id belongs to.";
+                                                    description "VPLS associated with the SAP";
                                                 }
 
                                                 leaf sap-id {
@@ -1516,7 +1836,7 @@ submodule nokia-conf-filter {
                                                         path "../../../../../../../service/vpls[service-name=current()/../vpls]/sap/sap-id";
                                                     }
                                                     mandatory true;
-                                                    description "A packet matching the entry will be forwarded using the specified SAP.";
+                                                    description "VPLS Ethernet SAP ID used to forward matching packets";
                                                 }
 
                                             } // container sap
@@ -1552,7 +1872,7 @@ submodule nokia-conf-filter {
                                                         path "../../../../../../../service/vprn/service-name";
                                                     }
                                                     mandatory true;
-                                                    description "Specifies the routing context used for route lookup.";
+                                                    description "Routing context used for route lookup";
                                                 }
 
                                                 leaf lsp {
@@ -1576,6 +1896,44 @@ submodule nokia-conf-filter {
                                                 }
                                                 description "GRE tunnel template ID that sets the location where an encapsulated matching packet is transported";
                                             }
+
+                                        }
+                                        case mpls-policy {
+
+                                            container mpls-policy {
+                                                presence "ipv4-filter entry action forward mpls-policy";
+                                                description "Enter the mpls-policy context";
+
+                                                leaf endpoint {
+                                                    type types-sros:ipv4-unicast-address;
+                                                    mandatory true;
+                                                    description "The MPLS forwarding policy endpoint IPv4 address";
+                                                }
+
+                                            } // container mpls-policy
+
+                                        }
+                                        case srte-policy {
+
+                                            container srte-policy {
+                                                presence "ipv4-filter entry action forward srte-policy";
+                                                description "Enter the srte-policy context";
+
+                                                leaf endpoint {
+                                                    type types-sros:ipv4-unicast-or-zero-address;
+                                                    mandatory true;
+                                                    description "The SR-TE policy endpoint IPv4 address";
+                                                }
+
+                                                leaf color {
+                                                    type int64 {
+                                                        range "0..4294967295";
+                                                    }
+                                                    mandatory true;
+                                                    description "The SR-TE policy color value";
+                                                }
+
+                                            } // container srte-policy
 
                                         }
                                     }
@@ -2079,6 +2437,15 @@ submodule nokia-conf-filter {
                             presence "Secondary (backup) action to be taken on a packet matching the filter entry.";
                             description "Enter the secondary context";
 
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
                             choice action {
                                 mandatory true;
                                 case forward {
@@ -2111,10 +2478,13 @@ submodule nokia-conf-filter {
                                                                 }
 
                                                                 leaf router-instance {
+                                                                    must ". != 'management' and . != 'vpls-management'" {
+                                                                        error-message "management and vpls-management are not allowed";
+                                                                    }
                                                                     type string;
                                                                     sros-ext:immutable;
                                                                     mandatory true;
-                                                                    description "Specifies the routing context used for route lookup.";
+                                                                    description "Routing context for route lookup for forwarding packets";
                                                                 }
 
                                                                 leaf address {
@@ -2142,14 +2512,14 @@ submodule nokia-conf-filter {
                                                             path "../../../../../../../../service/vpls/service-name";
                                                         }
                                                         mandatory true;
-                                                        description "VPLS the sdp-bind-id belongs to.";
+                                                        description "VPLS associated with the SDP";
                                                     }
 
                                                     leaf sdp-bind-id {
                                                         type types-services:sdp-bind-id;
                                                         sros-ext:immutable;
                                                         mandatory true;
-                                                        description "A packet matching the entry will be forwarded using the specified SDP.";
+                                                        description "VPLS SDP bind ID used to forward matching packets";
                                                     }
 
                                                 } // container sdp
@@ -2231,9 +2601,21 @@ submodule nokia-conf-filter {
                             description "Administrative state of this embedding";
                         }
 
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
                     } // list filter
 
                     list flowspec {
+                        must "./admin-state != 'enable' or ../../scope != 'system'" {
+                            error-message "Filter with scope system cannot contain active flowspec embeddings";
+                        }
                         key "offset";
                         description "Enter the flowspec list instance";
 
@@ -2251,6 +2633,7 @@ submodule nokia-conf-filter {
                         }
 
                         leaf router-instance {
+                            must ". != 'management' and . != 'vpls-management'";
                             type string;
                             sros-ext:immutable;
                             mandatory true;
@@ -2261,6 +2644,15 @@ submodule nokia-conf-filter {
                             type types-sros:admin-state;
                             default "enable";
                             description "Administrative state of this embedding";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
                         }
 
                     } // list flowspec
@@ -2287,6 +2679,15 @@ submodule nokia-conf-filter {
                             type types-sros:admin-state;
                             default "enable";
                             description "Administrative state of this embedding";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
                         }
 
                         choice context {
@@ -2334,6 +2735,9 @@ submodule nokia-conf-filter {
                                 }
 
                                 leaf sap {
+                                    must "../vpls" {
+                                        error-message "sap requires vpls";
+                                    }
                                     type leafref {
                                         path "../../../../../service/vpls[service-name=current()/../vpls]/sap/sap-id";
                                     }
@@ -2350,6 +2754,51 @@ submodule nokia-conf-filter {
             } // list ip-filter
 
             list ipv6-filter {
+                must "not(./subscriber-mgmt/host-specific-entry/filter-rule/range) or not(./subscriber-mgmt/host-specific-entry/filter-rule/range/end) or not(./subscriber-mgmt/host-specific-entry/filter-rule/range/start) or ./subscriber-mgmt/host-specific-entry/filter-rule/range/end >= ./subscriber-mgmt/host-specific-entry/filter-rule/range/start" {
+                    error-message "start must be less than end for filter-rule";
+                }
+                must "not(./subscriber-mgmt/host-specific-entry/filter-rule/range) or not(./subscriber-mgmt/host-specific-entry/filter-rule/range/end) or not(./subscriber-mgmt/host-specific-entry/filter-rule/range/start) or (./subscriber-mgmt/host-specific-entry/filter-rule/range/end - ./subscriber-mgmt/host-specific-entry/filter-rule/range/start) <= 65534" {
+                    error-message "Filter-rule range can't contain more than 65535 entries";
+                }
+                must "not(./subscriber-mgmt/host-specific-entry/credit-control/range) or not(./subscriber-mgmt/host-specific-entry/credit-control/range/start) or not(./subscriber-mgmt/host-specific-entry/credit-control/range/end) or ./subscriber-mgmt/host-specific-entry/credit-control/range/end >= ./subscriber-mgmt/host-specific-entry/credit-control/range/start" {
+                    error-message "start must be less than end for credit-control";
+                }
+                must "not(./subscriber-mgmt/host-specific-entry/credit-control/range) or not(./subscriber-mgmt/host-specific-entry/credit-control/range/start) or not(./subscriber-mgmt/host-specific-entry/credit-control/range/end) or (./subscriber-mgmt/host-specific-entry/credit-control/range/end - ./subscriber-mgmt/host-specific-entry/credit-control/range/start) <= 65534" {
+                    error-message "Credit-control range can't contain more than 65535 entries";
+                }
+                must "./subscriber-mgmt/host-specific-entry/watermark/high = 0 or ./subscriber-mgmt/host-specific-entry/watermark/high >= ./subscriber-mgmt/host-specific-entry/watermark/low" {
+                    error-message "The low watermark must be less than or equal to the high watermark";
+                }
+                must "not(./subscriber-mgmt/shared-entry/filter-rule/range) or not(./subscriber-mgmt/shared-entry/filter-rule/range/start) or not(./subscriber-mgmt/shared-entry/filter-rule/range/end) or ./subscriber-mgmt/shared-entry/filter-rule/range/end >= ./subscriber-mgmt/shared-entry/filter-rule/range/start" {
+                    error-message "start must be less than end for shared filter-rule";
+                }
+                must "not(./subscriber-mgmt/shared-entry/filter-rule/range) or not(./subscriber-mgmt/shared-entry/filter-rule/range/start) or not(./subscriber-mgmt/shared-entry/filter-rule/range/end) or (./subscriber-mgmt/shared-entry/filter-rule/range/end - ./subscriber-mgmt/shared-entry/filter-rule/range/start) <= 65534" {
+                    error-message "Filter-rule range can't contain more than 65535 entries";
+                }
+                must "not(./subscriber-mgmt/shared-entry/pcc-rule/range) or not(./subscriber-mgmt/shared-entry/pcc-rule/range/start) or not(./subscriber-mgmt/shared-entry/pcc-rule/range/end) or ./subscriber-mgmt/shared-entry/pcc-rule/range/end >= ./subscriber-mgmt/shared-entry/pcc-rule/range/start" {
+                    error-message "start must be less than end for shared pcc-rule";
+                }
+                must "not(./subscriber-mgmt/shared-entry/pcc-rule/range) or not(./subscriber-mgmt/shared-entry/pcc-rule/range/start) or not(./subscriber-mgmt/shared-entry/pcc-rule/range/end) or (./subscriber-mgmt/shared-entry/pcc-rule/range/end - ./subscriber-mgmt/shared-entry/pcc-rule/range/start) <= 65534" {
+                    error-message "Pcc-rule range can't contain more than 65535 entries";
+                }
+                must "not(./subscriber-mgmt/shared-entry/watermark) or not(./subscriber-mgmt/shared-entry/watermark/low) or not(./subscriber-mgmt/shared-entry/watermark/high) or ./subscriber-mgmt/shared-entry/watermark/high > ./subscriber-mgmt/shared-entry/watermark/low" {
+                    error-message "The low watermark must be less than the high watermark";
+                }
+                must "./scope != 'embedded' or (./subscriber-mgmt/host-specific-entry/filter-rule/range = 'false' and ./subscriber-mgmt/host-specific-entry/credit-control/range = 'false' and ./subscriber-mgmt/shared-entry/filter-rule/range = 'false' and ./subscriber-mgmt/shared-entry/pcc-rule/range = 'false')";
+                must "./scope != 'system' or (./subscriber-mgmt/host-specific-entry/filter-rule/range = 'false' and ./subscriber-mgmt/host-specific-entry/credit-control/range = 'false' and ./subscriber-mgmt/shared-entry/filter-rule/range = 'false' and ./subscriber-mgmt/shared-entry/pcc-rule/range = 'false')";
+                must "(./scope = 'template' or ./scope = 'exclusive') or ./chain-to-system-filter = 'false'" {
+                    error-message "filter scope must be 'exclusive' or 'template'";
+                }
+                must "./scope != 'system' or ./type != 'src-mac'" {
+                    error-message "filter scope system and type src-mac are mutually exclusive";
+                }
+                must "./chain-to-system-filter = 'false' or ./type != 'src-mac'" {
+                    error-message "chain-to-system-filter and type src-mac are mutually exclusive";
+                }
+                must "./scope != 'embedded' or (not(./embed/filter) and not(./embed/flowspec) and not(./embed/openflow))";
+                must "./type = 'normal' or (not(./embed/flowspec) and not(./embed/openflow))" {
+                    error-message "filter type normal is required";
+                }
                 key "filter-name";
                 description "Enter the ipv6-filter list instance";
 
@@ -2357,7 +2806,9 @@ submodule nokia-conf-filter {
                     type types-filter:filter-name {
                         pattern "(([1-9]|[1-9][0-9]|[1-9][0-9][0-9]|[1-9][0-9][0-9][0-9]|[1-5][0-9][0-9][0-9][0-9]|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])|(([^f0-9_ ]|f($|[^S]|S($|[^p]|p($|[^e]|e($|[^c]|c($|[^\\-]|-($|[^0-9]+)))))))\\P{C}*))";
                     }
-                    description "Name of the object to associate";
+                    description
+                        "The value of this object specifies the name to associate
+                         with this filter.";
                 }
 
                 leaf default-action {
@@ -2398,6 +2849,15 @@ submodule nokia-conf-filter {
                     type types-filter:filter-id;
                     sros-ext:immutable;
                     description "IPv6 filter identifier";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
                 }
 
                 container subscriber-mgmt {
@@ -2553,12 +3013,41 @@ submodule nokia-conf-filter {
                 } // container subscriber-mgmt
 
                 list entry {
+                    must "./match/packet-length/range = 'false' or ./match/packet-length/range/start < ./match/packet-length/range/end" {
+                        error-message "End must be greater than start";
+                    }
+                    must "./match/port/range = 'false' or ./match/port/range/start < ./match/port/range/end" {
+                        error-message "End must be greater than start";
+                    }
+                    must "./match/src-port/range = 'false' or ./match/src-port/range/start < ./match/src-port/range/end" {
+                        error-message "End must be greater than start";
+                    }
+                    must "./match/dst-port/range = 'false' or ./match/dst-port/range/start < ./match/dst-port/range/end" {
+                        error-message "End must be greater than start";
+                    }
+                    must "not(./log) or not(./egress-pbr)";
+                    must "./filter-sample = 'false' or not(./egress-pbr)";
+                    must "./interface-sample = 'true' or not(./egress-pbr)";
+                    must "./match/src-mac = 'false' or ../type = 'src-mac'" {
+                        error-message "Not compatible match criteria and filter type";
+                    }
+                    must "not(./egress-pbr) or ../scope != 'system'" {
+                        error-message "system";
+                    }
+                    must "./match/flow-label = 'false' or ../type != 'packet-length'" {
+                        error-message "Not compatible match criteria and filter type";
+                    }
                     key "entry-id";
                     description "Enter the entry list instance";
 
                     leaf entry-id {
                         type types-filter:entry-id;
-                        description "Secondary index for this entry";
+                        description
+                            "This is the secondary index for the entry. Filters can have multiple entries. Each
+                             entry is identified by the respective filter-id and entry-id.
+
+                             Refer to the description of entry-id for more info on the allowed values for this
+                             object.";
                     }
 
                     leaf description {
@@ -2602,17 +3091,27 @@ submodule nokia-conf-filter {
                         description "Sample matching traffic if IP interface is set to cflowd interface mode";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                     container match {
                         description "Enter the match context";
 
                         leaf next-header {
+                            must ". != 0 and . != 43 and . != 44 and . != 50 and . != 51 and . != 60";
                             type types-sros:ipv6-match-protocol;
-                            description "IPv6 next header to match. Because the match criteria only pertains to the last next-header, the following values are not accepted: 0, 43, 44, 50, 51, and 60.";
+                            description "IPv6 next header to match";
                         }
 
                         leaf dscp {
                             type types-qos:dscp-name;
-                            description "Specifies the DSCP to be matched on the packet.";
+                            description "DSCP used as an IP filter match criterion";
                         }
 
                         leaf fragment {
@@ -2622,14 +3121,14 @@ submodule nokia-conf-filter {
                                 enum "first-only"                   { value 4; }
                                 enum "non-first-only"               { value 5; }
                             }
-                            description "If not default, matches fragmented/unfragmented packets as per value of the object.";
+                            description "Match criterion for fragmented packages";
                         }
 
                         choice port-selector {
                             case src-dst-port {
 
                                 container src-port {
-                                    description "Enter the src-port context";
+                                    description "Specifies source port match criteria.";
 
                                     choice port {
                                         case eq {
@@ -2638,7 +3137,7 @@ submodule nokia-conf-filter {
                                                 type uint16 {
                                                     range "0..65535";
                                                 }
-                                                description "Equal to specified value";
+                                                description "Condition on equality to specified value.";
                                             }
 
                                         }
@@ -2648,7 +3147,7 @@ submodule nokia-conf-filter {
                                                 type uint16 {
                                                     range "1..65535";
                                                 }
-                                                description "Less than specified value";
+                                                description "Condition on being less than the specified value.";
                                             }
 
                                         }
@@ -2658,7 +3157,7 @@ submodule nokia-conf-filter {
                                                 type uint16 {
                                                     range "0..65534";
                                                 }
-                                                description "Greater than specified value";
+                                                description "Condition on being greater than the specified value.";
                                             }
 
                                         }
@@ -2666,14 +3165,14 @@ submodule nokia-conf-filter {
 
                                             container range {
                                                 presence "Enables port range matching.";
-                                                description "Enter the range context";
+                                                description "Specifies port range.";
 
                                                 leaf start {
                                                     type uint16 {
                                                         range "0..65534";
                                                     }
                                                     mandatory true;
-                                                    description "Lower bound port to match";
+                                                    description "Specifies lower bound port to match.";
                                                 }
 
                                                 leaf end {
@@ -2681,7 +3180,7 @@ submodule nokia-conf-filter {
                                                         range "1..65535";
                                                     }
                                                     mandatory true;
-                                                    description "Lower bound port to match";
+                                                    description "Specifies upper bound port to match.";
                                                 }
 
                                             } // container range
@@ -2693,7 +3192,7 @@ submodule nokia-conf-filter {
                                                 type leafref {
                                                     path "../../../../../match-list/port-list/port-list-name";
                                                 }
-                                                description "Parameter port-list as match criterion";
+                                                description "Specifies the port-list used as match criterion.";
                                             }
 
                                         }
@@ -2701,7 +3200,7 @@ submodule nokia-conf-filter {
                                 } // container src-port
 
                                 container dst-port {
-                                    description "Enter the dst-port context";
+                                    description "Specifies destination port match criteria.";
 
                                     choice port {
                                         case eq {
@@ -2710,7 +3209,7 @@ submodule nokia-conf-filter {
                                                 type uint16 {
                                                     range "0..65535";
                                                 }
-                                                description "Equal to specified value";
+                                                description "Condition on equality to specified value.";
                                             }
 
                                         }
@@ -2720,7 +3219,7 @@ submodule nokia-conf-filter {
                                                 type uint16 {
                                                     range "1..65535";
                                                 }
-                                                description "Less than specified value";
+                                                description "Condition on being less than the specified value.";
                                             }
 
                                         }
@@ -2730,7 +3229,7 @@ submodule nokia-conf-filter {
                                                 type uint16 {
                                                     range "0..65534";
                                                 }
-                                                description "Greater than specified value";
+                                                description "Condition on being greater than the specified value.";
                                             }
 
                                         }
@@ -2738,14 +3237,14 @@ submodule nokia-conf-filter {
 
                                             container range {
                                                 presence "Enables port range matching.";
-                                                description "Enter the range context";
+                                                description "Specifies port range.";
 
                                                 leaf start {
                                                     type uint16 {
                                                         range "0..65534";
                                                     }
                                                     mandatory true;
-                                                    description "Lower bound port to match";
+                                                    description "Specifies lower bound port to match.";
                                                 }
 
                                                 leaf end {
@@ -2753,7 +3252,7 @@ submodule nokia-conf-filter {
                                                         range "1..65535";
                                                     }
                                                     mandatory true;
-                                                    description "Lower bound port to match";
+                                                    description "Specifies upper bound port to match.";
                                                 }
 
                                             } // container range
@@ -2765,7 +3264,7 @@ submodule nokia-conf-filter {
                                                 type leafref {
                                                     path "../../../../../match-list/port-list/port-list-name";
                                                 }
-                                                description "Parameter port-list as match criterion";
+                                                description "Specifies the port-list used as match criterion.";
                                             }
 
                                         }
@@ -2776,7 +3275,7 @@ submodule nokia-conf-filter {
                             case port {
 
                                 container port {
-                                    description "Enter the port context";
+                                    description "Specifies port match criteria.";
 
                                     choice port {
                                         case eq {
@@ -2785,7 +3284,7 @@ submodule nokia-conf-filter {
                                                 type uint16 {
                                                     range "0..65535";
                                                 }
-                                                description "Equal to specified value";
+                                                description "Condition on equality to specified value.";
                                             }
 
                                         }
@@ -2795,7 +3294,7 @@ submodule nokia-conf-filter {
                                                 type uint16 {
                                                     range "1..65535";
                                                 }
-                                                description "Less than specified value";
+                                                description "Condition on being less than the specified value.";
                                             }
 
                                         }
@@ -2805,7 +3304,7 @@ submodule nokia-conf-filter {
                                                 type uint16 {
                                                     range "0..65534";
                                                 }
-                                                description "Greater than specified value";
+                                                description "Condition on being greater than the specified value.";
                                             }
 
                                         }
@@ -2813,14 +3312,14 @@ submodule nokia-conf-filter {
 
                                             container range {
                                                 presence "Enables port range matching.";
-                                                description "Enter the range context";
+                                                description "Specifies port range.";
 
                                                 leaf start {
                                                     type uint16 {
                                                         range "0..65534";
                                                     }
                                                     mandatory true;
-                                                    description "Lower bound port to match";
+                                                    description "Specifies lower bound port to match.";
                                                 }
 
                                                 leaf end {
@@ -2828,7 +3327,7 @@ submodule nokia-conf-filter {
                                                         range "1..65535";
                                                     }
                                                     mandatory true;
-                                                    description "Lower bound port to match";
+                                                    description "Specifies upper bound port to match.";
                                                 }
 
                                             } // container range
@@ -2840,7 +3339,7 @@ submodule nokia-conf-filter {
                                                 type leafref {
                                                     path "../../../../../match-list/port-list/port-list-name";
                                                 }
-                                                description "Parameter port-list as match criterion";
+                                                description "Specifies the port-list used as match criterion.";
                                             }
 
                                         }
@@ -2926,6 +3425,9 @@ submodule nokia-conf-filter {
                             }
 
                             leaf mask {
+                                must ". = 'ff:ff:ff:ff:ff:ff' or . != '00:00:00:00:00:00'" {
+                                    error-message "The MAC address mask cannot be 00:00:00:00:00:00.";
+                                }
                                 type yang:mac-address;
                                 default "ff:ff:ff:ff:ff:ff";
                                 description "MAC address mask";
@@ -2948,7 +3450,7 @@ submodule nokia-conf-filter {
 
                             leaf hop-by-hop {
                                 type boolean;
-                                description "If Enabled, matches a Hop-By-Hop options Extension Header as per value of the object.";
+                                description "Match on Hop-by-Hop Options Extension Header existence";
                             }
 
                             leaf routing-type0 {
@@ -2985,8 +3487,12 @@ submodule nokia-conf-filter {
                                 case code {
 
                                     leaf code {
+                                        must "../../next-header = 58";
                                         type types-filter:ipv6-match-icmp-codes;
-                                        description "ICMP code value to match. ICMP code and ICMP type must both be set to enable ICMP matching.";
+                                        description
+                                            "Icmp code to be matched. This object complements the
+                                             object icmp-type. Both of them need to be set to
+                                             actually enable ICMP matching.";
                                     }
 
                                 }
@@ -2995,8 +3501,12 @@ submodule nokia-conf-filter {
                                 case type {
 
                                     leaf type {
+                                        must "../../next-header = 58";
                                         type types-filter:ipv6-match-icmp-types;
-                                        description "ICMP type value to match. ICMP code and ICMP type must both be set to enable ICMP matching.";
+                                        description
+                                            "Icmp type to be matched. This object complements the
+                                             object icmp-code. Both of them need to be set to
+                                             actually enable ICMP matching.";
                                     }
 
                                 }
@@ -3007,46 +3517,55 @@ submodule nokia-conf-filter {
                             description "Enter the tcp-flags context";
 
                             leaf ack {
+                                must "../../next-header = 6";
                                 type boolean;
                                 description "Match TCP ACK as per value of the ACK TCP flag bit";
                             }
 
                             leaf syn {
+                                must "../../next-header = 6";
                                 type boolean;
                                 description "Match TCP SYN as per value of the SYN TCP flag bit";
                             }
 
                             leaf fin {
+                                must "../../next-header = 6";
                                 type boolean;
                                 description "Match TCP FIN as per value of the FIN TCP flag bit";
                             }
 
                             leaf rst {
+                                must "../../next-header = 6";
                                 type boolean;
                                 description "Match TCP RST as per value of the RST TCP flag bit";
                             }
 
                             leaf psh {
+                                must "../../next-header = 6";
                                 type boolean;
                                 description "Match TCP PSH as per value of the PSH TCP flag bit";
                             }
 
                             leaf urg {
+                                must "../../next-header = 6";
                                 type boolean;
                                 description "Match TCP URG as per value of the URG TCP flag bit";
                             }
 
                             leaf ece {
+                                must "../../next-header = 6";
                                 type boolean;
                                 description "Match TCP ECE as per value of the ECE TCP flag bit";
                             }
 
                             leaf cwr {
+                                must "../../next-header = 6";
                                 type boolean;
                                 description "Match TCP CWR as per value of the CWR TCP flag bit";
                             }
 
                             leaf ns {
+                                must "../../next-header = 6";
                                 type boolean;
                                 description "Match TCP NS as per value of the NS TCP flag bit";
                             }
@@ -3110,12 +3629,57 @@ submodule nokia-conf-filter {
                     } // container match
 
                     container action {
+                        must "not(./fc) or ./accept" {
+                            error-message "Action accept is required";
+                        }
+                        must "./drop-when = 'false' or ./accept" {
+                            error-message "Action accept is required";
+                        }
+                        must "./rate-limit = 'false' or ./accept" {
+                            error-message "Action accept is required";
+                        }
+                        must "./drop-when = 'false' or ./rate-limit = 'false'" {
+                            error-message "Not allowed action combination. Drop-when and rate-limit";
+                        }
+                        must "./drop-when = 'false' or ./remark = 'false'" {
+                            error-message "Not allowed action combination. Drop-when and remark";
+                        }
+                        must "./rate-limit = 'false' or ./remark = 'false'" {
+                            error-message "Not allowed action combination. Rate-limit and remark";
+                        }
+                        must "./rate-limit/payload-length/range = 'false' or ./rate-limit/payload-length/range/start < ./rate-limit/payload-length/range/end" {
+                            error-message "End must be greater than start";
+                        }
+                        must "./rate-limit/hop-limit/range = 'false' or ./rate-limit/hop-limit/range/start < ./rate-limit/hop-limit/range/end" {
+                            error-message "End must be greater than start";
+                        }
+                        must "./drop-when/payload-length/range = 'false' or ./drop-when/payload-length/range/start < ./drop-when/payload-length/range/end" {
+                            error-message "End must be greater than start";
+                        }
+                        must "./drop-when/hop-limit/range = 'false' or ./drop-when/hop-limit/range/start < ./drop-when/hop-limit/range/end" {
+                            error-message "End must be greater than start";
+                        }
+                        must "(./rate-limit/pattern/offset-type != 'data' and ./drop-when/pattern/offset-type != 'data' and ./accept-when/pattern/offset-type != 'data') or (../match/next-header = -2 or ../match/next-header = 6 or ../match/next-header = 17)" {
+                            error-message "conditional actions with pattern offset-type 'data' can only be configured with entry match next-header 'tcp', 'udp' or 'tcp-udp'";
+                        }
+                        must "./drop-when/payload-length = 'false' or ../../type != 'packet-length'" {
+                            error-message "Filter type packet-length is mutually exclusive with conditional action payload-length";
+                        }
                         presence "Action to be taken on a packet matching the IPv6 filter entry match criteria.";
                         description "Enter the action context";
 
                         leaf fc {
                             type types-sros:fc-name;
                             description "Class name to be forwarded for matching packets";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
                         }
 
                         choice action {
@@ -3190,7 +3754,7 @@ submodule nokia-conf-filter {
                                                     type types-sros:ipv6-address;
                                                     sros-ext:immutable;
                                                     mandatory true;
-                                                    description "Specifies the IP address of the service function toward which traffic is steered.";
+                                                    description "IP address of the service function to forward traffic";
                                                 }
 
                                                 leaf esi-value {
@@ -3215,7 +3779,7 @@ submodule nokia-conf-filter {
                                                     }
                                                     sros-ext:immutable;
                                                     mandatory true;
-                                                    description "Specifies the routing context used for route lookup.";
+                                                    description "Routing context for lookup to derive VPRN service label";
                                                 }
 
                                             } // container esi-l3
@@ -3224,6 +3788,9 @@ submodule nokia-conf-filter {
                                         case router {
 
                                             leaf router-instance {
+                                                must ". != 'management' and . != 'vpls-management'" {
+                                                    error-message "management and vpls-management are not allowed";
+                                                }
                                                 type string;
                                                 sros-ext:immutable;
                                                 description "Specifies the routing context used for route lookup.";
@@ -3278,10 +3845,13 @@ submodule nokia-conf-filter {
                                                             }
 
                                                             leaf router-instance {
+                                                                must ". != 'management' and . != 'vpls-management'" {
+                                                                    error-message "management and vpls-management are not allowed";
+                                                                }
                                                                 type string;
                                                                 sros-ext:immutable;
                                                                 mandatory true;
-                                                                description "Specifies the routing context used for route lookup.";
+                                                                description "Routing context for route lookup for forwarding packets";
                                                             }
 
                                                             leaf address {
@@ -3316,13 +3886,13 @@ submodule nokia-conf-filter {
                                                         path "../../../../../../../service/vpls/service-name";
                                                     }
                                                     mandatory true;
-                                                    description "VPLS the sdp-bind-id belongs to.";
+                                                    description "VPLS associated with the SDP";
                                                 }
 
                                                 leaf sdp-bind-id {
                                                     type types-services:sdp-bind-id;
                                                     mandatory true;
-                                                    description "A packet matching the entry will be forwarded using the specified SDP.";
+                                                    description "VPLS SDP bind ID used to forward matching packets";
                                                 }
 
                                             } // container sdp
@@ -3339,7 +3909,7 @@ submodule nokia-conf-filter {
                                                         path "../../../../../../../service/vpls/service-name";
                                                     }
                                                     mandatory true;
-                                                    description "VPLS the sdp-bind-id belongs to.";
+                                                    description "VPLS associated with the SAP";
                                                 }
 
                                                 leaf sap-id {
@@ -3347,7 +3917,7 @@ submodule nokia-conf-filter {
                                                         path "../../../../../../../service/vpls[service-name=current()/../vpls]/sap/sap-id";
                                                     }
                                                     mandatory true;
-                                                    description "A packet matching the entry will be forwarded using the specified SAP.";
+                                                    description "VPLS Ethernet SAP ID used to forward matching packets";
                                                 }
 
                                             } // container sap
@@ -3383,7 +3953,7 @@ submodule nokia-conf-filter {
                                                         path "../../../../../../../service/vprn/service-name";
                                                     }
                                                     mandatory true;
-                                                    description "Specifies the routing context used for route lookup.";
+                                                    description "Routing context used for route lookup";
                                                 }
 
                                                 leaf lsp {
@@ -3407,6 +3977,44 @@ submodule nokia-conf-filter {
                                                 }
                                                 description "GRE tunnel template ID that sets the location where an encapsulated matching packet is transported";
                                             }
+
+                                        }
+                                        case mpls-policy {
+
+                                            container mpls-policy {
+                                                presence "ipv6-filter entry action forward mpls-policy";
+                                                description "Enter the mpls-policy context";
+
+                                                leaf endpoint {
+                                                    type types-sros:ipv6-unicast-address;
+                                                    mandatory true;
+                                                    description "The MPLS forwarding policy endpoint IPv6 address";
+                                                }
+
+                                            } // container mpls-policy
+
+                                        }
+                                        case srte-policy {
+
+                                            container srte-policy {
+                                                presence "ipv6-filter entry action forward srte-policy";
+                                                description "Enter the srte-policy context";
+
+                                                leaf endpoint {
+                                                    type types-sros:ipv6-unicast-or-zero-address;
+                                                    mandatory true;
+                                                    description "The SR-TE policy endpoint IPv6 address";
+                                                }
+
+                                                leaf color {
+                                                    type int64 {
+                                                        range "0..4294967295";
+                                                    }
+                                                    mandatory true;
+                                                    description "The SR-TE policy color value";
+                                                }
+
+                                            } // container srte-policy
 
                                         }
                                     }
@@ -3901,6 +4509,15 @@ submodule nokia-conf-filter {
                             presence "Secondary (backup) action to be taken on a packet matching the filter entry.";
                             description "Enter the secondary context";
 
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
                             choice action {
                                 mandatory true;
                                 case forward {
@@ -3933,10 +4550,13 @@ submodule nokia-conf-filter {
                                                                 }
 
                                                                 leaf router-instance {
+                                                                    must ". != 'management' and . != 'vpls-management'" {
+                                                                        error-message "management and vpls-management are not allowed";
+                                                                    }
                                                                     type string;
                                                                     sros-ext:immutable;
                                                                     mandatory true;
-                                                                    description "Specifies the routing context used for route lookup.";
+                                                                    description "Routing context for route lookup for forwarding packets";
                                                                 }
 
                                                                 leaf address {
@@ -3963,14 +4583,14 @@ submodule nokia-conf-filter {
                                                             path "../../../../../../../../service/vpls/service-name";
                                                         }
                                                         mandatory true;
-                                                        description "VPLS the sdp-bind-id belongs to.";
+                                                        description "VPLS associated with the SDP";
                                                     }
 
                                                     leaf sdp-bind-id {
                                                         type types-services:sdp-bind-id;
                                                         sros-ext:immutable;
                                                         mandatory true;
-                                                        description "A packet matching the entry will be forwarded using the specified SDP.";
+                                                        description "VPLS SDP bind ID used to forward matching packets";
                                                     }
 
                                                 } // container sdp
@@ -4052,9 +4672,21 @@ submodule nokia-conf-filter {
                             description "Administrative state of this embedding";
                         }
 
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
                     } // list filter
 
                     list flowspec {
+                        must "./admin-state != 'enable' or ../../scope != 'system'" {
+                            error-message "Filter with scope system cannot contain active flowspec embeddings";
+                        }
                         key "offset";
                         description "Enter the flowspec list instance";
 
@@ -4072,6 +4704,7 @@ submodule nokia-conf-filter {
                         }
 
                         leaf router-instance {
+                            must ". != 'management' and . != 'vpls-management'";
                             type string;
                             sros-ext:immutable;
                             mandatory true;
@@ -4082,6 +4715,15 @@ submodule nokia-conf-filter {
                             type types-sros:admin-state;
                             default "enable";
                             description "Administrative state of this embedding";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
                         }
 
                     } // list flowspec
@@ -4108,6 +4750,15 @@ submodule nokia-conf-filter {
                             type types-sros:admin-state;
                             default "enable";
                             description "Administrative state of this embedding";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
                         }
 
                         choice context {
@@ -4155,6 +4806,9 @@ submodule nokia-conf-filter {
                                 }
 
                                 leaf sap {
+                                    must "../vpls" {
+                                        error-message "sap requires vpls";
+                                    }
                                     type leafref {
                                         path "../../../../../service/vpls[service-name=current()/../vpls]/sap/sap-id";
                                     }
@@ -4171,6 +4825,8 @@ submodule nokia-conf-filter {
             } // list ipv6-filter
 
             list mac-filter {
+                must "./scope != 'system'";
+                must "./scope != 'embedded'";
                 key "filter-name";
                 description "Enter the mac-filter list instance";
 
@@ -4178,7 +4834,9 @@ submodule nokia-conf-filter {
                     type types-filter:filter-name {
                         pattern "(([1-9]|[1-9][0-9]|[1-9][0-9][0-9]|[1-9][0-9][0-9][0-9]|[1-5][0-9][0-9][0-9][0-9]|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])|(([^f0-9_ ]|f($|[^S]|S($|[^p]|p($|[^e]|e($|[^c]|c($|[^\\-]|-($|[^0-9]+)))))))\\P{C}*))";
                     }
-                    description "Name of the object to associate";
+                    description
+                        "The value of this object specifies the name to associate
+                         with this filter.";
                 }
 
                 leaf default-action {
@@ -4212,13 +4870,33 @@ submodule nokia-conf-filter {
                     description "MAC filter ID";
                 }
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
                 list entry {
+                    must "../type = 'vid' or (./match/inner-tag = 'false' and ./match/outer-tag = 'false')" {
+                        error-message "The match criteria entered are not compatible with the Mac filter type - Allowed only with mac-filter type VID";
+                    }
+                    must "../type = 'normal' or (./match/src-mac = 'false' and ./match/dst-mac = 'false' and ./match/dot1p = 'false' and not(./match/snap-pid) and not(./match/snap-oui) and ./match/llc-ssap = 'false' and ./match/llc-dsap = 'false' and not(./match/etype))" {
+                        error-message "The match criteria entered are not compatible with the Mac filter type - allowed only with mac-filter type normal";
+                    }
                     key "entry-id";
                     description "Enter the entry list instance";
 
                     leaf entry-id {
                         type types-filter:entry-id;
-                        description "Secondary index for this entry";
+                        description
+                            "This is the secondary index for the entry. Filters can have multiple entries. Each
+                             entry is identified by the respective filter-id and entry-id.
+
+                             Refer to the description of entry-id for more info on the allowed values for this
+                             object.";
                     }
 
                     leaf description {
@@ -4242,6 +4920,15 @@ submodule nokia-conf-filter {
                         type types-filter:filter-sticky-dest;
                         units "seconds";
                         description "Time before action with available PBR or PBF destination and highest priority";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                     container match {
@@ -4283,6 +4970,9 @@ submodule nokia-conf-filter {
                             }
 
                             leaf mask {
+                                must ". = 'ff:ff:ff:ff:ff:ff' or . != '00:00:00:00:00:00'" {
+                                    error-message "The MAC address mask cannot be 00:00:00:00:00:00.";
+                                }
                                 type yang:mac-address;
                                 default "ff:ff:ff:ff:ff:ff";
                                 description "MAC address mask";
@@ -4301,6 +4991,9 @@ submodule nokia-conf-filter {
                             }
 
                             leaf mask {
+                                must ". = 'ff:ff:ff:ff:ff:ff' or . != '00:00:00:00:00:00'" {
+                                    error-message "The MAC address mask cannot be 00:00:00:00:00:00.";
+                                }
                                 type yang:mac-address;
                                 default "ff:ff:ff:ff:ff:ff";
                                 description "MAC address mask";
@@ -4315,7 +5008,7 @@ submodule nokia-conf-filter {
                             leaf priority {
                                 type types-qos:dot1p-priority;
                                 mandatory true;
-                                description "Value of 802.1P priority to use as a MAC filter match criterion";
+                                description "IEEE 802.1p value used as a MAC filter match criterion";
                             }
 
                             leaf mask {
@@ -4323,7 +5016,7 @@ submodule nokia-conf-filter {
                                     range "1..7";
                                 }
                                 default "7";
-                                description "Value of 802.1P mask to use as a MAC filter match criterion";
+                                description "802.1p mask value used as a MAC filter match criterion";
                             }
 
                         } // container dot1p
@@ -4437,6 +5130,9 @@ submodule nokia-conf-filter {
                                         }
 
                                         leaf end {
+                                            must "../start < ." {
+                                                error-message "End must be greater than start";
+                                            }
                                             type types-sros:svc-isid;
                                             mandatory true;
                                             description "Highest value of 24-bit service instance identifier for the service matching this entry";
@@ -4451,8 +5147,20 @@ submodule nokia-conf-filter {
                     } // container match
 
                     container action {
+                        must "./rate-limit = 'false' or ./accept" {
+                            error-message "Action accept is required";
+                        }
                         presence "Action to be taken on a packet matching the MAC filter entry match criteria.";
                         description "Enter the action context";
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
 
                         choice action {
                             mandatory true;
@@ -4515,13 +5223,13 @@ submodule nokia-conf-filter {
                                                         path "../../../../../../../service/vpls/service-name";
                                                     }
                                                     mandatory true;
-                                                    description "VPLS the sdp-bind-id belongs to.";
+                                                    description "VPLS associated with the SDP";
                                                 }
 
                                                 leaf sdp-bind-id {
                                                     type types-services:sdp-bind-id;
                                                     mandatory true;
-                                                    description "A packet matching the entry will be forwarded using the specified SDP.";
+                                                    description "VPLS SDP bind ID used to forward matching packets";
                                                 }
 
                                             } // container sdp
@@ -4538,7 +5246,7 @@ submodule nokia-conf-filter {
                                                         path "../../../../../../../service/vpls/service-name";
                                                     }
                                                     mandatory true;
-                                                    description "VPLS the sdp-bind-id belongs to.";
+                                                    description "VPLS associated with the SAP";
                                                 }
 
                                                 leaf sap-id {
@@ -4546,7 +5254,7 @@ submodule nokia-conf-filter {
                                                         path "../../../../../../../service/vpls[service-name=current()/../vpls]/sap/sap-id";
                                                     }
                                                     mandatory true;
-                                                    description "A packet matching the entry will be forwarded using the specified SAP.";
+                                                    description "VPLS Ethernet SAP ID used to forward matching packets";
                                                 }
 
                                             } // container sap
@@ -4598,6 +5306,15 @@ submodule nokia-conf-filter {
                             presence "Secondary (backup) action to be taken on a packet matching the filter entry.";
                             description "Enter the secondary context";
 
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
                             choice action {
                                 mandatory true;
                                 case forward {
@@ -4617,14 +5334,14 @@ submodule nokia-conf-filter {
                                                             path "../../../../../../../../service/vpls/service-name";
                                                         }
                                                         mandatory true;
-                                                        description "VPLS the sdp-bind-id belongs to.";
+                                                        description "VPLS associated with the SDP";
                                                     }
 
                                                     leaf sdp-bind-id {
                                                         type types-services:sdp-bind-id;
                                                         sros-ext:immutable;
                                                         mandatory true;
-                                                        description "A packet matching the entry will be forwarded using the specified SDP.";
+                                                        description "VPLS SDP bind ID used to forward matching packets";
                                                     }
 
                                                 } // container sdp
@@ -4677,6 +5394,15 @@ submodule nokia-conf-filter {
             container system-filter {
                 description "Enter the system-filter context";
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
                 list ip {
                     key "ip-filter";
                     max-elements 1;
@@ -4722,6 +5448,15 @@ submodule nokia-conf-filter {
                     description "Text description";
                 }
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
                 container ipv4 {
                     description "Enter the ipv4 context";
 
@@ -4732,6 +5467,7 @@ submodule nokia-conf-filter {
                     }
 
                     leaf gre-key {
+                        must ". = 'if-index'";
                         type types-filter:filter-gre-tunnel-gre-key;
                         description "GRE key";
                     }
@@ -4773,10 +5509,25 @@ submodule nokia-conf-filter {
                     }
 
                     leaf end {
+                        must "../start" {
+                            error-message "Start/End both must be specified";
+                        }
+                        must "../start <= . or not(../start)" {
+                            error-message "Start is greater than end";
+                        }
                         type types-filter:filter-id;
                         sros-ext:immutable;
                         mandatory true;
                         description "Upper value of the ID range, must be greater than or equal to start value";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                 } // container filter-id-range

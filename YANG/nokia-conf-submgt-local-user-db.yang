@@ -38,10 +38,13 @@ submodule nokia-conf-submgt-local-user-db {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-05-21";
+    revision "2019-10-09";
 
     grouping conf-submgt-local-user-db {
         list local-user-db {
+            must "./admin-state != 'enable' or ./ipoe/match-list or not(./ipoe/host)" {
+                error-message "No match-list defined";
+            }
             key "name";
             max-elements 127;
             description "Enter the local-user-db list instance";
@@ -60,6 +63,15 @@ submodule nokia-conf-submgt-local-user-db {
             leaf description {
                 type types-sros:description;
                 description "Text description";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
             }
 
             container ipoe {
@@ -87,6 +99,9 @@ submodule nokia-conf-submgt-local-user-db {
                 }
 
                 list mask {
+                    must "./prefix/length or ./prefix/string or ./suffix/length or ./suffix/string" {
+                        error-message "No mask parameters are set";
+                    }
                     key "type";
                     description "Enter the mask list instance";
 
@@ -100,6 +115,15 @@ submodule nokia-conf-submgt-local-user-db {
                             enum "option60"                     { value 8; }
                         }
                         description "Matching type to identify a host";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                     container prefix {
@@ -164,6 +188,12 @@ submodule nokia-conf-submgt-local-user-db {
                 } // list mask
 
                 list host {
+                    must "not(./authentication/radius-auth-policy) or not(./authentication/nasreq-auth-policy)" {
+                        error-message "Cannot configure a nasreq and a radius policy together";
+                    }
+                    must "./admin-state != 'enable' or ./host-name = 'default' or ./host-identification/derived-id or ./host-identification/mac or ./host-identification/sap-id or ./host-identification/ip-prefix or ./host-identification/string or ./host-identification/service-id or ./host-identification/system-id or ./host-identification/circuit-id/ascii-string or ./host-identification/circuit-id/hex-string or ./host-identification/remote-id/ascii-string or ./host-identification/remote-id/hex-string or ./host-identification/option60/ascii-string or ./host-identification/option60/hex-string or ./host-identification/encap-tag-range/from or ./host-identification/encap-tag-range/to" {
+                        error-message "Host-identification must have at least 1 item defined";
+                    }
                     key "host-name";
                     description "Enter the host list instance";
 
@@ -186,6 +216,15 @@ submodule nokia-conf-submgt-local-user-db {
                     leaf rip-policy {
                         type types-sros:named-item;
                         description "RIP policy";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                     container host-identification {
@@ -693,6 +732,9 @@ submodule nokia-conf-submgt-local-user-db {
                                         }
 
                                         leaf delimiter {
+                                            must "../secondary" {
+                                                error-message "Delimiter without a secondary pool name.";
+                                            }
                                             type string {
                                                 length "1";
                                             }
@@ -745,13 +787,22 @@ submodule nokia-conf-submgt-local-user-db {
                                 description "DHCP option to send identification strings to client";
                             }
 
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
                             choice value {
                                 mandatory true;
                                 description "The value of the DHCP option.";
                                 case ascii-string {
 
                                     leaf ascii-string {
-                                        when "../number != 46 and ../number != 51 and ../number != 58 and ../number != 59";
+                                        when "not(../number = 46) and not(../number = 51) and not(../number = 58) and not(../number = 59)";
                                         type types-sros:string-not-all-spaces {
                                             length "1..127";
                                         }
@@ -762,7 +813,7 @@ submodule nokia-conf-submgt-local-user-db {
                                 case hex-string {
 
                                     leaf hex-string {
-                                        when "../number != 46 and ../number != 51 and ../number != 58 and ../number != 59";
+                                        when "not(../number = 46) and not(../number = 51) and not(../number = 58) and not(../number = 59)";
                                         type types-sros:hex-string {
                                             length "1..256";
                                         }
@@ -799,7 +850,7 @@ submodule nokia-conf-submgt-local-user-db {
                                 case ipv4-address {
 
                                     leaf-list ipv4-address {
-                                        when "../number != 46 and ../number != 51 and ../number != 58 and ../number != 59";
+                                        when "not(../number = 46) and not(../number = 51) and not(../number = 58) and not(../number = 59)";
                                         type types-sros:ipv4-address;
                                         max-elements 4;
                                         description "DHCP option as a list of IPv4 addresses";
@@ -809,7 +860,7 @@ submodule nokia-conf-submgt-local-user-db {
                                 case empty {
 
                                     leaf empty {
-                                        when "../number != 46 and ../number != 51 and ../number != 58 and ../number != 59";
+                                        when "not(../number = 46) and not(../number = 51) and not(../number = 58) and not(../number = 59)";
                                         type empty;
                                         description "Empty DHCP option.";
                                     }
@@ -938,6 +989,15 @@ submodule nokia-conf-submgt-local-user-db {
                                 description "The number of the DHCPv6 option.";
                             }
 
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
                             choice value {
                                 mandatory true;
                                 description "The value of the DHCP option.";
@@ -1004,6 +1064,15 @@ submodule nokia-conf-submgt-local-user-db {
                                 description "DHCP option to send identification strings to client";
                             }
 
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
                             choice value {
                                 mandatory true;
                                 description "The value of the DHCP option.";
@@ -1056,7 +1125,7 @@ submodule nokia-conf-submgt-local-user-db {
                                 case ipv4-address {
 
                                     leaf-list ipv4-address {
-                                        when "../number != 46 and ../number != 51 and ../number != 58 and ../number != 59";
+                                        when "not(../number = 46) and not(../number = 51) and not(../number = 58) and not(../number = 59)";
                                         type types-sros:ipv4-address;
                                         max-elements 4;
                                         description "DHCP option as a list of IPv4 addresses";
@@ -1089,6 +1158,15 @@ submodule nokia-conf-submgt-local-user-db {
                                     }
                                 }
                                 description "DHCP option number";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
                             }
 
                             choice value {
@@ -1165,6 +1243,15 @@ submodule nokia-conf-submgt-local-user-db {
                                     }
                                 }
                                 description "DHCP option number";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
                             }
 
                             choice value {
@@ -1248,6 +1335,9 @@ submodule nokia-conf-submgt-local-user-db {
                 }
 
                 list mask {
+                    must "./prefix/length or ./prefix/string or ./suffix/length or ./suffix/string" {
+                        error-message "No mask parameters are set";
+                    }
                     key "type";
                     description "Enter the mask list instance";
 
@@ -1260,6 +1350,15 @@ submodule nokia-conf-submgt-local-user-db {
                             enum "sap-id"                       { value 6; }
                         }
                         description "Matching type to identify a host";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                     container prefix {
@@ -1324,6 +1423,12 @@ submodule nokia-conf-submgt-local-user-db {
                 } // list mask
 
                 list host {
+                    must "not(./authentication/radius-auth-policy) or not(./authentication/nasreq-auth-policy)" {
+                        error-message "Cannot configure a nasreq and a radius policy together";
+                    }
+                    must "./admin-state != 'enable' or ./host-name = 'default' or ./host-identification/derived-id or ./host-identification/mac or ./host-identification/sap-id or ./host-identification/service-name or ./host-identification/circuit-id/ascii-string or ./host-identification/circuit-id/hex-string or ./host-identification/remote-id/ascii-string or ./host-identification/remote-id/hex-string or ./host-identification/encap-tag-range/from or ./host-identification/encap-tag-range/to or ./host-identification/user-name/name or ./host-identification/user-name/format != 'full'" {
+                        error-message "Host-identification must have at least 1 item defined";
+                    }
                     key "host-name";
                     description "Enter the host list instance";
 
@@ -1359,6 +1464,15 @@ submodule nokia-conf-submgt-local-user-db {
                     leaf steering-profile {
                         type types-sros:named-item;
                         description "Steering profile";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                     container host-identification {
@@ -1787,6 +1901,15 @@ submodule nokia-conf-submgt-local-user-db {
                             description "Last mile link downstream rate in the access loop";
                         }
 
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
                         container encap-offset {
                             description "Enter the encap-offset context";
 
@@ -1874,6 +1997,9 @@ submodule nokia-conf-submgt-local-user-db {
                                         }
 
                                         leaf delimiter {
+                                            must "../secondary" {
+                                                error-message "Delimiter without a secondary pool name.";
+                                            }
                                             type string {
                                                 length "1";
                                             }
@@ -1926,13 +2052,22 @@ submodule nokia-conf-submgt-local-user-db {
                                 description "DHCP option to send identification strings to client";
                             }
 
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
                             choice value {
                                 mandatory true;
                                 description "The value of the DHCP option.";
                                 case ascii-string {
 
                                     leaf ascii-string {
-                                        when "../number != 46 and ../number != 51 and ../number != 58 and ../number != 59";
+                                        when "not(../number = 46) and not(../number = 51) and not(../number = 58) and not(../number = 59)";
                                         type types-sros:string-not-all-spaces {
                                             length "1..127";
                                         }
@@ -1943,7 +2078,7 @@ submodule nokia-conf-submgt-local-user-db {
                                 case hex-string {
 
                                     leaf hex-string {
-                                        when "../number != 46 and ../number != 51 and ../number != 58 and ../number != 59";
+                                        when "not(../number = 46) and not(../number = 51) and not(../number = 58) and not(../number = 59)";
                                         type types-sros:hex-string {
                                             length "1..256";
                                         }
@@ -1980,7 +2115,7 @@ submodule nokia-conf-submgt-local-user-db {
                                 case ipv4-address {
 
                                     leaf-list ipv4-address {
-                                        when "../number != 46 and ../number != 51 and ../number != 58 and ../number != 59";
+                                        when "not(../number = 46) and not(../number = 51) and not(../number = 58) and not(../number = 59)";
                                         type types-sros:ipv4-address;
                                         max-elements 4;
                                         description "DHCP option as a list of IPv4 addresses";
@@ -1990,7 +2125,7 @@ submodule nokia-conf-submgt-local-user-db {
                                 case empty {
 
                                     leaf empty {
-                                        when "../number != 46 and ../number != 51 and ../number != 58 and ../number != 59";
+                                        when "not(../number = 46) and not(../number = 51) and not(../number = 58) and not(../number = 59)";
                                         type empty;
                                         description "Empty DHCP option.";
                                     }
@@ -2115,6 +2250,15 @@ submodule nokia-conf-submgt-local-user-db {
                                 description "The number of the DHCPv6 option.";
                             }
 
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
                             choice value {
                                 mandatory true;
                                 description "The value of the DHCP option.";
@@ -2172,6 +2316,15 @@ submodule nokia-conf-submgt-local-user-db {
                                     }
                                 }
                                 description "DHCP option number";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
                             }
 
                             choice value {

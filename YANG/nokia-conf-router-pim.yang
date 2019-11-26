@@ -40,10 +40,13 @@ submodule nokia-conf-router-pim {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-07-01";
+    revision "2019-10-14";
 
     grouping conf-router-pim {
         container pim {
+            must "../router-name = 'Base'" {
+                error-message "Protocol only supported in router Base";
+            }
             presence "Enables PIM functionality.";
             description "Enter the pim context";
 
@@ -77,6 +80,7 @@ submodule nokia-conf-router-pim {
             }
 
             leaf mc-ecmp-balance {
+                must ". != 'true' or not(../mc-ecmp-hashing)";
                 type boolean;
                 default "true";
                 description "Enable multicast balancing of traffic over ECMP links";
@@ -119,6 +123,9 @@ submodule nokia-conf-router-pim {
                 }
 
                 leaf multicast-fast-failover {
+                    must ". = 'false' or not(../gtm/auto-discovery)" {
+                        error-message "Cannot configure MoFrr with GTM auto-discovery";
+                    }
                     type boolean;
                     default "false";
                     description "Use Multicast-Only Fast Reroute (MoFRR) functionality";
@@ -164,6 +171,9 @@ submodule nokia-conf-router-pim {
                 }
 
                 leaf multicast-fast-failover {
+                    must ". = 'false' or not(../../ipv4/gtm/auto-discovery)" {
+                        error-message "Cannot configure MoFrr with GTM auto-discovery";
+                    }
                     type boolean;
                     default "false";
                     description "Use Multicast-Only Fast Reroute (MoFRR) functionality";
@@ -223,6 +233,9 @@ submodule nokia-conf-router-pim {
             } // container import
 
             list interface {
+                must "(./p2mp-ldp-tree-join/ipv4 = 'false' and ./p2mp-ldp-tree-join/ipv6 = 'false') or (./bier-signaling-type/ipv4 = 'false' and ./bier-signaling-type/ipv6 = 'false')" {
+                    error-message "Dynamic mldp inband signalling not supported if bier signaling type config is present.";
+                }
                 key "interface-name";
                 description "Enter the interface list instance";
 
@@ -234,7 +247,7 @@ submodule nokia-conf-router-pim {
                 leaf admin-state {
                     type types-sros:admin-state;
                     default "enable";
-                    description "Administrative state of this interface";
+                    description "Administrative state of the interface.";
                 }
 
                 leaf assert-period {
@@ -242,13 +255,9 @@ submodule nokia-conf-router-pim {
                         range "1..300";
                     }
                     default "60";
-                    description "Time for periodic refreshes of PIM Assert messages on an interface";
-                }
-
-                leaf bsm-check-rtr-alert {
-                    type boolean;
-                    default "false";
-                    description "Check router alert option in bootstrap messages received";
+                    description
+                        "The period for periodic refreshes of PIM Assert
+                         messages on an interface.";
                 }
 
                 leaf hello-interval {
@@ -256,7 +265,9 @@ submodule nokia-conf-router-pim {
                         range "0..255";
                     }
                     default "30";
-                    description "Frequency at which PIM Hello messages are sent over this interface";
+                    description
+                        "The frequency at which PIM hello messages are sent over this
+                         interface.";
                 }
 
                 leaf hello-multiplier {
@@ -264,19 +275,13 @@ submodule nokia-conf-router-pim {
                         range "20..100";
                     }
                     default "35";
-                    description "Multiplier of Hello in multiples of 0.1";
-                }
-
-                leaf improved-assert {
-                    type boolean;
-                    default "true";
-                    description "Allow improved assert processing on interface";
+                    description "The hello-multiplier in multiples of 0.1.";
                 }
 
                 leaf instant-prune-echo {
                     type boolean;
                     default "false";
-                    description "Allow PIM to send an instant prune echo when router starts the prune pending timer for PIM interface";
+                    description "Whether to instant PruneEcho for a PIM interface.";
                 }
 
                 leaf max-groups {
@@ -284,7 +289,42 @@ submodule nokia-conf-router-pim {
                         range "0|1..16000";
                     }
                     default "0";
-                    description "Max number of groups for which PIM can have local receiver information based on received PIM reports";
+                    description "The maximum number of groups for this interface.";
+                }
+
+                leaf priority {
+                    type uint32 {
+                        range "1..max";
+                    }
+                    default "1";
+                    description
+                        "The value of this object specifies the value sent in PIM
+                         Hello messages and used by routers to elect the Designated
+                         Router(DR).";
+                }
+
+                leaf three-way-hello {
+                    type boolean;
+                    default "false";
+                    description "The compatibility mode for three-way-hello.";
+                }
+
+                leaf tracking-support {
+                    type boolean;
+                    default "false";
+                    description "Whether the tracking support is enabled.";
+                }
+
+                leaf bsm-check-rtr-alert {
+                    type boolean;
+                    default "false";
+                    description "Whether to accept the BSM packets without router alert option.";
+                }
+
+                leaf improved-assert {
+                    type boolean;
+                    default "true";
+                    description "Whether to improve assert processing.";
                 }
 
                 leaf multicast-senders {
@@ -294,30 +334,15 @@ submodule nokia-conf-router-pim {
                         enum "never"                        { value 2; }
                     }
                     default "auto";
-                    description "Subnet matching for the incoming data packets";
-                }
-
-                leaf priority {
-                    type uint32 {
-                        range "1..max";
-                    }
-                    default "1";
-                    description "DR election priority for this interface";
-                }
-
-                leaf three-way-hello {
-                    type boolean;
-                    default "false";
-                    description "Allow three-way hello compatibility mode";
-                }
-
-                leaf tracking-support {
-                    type boolean;
-                    default "false";
-                    description "Allow upstream routers to explicitly track join membership";
+                    description
+                        "The way subnet matching is done for incoming data packets on this
+                         interface.";
                 }
 
                 container p2mp-ldp-tree-join {
+                    must "(./ipv4 = 'false' and ./ipv6 = 'false') or not(../../ipv4/gtm/auto-discovery)" {
+                        error-message "Dynamic mldp inband signaling cannot coexist with GTM config";
+                    }
                     description "Enter the p2mp-ldp-tree-join context";
 
                     leaf ipv4 {
@@ -361,6 +386,15 @@ submodule nokia-conf-router-pim {
                     }
 
                     container monitor-oper-group {
+                        must "./name or (not(./operation) and not(./priority-delta))" {
+                            error-message "Oper Group Name missing";
+                        }
+                        must "./operation or (not(./name) and not(./priority-delta))" {
+                            error-message "Oper Group Operation missing";
+                        }
+                        must "./priority-delta or (not(./operation) and not(./name))" {
+                            error-message "Oper Group Priority-Delta missing";
+                        }
                         description "Enter the monitor-oper-group context";
 
                         leaf name {
@@ -380,6 +414,9 @@ submodule nokia-conf-router-pim {
                         }
 
                         leaf priority-delta {
+                            must "(../operation != 'add' or (../../../priority + .) > ../../../priority) and (../operation != 'subtract' or (../../../priority - .) < ../../../priority)" {
+                                error-message "Invalid Oper Group Priority";
+                            }
                             type uint32 {
                                 range "1..4294967295";
                             }
@@ -400,6 +437,15 @@ submodule nokia-conf-router-pim {
                     }
 
                     container monitor-oper-group {
+                        must "./name or (not(./operation) and not(./priority-delta))" {
+                            error-message "Oper Group Name missing";
+                        }
+                        must "./operation or (not(./name) and not(./priority-delta))" {
+                            error-message "Oper Group Operation missing";
+                        }
+                        must "./priority-delta or (not(./operation) and not(./name))" {
+                            error-message "Oper Group Priority-Delta missing";
+                        }
                         description "Enter the monitor-oper-group context";
 
                         leaf name {
@@ -419,6 +465,9 @@ submodule nokia-conf-router-pim {
                         }
 
                         leaf priority-delta {
+                            must "(../operation != 'add' or (../../../priority + .) > ../../../priority) and (../operation != 'subtract' or (../../../priority - .) < ../../../priority)" {
+                                error-message "Invalid Oper Group Priority";
+                            }
                             type uint32 {
                                 range "1..4294967295";
                             }
@@ -469,6 +518,12 @@ submodule nokia-conf-router-pim {
                         }
 
                         leaf mandatory {
+                            must "../total != 'unlimited' or . = 'unlimited'" {
+                                error-message "mandatory bandwidth cannot be set without total bandwidth";
+                            }
+                            must "../total = 'unlimited' or . != 'unlimited'" {
+                                error-message "total bandwidth cannot be set without mandatory bandwidth";
+                            }
                             type types-mcast-cac:bandwidth-limit;
                             description "Pre-reserved bandwidth for all mandatory channels";
                         }
@@ -532,6 +587,29 @@ submodule nokia-conf-router-pim {
 
                 } // container mcac
 
+                container bier-signaling-type {
+                    description "Enter the bier-signaling-type context";
+
+                    leaf ipv4 {
+                        must ". = 'false' or ../../../ipv4/gtm/auto-discovery = 0" {
+                            error-message "Cannot configure pim bier inband signaling type ipv4 with GTM auto-discovery.";
+                        }
+                        type boolean;
+                        default "false";
+                        description "Whether ipv4 bier-signaling-type is enabled.";
+                    }
+
+                    leaf ipv6 {
+                        must ". = 'false' or ../../../ipv4/gtm/auto-discovery = 0" {
+                            error-message "Cannot configure pim bier inband signaling type ipv6 with GTM auto-discovery.";
+                        }
+                        type boolean;
+                        default "false";
+                        description "Whether ipv6 bier-signaling-type is enabled.";
+                    }
+
+                } // container bier-signaling-type
+
             } // list interface
 
             container rp {
@@ -561,6 +639,7 @@ submodule nokia-conf-router-pim {
                 } // container bootstrap
 
                 container ipv4 {
+                    must "./auto-rp-discovery != 'true' or (./bsr-candidate/admin-state != 'enable' and ./rp-candidate/admin-state != 'enable')";
                     description "Enter the ipv4 context";
 
                     leaf auto-rp-discovery {
@@ -570,6 +649,7 @@ submodule nokia-conf-router-pim {
                     }
 
                     list anycast {
+                        must "./ipv4-address != ./rp-set-peer";
                         key "ipv4-address rp-set-peer";
                         description "Add a list entry for anycast";
 
@@ -700,6 +780,7 @@ submodule nokia-conf-router-pim {
                     description "Enter the ipv6 context";
 
                     list anycast {
+                        must "./ipv6-address != ./rp-set-peer";
                         key "ipv6-address rp-set-peer";
                         description "Add a list entry for anycast";
 
