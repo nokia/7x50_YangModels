@@ -42,7 +42,7 @@ submodule nokia-conf-lag {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-04-09";
+    revision "2019-07-26";
 
     grouping conf-lag {
         list lag {
@@ -52,6 +52,31 @@ submodule nokia-conf-lag {
             leaf lag-index {
                 type types-sros:lag-interface;
                 description "LAG index";
+            }
+
+            leaf encap-type {
+                type enumeration {
+                    enum "null"                         { value 1; }
+                    enum "dot1q"                        { value 2; }
+                    enum "qinq"                         { value 10; }
+                }
+                sros-ext:immutable;
+                sros-ext:auto-restart-to-modify;
+                description "Encapsulation type";
+            }
+
+            leaf mac-address {
+                type yang:mac-address;
+                default "00:00:00:00:00:00";
+                description "Static MAC address for the LAG";
+            }
+
+            leaf mode {
+                type types-port:mode;
+                sros-ext:immutable;
+                sros-ext:auto-restart-to-modify;
+                default "network";
+                description "Port mode of the LAG";
             }
 
             leaf description {
@@ -135,32 +160,7 @@ submodule nokia-conf-lag {
                 type leafref {
                     path "../../service/oper-group/name";
                 }
-                description "Operational-Group to monitor. Its state will affect the state of this LAG";
-            }
-
-            leaf encap-type {
-                type enumeration {
-                    enum "null"                         { value 1; }
-                    enum "dot1q"                        { value 2; }
-                    enum "qinq"                         { value 10; }
-                }
-                sros-ext:immutable;
-                sros-ext:auto-restart-to-modify;
-                description "Encapsulation type";
-            }
-
-            leaf mac-address {
-                type yang:mac-address;
-                default "00:00:00:00:00:00";
-                description "Static MAC address for the LAG";
-            }
-
-            leaf mode {
-                type types-port:mode;
-                sros-ext:immutable;
-                sros-ext:auto-restart-to-modify;
-                default "network";
-                description "Port mode of the LAG";
+                description "Operational group to monitor";
             }
 
             container port-threshold {
@@ -187,9 +187,7 @@ submodule nokia-conf-lag {
                     type uint32 {
                         range "1..16777215";
                     }
-                    description
-                        "Cost of the LAG if the action is equal to static-cost.
-                         The cost can be used by IGP such as OSPF and ISIS.";
+                    description "Cost of the LAG if the action is equal to static-cost. The cost can be used by IGP such as OSPF and ISIS.";
                 }
 
             } // container port-threshold
@@ -369,9 +367,7 @@ submodule nokia-conf-lag {
                     type uint32 {
                         range "1..16777215";
                     }
-                    description
-                        "Cost of the LAG if the action is equal to static-cost.
-                         The cost can be used by IGP such as OSPF and ISIS.";
+                    description "Cost of the LAG if the action is equal to static-cost. The cost can be used by IGP such as OSPF and ISIS.";
                 }
 
             } // container weight-threshold
@@ -560,19 +556,19 @@ submodule nokia-conf-lag {
                         type leafref {
                             path "../../../../eth-cfm/domain/md-admin-name";
                         }
-                        description "Unique domain name";
+                        description "Admin-assigned maintenance domain index value";
                     }
 
                     leaf ma-admin-name {
                         type leafref {
                             path "../../../../eth-cfm/domain[md-admin-name=current()/../md-admin-name]/association/ma-admin-name";
                         }
-                        description "Unique association name";
+                        description "Admin-assigned maintenance association index value";
                     }
 
                     leaf mep-id {
                         type types-eth-cfm:mep-id-type;
-                        description "Maintenance association end point identifier";
+                        description "MEP identifier";
                     }
 
                     leaf vlan {
@@ -626,7 +622,7 @@ submodule nokia-conf-lag {
                         type uint32 {
                             range "3..1500";
                         }
-                        description "Additional octets inserted into CCM PDU for data TLV padding";
+                        description "Number of octets of padding to insert in CCM packets";
                     }
 
                     leaf one-way-delay-threshold {
@@ -635,19 +631,19 @@ submodule nokia-conf-lag {
                         }
                         units "seconds";
                         default "3";
-                        description "Threshold for one way delay test";
+                        description "Threshold time limit for one-way delay test";
                     }
 
                     leaf collect-lmm-stats {
                         type boolean;
                         default "false";
-                        description "Collect statistics for OAM-PM Loss Measurement Message (LMM) tests";
+                        description "Collect statistics for loss measurement message tests";
                     }
 
                     leaf facility-fault {
                         type boolean;
                         default "false";
-                        description "Allow the facility MEP to move from alarming only to network actionable function";
+                        description "Allow the facility MEP to generate a network action";
                     }
 
                     leaf-list ccm-tlv-ignore {
@@ -664,7 +660,7 @@ submodule nokia-conf-lag {
                                 range "250|500|1000";
                             }
                             units "centiseconds";
-                            description "Time to expire before a Fault Notification Generation (FNG) alarm";
+                            description "Time that must expire before an FNG alarm is raised";
                         }
 
                         leaf fng-reset-time {
@@ -672,7 +668,7 @@ submodule nokia-conf-lag {
                                 range "250|500|1000";
                             }
                             units "centiseconds";
-                            description "Time to expire before a Fault Notification Generation (FNG) alarm is reset";
+                            description "Time that must expire before an FNG alarm is reset";
                         }
 
                     } // container alarm-notification
@@ -748,7 +744,7 @@ submodule nokia-conf-lag {
                             }
                             units "bit errors";
                             default "1";
-                            description "Lowest priority defect threshold for the bit error trap to generate a fault alarm";
+                            description "Lowest priority defect allowed to generate fault alarm";
                         }
 
                         container test-pattern {
@@ -760,7 +756,7 @@ submodule nokia-conf-lag {
                                     enum "all-ones"                     { value 1; }
                                 }
                                 default "all-zeros";
-                                description "Test pattern for eth-test frames";
+                                description "Test pattern for ETH-test frames";
                             }
 
                             leaf crc-tlv {
@@ -784,7 +780,7 @@ submodule nokia-conf-lag {
                                     range "1..86400";
                                 }
                                 units "seconds";
-                                description "Value to compare to received peer value, lower is used as maximum ETH-ED expected defect window";
+                                description "Maximum received ETH-ED window duration";
                             }
 
                             leaf priority {
@@ -797,13 +793,13 @@ submodule nokia-conf-lag {
                             leaf rx-eth-ed {
                                 type boolean;
                                 default "true";
-                                description "Receive and process ETH-ED PDUs";
+                                description "Receive and process ETH-ED ITU-T Y.1731 PDUs on the MEP";
                             }
 
                             leaf tx-eth-ed {
                                 type boolean;
                                 default "false";
-                                description "Transmit ETH-ED PDUs";
+                                description "Transmit ETH-ED PDUs from the MEP";
                             }
 
                         } // container eth-ed
@@ -814,13 +810,13 @@ submodule nokia-conf-lag {
                             leaf rx-eth-vsm-grace {
                                 type boolean;
                                 default "true";
-                                description "Allow the reception and processing  of the Nokia ETH-CFM Grace PDU on the MEP";
+                                description "Receive and process Nokia ETH-CFM Grace PDU on the MEP";
                             }
 
                             leaf tx-eth-vsm-grace {
                                 type boolean;
                                 default "true";
-                                description "Allow the transmission of the Nokia ETH-CFM Grace PDU from the MEP";
+                                description "Transmit ETH-ED PDUs from the MEP";
                             }
 
                         } // container eth-vsm-grace
@@ -874,7 +870,7 @@ submodule nokia-conf-lag {
                             enum "port-speed"                   { value -1; }
                         }
                     }
-                    description "Hash weight within the LAG";
+                    description "Flow hashing distribution between LAG ports";
                 }
 
             } // list port

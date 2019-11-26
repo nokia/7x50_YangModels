@@ -61,7 +61,7 @@ submodule nokia-conf-svc-vpls {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-05-03";
+    revision "2019-06-21";
 
     grouping conf-svc-vpls {
         list vpls {
@@ -70,7 +70,7 @@ submodule nokia-conf-svc-vpls {
 
             leaf service-name {
                 type types-services:service-name;
-                description "Name of the service";
+                description "Service name";
             }
 
             leaf service-id {
@@ -107,7 +107,7 @@ submodule nokia-conf-svc-vpls {
 
             leaf service-mtu {
                 type int32 {
-                    range "1..9194";
+                    range "1..9782";
                 }
                 default "1514";
                 description "MTU size";
@@ -287,13 +287,13 @@ submodule nokia-conf-svc-vpls {
                     leaf learning {
                         type boolean;
                         default "true";
-                        description "Enable learning of new MAC addresses";
+                        description "Enable/disable learning of new MAC addresses";
                     }
 
                     leaf aging {
                         type boolean;
                         default "true";
-                        description "Enable aging of MAC addresses";
+                        description "Enable/disable aging of MAC addresses";
                     }
 
                     leaf local-age-time {
@@ -322,6 +322,114 @@ submodule nokia-conf-svc-vpls {
                         default "disable";
                         description "Administrative state of MAC move";
                     }
+
+                    leaf move-frequency {
+                        type uint32 {
+                            range "1..10";
+                        }
+                        default "2";
+                        description "Move frequency to be used, in 5-second intervals. For the default move-frequency of 2 (moves per second), the system will disable a VPLS sap/spoke-sdp as soon as the number of relearns detected has reached, for instance, 10 relearns within a 5 second interval";
+                    }
+
+                    leaf retry-count {
+                        type union {
+                            type uint32 {
+                                range "1..255";
+                            }
+                            type enumeration {
+                                enum "unlimited"                    { value 0; }
+                            }
+                        }
+                        default "3";
+                        description "Number of retries for reenabling.";
+                    }
+
+                    leaf hold-down-time {
+                        type uint32 {
+                            range "0..600";
+                        }
+                        units "seconds";
+                        default "10";
+                        description "Time to wait before a SAP that has been disabled after exceeding the maximum re-learn rate is re-enabled.";
+                    }
+
+                    leaf primary-cumulative-factor {
+                        type uint32 {
+                            range "3..10";
+                        }
+                        default "3";
+                        description "Factor for the primary ports defining how many MAC-relearn periods should be used to measure the MAC-relearn rate. This rate must be exceeded during consecutive periods before the corresponding ports (SAP and/or spoke-SDP) are blocked by the MAC-move feature.";
+                    }
+
+                    leaf secondary-cumulative-factor {
+                        type uint32 {
+                            range "2..9";
+                        }
+                        default "2";
+                        description "Factor for the secondary ports defining how many MAC-relearn periods should be used to measure the MAC-relearn rate. This rate must be exceeded during consecutive periods before the corresponding ports (SAP and/or spoke-SDP) are blocked by the MAC-move feature.";
+                    }
+
+                    list sap {
+                        key "sap-id";
+                        description "Enter the sap context";
+
+                        leaf sap-id {
+                            type leafref {
+                                path "../../../../sap/sap-id";
+                            }
+                            description "SAP identifier";
+                        }
+
+                        leaf level {
+                            type enumeration {
+                                enum "primary"                      { value 1; }
+                                enum "secondary"                    { value 2; }
+                            }
+                            mandatory true;
+                            description "Configure primary or secondary port level";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                    } // list sap
+
+                    list spoke-sdp {
+                        key "sdp-bind-id";
+                        description "Enter the spoke-sdp context";
+
+                        leaf sdp-bind-id {
+                            type leafref {
+                                path "../../../../spoke-sdp/sdp-bind-id";
+                            }
+                            description "SDP Binding identifier as <sdp-id>:<vc-id>. sdp-id - [1..32767] vc-id - [1..4294967295].";
+                        }
+
+                        leaf level {
+                            type enumeration {
+                                enum "primary"                      { value 1; }
+                                enum "secondary"                    { value 2; }
+                            }
+                            mandatory true;
+                            description "Configure primary or secondary port level";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                    } // list spoke-sdp
 
                 } // container mac-move
 
@@ -515,7 +623,7 @@ submodule nokia-conf-svc-vpls {
                             enum "none"                         { value 2; }
                         }
                         default "bm";
-                        description "specifies the type of multicast traffic discarded on the receive side of  when the vxlan instance is NDF";
+                        description "Received multicast traffic type discarded on NDF";
                     }
 
                     leaf-list apply-groups {
@@ -605,7 +713,7 @@ submodule nokia-conf-svc-vpls {
 
                     list egress-vtep {
                         key "ip-address";
-                        description "Enter the egress-vtep context";
+                        description "Add a list entry for egress-vtep";
 
                         leaf ip-address {
                             type types-sros:ip-unicast-address;
@@ -653,7 +761,7 @@ submodule nokia-conf-svc-vpls {
                     } // container fdb
 
                     container igmp-snooping {
-                        description "igmp-snooping configuration for the VXLAN instance.";
+                        description "Enter the igmp-snooping context";
 
                         leaf mrouter-port {
                             type boolean;
@@ -664,7 +772,7 @@ submodule nokia-conf-svc-vpls {
                     } // container igmp-snooping
 
                     container mld-snooping {
-                        description "mld-snooping configuration for the VXLAN instance.";
+                        description "Enter the mld-snooping context";
 
                         leaf mrouter-port {
                             type boolean;
@@ -1059,7 +1167,7 @@ submodule nokia-conf-svc-vpls {
                         description "Enter the ip-address context";
 
                         leaf ipv6-address {
-                            type types-sros:ipv6-unicast-address;
+                            type types-sros:ipv6-address;
                             description "Proxy ND IP address";
                         }
 
@@ -1099,7 +1207,7 @@ submodule nokia-conf-svc-vpls {
                         description "Enter the ip-address context";
 
                         leaf ipv6-address {
-                            type types-sros:ipv6-unicast-address;
+                            type types-sros:ipv6-address;
                             description "Proxy ND IP address";
                         }
 
@@ -1172,7 +1280,7 @@ submodule nokia-conf-svc-vpls {
                             leaf mrouter-port {
                                 type boolean;
                                 default "false";
-                                description "VPLS L3 interface as a multicast router port";
+                                description "Operate VPLS L3 interface as a multicast router port";
                             }
 
                         } // container igmp-snooping
@@ -1194,7 +1302,7 @@ submodule nokia-conf-svc-vpls {
                             leaf mrouter-port {
                                 type boolean;
                                 default "false";
-                                description "VPLS L3 interface as a multicast router port";
+                                description "Operate VPLS L3 interface as a multicast router port";
                             }
 
                         } // container mld-snooping
@@ -1274,7 +1382,7 @@ submodule nokia-conf-svc-vpls {
 
                         list mrouter-destination {
                             key "mac-reference";
-                            description "Enter the mrouter-destination context";
+                            description "Add a list entry for mrouter-destination";
 
                             leaf mac-reference {
                                 type leafref {
@@ -1292,7 +1400,7 @@ submodule nokia-conf-svc-vpls {
 
                         list mrouter-destination {
                             key "mac-reference";
-                            description "Enter the mrouter-destination context";
+                            description "Add a list entry for mrouter-destination";
 
                             leaf mac-reference {
                                 type leafref {
@@ -1331,7 +1439,7 @@ submodule nokia-conf-svc-vpls {
                             leaf mrouter-port {
                                 type boolean;
                                 default "false";
-                                description "Port as a multicast router port";
+                                description "Operate port as a multicast router port";
                             }
 
                         } // container igmp-snooping
@@ -1342,7 +1450,7 @@ submodule nokia-conf-svc-vpls {
                             leaf mrouter-port {
                                 type boolean;
                                 default "false";
-                                description "Port as a multicast router port";
+                                description "Operate port as a multicast router port";
                             }
 
                         } // container mld-snooping
@@ -1357,7 +1465,7 @@ submodule nokia-conf-svc-vpls {
                             type leafref {
                                 path "../../../../../vpls[service-name=current()/../../backbone-vpls-service-name]/spoke-sdp/sdp-bind-id";
                             }
-                            description "Backbone VPLS SAP";
+                            description "Backbone VPLS SDP Binding ID";
                         }
 
                         leaf-list apply-groups {
@@ -1375,7 +1483,7 @@ submodule nokia-conf-svc-vpls {
                             leaf mrouter-port {
                                 type boolean;
                                 default "false";
-                                description "Port as a multicast router port";
+                                description "Operate port as a multicast router port";
                             }
 
                         } // container igmp-snooping
@@ -1386,7 +1494,7 @@ submodule nokia-conf-svc-vpls {
                             leaf mrouter-port {
                                 type boolean;
                                 default "false";
-                                description "Port as a multicast router port";
+                                description "Operate port as a multicast router port";
                             }
 
                         } // container mld-snooping
@@ -1401,7 +1509,7 @@ submodule nokia-conf-svc-vpls {
                             type leafref {
                                 path "../../../../../vpls[service-name=current()/../../backbone-vpls-service-name]/mesh-sdp/sdp-bind-id";
                             }
-                            description "Backbone VPLS SAP";
+                            description "Backbone VPLS SDP Binding ID";
                         }
 
                         leaf-list apply-groups {
@@ -1419,7 +1527,7 @@ submodule nokia-conf-svc-vpls {
                             leaf mrouter-port {
                                 type boolean;
                                 default "false";
-                                description "Port as a multicast router port";
+                                description "Operate port as a multicast router port";
                             }
 
                         } // container igmp-snooping
@@ -1430,7 +1538,7 @@ submodule nokia-conf-svc-vpls {
                             leaf mrouter-port {
                                 type boolean;
                                 default "false";
-                                description "Port as a multicast router port";
+                                description "Operate port as a multicast router port";
                             }
 
                         } // container mld-snooping
@@ -1449,13 +1557,13 @@ submodule nokia-conf-svc-vpls {
                         leaf send-on-bvpls-failure {
                             type boolean;
                             default "false";
-                            description "Send flush-all-from-me on b-vpls failure";
+                            description "Send negative flush message (flush-all-from-me) on B-VPLS failure";
                         }
 
                         leaf propagate-from-bvpls {
                             type boolean;
                             default "false";
-                            description "Propagate mac-flush from b-vpls into local i-vpls";
+                            description "Propagate MAC flush message from B-VPLS into local I-VPLS";
                         }
 
                         container send-to-bvpls {
@@ -1676,7 +1784,7 @@ submodule nokia-conf-svc-vpls {
                                 type leafref {
                                     path "../../../../oper-group/name";
                                 }
-                                description "Oerational group to monitor";
+                                description "Operational group to monitor";
                             }
 
                         }
@@ -1991,18 +2099,14 @@ submodule nokia-conf-svc-vpls {
                         leaf cfm-mac {
                             type boolean;
                             default "false";
-                            description
-                                "Enable/disable the advertisement of MEP, MIP, and VMEP
-                                 MAC addresses over the BGP EVPN.";
+                            description "Enable/disable the advertisement of MEP, MIP, and VMEP MAC addresses over the BGP EVPN.";
                         }
 
                         leaf unknown-mac {
                             when "../../../../pbb-type != 'b-vpls'";
                             type boolean;
                             default "false";
-                            description
-                                "Enable/disable the advertisement of MEP, MIP, and VMEP
-                                 MAC addresses over the BGP EVPN.";
+                            description "Enable/disable the advertisement of MEP, MIP, and VMEP MAC addresses over the BGP EVPN.";
                         }
 
                     } // container mac-ip
@@ -2208,16 +2312,16 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     container routes {
-                        description "BGP-EVPN vxlan routes information";
+                        description "Enter the routes context";
 
                         container auto-disc {
-                            description "BGP-EVPN vxlan routes auto-discovery information";
+                            description "Enter the auto-disc context";
 
                             leaf advertise {
                                 type boolean;
                                 sros-ext:auto-restart-to-modify;
                                 default "false";
-                                description "Route advertise on auto discovery";
+                                description "Advertise routes on auto-discovery";
                             }
 
                         } // container auto-disc
@@ -2246,7 +2350,7 @@ submodule nokia-conf-svc-vpls {
                     leaf force-vc-forwarding {
                         when "../../../pbb-type != 'b-vpls' and not(../../../routed-vpls)";
                         type types-services:bgp-evpn-force-vc-forwarding;
-                        description "Forces vlan-vc-type forwarding in the data-path.";
+                        description "VC forwarding action";
                     }
 
                     leaf control-word {
@@ -2379,7 +2483,7 @@ submodule nokia-conf-svc-vpls {
                             leaf mpls-fwd-policy {
                                 type boolean;
                                 default "false";
-                                description "Enable/disable setting MPLS Forwarding Policy for auto-bind-tunnel";
+                                description "Use MPLS forwarding policy to determine BGP next hop";
                             }
 
                             leaf sr-policy {
@@ -2391,7 +2495,7 @@ submodule nokia-conf-svc-vpls {
                             leaf rib-api {
                                 type boolean;
                                 default "false";
-                                description "Enable/disable setting RIB API type for auto-bind-tunnel";
+                                description "Use tunnels from RibApi gRPC service for BGP next hop";
                             }
 
                         } // container resolution-filter
@@ -2478,7 +2582,7 @@ submodule nokia-conf-svc-vpls {
                 leaf ignore-standby-signaling {
                     type boolean;
                     default "false";
-                    description "Ignore standby-bit received from TLDP peers  when performing internal tasks";
+                    description "Ignore standby-bit received from TLDP peers when performing internal tasks";
                 }
 
                 leaf suppress-standby-signaling {
@@ -2490,10 +2594,7 @@ submodule nokia-conf-svc-vpls {
                 leaf block-on-mesh-failure {
                     type boolean;
                     default "false";
-                    description
-                        "Whether operational status of spoke-SDPs in the
-                         endpoint will be affected by the operational status of
-                         associated mesh SDPs in this service.";
+                    description "Whether operational status of spoke-SDPs in the endpoint will be affected by the operational status of associated mesh SDPs in this service.";
                 }
 
                 leaf-list apply-groups {
@@ -2614,19 +2715,19 @@ submodule nokia-conf-svc-vpls {
                         type leafref {
                             path "../../../../../eth-cfm/domain/md-admin-name";
                         }
-                        description "Unique domain name";
+                        description "Admin-assigned maintenance domain index value";
                     }
 
                     leaf ma-admin-name {
                         type leafref {
                             path "../../../../../eth-cfm/domain[md-admin-name=current()/../md-admin-name]/association/ma-admin-name";
                         }
-                        description "Unique association name";
+                        description "Admin-assigned maintenance association index value";
                     }
 
                     leaf mep-id {
                         type types-eth-cfm:mep-id-type;
-                        description "Maintenance association end point identifier";
+                        description "MEP identifier";
                     }
 
                     leaf admin-state {
@@ -2673,7 +2774,7 @@ submodule nokia-conf-svc-vpls {
                         type uint32 {
                             range "3..1500";
                         }
-                        description "Additional octets inserted into CCM PDU for data TLV padding";
+                        description "Number of octets of padding to insert in CCM packets";
                     }
 
                     leaf one-way-delay-threshold {
@@ -2682,7 +2783,7 @@ submodule nokia-conf-svc-vpls {
                         }
                         units "seconds";
                         default "3";
-                        description "Threshold for one way delay test";
+                        description "Threshold time limit for one-way delay test";
                     }
 
                     leaf-list apply-groups {
@@ -2702,7 +2803,7 @@ submodule nokia-conf-svc-vpls {
                                 range "250|500|1000";
                             }
                             units "centiseconds";
-                            description "Time to expire before a Fault Notification Generation (FNG) alarm";
+                            description "Time that must expire before an FNG alarm is raised";
                         }
 
                         leaf fng-reset-time {
@@ -2710,7 +2811,7 @@ submodule nokia-conf-svc-vpls {
                                 range "250|500|1000";
                             }
                             units "centiseconds";
-                            description "Time to expire before a Fault Notification Generation (FNG) alarm is reset";
+                            description "Time that must expire before an FNG alarm is reset";
                         }
 
                     } // container alarm-notification
@@ -2725,7 +2826,7 @@ submodule nokia-conf-svc-vpls {
                             }
                             units "bit errors";
                             default "1";
-                            description "Lowest priority defect threshold for the bit error trap to generate a fault alarm";
+                            description "Lowest priority defect allowed to generate fault alarm";
                         }
 
                         container test-pattern {
@@ -2737,7 +2838,7 @@ submodule nokia-conf-svc-vpls {
                                     enum "all-ones"                     { value 1; }
                                 }
                                 default "all-zeros";
-                                description "Test pattern for eth-test frames";
+                                description "Test pattern for ETH-test frames";
                             }
 
                             leaf crc-tlv {
@@ -2761,7 +2862,7 @@ submodule nokia-conf-svc-vpls {
                                     range "1..86400";
                                 }
                                 units "seconds";
-                                description "Value to compare to received peer value, lower is used as maximum ETH-ED expected defect window";
+                                description "Maximum received ETH-ED window duration";
                             }
 
                             leaf priority {
@@ -2774,13 +2875,13 @@ submodule nokia-conf-svc-vpls {
                             leaf rx-eth-ed {
                                 type boolean;
                                 default "true";
-                                description "Receive and process ETH-ED PDUs";
+                                description "Receive and process ETH-ED ITU-T Y.1731 PDUs on the MEP";
                             }
 
                             leaf tx-eth-ed {
                                 type boolean;
                                 default "false";
-                                description "Transmit ETH-ED PDUs";
+                                description "Transmit ETH-ED PDUs from the MEP";
                             }
 
                         } // container eth-ed
@@ -2791,13 +2892,13 @@ submodule nokia-conf-svc-vpls {
                             leaf rx-eth-vsm-grace {
                                 type boolean;
                                 default "true";
-                                description "Allow the reception and processing  of the Nokia ETH-CFM Grace PDU on the MEP";
+                                description "Receive and process Nokia ETH-CFM Grace PDU on the MEP";
                             }
 
                             leaf tx-eth-vsm-grace {
                                 type boolean;
                                 default "true";
-                                description "Allow the transmission of the Nokia ETH-CFM Grace PDU from the MEP";
+                                description "Transmit ETH-ED PDUs from the MEP";
                             }
 
                         } // container eth-vsm-grace
@@ -2840,10 +2941,7 @@ submodule nokia-conf-svc-vpls {
 
                 leaf sdp-bind-id {
                     type types-services:sdp-bind-id;
-                    description
-                        "SDP Binding identifier as <sdp-id>:<vc-id>.
-                         sdp-id - [1..32767]
-                         vc-id - [1..4294967295].";
+                    description "SDP Binding identifier as <sdp-id>:<vc-id>. sdp-id - [1..32767] vc-id - [1..4294967295].";
                 }
 
                 leaf description {
@@ -2902,7 +3000,7 @@ submodule nokia-conf-svc-vpls {
                         enum "qinq-c-tag-c-tag"             { value 2; }
                         enum "qinq-s-tag-c-tag"             { value 3; }
                     }
-                    description "VC forwarding status";
+                    description "VC forwarding action";
                 }
 
                 leaf etree-root-leaf-tag {
@@ -3138,9 +3236,7 @@ submodule nokia-conf-svc-vpls {
 
                                 leaf instance {
                                     type types-services:qos-qgrp-instance-id;
-                                    description
-                                        "Instance of the port egress Queue Group for this SDP
-                                         binding.";
+                                    description "Instance of the port egress Queue Group for this SDP binding.";
                                 }
 
                             } // container port-redirect-group
@@ -3154,7 +3250,7 @@ submodule nokia-conf-svc-vpls {
 
                         list mda {
                             key "mda-id";
-                            description "Enter the mda context";
+                            description "Add a list entry for mda";
 
                             leaf mda-id {
                                 type types-isa:slot-mda;
@@ -3218,7 +3314,7 @@ submodule nokia-conf-svc-vpls {
 
                                 leaf car {
                                     type empty;
-                                    description "Eth-CFM packets  to be ignored when enforcing overall rate";
+                                    description "Eth-CFM packets to be ignored when enforcing overall rate";
                                 }
 
                             } // container eth-cfm-monitoring
@@ -3515,7 +3611,7 @@ submodule nokia-conf-svc-vpls {
                     leaf mrouter-port {
                         type boolean;
                         default "false";
-                        description "Port as a multicast router port";
+                        description "Operate port as a multicast router port";
                     }
 
                     leaf robust-count {
@@ -3568,7 +3664,7 @@ submodule nokia-conf-svc-vpls {
                             type leafref {
                                 path "../../../../../../mcac/interface-policy/policy-name";
                             }
-                            description "Name for multicast CAC interface policy";
+                            description "Name of multicast CAC interface policy";
                         }
 
                         leaf policy {
@@ -3583,12 +3679,12 @@ submodule nokia-conf-svc-vpls {
 
                             leaf total {
                                 type types-mcast-cac:bandwidth-limit;
-                                description "Maximum allowed bandwidth.";
+                                description "Maximum allowed bandwidth";
                             }
 
                             leaf mandatory {
                                 type types-mcast-cac:bandwidth-limit;
-                                description "Pre-reserved bandwidth for all mandatory channels.";
+                                description "Pre-reserved bandwidth for all mandatory channels";
                             }
 
                         } // container bandwidth
@@ -3604,7 +3700,7 @@ submodule nokia-conf-svc-vpls {
 
                             leaf group-address {
                                 type types-sros:ipv4-multicast-address;
-                                description "Group address of multicast channel";
+                                description "Group address of static IGMP multicast channel";
                             }
 
                             leaf-list apply-groups {
@@ -3622,11 +3718,11 @@ submodule nokia-conf-svc-vpls {
 
                                     list source {
                                         key "source-address";
-                                        description "Enter the source context";
+                                        description "Add a list entry for source";
 
                                         leaf source-address {
                                             type types-sros:ipv4-unicast-address;
-                                            description "Source address of multicast channel.";
+                                            description "Source IP address of multicast channel sending data";
                                         }
 
                                     } // list source
@@ -3707,7 +3803,7 @@ submodule nokia-conf-svc-vpls {
                     leaf mrouter-port {
                         type boolean;
                         default "false";
-                        description "Port as a multicast router port";
+                        description "Operate port as a multicast router port";
                     }
 
                     leaf robust-count {
@@ -3766,7 +3862,7 @@ submodule nokia-conf-svc-vpls {
 
                                     list source {
                                         key "source-address";
-                                        description "Enter the source context";
+                                        description "Add a list entry for source";
 
                                         leaf source-address {
                                             type types-sros:ipv6-unicast-address;
@@ -3819,7 +3915,7 @@ submodule nokia-conf-svc-vpls {
                     leaf collect-lmm-stats {
                         type boolean;
                         default "false";
-                        description "Collect statistics for OAM-PM Loss Measurement Message (LMM) tests";
+                        description "Collect statistics for loss measurement message tests";
                     }
 
                     leaf-list squelch-ingress-levels {
@@ -3851,13 +3947,13 @@ submodule nokia-conf-svc-vpls {
                         leaf-list fc {
                             type types-eth-cfm:fc-type;
                             max-elements 8;
-                            description "Forwarding class name for which to create an individual profile-unaware counter";
+                            description "Forwarding class name for profile-unaware counter";
                         }
 
                         leaf-list fc-in-profile {
                             type types-eth-cfm:fc-type;
                             max-elements 8;
-                            description "Individual counters to create for the specified Forwarding Class";
+                            description "Forwarding class name for profile-aware counter";
                         }
 
                     } // container collect-lmm-fc-stats
@@ -3870,19 +3966,19 @@ submodule nokia-conf-svc-vpls {
                             type leafref {
                                 path "../../../../../../eth-cfm/domain/md-admin-name";
                             }
-                            description "Unique domain name";
+                            description "Admin-assigned maintenance domain index value";
                         }
 
                         leaf ma-admin-name {
                             type leafref {
                                 path "../../../../../../eth-cfm/domain[md-admin-name=current()/../md-admin-name]/association/ma-admin-name";
                             }
-                            description "Unique association name";
+                            description "Admin-assigned maintenance association index value";
                         }
 
                         leaf mep-id {
                             type types-eth-cfm:mep-id-type;
-                            description "Maintenance association end point identifier";
+                            description "MEP identifier";
                         }
 
                         leaf primary-vlan {
@@ -3947,13 +4043,13 @@ submodule nokia-conf-svc-vpls {
                             type uint32 {
                                 range "3..1500";
                             }
-                            description "Additional octets inserted into CCM PDU for data TLV padding";
+                            description "Number of octets of padding to insert in CCM packets";
                         }
 
                         leaf lbm-svc-act-responder {
                             type boolean;
                             default "false";
-                            description "Process service activation streams encapsulated in ETH-CFM request Loopback Message";
+                            description "Process service activation streams in ETH-CFM LBM";
                         }
 
                         leaf one-way-delay-threshold {
@@ -3962,7 +4058,7 @@ submodule nokia-conf-svc-vpls {
                             }
                             units "seconds";
                             default "3";
-                            description "Threshold for one way delay test";
+                            description "Threshold time limit for one-way delay test";
                         }
 
                         leaf-list apply-groups {
@@ -3982,7 +4078,7 @@ submodule nokia-conf-svc-vpls {
                                     range "250|500|1000";
                                 }
                                 units "centiseconds";
-                                description "The Fault Notification Generation (FNG) alarm time.";
+                                description "Time that must expire before an FNG alarm is raised";
                             }
 
                             leaf fng-reset-time {
@@ -3990,7 +4086,7 @@ submodule nokia-conf-svc-vpls {
                                     range "250|500|1000";
                                 }
                                 units "centiseconds";
-                                description "Time to expire before a Fault Notification Generation (FNG) alarm is reset";
+                                description "Time that must expire before an FNG alarm is reset";
                             }
 
                         } // container alarm-notification
@@ -4030,14 +4126,7 @@ submodule nokia-conf-svc-vpls {
                                     enum "mac-rem-err-xcon"             { value 2; }
                                 }
                                 default "all-def";
-                                description
-                                    "The Lowest Priority Defect for the MEP AIS generation.
-
-                                     When this object is 'all-def (1)', AIS frame generation will be
-                                     triggered for any defect in the CCM state machine.
-                                     When this object is 'mac-rem-err-xcon (2)', AIS frame generation will be
-                                     triggered for 'def-mac-staus' defect and any defect higher than
-                                     'def-mac-status'.";
+                                description "Lowest priority defect for MEP AIS generation";
                             }
 
                             leaf priority {
@@ -4073,7 +4162,7 @@ submodule nokia-conf-svc-vpls {
                                 }
                                 units "bit errors";
                                 default "1";
-                                description "Lowest priority defect threshold for the bit error trap to generate a fault alarm";
+                                description "Lowest priority defect allowed to generate fault alarm";
                             }
 
                             container test-pattern {
@@ -4085,7 +4174,7 @@ submodule nokia-conf-svc-vpls {
                                         enum "all-ones"                     { value 1; }
                                     }
                                     default "all-zeros";
-                                    description "Test pattern for eth-test frames";
+                                    description "Test pattern for ETH-test frames";
                                 }
 
                                 leaf crc-tlv {
@@ -4109,7 +4198,7 @@ submodule nokia-conf-svc-vpls {
                                         range "1..86400";
                                     }
                                     units "seconds";
-                                    description "Value to compare to received peer value, lower is used as maximum ETH-ED expected defect window";
+                                    description "Maximum received ETH-ED window duration";
                                 }
 
                                 leaf priority {
@@ -4122,13 +4211,13 @@ submodule nokia-conf-svc-vpls {
                                 leaf rx-eth-ed {
                                     type boolean;
                                     default "true";
-                                    description "Receive and process ETH-ED PDUs";
+                                    description "Receive and process ETH-ED ITU-T Y.1731 PDUs on the MEP";
                                 }
 
                                 leaf tx-eth-ed {
                                     type boolean;
                                     default "false";
-                                    description "Transmit ETH-ED PDUs";
+                                    description "Transmit ETH-ED PDUs from the MEP";
                                 }
 
                             } // container eth-ed
@@ -4139,13 +4228,13 @@ submodule nokia-conf-svc-vpls {
                                 leaf rx-eth-vsm-grace {
                                     type boolean;
                                     default "true";
-                                    description "Allow the reception and processing  of the Nokia ETH-CFM Grace PDU on the MEP";
+                                    description "Receive and process Nokia ETH-CFM Grace PDU on the MEP";
                                 }
 
                                 leaf tx-eth-vsm-grace {
                                     type boolean;
                                     default "true";
-                                    description "Allow the transmission of the Nokia ETH-CFM Grace PDU from the MEP";
+                                    description "Transmit ETH-ED PDUs from the MEP";
                                 }
 
                             } // container eth-vsm-grace
@@ -4164,10 +4253,7 @@ submodule nokia-conf-svc-vpls {
 
                 leaf sdp-bind-id {
                     type types-services:sdp-bind-id;
-                    description
-                        "SDP Binding identifier as <sdp-id>:<vc-id>.
-                         sdp-id - [1..32767]
-                         vc-id - [1..4294967295].";
+                    description "SDP Binding identifier as <sdp-id>:<vc-id>. sdp-id - [1..32767] vc-id - [1..4294967295].";
                 }
 
                 leaf description {
@@ -4211,7 +4297,7 @@ submodule nokia-conf-svc-vpls {
                         enum "qinq-c-tag-c-tag"             { value 2; }
                         enum "qinq-s-tag-c-tag"             { value 3; }
                     }
-                    description "VC forwarding status";
+                    description "VC forwarding action";
                 }
 
                 leaf etree-root-leaf-tag {
@@ -4408,9 +4494,7 @@ submodule nokia-conf-svc-vpls {
 
                                 leaf instance {
                                     type types-services:qos-qgrp-instance-id;
-                                    description
-                                        "Instance of the port egress Queue Group for this SDP
-                                         binding.";
+                                    description "Instance of the port egress Queue Group for this SDP binding.";
                                 }
 
                             } // container port-redirect-group
@@ -4424,7 +4508,7 @@ submodule nokia-conf-svc-vpls {
 
                         list mda {
                             key "mda-id";
-                            description "Enter the mda context";
+                            description "Add a list entry for mda";
 
                             leaf mda-id {
                                 type types-isa:slot-mda;
@@ -4469,7 +4553,7 @@ submodule nokia-conf-svc-vpls {
 
                                 leaf car {
                                     type empty;
-                                    description "Eth-CFM packets  to be ignored when enforcing overall rate";
+                                    description "Eth-CFM packets to be ignored when enforcing overall rate";
                                 }
 
                             } // container eth-cfm-monitoring
@@ -4598,7 +4682,7 @@ submodule nokia-conf-svc-vpls {
                     leaf mrouter-port {
                         type boolean;
                         default "false";
-                        description "Port as a multicast router port";
+                        description "Operate port as a multicast router port";
                     }
 
                     leaf robust-count {
@@ -4651,7 +4735,7 @@ submodule nokia-conf-svc-vpls {
                             type leafref {
                                 path "../../../../../../mcac/interface-policy/policy-name";
                             }
-                            description "Name for multicast CAC interface policy";
+                            description "Name of multicast CAC interface policy";
                         }
 
                         leaf policy {
@@ -4666,12 +4750,12 @@ submodule nokia-conf-svc-vpls {
 
                             leaf total {
                                 type types-mcast-cac:bandwidth-limit;
-                                description "Maximum allowed bandwidth.";
+                                description "Maximum allowed bandwidth";
                             }
 
                             leaf mandatory {
                                 type types-mcast-cac:bandwidth-limit;
-                                description "Pre-reserved bandwidth for all mandatory channels.";
+                                description "Pre-reserved bandwidth for all mandatory channels";
                             }
 
                         } // container bandwidth
@@ -4687,7 +4771,7 @@ submodule nokia-conf-svc-vpls {
 
                             leaf group-address {
                                 type types-sros:ipv4-multicast-address;
-                                description "Group address of multicast channel";
+                                description "Group address of static IGMP multicast channel";
                             }
 
                             leaf-list apply-groups {
@@ -4705,11 +4789,11 @@ submodule nokia-conf-svc-vpls {
 
                                     list source {
                                         key "source-address";
-                                        description "Enter the source context";
+                                        description "Add a list entry for source";
 
                                         leaf source-address {
                                             type types-sros:ipv4-unicast-address;
-                                            description "Source address of multicast channel.";
+                                            description "Source IP address of multicast channel sending data";
                                         }
 
                                     } // list source
@@ -4790,7 +4874,7 @@ submodule nokia-conf-svc-vpls {
                     leaf mrouter-port {
                         type boolean;
                         default "false";
-                        description "Port as a multicast router port";
+                        description "Operate port as a multicast router port";
                     }
 
                     leaf robust-count {
@@ -4849,7 +4933,7 @@ submodule nokia-conf-svc-vpls {
 
                                     list source {
                                         key "source-address";
-                                        description "Enter the source context";
+                                        description "Add a list entry for source";
 
                                         leaf source-address {
                                             type types-sros:ipv6-unicast-address;
@@ -4880,7 +4964,7 @@ submodule nokia-conf-svc-vpls {
                     leaf collect-lmm-stats {
                         type boolean;
                         default "false";
-                        description "Collect statistics for OAM-PM Loss Measurement Message (LMM) tests";
+                        description "Collect statistics for loss measurement message tests";
                     }
 
                     leaf-list squelch-ingress-levels {
@@ -4912,13 +4996,13 @@ submodule nokia-conf-svc-vpls {
                         leaf-list fc {
                             type types-eth-cfm:fc-type;
                             max-elements 8;
-                            description "Forwarding class name for which to create an individual profile-unaware counter";
+                            description "Forwarding class name for profile-unaware counter";
                         }
 
                         leaf-list fc-in-profile {
                             type types-eth-cfm:fc-type;
                             max-elements 8;
-                            description "Individual counters to create for the specified Forwarding Class";
+                            description "Forwarding class name for profile-aware counter";
                         }
 
                     } // container collect-lmm-fc-stats
@@ -4931,19 +5015,19 @@ submodule nokia-conf-svc-vpls {
                             type leafref {
                                 path "../../../../../../eth-cfm/domain/md-admin-name";
                             }
-                            description "Unique domain name";
+                            description "Admin-assigned maintenance domain index value";
                         }
 
                         leaf ma-admin-name {
                             type leafref {
                                 path "../../../../../../eth-cfm/domain[md-admin-name=current()/../md-admin-name]/association/ma-admin-name";
                             }
-                            description "Unique association name";
+                            description "Admin-assigned maintenance association index value";
                         }
 
                         leaf mep-id {
                             type types-eth-cfm:mep-id-type;
-                            description "Maintenance association end point identifier";
+                            description "MEP identifier";
                         }
 
                         leaf primary-vlan {
@@ -5008,13 +5092,13 @@ submodule nokia-conf-svc-vpls {
                             type uint32 {
                                 range "3..1500";
                             }
-                            description "Additional octets inserted into CCM PDU for data TLV padding";
+                            description "Number of octets of padding to insert in CCM packets";
                         }
 
                         leaf lbm-svc-act-responder {
                             type boolean;
                             default "false";
-                            description "Process service activation streams encapsulated in ETH-CFM request Loopback Message";
+                            description "Process service activation streams in ETH-CFM LBM";
                         }
 
                         leaf one-way-delay-threshold {
@@ -5023,7 +5107,7 @@ submodule nokia-conf-svc-vpls {
                             }
                             units "seconds";
                             default "3";
-                            description "Threshold for one way delay test";
+                            description "Threshold time limit for one-way delay test";
                         }
 
                         leaf-list apply-groups {
@@ -5043,7 +5127,7 @@ submodule nokia-conf-svc-vpls {
                                     range "250|500|1000";
                                 }
                                 units "centiseconds";
-                                description "Time to expire before a Fault Notification Generation (FNG) alarm";
+                                description "Time that must expire before an FNG alarm is raised";
                             }
 
                             leaf fng-reset-time {
@@ -5051,7 +5135,7 @@ submodule nokia-conf-svc-vpls {
                                     range "250|500|1000";
                                 }
                                 units "centiseconds";
-                                description "Time to expire before a Fault Notification Generation (FNG) alarm is reset";
+                                description "Time that must expire before an FNG alarm is reset";
                             }
 
                         } // container alarm-notification
@@ -5127,7 +5211,7 @@ submodule nokia-conf-svc-vpls {
                                 }
                                 units "bit errors";
                                 default "1";
-                                description "Lowest priority defect threshold for the bit error trap to generate a fault alarm";
+                                description "Lowest priority defect allowed to generate fault alarm";
                             }
 
                             container test-pattern {
@@ -5139,7 +5223,7 @@ submodule nokia-conf-svc-vpls {
                                         enum "all-ones"                     { value 1; }
                                     }
                                     default "all-zeros";
-                                    description "Test pattern for eth-test frames";
+                                    description "Test pattern for ETH-test frames";
                                 }
 
                                 leaf crc-tlv {
@@ -5163,7 +5247,7 @@ submodule nokia-conf-svc-vpls {
                                         range "1..86400";
                                     }
                                     units "seconds";
-                                    description "Value to compare to received peer value, lower is used as maximum ETH-ED expected defect window";
+                                    description "Maximum received ETH-ED window duration";
                                 }
 
                                 leaf priority {
@@ -5176,13 +5260,13 @@ submodule nokia-conf-svc-vpls {
                                 leaf rx-eth-ed {
                                     type boolean;
                                     default "true";
-                                    description "Receive and process ETH-ED PDUs";
+                                    description "Receive and process ETH-ED ITU-T Y.1731 PDUs on the MEP";
                                 }
 
                                 leaf tx-eth-ed {
                                     type boolean;
                                     default "false";
-                                    description "Transmit ETH-ED PDUs";
+                                    description "Transmit ETH-ED PDUs from the MEP";
                                 }
 
                             } // container eth-ed
@@ -5193,13 +5277,13 @@ submodule nokia-conf-svc-vpls {
                                 leaf rx-eth-vsm-grace {
                                     type boolean;
                                     default "true";
-                                    description "Allow the reception and processing  of the Nokia ETH-CFM Grace PDU on the MEP";
+                                    description "Receive and process Nokia ETH-CFM Grace PDU on the MEP";
                                 }
 
                                 leaf tx-eth-vsm-grace {
                                     type boolean;
                                     default "true";
-                                    description "Allow the transmission of the Nokia ETH-CFM Grace PDU from the MEP";
+                                    description "Transmit ETH-ED PDUs from the MEP";
                                 }
 
                             } // container eth-vsm-grace
@@ -5408,14 +5492,6 @@ submodule nokia-conf-svc-vpls {
                     sros-ext:immutable;
                     default "false";
                     description "Enable/disable multicast-source on the SAP.";
-                }
-
-                leaf eth-ring {
-                    type uint32 {
-                        range "0..128";
-                    }
-                    sros-ext:immutable;
-                    description "Ethernet ring operation";
                 }
 
                 leaf etree-leaf {
@@ -6116,9 +6192,7 @@ submodule nokia-conf-svc-vpls {
                                             type leafref {
                                                 path "../../../../../../../../../../qos/hsmda-slope-policy/hsmda-slope-policy-name";
                                             }
-                                            description
-                                                "Name of the slope-policy which is used to override the
-                                                 default slope-policy for the named buffer pool.";
+                                            description "Name of the slope-policy which is used to override the default slope-policy for the named buffer pool.";
                                         }
 
                                         leaf wrr-weight {
@@ -6155,9 +6229,7 @@ submodule nokia-conf-svc-vpls {
                                             range "0.00..100.00";
                                             fraction-digits 2;
                                         }
-                                        description
-                                            "Encapsulation overhead, in centipercent, used to
-                                             translate packet-based rate to frame-based rate and vice versa.";
+                                        description "Encapsulation overhead, in centipercent, used to translate packet-based rate to frame-based rate and vice versa.";
                                     }
 
                                     leaf burst-limit {
@@ -6677,7 +6749,7 @@ submodule nokia-conf-svc-vpls {
                         } // container scheduler-policy
 
                         container vlan-qos-policy {
-                            description "Attach an egress vlan-qos-policy.";
+                            description "Enter the vlan-qos-policy context";
 
                             leaf policy-name {
                                 type leafref {
@@ -6689,7 +6761,7 @@ submodule nokia-conf-svc-vpls {
                         } // container vlan-qos-policy
 
                         container egress-remark-policy {
-                            description "Attach an egress-remark-policy.";
+                            description "Enter the egress-remark-policy context";
 
                             leaf policy-name {
                                 type leafref {
@@ -6798,7 +6870,7 @@ submodule nokia-conf-svc-vpls {
 
                                 leaf car {
                                     type empty;
-                                    description "Eth-CFM packets  to be ignored when enforcing overall rate";
+                                    description "Eth-CFM packets to be ignored when enforcing overall rate";
                                 }
 
                             } // container eth-cfm-monitoring
@@ -6816,18 +6888,18 @@ submodule nokia-conf-svc-vpls {
                     }
 
                     container per-link-hash {
-                        description "Configure per-link-hash information.";
+                        description "Enter the per-link-hash context";
 
                         leaf class {
                             type types-services:sap-lag-per-link-hash-class;
                             default "1";
-                            description "Configure per-link-hash class.";
+                            description "Class used on LAG egress when using weighted per-link-hash";
                         }
 
                         leaf weight {
                             type types-services:sap-lag-per-link-hash-weight;
                             default "1";
-                            description "Configure per-link-hash weight.";
+                            description "Weight used on LAG egress when using weighted per-link-hash";
                         }
 
                     } // container per-link-hash
@@ -6966,7 +7038,7 @@ submodule nokia-conf-svc-vpls {
                     leaf mrouter-port {
                         type boolean;
                         default "false";
-                        description "Port as a multicast router port";
+                        description "Operate port as a multicast router port";
                     }
 
                     leaf robust-count {
@@ -7019,7 +7091,7 @@ submodule nokia-conf-svc-vpls {
                             type leafref {
                                 path "../../../../../../mcac/interface-policy/policy-name";
                             }
-                            description "Name for multicast CAC interface policy";
+                            description "Name of multicast CAC interface policy";
                         }
 
                         leaf policy {
@@ -7035,7 +7107,7 @@ submodule nokia-conf-svc-vpls {
                             leaf use-lag-port-weight {
                                 type boolean;
                                 default "false";
-                                description "Use LAG port weight while calculating Multicast CAC constraints";
+                                description "Use LAG port weight in calculating MCAC constraints";
                             }
 
                             list level {
@@ -7074,13 +7146,13 @@ submodule nokia-conf-svc-vpls {
                                     type uint32 {
                                         range "1..64";
                                     }
-                                    description "Number of LAG ports down";
+                                    description "Number of ports that are down in this LAG link";
                                 }
 
                                 leaf level {
                                     type types-mcast-cac:constraints-level;
                                     mandatory true;
-                                    description "Level associated with the number of LAG ports that are down";
+                                    description "Level ID to associate with number of down LAG ports";
                                 }
 
                                 leaf-list apply-groups {
@@ -7101,12 +7173,12 @@ submodule nokia-conf-svc-vpls {
 
                             leaf total {
                                 type types-mcast-cac:bandwidth-limit;
-                                description "Maximum allowed bandwidth.";
+                                description "Maximum allowed bandwidth";
                             }
 
                             leaf mandatory {
                                 type types-mcast-cac:bandwidth-limit;
-                                description "Pre-reserved bandwidth for all mandatory channels.";
+                                description "Pre-reserved bandwidth for all mandatory channels";
                             }
 
                         } // container bandwidth
@@ -7140,7 +7212,7 @@ submodule nokia-conf-svc-vpls {
 
                             leaf group-address {
                                 type types-sros:ipv4-multicast-address;
-                                description "Group address of multicast channel";
+                                description "Group address of static IGMP multicast channel";
                             }
 
                             leaf-list apply-groups {
@@ -7158,11 +7230,11 @@ submodule nokia-conf-svc-vpls {
 
                                     list source {
                                         key "source-address";
-                                        description "Enter the source context";
+                                        description "Add a list entry for source";
 
                                         leaf source-address {
                                             type types-sros:ipv4-unicast-address;
-                                            description "Source address of multicast channel.";
+                                            description "Source IP address of multicast channel sending data";
                                         }
 
                                     } // list source
@@ -7243,7 +7315,7 @@ submodule nokia-conf-svc-vpls {
                     leaf mrouter-port {
                         type boolean;
                         default "false";
-                        description "Port as a multicast router port";
+                        description "Operate port as a multicast router port";
                     }
 
                     leaf robust-count {
@@ -7320,7 +7392,7 @@ submodule nokia-conf-svc-vpls {
 
                                     list source {
                                         key "source-address";
-                                        description "Enter the source context";
+                                        description "Add a list entry for source";
 
                                         leaf source-address {
                                             type types-sros:ipv6-unicast-address;
@@ -7649,9 +7721,7 @@ submodule nokia-conf-svc-vpls {
                         }
                         units "minutes";
                         default "15";
-                        description
-                            "Minimal time that has to pass before incoming ARPs of an active
-                             ARP host are re-authenticated.";
+                        description "Minimal time that has to pass before incoming ARPs of an active ARP host are re-authenticated.";
                     }
 
                     leaf-list apply-groups {
@@ -7677,7 +7747,7 @@ submodule nokia-conf-svc-vpls {
 
                     leaf description {
                         type types-sros:description;
-                        description "Add/remove a text description for DHCP.";
+                        description "Text description";
                     }
 
                     leaf snoop {
@@ -7740,7 +7810,7 @@ submodule nokia-conf-svc-vpls {
                                 enum "keep"                         { value 3; }
                             }
                             default "keep";
-                            description "What to do with DHCP option 82.";
+                            description "Action to take with received DHCP Option 82";
                         }
 
                         container circuit-id {
@@ -7752,7 +7822,7 @@ submodule nokia-conf-svc-vpls {
 
                                     leaf none {
                                         type empty;
-                                        description "Do not include the circuit-id.";
+                                        description "Do not include the Circuit ID";
                                     }
 
                                 }
@@ -7760,7 +7830,7 @@ submodule nokia-conf-svc-vpls {
 
                                     leaf ascii-tuple {
                                         type empty;
-                                        description "Use ascii-tuple in the option.";
+                                        description "Use the ASCII-encoded tuple for the Circuit ID";
                                     }
 
                                 }
@@ -7768,7 +7838,7 @@ submodule nokia-conf-svc-vpls {
 
                                     leaf vlan-ascii-tuple {
                                         type empty;
-                                        description "Use vlan-ascii-tuple in the option.";
+                                        description "Include the VLAN ID and dot1p bits in the ASCII tuple";
                                     }
 
                                 }
@@ -7794,7 +7864,7 @@ submodule nokia-conf-svc-vpls {
 
                                     leaf none {
                                         type empty;
-                                        description "Do not include the remote-id.";
+                                        description "Do not include the Remote ID";
                                     }
 
                                 }
@@ -7802,7 +7872,7 @@ submodule nokia-conf-svc-vpls {
 
                                     leaf mac {
                                         type empty;
-                                        description "Use MAC address in the option.";
+                                        description "Use the MAC address for the Remote ID";
                                     }
 
                                 }
@@ -7812,7 +7882,7 @@ submodule nokia-conf-svc-vpls {
                                         type types-sros:string-not-all-spaces {
                                             length "1..32";
                                         }
-                                        description "Use user-defined ASCII string in the option.";
+                                        description "User-defined ASCII string for the Remote ID";
                                     }
 
                                 }
@@ -7835,19 +7905,19 @@ submodule nokia-conf-svc-vpls {
                             leaf system-id {
                                 type boolean;
                                 default "false";
-                                description "Send the system ID in the Nokia vendor specific suboption.";
+                                description "Send the system ID in the Vendor Specific Option";
                             }
 
                             leaf client-mac-address {
                                 type boolean;
                                 default "false";
-                                description "Send the MAC address in the Nokia vendor specific suboption.";
+                                description "Send the MAC address in the Vendor Specific Option";
                             }
 
                             leaf service-id {
                                 type boolean;
                                 default "false";
-                                description "Send the service ID in the Nokia vendor specific suboption.";
+                                description "Send the service ID in the Vendor Specific Option";
                             }
 
                             leaf sap-id {
@@ -7860,7 +7930,7 @@ submodule nokia-conf-svc-vpls {
                                 type types-sros:string-not-all-spaces {
                                     length "1..32";
                                 }
-                                description "Send a user-defined string in the Nokia vendor specific suboption.";
+                                description "User-defined ASCII string for Vendor Specific Option";
                             }
 
                         } // container vendor-specific-option
@@ -8099,7 +8169,7 @@ submodule nokia-conf-svc-vpls {
                                     path "../../../../../../../subscriber-mgmt/sub-profile/name";
                                 }
                                 mandatory true;
-                                description "Subscriber IDprofile applied for all non-subscriber traffic";
+                                description "Subscriber ID profile applied for all non-subscriber traffic";
                             }
 
                             leaf sla-profile {
@@ -8123,13 +8193,12 @@ submodule nokia-conf-svc-vpls {
                 } // container sub-sla-mgmt
 
                 container eth-cfm {
-                    when "../eth-ring = 0";
                     description "Enter the eth-cfm context";
 
                     leaf collect-lmm-stats {
                         type boolean;
                         default "false";
-                        description "Collect statistics for OAM-PM Loss Measurement Message (LMM) tests";
+                        description "Collect statistics for loss measurement message tests";
                     }
 
                     leaf-list squelch-ingress-levels {
@@ -8161,13 +8230,13 @@ submodule nokia-conf-svc-vpls {
                         leaf-list fc {
                             type types-eth-cfm:fc-type;
                             max-elements 8;
-                            description "Forwarding class name for which to create an individual profile-unaware counter";
+                            description "Forwarding class name for profile-unaware counter";
                         }
 
                         leaf-list fc-in-profile {
                             type types-eth-cfm:fc-type;
                             max-elements 8;
-                            description "Individual counters to create for the specified Forwarding Class";
+                            description "Forwarding class name for profile-aware counter";
                         }
 
                     } // container collect-lmm-fc-stats
@@ -8180,19 +8249,19 @@ submodule nokia-conf-svc-vpls {
                             type leafref {
                                 path "../../../../../../eth-cfm/domain/md-admin-name";
                             }
-                            description "Unique domain name";
+                            description "Admin-assigned maintenance domain index value";
                         }
 
                         leaf ma-admin-name {
                             type leafref {
                                 path "../../../../../../eth-cfm/domain[md-admin-name=current()/../md-admin-name]/association/ma-admin-name";
                             }
-                            description "Unique association name";
+                            description "Admin-assigned maintenance association index value";
                         }
 
                         leaf mep-id {
                             type types-eth-cfm:mep-id-type;
-                            description "Maintenance association end point identifier";
+                            description "MEP identifier";
                         }
 
                         leaf primary-vlan {
@@ -8257,13 +8326,13 @@ submodule nokia-conf-svc-vpls {
                             type uint32 {
                                 range "3..1500";
                             }
-                            description "Additional octets inserted into CCM PDU for data TLV padding";
+                            description "Number of octets of padding to insert in CCM packets";
                         }
 
                         leaf lbm-svc-act-responder {
                             type boolean;
                             default "false";
-                            description "Process service activation streams encapsulated in ETH-CFM request Loopback Message";
+                            description "Process service activation streams in ETH-CFM LBM";
                         }
 
                         leaf one-way-delay-threshold {
@@ -8272,7 +8341,7 @@ submodule nokia-conf-svc-vpls {
                             }
                             units "seconds";
                             default "3";
-                            description "Threshold for one way delay test";
+                            description "Threshold time limit for one-way delay test";
                         }
 
                         leaf-list apply-groups {
@@ -8292,7 +8361,7 @@ submodule nokia-conf-svc-vpls {
                                     range "250|500|1000";
                                 }
                                 units "centiseconds";
-                                description "Time to expire before a Fault Notification Generation (FNG) alarm";
+                                description "Time that must expire before an FNG alarm is raised";
                             }
 
                             leaf fng-reset-time {
@@ -8300,7 +8369,7 @@ submodule nokia-conf-svc-vpls {
                                     range "250|500|1000";
                                 }
                                 units "centiseconds";
-                                description "Time to expire before a Fault Notification Generation (FNG) alarm is reset";
+                                description "Time that must expire before an FNG alarm is reset";
                             }
 
                         } // container alarm-notification
@@ -8376,7 +8445,7 @@ submodule nokia-conf-svc-vpls {
                                 }
                                 units "bit errors";
                                 default "1";
-                                description "Lowest priority defect threshold for the bit error trap to generate a fault alarm";
+                                description "Lowest priority defect allowed to generate fault alarm";
                             }
 
                             container test-pattern {
@@ -8388,7 +8457,7 @@ submodule nokia-conf-svc-vpls {
                                         enum "all-ones"                     { value 1; }
                                     }
                                     default "all-zeros";
-                                    description "Test pattern for eth-test frames";
+                                    description "Test pattern for ETH-test frames";
                                 }
 
                                 leaf crc-tlv {
@@ -8412,7 +8481,7 @@ submodule nokia-conf-svc-vpls {
                                         range "1..86400";
                                     }
                                     units "seconds";
-                                    description "Value to compare to received peer value, lower is used as maximum ETH-ED expected defect window";
+                                    description "Maximum received ETH-ED window duration";
                                 }
 
                                 leaf priority {
@@ -8425,13 +8494,13 @@ submodule nokia-conf-svc-vpls {
                                 leaf rx-eth-ed {
                                     type boolean;
                                     default "true";
-                                    description "Receive and process ETH-ED PDUs";
+                                    description "Receive and process ETH-ED ITU-T Y.1731 PDUs on the MEP";
                                 }
 
                                 leaf tx-eth-ed {
                                     type boolean;
                                     default "false";
-                                    description "Transmit ETH-ED PDUs";
+                                    description "Transmit ETH-ED PDUs from the MEP";
                                 }
 
                             } // container eth-ed
@@ -8442,13 +8511,13 @@ submodule nokia-conf-svc-vpls {
                                 leaf rx-eth-vsm-grace {
                                     type boolean;
                                     default "true";
-                                    description "Allow the reception and processing  of the Nokia ETH-CFM Grace PDU on the MEP";
+                                    description "Receive and process Nokia ETH-CFM Grace PDU on the MEP";
                                 }
 
                                 leaf tx-eth-vsm-grace {
                                     type boolean;
                                     default "true";
-                                    description "Allow the transmission of the Nokia ETH-CFM Grace PDU from the MEP";
+                                    description "Transmit ETH-ED PDUs from the MEP";
                                 }
 
                             } // container eth-vsm-grace
@@ -8460,7 +8529,6 @@ submodule nokia-conf-svc-vpls {
                 } // container eth-cfm
 
                 container mc-ring {
-                    when "../eth-ring = 0";
                     presence "Prepare SAP for use in MC-ring";
                     description "Enter the mc-ring context";
 
@@ -8845,7 +8913,7 @@ submodule nokia-conf-svc-vpls {
                             leaf init-only {
                                 type boolean;
                                 default "false";
-                                description "Apply down delay only when interface is configured or after reboot";
+                                description "Apply delay only at interface configuration or reboot";
                             }
 
                         } // container down
@@ -8974,14 +9042,6 @@ submodule nokia-conf-svc-vpls {
                     description "Text description";
                 }
 
-                leaf sap-template {
-                    type leafref {
-                        path "../../../template/vpls-sap-template/name";
-                    }
-                    sros-ext:auto-restart-to-modify;
-                    description "Template used when creating internal SAPs towards ISAs";
-                }
-
                 leaf-list apply-groups {
                     type leafref {
                         path "../../../../groups/group/name";
@@ -9077,7 +9137,7 @@ submodule nokia-conf-svc-vpls {
                         leaf dynamic-topology-discovery {
                             type boolean;
                             default "true";
-                            description "Enable the  ANCP dynamic topology discovery capability";
+                            description "Enable the ANCP dynamic topology discovery capability";
                         }
 
                         leaf oam {
@@ -9155,6 +9215,91 @@ submodule nokia-conf-svc-vpls {
                 } // list group
 
             } // container gsmp
+
+            container provider-tunnel {
+                presence "Configure provider tunnel parameters";
+                description "Enter the provider-tunnel context";
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    sros-ext:auto-restart-to-modify;
+                    description "Apply a configuration group at this level";
+                }
+
+                container inclusive {
+                    sros-ext:auto-restart-to-modify;
+                    description "Enter the inclusive context";
+
+                    leaf data-delay-interval {
+                        type int32 {
+                            range "3..180";
+                        }
+                        units "seconds";
+                        sros-ext:auto-restart-to-modify;
+                        default "15";
+                        description "Configure the delay interval that the system waits before BUM packets are forwarded over the provider-tunnel.";
+                    }
+
+                    leaf owner {
+                        type enumeration {
+                            enum "bgp-ad"                       { value 1; }
+                            enum "bgp-vpls"                     { value 2; }
+                            enum "bgp-evpn-mpls"                { value 3; }
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        description "Configure provider-tunnel owner";
+                    }
+
+                    leaf root-and-leaf {
+                        type boolean;
+                        sros-ext:auto-restart-to-modify;
+                        default "false";
+                        description "Configure whether the provider tunnel acts as a leaf or both a root and leaf";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        sros-ext:auto-restart-to-modify;
+                        default "disable";
+                        description "Administratively enable/disable the provider tunnel.";
+                    }
+
+                    choice ipmsi {
+                        case mldp {
+
+                            leaf mldp {
+                                type empty;
+                                sros-ext:auto-restart-to-modify;
+                                description "Enable/Disable MLDP";
+                            }
+
+                        }
+                        case rsvp {
+
+                            container rsvp {
+                                presence "Configure RSVP parameters";
+                                sros-ext:auto-restart-to-modify;
+                                description "Enter the rsvp context";
+
+                                leaf lsp-template {
+                                    type leafref {
+                                        path "../../../../../../router/mpls/lsp-template/template-name";
+                                    }
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Configure LSP template name";
+                                }
+
+                            } // container rsvp
+
+                        }
+                    }
+                } // container inclusive
+
+            } // container provider-tunnel
 
         } // list vpls
 

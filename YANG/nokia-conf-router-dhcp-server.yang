@@ -8,6 +8,7 @@ submodule nokia-conf-router-dhcp-server {
     import nokia-types-dhcp               { prefix "types-dhcp"; }
     import nokia-types-sros               { prefix "types-sros"; }
 
+    include nokia-conf-groups;
     include nokia-conf-redundancy;
     include nokia-conf-submgt-local-user-db;
     include nokia-conf-subscriber-mgmt;
@@ -39,7 +40,7 @@ submodule nokia-conf-router-dhcp-server {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-04-16";
+    revision "2019-06-18";
 
     grouping conf-router-dhcp-server {
         container dhcp-server {
@@ -86,13 +87,13 @@ submodule nokia-conf-router-dhcp-server {
                     }
                     sros-ext:auto-restart-to-modify;
                     default "mac-circuit-id";
-                    description "User identification for DHCPv6";
+                    description "User identification method for the DHCP server";
                 }
 
                 leaf force-renews {
                     type boolean;
                     default "false";
-                    description "Send DHCP FORCERENEW messages to force renewal of lease state";
+                    description "Send FORCERENEW messages to force renewals of leases";
                 }
 
                 container pool-selection {
@@ -108,7 +109,7 @@ submodule nokia-conf-router-dhcp-server {
                                 enum "pool"                         { value 1; }
                             }
                             default "subnet";
-                            description "Match the GI address to a specific subnet or pool.";
+                            description "GI address-matching scope";
                         }
 
                     } // container use-gi-address
@@ -121,7 +122,7 @@ submodule nokia-conf-router-dhcp-server {
                             type types-sros:string-not-all-spaces {
                                 length "1";
                             }
-                            description "Delimiter character to combine primary and secondary pool names";
+                            description "Delimiter to combine primary and secondary pool names";
                         }
 
                     } // container use-pool-from-client
@@ -170,7 +171,7 @@ submodule nokia-conf-router-dhcp-server {
                     leaf ignore-mclt-on-takeover {
                         type boolean;
                         default "false";
-                        description "Ignore maximum client lead delay while taking over the pool address space from partner";
+                        description "Ignore maximum client lead during takeover from partner";
                     }
 
                     leaf maximum-client-lead-time {
@@ -180,7 +181,7 @@ submodule nokia-conf-router-dhcp-server {
                         units "seconds";
                         sros-ext:auto-restart-to-modify;
                         default "600";
-                        description "Maximum client lease time (MCLT) that a DHCP server can extend";
+                        description "Maximum time that DHCP server can extend client's lease";
                     }
 
                     leaf partner-down-delay {
@@ -190,7 +191,7 @@ submodule nokia-conf-router-dhcp-server {
                         units "seconds";
                         sros-ext:auto-restart-to-modify;
                         default "86399";
-                        description "Partner down delay that prevents the IP lease duplication";
+                        description "Delay to prevent lease duplication during link failure";
                     }
 
                     leaf startup-wait-time {
@@ -200,7 +201,7 @@ submodule nokia-conf-router-dhcp-server {
                         units "seconds";
                         sros-ext:auto-restart-to-modify;
                         default "120";
-                        description "Startup wait time";
+                        description "Time between initialization and assuming active role";
                     }
 
                     list peer {
@@ -213,14 +214,14 @@ submodule nokia-conf-router-dhcp-server {
                             type leafref {
                                 path "../../../../../../redundancy/multi-chassis/peer/ip-address";
                             }
-                            description "Failover peer address";
+                            description "IP address of the failover peer";
                         }
 
                         leaf sync-tag {
                             type types-sros:named-item;
                             sros-ext:immutable;
                             mandatory true;
-                            description "Failover peer Sync tag";
+                            description "Tag that identifies synchronizing server or pool pairs";
                         }
 
                     } // list peer
@@ -265,13 +266,13 @@ submodule nokia-conf-router-dhcp-server {
                         }
                         units "seconds";
                         default "60";
-                        description "Time interval when a DHCP offer remains valid";
+                        description "Time interval during which a DHCP offer remains valid";
                     }
 
                     leaf nak-non-matching-subnet {
                         type boolean;
                         default "false";
-                        description "Send a DHCP NAK if a DHCP request IP address does not match any range in this pool";
+                        description "Send NAK if no match for request address pool range";
                     }
 
                     container minimum-free {
@@ -280,7 +281,7 @@ submodule nokia-conf-router-dhcp-server {
                         leaf event-when-depleted {
                             type boolean;
                             default "false";
-                            description "Generate a notification when this pool is depleted";
+                            description "Generate a notification when pool or subnet is depleted";
                         }
 
                         choice value {
@@ -292,7 +293,7 @@ submodule nokia-conf-router-dhcp-server {
                                         range "0..255";
                                     }
                                     default "1";
-                                    description "Absolute minimum number for free addresses";
+                                    description "Minimum number of free addresses in this pool or subnet";
                                 }
 
                             }
@@ -302,7 +303,8 @@ submodule nokia-conf-router-dhcp-server {
                                     type uint32 {
                                         range "0..100";
                                     }
-                                    description "Minimum percentage of free addresses";
+                                    default "1";
+                                    description "Minimum percentage of free addresses in pool or subnet";
                                 }
 
                             }
@@ -333,7 +335,7 @@ submodule nokia-conf-router-dhcp-server {
                                         enum "lease-rebind-time"            { value 59; }
                                     }
                                 }
-                                description "DHCP option for sending identification strings to DHCP client";
+                                description "DHCP option to send identification strings to client";
                             }
 
                             choice value {
@@ -346,7 +348,7 @@ submodule nokia-conf-router-dhcp-server {
                                         type types-sros:string-not-all-spaces {
                                             length "1..127";
                                         }
-                                        description "ASCII string for DHCP option";
+                                        description "DHCP option specified as an ASCII string";
                                     }
 
                                 }
@@ -357,7 +359,7 @@ submodule nokia-conf-router-dhcp-server {
                                         type types-sros:hex-string {
                                             length "1..256";
                                         }
-                                        description "DHCP option as hexadecimal string";
+                                        description "DHCP option specified as hexadecimal string";
                                     }
 
                                 }
@@ -371,7 +373,7 @@ submodule nokia-conf-router-dhcp-server {
                                             enum "m-node"                       { value 4; }
                                             enum "h-node"                       { value 8; }
                                         }
-                                        description "DHCP option as NetBIOS node type";
+                                        description "DHCP option specified as a NetBIOS node type";
                                     }
 
                                 }
@@ -383,7 +385,7 @@ submodule nokia-conf-router-dhcp-server {
                                             range "10..315446399";
                                         }
                                         units "seconds";
-                                        description "DHCP option as time duration";
+                                        description "DHCP option specified as time duration";
                                     }
 
                                 }
@@ -393,7 +395,7 @@ submodule nokia-conf-router-dhcp-server {
                                         when "../number != 46 and ../number != 51 and ../number != 58 and ../number != 59";
                                         type types-sros:ipv4-address;
                                         max-elements 4;
-                                        description "DHCP option as a list of IPv4 addresses";
+                                        description "DHCP option specified as a list of IPv4 addresses";
                                     }
 
                                 }
@@ -402,7 +404,7 @@ submodule nokia-conf-router-dhcp-server {
                                     leaf empty {
                                         when "../number != 46 and ../number != 51 and ../number != 58 and ../number != 59";
                                         type empty;
-                                        description "Empty DHCP option.";
+                                        description "Remove DHCP option from configuration";
                                     }
 
                                 }
@@ -423,7 +425,7 @@ submodule nokia-conf-router-dhcp-server {
                         leaf ignore-mclt-on-takeover {
                             type boolean;
                             default "false";
-                            description "Ignore maximum client lead delay while taking over the pool address space from partner";
+                            description "Ignore maximum client lead during takeover from partner";
                         }
 
                         leaf maximum-client-lead-time {
@@ -433,7 +435,7 @@ submodule nokia-conf-router-dhcp-server {
                             units "seconds";
                             sros-ext:auto-restart-to-modify;
                             default "600";
-                            description "Maximum client lease time (MCLT) that a DHCP server can extend";
+                            description "Maximum time that DHCP server can extend client's lease";
                         }
 
                         leaf partner-down-delay {
@@ -443,7 +445,7 @@ submodule nokia-conf-router-dhcp-server {
                             units "seconds";
                             sros-ext:auto-restart-to-modify;
                             default "86399";
-                            description "Partner down delay that prevents the IP lease duplication";
+                            description "Delay to prevent lease duplication during link failure";
                         }
 
                         leaf startup-wait-time {
@@ -453,7 +455,7 @@ submodule nokia-conf-router-dhcp-server {
                             units "seconds";
                             sros-ext:auto-restart-to-modify;
                             default "120";
-                            description "Startup wait time";
+                            description "Time between initialization and assuming active role";
                         }
 
                         list peer {
@@ -466,14 +468,14 @@ submodule nokia-conf-router-dhcp-server {
                                 type leafref {
                                     path "../../../../../../../redundancy/multi-chassis/peer/ip-address";
                                 }
-                                description "Failover peer address";
+                                description "IP address of the failover peer";
                             }
 
                             leaf sync-tag {
                                 type types-sros:named-item;
                                 sros-ext:immutable;
                                 mandatory true;
-                                description "Failover peer Sync tag";
+                                description "Tag that identifies synchronizing server or pool pairs";
                             }
 
                         } // list peer
@@ -486,19 +488,19 @@ submodule nokia-conf-router-dhcp-server {
 
                         leaf ipv4-prefix {
                             type types-sros:ipv4-unicast-prefix;
-                            description "IPv4 prefix";
+                            description "IPv4 prefix for the subnet";
                         }
 
                         leaf drain {
                             type boolean;
                             default "false";
-                            description "Prevent new leases from setting up in this prefix";
+                            description "Prevent new lease assignment from this subnet";
                         }
 
                         leaf maximum-declined {
                             type uint32;
                             default "64";
-                            description "Maximum number of declined addresses";
+                            description "Maximum number of declined addresses allowed";
                         }
 
                         container minimum-free {
@@ -507,7 +509,7 @@ submodule nokia-conf-router-dhcp-server {
                             leaf event-when-depleted {
                                 type boolean;
                                 default "false";
-                                description "Generate a notification when this pool is depleted";
+                                description "Generate a notification when pool or subnet is depleted";
                             }
 
                             choice value {
@@ -519,7 +521,7 @@ submodule nokia-conf-router-dhcp-server {
                                             range "0..255";
                                         }
                                         default "1";
-                                        description "Absolute minimum number for free addresses";
+                                        description "Minimum number of free addresses in this pool or subnet";
                                     }
 
                                 }
@@ -529,7 +531,8 @@ submodule nokia-conf-router-dhcp-server {
                                         type uint32 {
                                             range "0..100";
                                         }
-                                        description "Minimum percentage of free addresses";
+                                        default "1";
+                                        description "Minimum percentage of free addresses in pool or subnet";
                                     }
 
                                 }
@@ -560,7 +563,7 @@ submodule nokia-conf-router-dhcp-server {
                                             enum "lease-rebind-time"            { value 59; }
                                         }
                                     }
-                                    description "DHCP option for sending identification strings to DHCP client";
+                                    description "DHCP option to send identification strings to client";
                                 }
 
                                 choice value {
@@ -573,7 +576,7 @@ submodule nokia-conf-router-dhcp-server {
                                             type types-sros:string-not-all-spaces {
                                                 length "1..127";
                                             }
-                                            description "ASCII string for DHCP option";
+                                            description "DHCP option specified as an ASCII string";
                                         }
 
                                     }
@@ -584,7 +587,7 @@ submodule nokia-conf-router-dhcp-server {
                                             type types-sros:hex-string {
                                                 length "1..256";
                                             }
-                                            description "DHCP option as hexadecimal string";
+                                            description "DHCP option specified as hexadecimal string";
                                         }
 
                                     }
@@ -598,7 +601,7 @@ submodule nokia-conf-router-dhcp-server {
                                                 enum "m-node"                       { value 4; }
                                                 enum "h-node"                       { value 8; }
                                             }
-                                            description "DHCP option as NetBIOS node type";
+                                            description "DHCP option specified as a NetBIOS node type";
                                         }
 
                                     }
@@ -610,7 +613,7 @@ submodule nokia-conf-router-dhcp-server {
                                                 range "10..315446399";
                                             }
                                             units "seconds";
-                                            description "DHCP option as time duration";
+                                            description "DHCP option specified as time";
                                         }
 
                                     }
@@ -620,7 +623,7 @@ submodule nokia-conf-router-dhcp-server {
                                             when "../number != 46 and ../number != 51 and ../number != 58 and ../number != 59";
                                             type types-sros:ipv4-address;
                                             max-elements 4;
-                                            description "DHCP option as a list of IPv4 addresses";
+                                            description "DHCP option specified as a list of IPv4 addresses";
                                         }
 
                                     }
@@ -629,7 +632,7 @@ submodule nokia-conf-router-dhcp-server {
                                         leaf empty {
                                             when "../number != 46 and ../number != 51 and ../number != 58 and ../number != 59";
                                             type empty;
-                                            description "Empty DHCP option.";
+                                            description "Empty DHCP option";
                                         }
 
                                     }
@@ -663,7 +666,7 @@ submodule nokia-conf-router-dhcp-server {
 
                         list exclude-addresses {
                             key "start end";
-                            description "Enter the exclude-addresses context";
+                            description "Add a list entry for exclude-addresses";
 
                             leaf start {
                                 type types-sros:ipv4-unicast-address;
@@ -724,27 +727,27 @@ submodule nokia-conf-router-dhcp-server {
                     }
                     sros-ext:auto-restart-to-modify;
                     default "duid";
-                    description "User identification for DHCPv6";
+                    description "User identification method for the DHCP server";
                 }
 
                 leaf ignore-rapid-commit {
                     type boolean;
                     default "false";
-                    description "Rapid Commit Option to ignore";
+                    description "Ignore Rapid Commit option";
                 }
 
                 leaf interface-id-mapping {
                     type boolean;
                     sros-ext:auto-restart-to-modify;
                     default "false";
-                    description "Map different hosts using the same interface ID to the same prefix";
+                    description "Map hosts within interface-to-prefix combinations";
                 }
 
                 leaf lease-query {
                     when "../auto-provisioned = 'false'";
                     type boolean;
                     default "false";
-                    description "Allow lease query messages";
+                    description "Handle and reply to lease query messages";
                 }
 
                 container pool-selection {
@@ -761,7 +764,7 @@ submodule nokia-conf-router-dhcp-server {
                                 enum "pool"                         { value 1; }
                             }
                             default "subnet";
-                            description "Match a specific pool or prefix using the DHCPv6 relay link address.";
+                            description "Scope of the IP address selection";
                         }
 
                     } // container use-link-address
@@ -774,7 +777,7 @@ submodule nokia-conf-router-dhcp-server {
                             type types-sros:string-not-all-spaces {
                                 length "1";
                             }
-                            description "Delimiter character to combine primary and secondary pool names";
+                            description "Delimiter to combine primary and secondary pool names";
                         }
 
                     } // container use-pool-from-client
@@ -822,7 +825,7 @@ submodule nokia-conf-router-dhcp-server {
 
                             leaf duid-link-local {
                                 type empty;
-                                description "DUID (DHCP Unique Identifier) type code link local";
+                                description "Derive DUID server ID from a system link-layer address";
                             }
 
                         }
@@ -838,7 +841,7 @@ submodule nokia-conf-router-dhcp-server {
                                             type types-sros:string-not-all-spaces {
                                                 length "1..58";
                                             }
-                                            description "DUID enterprise value as an ASCII string";
+                                            description "DUID enterprise server ID specified as an ASCII string";
                                         }
 
                                     }
@@ -848,7 +851,7 @@ submodule nokia-conf-router-dhcp-server {
                                             type types-sros:hex-string {
                                                 length "1..118";
                                             }
-                                            description "DUID enterprise value as a hexadecimal string";
+                                            description "DUID enterprise server ID specified as a hex string";
                                         }
 
                                     }
@@ -872,7 +875,7 @@ submodule nokia-conf-router-dhcp-server {
                     leaf ignore-mclt-on-takeover {
                         type boolean;
                         default "false";
-                        description "Ignore maximum client lead delay while taking over the pool address space from partner";
+                        description "Ignore maximum client lead during takeover from partner";
                     }
 
                     leaf maximum-client-lead-time {
@@ -882,7 +885,7 @@ submodule nokia-conf-router-dhcp-server {
                         units "seconds";
                         sros-ext:auto-restart-to-modify;
                         default "600";
-                        description "Maximum client lease time (MCLT) that a DHCP server can extend";
+                        description "Maximum time that DHCP server can extend client's lease";
                     }
 
                     leaf partner-down-delay {
@@ -892,7 +895,7 @@ submodule nokia-conf-router-dhcp-server {
                         units "seconds";
                         sros-ext:auto-restart-to-modify;
                         default "86399";
-                        description "Partner down delay that prevents the IP lease duplication";
+                        description "Delay to prevent lease duplication during link failure";
                     }
 
                     leaf startup-wait-time {
@@ -902,7 +905,7 @@ submodule nokia-conf-router-dhcp-server {
                         units "seconds";
                         sros-ext:auto-restart-to-modify;
                         default "120";
-                        description "Startup wait time";
+                        description "Time between initialization and assuming active role";
                     }
 
                     list peer {
@@ -915,14 +918,14 @@ submodule nokia-conf-router-dhcp-server {
                             type leafref {
                                 path "../../../../../../redundancy/multi-chassis/peer/ip-address";
                             }
-                            description "Failover peer address";
+                            description "IP address of the failover peer";
                         }
 
                         leaf sync-tag {
                             type types-sros:named-item;
                             sros-ext:immutable;
                             mandatory true;
-                            description "Failover peer Sync tag";
+                            description "Tag that identifies synchronizing server or pool pairs";
                         }
 
                     } // list peer
@@ -939,7 +942,7 @@ submodule nokia-conf-router-dhcp-server {
                         }
                         units "seconds";
                         default "3600";
-                        description "Time for the prefix to remain preferred.";
+                        description "Time this lease remains preferred";
                     }
 
                     leaf valid-lifetime {
@@ -948,7 +951,7 @@ submodule nokia-conf-router-dhcp-server {
                         }
                         units "seconds";
                         default "86400";
-                        description "Time for the prefix to remain valid.";
+                        description "Time for the lease to remain valid";
                     }
 
                     leaf renew-time {
@@ -957,7 +960,7 @@ submodule nokia-conf-router-dhcp-server {
                         }
                         units "seconds";
                         default "1800";
-                        description "Renew time for the prefix.";
+                        description "Renew time for the lease";
                     }
 
                     leaf rebind-time {
@@ -966,7 +969,7 @@ submodule nokia-conf-router-dhcp-server {
                         }
                         units "seconds";
                         default "2880";
-                        description "Rebind time for the prefix.";
+                        description "Rebind time for the lease";
                     }
 
                     container options {
@@ -986,7 +989,7 @@ submodule nokia-conf-router-dhcp-server {
                                         enum "domain-name"                  { value 24; }
                                     }
                                 }
-                                description "DHCPv6 option for sending identification strings to DHCP client";
+                                description "DHCP option number";
                             }
 
                             choice value {
@@ -998,7 +1001,7 @@ submodule nokia-conf-router-dhcp-server {
                                         type types-sros:string-not-all-spaces {
                                             length "1..127";
                                         }
-                                        description "ASCII string for DHCP option";
+                                        description "DHCP option specified as an ASCII string";
                                     }
 
                                 }
@@ -1008,7 +1011,7 @@ submodule nokia-conf-router-dhcp-server {
                                         type types-sros:hex-string {
                                             length "1..256";
                                         }
-                                        description "DHCP option as hexadecimal string";
+                                        description "DHCP option specified as hexadecimal string";
                                     }
 
                                 }
@@ -1019,7 +1022,7 @@ submodule nokia-conf-router-dhcp-server {
                                             length "1..127";
                                             pattern "[a-z0-9\\-]+(\\.[a-z0-9\\-]+)*";
                                         }
-                                        description "DHCP option as domain name";
+                                        description "DHCP option specified as a domain name";
                                     }
 
                                 }
@@ -1030,7 +1033,7 @@ submodule nokia-conf-router-dhcp-server {
                                             range "10..315446399";
                                         }
                                         units "seconds";
-                                        description "DHCP option as time duration";
+                                        description "DHCP option specified as time";
                                     }
 
                                 }
@@ -1039,7 +1042,7 @@ submodule nokia-conf-router-dhcp-server {
                                     leaf-list ipv6-address {
                                         type types-sros:ipv6-address;
                                         max-elements 4;
-                                        description "DHCP option as a list of IPv6 addresses";
+                                        description "DHCP option specified as a list of IPv6 addresses";
                                     }
 
                                 }
@@ -1047,7 +1050,7 @@ submodule nokia-conf-router-dhcp-server {
 
                                     leaf empty {
                                         type empty;
-                                        description "Empty DHCP option.";
+                                        description "Empty DHCP option";
                                     }
 
                                 }
@@ -1081,7 +1084,7 @@ submodule nokia-conf-router-dhcp-server {
                                 range "48..127";
                             }
                             default "64";
-                            description "Prefix length for this pool if unspecified by client";
+                            description "Prefix length for pool if unspecified by client";
                         }
 
                         leaf minimum {
@@ -1114,7 +1117,7 @@ submodule nokia-conf-router-dhcp-server {
                         leaf ignore-mclt-on-takeover {
                             type boolean;
                             default "false";
-                            description "Ignore maximum client lead delay while taking over the pool address space from partner";
+                            description "Ignore maximum client lead during takeover from partner";
                         }
 
                         leaf maximum-client-lead-time {
@@ -1124,7 +1127,7 @@ submodule nokia-conf-router-dhcp-server {
                             units "seconds";
                             sros-ext:auto-restart-to-modify;
                             default "600";
-                            description "Maximum client lease time (MCLT) that a DHCP server can extend";
+                            description "Maximum time that DHCP server can extend client's lease";
                         }
 
                         leaf partner-down-delay {
@@ -1134,7 +1137,7 @@ submodule nokia-conf-router-dhcp-server {
                             units "seconds";
                             sros-ext:auto-restart-to-modify;
                             default "86399";
-                            description "Partner down delay that prevents the IP lease duplication";
+                            description "Delay to prevent lease duplication during link failure";
                         }
 
                         leaf startup-wait-time {
@@ -1144,7 +1147,7 @@ submodule nokia-conf-router-dhcp-server {
                             units "seconds";
                             sros-ext:auto-restart-to-modify;
                             default "120";
-                            description "Startup wait time";
+                            description "Time between initialization and assuming active role";
                         }
 
                         list peer {
@@ -1157,14 +1160,14 @@ submodule nokia-conf-router-dhcp-server {
                                 type leafref {
                                     path "../../../../../../../redundancy/multi-chassis/peer/ip-address";
                                 }
-                                description "Failover peer address";
+                                description "IP address of the failover peer";
                             }
 
                             leaf sync-tag {
                                 type types-sros:named-item;
                                 sros-ext:immutable;
                                 mandatory true;
-                                description "Failover peer Sync tag";
+                                description "Tag that identifies synchronizing server or pool pairs";
                             }
 
                         } // list peer
@@ -1180,7 +1183,7 @@ submodule nokia-conf-router-dhcp-server {
                             type uint32 {
                                 range "1..128";
                             }
-                            description "Delegated prefix length";
+                            description "Delegated prefix length for pool thresholds";
                         }
 
                         leaf minimum-free-percent {
@@ -1216,7 +1219,7 @@ submodule nokia-conf-router-dhcp-server {
                                         enum "domain-name"                  { value 24; }
                                     }
                                 }
-                                description "DHCPv6 option for sending identification strings to DHCP client";
+                                description "DHCP option number";
                             }
 
                             choice value {
@@ -1228,7 +1231,7 @@ submodule nokia-conf-router-dhcp-server {
                                         type types-sros:string-not-all-spaces {
                                             length "1..127";
                                         }
-                                        description "ASCII string for DHCP option";
+                                        description "DHCP option specified as an ASCII string";
                                     }
 
                                 }
@@ -1238,7 +1241,7 @@ submodule nokia-conf-router-dhcp-server {
                                         type types-sros:hex-string {
                                             length "1..256";
                                         }
-                                        description "DHCP option as hexadecimal string";
+                                        description "DHCP option specified as hexadecimal string";
                                     }
 
                                 }
@@ -1249,7 +1252,7 @@ submodule nokia-conf-router-dhcp-server {
                                             length "1..127";
                                             pattern "[a-z0-9\\-]+(\\.[a-z0-9\\-]+)*";
                                         }
-                                        description "DHCP option as domain name";
+                                        description "DHCP option specified as a domain name";
                                     }
 
                                 }
@@ -1260,7 +1263,7 @@ submodule nokia-conf-router-dhcp-server {
                                             range "10..315446399";
                                         }
                                         units "seconds";
-                                        description "DHCP option as time duration";
+                                        description "DHCP option specified as time";
                                     }
 
                                 }
@@ -1269,7 +1272,7 @@ submodule nokia-conf-router-dhcp-server {
                                     leaf-list ipv6-address {
                                         type types-sros:ipv6-address;
                                         max-elements 4;
-                                        description "DHCP option as a list of IPv6 addresses";
+                                        description "DHCP option specified as a list of IPv6 addresses";
                                     }
 
                                 }
@@ -1277,7 +1280,7 @@ submodule nokia-conf-router-dhcp-server {
 
                                     leaf empty {
                                         type empty;
-                                        description "Empty DHCP option.";
+                                        description "Empty DHCP option";
                                     }
 
                                 }
@@ -1292,7 +1295,7 @@ submodule nokia-conf-router-dhcp-server {
 
                         leaf ipv6-prefix {
                             type types-sros:ipv6-prefix;
-                            description "IPv6 prefix";
+                            description "IPv6 prefix to be excluded from available pool prefixes";
                         }
 
                         leaf failover-control-type {
@@ -1308,7 +1311,7 @@ submodule nokia-conf-router-dhcp-server {
                             }
                             units "seconds";
                             default "3600";
-                            description "Time for the prefix to remain preferred.";
+                            description "Time this lease remains preferred";
                         }
 
                         leaf valid-lifetime {
@@ -1317,7 +1320,7 @@ submodule nokia-conf-router-dhcp-server {
                             }
                             units "seconds";
                             default "86400";
-                            description "Time for the prefix to remain valid.";
+                            description "Time for the lease to remain valid";
                         }
 
                         leaf renew-time {
@@ -1326,7 +1329,7 @@ submodule nokia-conf-router-dhcp-server {
                             }
                             units "seconds";
                             default "1800";
-                            description "Renew time for the prefix.";
+                            description "Renew time for the lease";
                         }
 
                         leaf rebind-time {
@@ -1335,13 +1338,13 @@ submodule nokia-conf-router-dhcp-server {
                             }
                             units "seconds";
                             default "2880";
-                            description "Rebind time for the prefix.";
+                            description "Rebind time for the lease";
                         }
 
                         leaf drain {
                             type boolean;
                             default "false";
-                            description "Prevent new leases from setting up in this prefix";
+                            description "No new leases can be assigned";
                         }
 
                         container prefix-type {
@@ -1351,14 +1354,14 @@ submodule nokia-conf-router-dhcp-server {
                                 type boolean;
                                 sros-ext:immutable;
                                 default "true";
-                                description "Aggregate prefix to be used by IPv6 ESM hosts for DHCPv6 prefix delegation";
+                                description "Allocate IA-PD prefixes from this prefix pool";
                             }
 
                             leaf wan-host {
                                 type boolean;
                                 sros-ext:immutable;
                                 default "true";
-                                description "Aggregate prefix to be used by IPv6 ESM hosts, or by routing gateway WAN interface";
+                                description "Allocate IA-NA or SLAAC prefixes from this prefix pool";
                             }
 
                         } // container prefix-type
@@ -1380,7 +1383,7 @@ submodule nokia-conf-router-dhcp-server {
                                             enum "domain-name"                  { value 24; }
                                         }
                                     }
-                                    description "DHCPv6 option for sending identification strings to DHCP client";
+                                    description "DHCP option number";
                                 }
 
                                 choice value {
@@ -1392,7 +1395,7 @@ submodule nokia-conf-router-dhcp-server {
                                             type types-sros:string-not-all-spaces {
                                                 length "1..127";
                                             }
-                                            description "ASCII string for DHCP option";
+                                            description "DHCP option specified as an ASCII string";
                                         }
 
                                     }
@@ -1402,7 +1405,7 @@ submodule nokia-conf-router-dhcp-server {
                                             type types-sros:hex-string {
                                                 length "1..256";
                                             }
-                                            description "DHCP option as hexadecimal string";
+                                            description "DHCP option specified as hexadecimal string";
                                         }
 
                                     }
@@ -1413,7 +1416,7 @@ submodule nokia-conf-router-dhcp-server {
                                                 length "1..127";
                                                 pattern "[a-z0-9\\-]+(\\.[a-z0-9\\-]+)*";
                                             }
-                                            description "DHCP option as domain name";
+                                            description "DHCP option specified as a domain name";
                                         }
 
                                     }
@@ -1424,7 +1427,7 @@ submodule nokia-conf-router-dhcp-server {
                                                 range "10..315446399";
                                             }
                                             units "seconds";
-                                            description "DHCP option as time duration";
+                                            description "DHCP option specified as time";
                                         }
 
                                     }
@@ -1433,7 +1436,7 @@ submodule nokia-conf-router-dhcp-server {
                                         leaf-list ipv6-address {
                                             type types-sros:ipv6-address;
                                             max-elements 4;
-                                            description "DHCP option as a list of IPv6 addresses";
+                                            description "DHCP option specified as a list of IPv6 addresses";
                                         }
 
                                     }
@@ -1441,7 +1444,7 @@ submodule nokia-conf-router-dhcp-server {
 
                                         leaf empty {
                                             type empty;
-                                            description "Empty DHCP option.";
+                                            description "Empty DHCP option";
                                         }
 
                                     }
@@ -1459,7 +1462,7 @@ submodule nokia-conf-router-dhcp-server {
                                 type uint32 {
                                     range "1..128";
                                 }
-                                description "Delegated prefix length";
+                                description "Delegated prefix length for pool thresholds";
                             }
 
                             leaf event-when-depleted {
@@ -1475,7 +1478,7 @@ submodule nokia-conf-router-dhcp-server {
                                         type uint32 {
                                             range "1..4294967295";
                                         }
-                                        description "Absolute minimum number for free addresses";
+                                        description "Minimum number of free prefixes for this prefix length";
                                     }
 
                                 }
@@ -1485,7 +1488,7 @@ submodule nokia-conf-router-dhcp-server {
                                         type uint32 {
                                             range "1..100";
                                         }
-                                        description "Minimum percentage of free addresses";
+                                        description "Minimum percentage of free prefixes for prefix length";
                                     }
 
                                 }
@@ -1496,11 +1499,11 @@ submodule nokia-conf-router-dhcp-server {
 
                     list exclude-prefix {
                         key "ipv6-prefix";
-                        description "Enter the exclude-prefix context";
+                        description "Add a list entry for exclude-prefix";
 
                         leaf ipv6-prefix {
                             type types-sros:ipv6-prefix;
-                            description "IPv6 prefix";
+                            description "IPv6 prefix to be excluded from available pool prefixes";
                         }
 
                     } // list exclude-prefix

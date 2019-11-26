@@ -8,6 +8,7 @@ submodule nokia-conf-router {
     import ietf-yang-types                { prefix "yang"; }
     import nokia-sros-yang-extensions     { prefix "sros-ext"; }
     import nokia-types-eth-cfm            { prefix "types-eth-cfm"; }
+    import nokia-types-ipsec              { prefix "types-ipsec"; }
     import nokia-types-qos                { prefix "types-qos"; }
     import nokia-types-router             { prefix "types-router"; }
     import nokia-types-services           { prefix "types-services"; }
@@ -16,6 +17,7 @@ submodule nokia-conf-router {
     include nokia-conf-eth-cfm;
     include nokia-conf-filter;
     include nokia-conf-groups;
+    include nokia-conf-ipsec;
     include nokia-conf-isa;
     include nokia-conf-mcast-mgmt;
     include nokia-conf-policy-options;
@@ -86,7 +88,7 @@ submodule nokia-conf-router {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-06-03";
+    revision "2019-06-27";
 
     grouping conf-router {
         list router {
@@ -100,10 +102,7 @@ submodule nokia-conf-router {
                         error-message "vRtrName needs to be extended to 64 to support this name";
                     }
                 }
-                description
-                    "The administrative name for this virtual router.
-
-                     The router name must be unique among all virtual routers in the system.";
+                description "The administrative name for this virtual router. The router name must be unique among all virtual routers in the system.";
             }
 
             leaf description {
@@ -123,14 +122,14 @@ submodule nokia-conf-router {
                 when "../router-name = 'management'";
                 type boolean;
                 default "false";
-                description "Allow ICMP redirects on management interface";
+                description "Allow ICMP redirects on the management interface";
             }
 
             leaf allow-icmp6-redirect {
                 when "../router-name = 'management'";
                 type boolean;
                 default "false";
-                description "Allow IPv6 ICMP redirects on management interface";
+                description "Allow IPv6 ICMP redirects on the management interface";
             }
 
             leaf class-forwarding {
@@ -144,38 +143,34 @@ submodule nokia-conf-router {
                 when "../router-name = 'Base'";
                 type boolean;
                 default "false";
-                description "Allow tunneling of ICMP reply packets over MPLS LSP at an LSR node";
+                description "Allow tunneling of ICMP reply packets over MPLS LSPs";
             }
 
             leaf fib-telemetry {
                 when "../router-name = 'Base'";
                 type boolean;
                 default "false";
-                description "Enable/disable fib telemetry collection.";
+                description "Collect extra state information";
             }
 
             leaf selective-fib {
                 when "../router-name = 'Base'";
                 type boolean;
                 default "true";
-                description
-                    "Enable/disable selective FIB.
-
-                     If disabled, all active routes of this routing
-                     instance are installed on all line cards.";
+                description "Enable/disable selective FIB. If disabled, all active routes of this routing instance are installed on all line cards.";
             }
 
             leaf autonomous-system {
                 type uint32 {
                     range "1..max";
                 }
-                description "Autonomous System number that is advertised to peer";
+                description "AS number advertised to peers for this router";
             }
 
             leaf ecmp {
                 type types-router:ip-ecmp;
                 default "1";
-                description "Maximum number of equal cost routes allowed on this routing table instance";
+                description "Maximum equal-cost routes for routing table instance";
             }
 
             leaf entropy-label {
@@ -190,7 +185,7 @@ submodule nokia-conf-router {
                     enum "high"                         { value 2; }
                 }
                 default "standard";
-                description "FIB (Forwarding Information Base) priority";
+                description "FIB priority for VPRN BGP routes";
             }
 
             leaf multicast-info-policy {
@@ -202,7 +197,7 @@ submodule nokia-conf-router {
 
             leaf router-id {
                 type types-router:router-id;
-                description "Unique router ID for the router in the Autonomous System";
+                description "Unique router ID for the router in the AS";
             }
 
             leaf weighted-ecmp {
@@ -264,14 +259,14 @@ submodule nokia-conf-router {
                             type leafref {
                                 path "../../../../interface/interface-name";
                             }
-                            description "Name for the s11 interface";
+                            description "Name for the S11 interface";
                         }
 
                         leaf apn-policy {
                             type leafref {
                                 path "../../../../../subscriber-mgmt/gtp/apn-policy/name";
                             }
-                            description "APN policy for the S11 interface";
+                            description "Access point name policy for the S11 interface";
                         }
 
                     } // list interface
@@ -293,7 +288,7 @@ submodule nokia-conf-router {
                                     path "../../../../../../subscriber-mgmt/gtp/peer-profile/name";
                                 }
                                 mandatory true;
-                                description "Peer profile used for peers in this prefix";
+                                description "GTP peer profile associated with the address prefix";
                             }
 
                         } // list prefix
@@ -313,7 +308,7 @@ submodule nokia-conf-router {
                                 error-message "wrong format of apn name";
                             }
                         }
-                        description "Network Identifier part of APN";
+                        description "Network identifier part of the APN for the uplink";
                     }
 
                     leaf pdn-type {
@@ -323,7 +318,7 @@ submodule nokia-conf-router {
                             enum "ipv4v6"                       { value 2; }
                         }
                         default "ipv4";
-                        description "Default 3GPP PDN in GTP";
+                        description "Default PDN to be signaled in GTP";
                     }
 
                     container peer-profile-map {
@@ -335,7 +330,7 @@ submodule nokia-conf-router {
 
                             leaf peer-prefix {
                                 type types-sros:ip-unicast-prefix;
-                                description "IP prefix and prefix length of the subnet";
+                                description "IP prefix and prefix length for the subnet";
                             }
 
                             leaf peer-profile {
@@ -343,7 +338,7 @@ submodule nokia-conf-router {
                                     path "../../../../../../subscriber-mgmt/gtp/peer-profile/name";
                                 }
                                 mandatory true;
-                                description "Peer profile name";
+                                description "GTP peer profile associated with the address prefix";
                             }
 
                         } // list prefix
@@ -353,6 +348,36 @@ submodule nokia-conf-router {
                 } // container uplink
 
             } // container gtp
+
+            container bfd {
+                when "../router-name = 'Base'";
+                description "Enter the bfd context";
+
+                container seamless-bfd {
+                    description "Enter the seamless-bfd context";
+
+                    list peer {
+                        key "address";
+                        max-elements 8000;
+                        description "Enter the peer context";
+
+                        leaf address {
+                            type types-sros:ip-unicast-address;
+                            description "Address of the remote node";
+                        }
+
+                        leaf discriminator {
+                            type uint32 {
+                                range "1..4294967295";
+                            }
+                            description "Discriminator of the remote node";
+                        }
+
+                    } // list peer
+
+                } // container seamless-bfd
+
+            } // container bfd
 
             container aggregates {
                 when "../router-name = 'Base'";
@@ -373,20 +398,20 @@ submodule nokia-conf-router {
 
                     leaf ip-prefix {
                         type types-sros:ip-unicast-prefix;
-                        description "IP address prefix to match for aggregation";
+                        description "Destination IP address prefix of the aggregate route";
                     }
 
                     leaf as-set {
                         type boolean;
                         default "false";
-                        description "Allow aggregate route as an AS-SET option";
+                        description "Use AS_SET path segment type for the aggregate route";
                     }
 
                     leaf-list community {
                         type types-sros:community;
                         max-elements 12;
                         ordered-by user;
-                        description "Community name that is added to aggregate route";
+                        description "Community name that is added to the aggregate route";
                     }
 
                     leaf description {
@@ -397,14 +422,20 @@ submodule nokia-conf-router {
                     leaf summary-only {
                         type boolean;
                         default "false";
-                        description "Advertise only the aggregate route and not the specific routes that make up the aggregate";
+                        description "Advertise the aggregate route only";
                     }
 
                     leaf local-preference {
                         type int64 {
                             range "0..4294967295";
                         }
-                        description "Default local preference if aggregate route is exported and advertised to BGP peers";
+                        description "Local preference used when aggregate route is exported";
+                    }
+
+                    leaf discard-component-communities {
+                        type boolean;
+                        default "false";
+                        description "Advertise aggregate with aggregate route community set";
                     }
 
                     leaf-list apply-groups {
@@ -426,7 +457,7 @@ submodule nokia-conf-router {
                                 leaf generate-icmp {
                                     type boolean;
                                     default "false";
-                                    description "Send ICMP unreachable messages when packets match an aggregate route with black-hole next-hop";
+                                    description "Send ICMP unreachable messages for aggregate routes";
                                 }
 
                             } // container blackhole
@@ -437,7 +468,7 @@ submodule nokia-conf-router {
                             leaf indirect {
                                 type types-sros:ip-unicast-address;
                                 sros-ext:immutable;
-                                description "Address of indirect next hop";
+                                description "Address of the indirect next hop";
                             }
 
                         }
@@ -449,7 +480,7 @@ submodule nokia-conf-router {
                             type uint32 {
                                 range "1..max";
                             }
-                            description "Aggregator Autonomous System Number (ASN)";
+                            description "Aggregator AS number";
                         }
 
                         leaf address {
@@ -470,9 +501,7 @@ submodule nokia-conf-router {
                     type int32 {
                         range "1..2147483647";
                     }
-                    description
-                        "Maximum number of multicast routes to be configured on
-                         this virtual router";
+                    description "Maximum number of multicast routes to be configured on this virtual router";
                 }
 
                 leaf log-only {
@@ -497,7 +526,7 @@ submodule nokia-conf-router {
 
                 container lanext {
                     presence "lanext";
-                    description "Home LAN Extension";
+                    description "Enter the lanext context";
 
                     leaf admin-state {
                         type types-sros:admin-state;
@@ -510,7 +539,7 @@ submodule nokia-conf-router {
                             range "4789|8472";
                         }
                         default "4789";
-                        description "UDP port used by local/remote vxlan VTEP";
+                        description "UDP port to be used by local or remote VXLAN VTEP";
                     }
 
                     leaf wlan-gw-group {
@@ -518,20 +547,20 @@ submodule nokia-conf-router {
                             path "../../../../isa/wlan-gw-group/id";
                         }
                         sros-ext:immutable;
-                        description "WLAN-GW group used for home lan extension";
+                        description "WLAN-GW group used for Home LAN Extension";
                     }
 
                     container vxlan-vtep-range {
-                        description "Range of addresses used by ISAs for local VTEP";
+                        description "Enter the vxlan-vtep-range context";
 
                         leaf start {
                             type types-sros:ip-unicast-without-local-address;
-                            description "Start address of the range";
+                            description "Start address of this range";
                         }
 
                         leaf end {
                             type types-sros:ip-unicast-without-local-address;
-                            description "End address of the range";
+                            description "End address of this range";
                         }
 
                     } // container vxlan-vtep-range
@@ -545,7 +574,7 @@ submodule nokia-conf-router {
                 description "Enter the wlan-gw context";
 
                 container mobility-triggered-accounting {
-                    description "Send mobility-triggered accounting interim updates";
+                    description "Enter the mobility-triggered-accounting context";
 
                     leaf admin-state {
                         type types-sros:admin-state;
@@ -651,9 +680,7 @@ submodule nokia-conf-router {
                         range "1..600";
                     }
                     units "seconds";
-                    description
-                        "The delay between the detection of the SFM condition and
-                         the IGP entering the overload state.";
+                    description "The delay between the detection of the SFM condition and the IGP entering the overload state.";
                 }
 
             } // container sfm-overload
@@ -666,19 +693,19 @@ submodule nokia-conf-router {
                     type inet:as-number {
                         range "1..4294967295";
                     }
-                    description "Confederation number within an autonomous system";
+                    description "Confederation AS number";
                 }
 
                 list members {
                     key "as-number";
                     max-elements 256;
-                    description "Enter the members context";
+                    description "Add a list entry for members";
 
                     leaf as-number {
                         type inet:as-number {
                             range "1..4294967295";
                         }
-                        description "AS number to assign to members that are part of the confederation";
+                        description "AS number assigned to confederation members";
                     }
 
                 } // list members
@@ -713,7 +740,7 @@ submodule nokia-conf-router {
                     type leafref {
                         path "../../../system/security/cpu-protection/policy/policy-id";
                     }
-                    description "CPU protection policy";
+                    description "CPU protection policy ID for the interface";
                 }
 
                 leaf description {
@@ -724,9 +751,9 @@ submodule nokia-conf-router {
 
                 leaf ip-mtu {
                     when "../../router-name != 'management'";
-                    type types-router:ip-mtu;
+                    type types-router:ip-mtu-ext;
                     units "bytes";
-                    description "IP MTU interface";
+                    description "Interface IP MTU";
                 }
 
                 leaf admin-state {
@@ -747,7 +774,7 @@ submodule nokia-conf-router {
                     type leafref {
                         path "../../../system/security/dist-cpu-protection/policy/policy-name";
                     }
-                    description "Distributed CPU protection policy";
+                    description "Name of distributed CPU protection policy for interface";
                 }
 
                 leaf mac {
@@ -787,16 +814,14 @@ submodule nokia-conf-router {
                     when "../../router-name = 'Base' and ../flavor = 'regular' and ../interface-name != 'system'";
                     type boolean;
                     default "false";
-                    description "GRE termination that is selected in virtual router for the primary subnet";
+                    description "Terminate GRE packets on primary subnet of interface";
                 }
 
                 leaf urpf-selected-vprns {
                     when "../../router-name = 'Base' and ../flavor = 'regular' and ../interface-name != 'system'";
                     type boolean;
                     default "false";
-                    description
-                        "Enable/disable per-VPRN selective URPF treatment. This
-                         applies to packets associated with a VPRN.";
+                    description "Enable/disable per-VPRN selective URPF treatment. This applies to packets associated with a VPRN.";
                 }
 
                 leaf-list apply-groups {
@@ -838,23 +863,23 @@ submodule nokia-conf-router {
                             type leafref {
                                 path "../../../../../filter/ip-filter/filter-name";
                             }
-                            description "IP filter";
+                            description "Name of the IPv4 network filter policy";
                         }
 
                         leaf ipv6 {
                             type leafref {
                                 path "../../../../../filter/ipv6-filter/filter-name";
                             }
-                            description "IPv6 filter";
+                            description "Name of the IPv6 network filter policy";
                         }
 
                     } // container filter
 
                     container qos {
-                        description "QoS egress policies associated with the interface";
+                        description "Enter the qos context";
 
                         container vlan-qos-policy {
-                            description "Attach an egress vlan-qos-policy.";
+                            description "Enter the vlan-qos-policy context";
 
                             leaf policy-name {
                                 type leafref {
@@ -866,7 +891,7 @@ submodule nokia-conf-router {
                         } // container vlan-qos-policy
 
                         container egress-remark-policy {
-                            description "Attach an egress egress-remark-policy.";
+                            description "Enter the egress-remark-policy context";
 
                             leaf policy-name {
                                 type leafref {
@@ -878,10 +903,10 @@ submodule nokia-conf-router {
                         } // container egress-remark-policy
 
                         container agg-rate {
-                            description "Specifies Aggregate Rate.";
+                            description "Enter the agg-rate context";
 
                             container rate {
-                                description "Specifies PIR and CIR Aggregate Rate.";
+                                description "Enter the rate context";
 
                                 leaf pir {
                                     type union {
@@ -894,7 +919,7 @@ submodule nokia-conf-router {
                                     }
                                     units "kilobps";
                                     default "max";
-                                    description "Specifies the administrative PIR rate.";
+                                    description "Administrative PIR rate";
                                 }
 
                                 leaf cir {
@@ -908,7 +933,7 @@ submodule nokia-conf-router {
                                     }
                                     units "kilobps";
                                     default "0";
-                                    description "Specifies the administrative CIR rate.";
+                                    description "Administrative CIR rate";
                                 }
 
                             } // container rate
@@ -930,17 +955,34 @@ submodule nokia-conf-router {
                             type leafref {
                                 path "../../../../../filter/ip-filter/filter-name";
                             }
-                            description "IP filter";
+                            description "Name of the IPv4 network filter policy";
                         }
 
                         leaf ipv6 {
                             type leafref {
                                 path "../../../../../filter/ipv6-filter/filter-name";
                             }
-                            description "IPv6 filter";
+                            description "Name of the IPv6 network filter policy";
                         }
 
                     } // container filter
+
+                    container qos {
+                        description "Enter the qos context";
+
+                        container network-ingress {
+                            description "Enter the network-ingress context";
+
+                            leaf policy-name {
+                                type leafref {
+                                    path "../../../../../../qos/network-ingress/network-ingress-policy-name";
+                                }
+                                description "Network ingress qos policy name";
+                            }
+
+                        } // container network-ingress
+
+                    } // container qos
 
                 } // container ingress
 
@@ -1001,18 +1043,18 @@ submodule nokia-conf-router {
 
                     container per-link-hash {
                         when "../../flavor != 'unnumbered-mpls-tp'";
-                        description "Configure per-link-hash information.";
+                        description "Enter the per-link-hash context";
 
                         leaf class {
                             type types-services:sap-lag-per-link-hash-class;
                             default "1";
-                            description "Configure per-link-hash class.";
+                            description "Class used on LAG egress when using weighted per-link-hash";
                         }
 
                         leaf weight {
                             type types-services:sap-lag-per-link-hash-weight;
                             default "1";
-                            description "Configure per-link-hash weight.";
+                            description "Weight used on LAG egress when using weighted per-link-hash";
                         }
 
                     } // container per-link-hash
@@ -1029,7 +1071,7 @@ submodule nokia-conf-router {
 
                         leaf sampling-type {
                             type types-router:unicast-multicast;
-                            description "Cflowd sampling type for virtual router interface";
+                            description "Unicast or multicast traffic";
                         }
 
                         leaf type {
@@ -1038,7 +1080,7 @@ submodule nokia-conf-router {
                                 enum "interface"                    { value 2; }
                             }
                             mandatory true;
-                            description "The type of Cflowd analysis that is applied to the given interface.";
+                            description "Type of cflowd analysis";
                         }
 
                         leaf direction {
@@ -1048,9 +1090,7 @@ submodule nokia-conf-router {
                                 enum "both"                         { value 3; }
                             }
                             default "ingress-only";
-                            description
-                                "The direction of the Cflowd analysis that is applied to the given
-                                 interface.";
+                            description "Direction of traffic for cflowd sampling";
                         }
 
                         leaf sample-profile {
@@ -1060,6 +1100,7 @@ submodule nokia-conf-router {
                                 }
                                 type uint32;
                             }
+                            description "Sample profile ID";
                         }
 
                     } // list sampling
@@ -1096,7 +1137,7 @@ submodule nokia-conf-router {
                             leaf init-only {
                                 type boolean;
                                 default "false";
-                                description "Apply down delay only when interface is configured or after reboot";
+                                description "Apply delay only at interface configuration or reboot";
                             }
 
                         } // container down
@@ -1113,7 +1154,7 @@ submodule nokia-conf-router {
                             leaf seconds {
                                 type types-router:hold-time-seconds;
                                 units "seconds";
-                                description "Up hold time for the IPv6 interface";
+                                description "Up hold time for the IP interface";
                             }
 
                         } // container up
@@ -1124,13 +1165,13 @@ submodule nokia-conf-router {
                             leaf seconds {
                                 type types-router:hold-time-seconds;
                                 units "seconds";
-                                description "Down hold time for the IPv6 interface";
+                                description "Down hold time for the IP interface";
                             }
 
                             leaf init-only {
                                 type boolean;
                                 default "false";
-                                description "Apply hold time only when IP interface is first configured or after system reboot";
+                                description "Apply delay only at interface configuration or reboot";
                             }
 
                         } // container down
@@ -1152,19 +1193,19 @@ submodule nokia-conf-router {
                             type leafref {
                                 path "../../../../../eth-cfm/domain/md-admin-name";
                             }
-                            description "Unique domain name";
+                            description "Admin-assigned maintenance domain index value";
                         }
 
                         leaf ma-admin-name {
                             type leafref {
                                 path "../../../../../eth-cfm/domain[md-admin-name=current()/../md-admin-name]/association/ma-admin-name";
                             }
-                            description "Unique association name";
+                            description "Admin-assigned maintenance association index value";
                         }
 
                         leaf mep-id {
                             type types-eth-cfm:mep-id-type;
-                            description "Maintenance association end point identifier";
+                            description "MEP identifier";
                         }
 
                         leaf admin-state {
@@ -1192,7 +1233,7 @@ submodule nokia-conf-router {
                         leaf facility-fault {
                             type boolean;
                             default "false";
-                            description "Allow the facility MEP to move from alarming only to network actionable function";
+                            description "Allow the facility MEP to generate a network action";
                         }
 
                         leaf ccm {
@@ -1211,7 +1252,7 @@ submodule nokia-conf-router {
                             type uint32 {
                                 range "3..1500";
                             }
-                            description "Additional octets inserted into CCM PDU for data TLV padding";
+                            description "Number of octets of padding to insert in CCM packets";
                         }
 
                         leaf-list ccm-tlv-ignore {
@@ -1223,19 +1264,19 @@ submodule nokia-conf-router {
                         leaf low-priority-defect {
                             type types-eth-cfm:lowest-alarm-priority;
                             default "mac-rem-err-xcon";
-                            description "Lowest priority defect for MEP AIS generation";
+                            description "Lowest priority defect for fault alarm generation";
                         }
 
                         leaf collect-lmm-stats {
                             type boolean;
                             default "false";
-                            description "Collect statistics for OAM-PM Loss Measurement Message (LMM) tests";
+                            description "Collect statistics for loss measurement message tests";
                         }
 
                         leaf lbm-svc-act-responder {
                             type boolean;
                             default "false";
-                            description "Process service activation streams encapsulated in ETH-CFM request Loopback Message";
+                            description "Process service activation streams in ETH-CFM LBM";
                         }
 
                         leaf one-way-delay-threshold {
@@ -1244,7 +1285,7 @@ submodule nokia-conf-router {
                             }
                             units "seconds";
                             default "3";
-                            description "Threshold for one way delay test";
+                            description "Threshold time limit for one-way delay test";
                         }
 
                         container alarm-notification {
@@ -1255,7 +1296,7 @@ submodule nokia-conf-router {
                                     range "250|500|1000";
                                 }
                                 units "centiseconds";
-                                description "Time to expire before a Fault Notification Generation (FNG) alarm";
+                                description "Time that must expire before an FNG alarm is raised";
                             }
 
                             leaf fng-reset-time {
@@ -1263,7 +1304,7 @@ submodule nokia-conf-router {
                                     range "250|500|1000";
                                 }
                                 units "centiseconds";
-                                description "Time to expire before a Fault Notification Generation (FNG) alarm is reset";
+                                description "Time that must expire before an FNG alarm is reset";
                             }
 
                         } // container alarm-notification
@@ -1278,7 +1319,7 @@ submodule nokia-conf-router {
                                 }
                                 units "bit errors";
                                 default "1";
-                                description "Lowest priority defect threshold for the bit error trap to generate a fault alarm";
+                                description "Lowest priority defect allowed to generate fault alarm";
                             }
 
                             container test-pattern {
@@ -1290,7 +1331,7 @@ submodule nokia-conf-router {
                                         enum "all-ones"                     { value 1; }
                                     }
                                     default "all-zeros";
-                                    description "Test pattern for eth-test frames";
+                                    description "Test pattern for ETH-test frames";
                                 }
 
                                 leaf crc-tlv {
@@ -1309,13 +1350,13 @@ submodule nokia-conf-router {
                             leaf-list fc {
                                 type types-eth-cfm:fc-type;
                                 max-elements 8;
-                                description "Forwarding class name for which to create an individual profile-unaware counter";
+                                description "Forwarding class name for profile-unaware counter";
                             }
 
                             leaf-list fc-in-profile {
                                 type types-eth-cfm:fc-type;
                                 max-elements 8;
-                                description "Individual counters to create for the specified Forwarding Class";
+                                description "Forwarding class name for profile-aware counter";
                             }
 
                         } // container collect-lmm-fc-stats
@@ -1331,7 +1372,7 @@ submodule nokia-conf-router {
                                         range "1..86400";
                                     }
                                     units "seconds";
-                                    description "Value to compare to received peer value, lower is used as maximum ETH-ED expected defect window";
+                                    description "Maximum received ETH-ED window duration";
                                 }
 
                                 leaf priority {
@@ -1344,13 +1385,13 @@ submodule nokia-conf-router {
                                 leaf rx-eth-ed {
                                     type boolean;
                                     default "true";
-                                    description "Receive and process ETH-ED PDUs";
+                                    description "Receive and process ETH-ED ITU-T Y.1731 PDUs on the MEP";
                                 }
 
                                 leaf tx-eth-ed {
                                     type boolean;
                                     default "false";
-                                    description "Transmit ETH-ED PDUs";
+                                    description "Transmit ETH-ED PDUs from the MEP";
                                 }
 
                             } // container eth-ed
@@ -1361,13 +1402,13 @@ submodule nokia-conf-router {
                                 leaf rx-eth-vsm-grace {
                                     type boolean;
                                     default "true";
-                                    description "Allow the reception and processing  of the Nokia ETH-CFM Grace PDU on the MEP";
+                                    description "Receive and process Nokia ETH-CFM Grace PDU on the MEP";
                                 }
 
                                 leaf tx-eth-vsm-grace {
                                     type boolean;
                                     default "true";
-                                    description "Allow the transmission of the Nokia ETH-CFM Grace PDU from the MEP";
+                                    description "Transmit ETH-ED PDUs from the MEP";
                                 }
 
                             } // container eth-vsm-grace
@@ -1384,7 +1425,7 @@ submodule nokia-conf-router {
 
                     leaf tcp-mss {
                         when "../../../router-name = 'Base' and (../../flavor != 'control-tunnel' and ../../flavor != 'pdn')";
-                        type types-router:ipv4-tcp-mss;
+                        type types-router:ipv4-tcp-mss-ext;
                         description "TCP maximum segment size for the interface";
                     }
 
@@ -1412,7 +1453,7 @@ submodule nokia-conf-router {
                     leaf ip-helper-address {
                         when "../../../router-name = 'Base' and ../../flavor = 'regular' and ../../interface-name != 'system'";
                         type types-sros:ipv4-unicast-address;
-                        description "Gateway address";
+                        description "IP address of the target UDP broadcast gateway";
                     }
 
                     container icmp {
@@ -1448,7 +1489,7 @@ submodule nokia-conf-router {
                                 }
                                 units "seconds";
                                 default "10";
-                                description "Time to limit the number of ICMP redirect messages that can be issued";
+                                description "Time used to limit the number of ICMP redirect messages";
                             }
 
                         } // container redirects
@@ -1467,7 +1508,7 @@ submodule nokia-conf-router {
                                     range "10..2000";
                                 }
                                 default "100";
-                                description "Maximum number of TTL expired messages to send";
+                                description "Maximum number of TTL-expired messages to send";
                             }
 
                             leaf seconds {
@@ -1476,7 +1517,7 @@ submodule nokia-conf-router {
                                 }
                                 units "seconds";
                                 default "10";
-                                description "Time to limit the number of ICMP TTL expired messages that can be issued";
+                                description "Time used to limit the number of TTL-expired messages";
                             }
 
                         } // container ttl-expired
@@ -1504,7 +1545,7 @@ submodule nokia-conf-router {
                                 }
                                 units "seconds";
                                 default "10";
-                                description "Time to limit the number of unreachable messages that can be issued";
+                                description "Time to limit the number of ICMP unreachable messages";
                             }
 
                         } // container unreachables
@@ -1523,7 +1564,7 @@ submodule nokia-conf-router {
                                     range "10..1000";
                                 }
                                 default "100";
-                                description "Number of parameter-problem ICMP messages to send in specified time interval";
+                                description "Maximum number of parameter problem messages to send";
                             }
 
                             leaf seconds {
@@ -1532,7 +1573,7 @@ submodule nokia-conf-router {
                                 }
                                 units "seconds";
                                 default "10";
-                                description "Time used to limit number of parameter-problem ICMP messages issued";
+                                description "Time used to limit number of parameter problem messages";
                             }
 
                         } // container param-problem
@@ -1602,32 +1643,32 @@ submodule nokia-conf-router {
 
                         leaf description {
                             type types-sros:description;
-                            description "Add/remove a text description for DHCP.";
+                            description "Text description";
                         }
 
                         leaf python-policy {
                             type leafref {
                                 path "../../../../../python/python-policy/name";
                             }
-                            description "Python policy.";
+                            description "Python policy name";
                         }
 
                         leaf-list server {
                             type types-sros:ipv4-unicast-address;
                             max-elements 8;
                             ordered-by user;
-                            description "Configure the DHCP server IP addresses.";
+                            description "IP addresses for DHCP server requests";
                         }
 
                         leaf trusted {
                             type boolean;
                             default "false";
-                            description "Enable/disable relaying of untrusted packets.";
+                            description "Relay untrusted packets";
                         }
 
                         leaf gi-address {
                             type types-sros:ipv4-unicast-address;
-                            description "Configure the gateway interface address for the DHCP relay.";
+                            description "Gateway interface address for the DHCP relay";
                         }
 
                         leaf src-ip-addr {
@@ -1636,13 +1677,13 @@ submodule nokia-conf-router {
                                 enum "gi-address"                   { value 1; }
                             }
                             default "auto";
-                            description "Specify what source address to use.";
+                            description "Type of source address to use for DHCP relay";
                         }
 
                         leaf relay-plain-bootp {
                             type boolean;
                             default "false";
-                            description "Enable/disable relaying of plain BOOTP packets.";
+                            description "Relay plain BOOTP packets";
                         }
 
                         container option-82 {
@@ -1655,7 +1696,7 @@ submodule nokia-conf-router {
                                     enum "keep"                         { value 3; }
                                 }
                                 default "keep";
-                                description "What to do with DHCP option 82.";
+                                description "Action to take with received DHCP Option 82";
                             }
 
                             container circuit-id {
@@ -1667,7 +1708,7 @@ submodule nokia-conf-router {
 
                                         leaf none {
                                             type empty;
-                                            description "Do not include the circuit-id.";
+                                            description "Do not include the Circuit ID";
                                         }
 
                                     }
@@ -1675,7 +1716,7 @@ submodule nokia-conf-router {
 
                                         leaf ifindex {
                                             type empty;
-                                            description "Use ifindex in the option.";
+                                            description "Use the interface index for the Circuit ID";
                                         }
 
                                     }
@@ -1683,7 +1724,7 @@ submodule nokia-conf-router {
 
                                         leaf ascii-tuple {
                                             type empty;
-                                            description "Use ascii-tuple in the option.";
+                                            description "Use the ASCII-encoded tuple for the Circuit ID";
                                         }
 
                                     }
@@ -1691,7 +1732,7 @@ submodule nokia-conf-router {
 
                                         leaf vlan-ascii-tuple {
                                             type empty;
-                                            description "Use vlan-ascii-tuple in the option.";
+                                            description "Include the VLAN ID and dot1p bits in the ASCII tuple";
                                         }
 
                                     }
@@ -1699,7 +1740,7 @@ submodule nokia-conf-router {
 
                                         leaf port-id {
                                             type empty;
-                                            description "Use port ID in the option.";
+                                            description "Use the port ID for the Circuit ID";
                                         }
 
                                     }
@@ -1707,7 +1748,7 @@ submodule nokia-conf-router {
 
                                         leaf if-name {
                                             type empty;
-                                            description "Use interface name in the option.";
+                                            description "Use the interface name for the Circuit ID";
                                         }
 
                                     }
@@ -1723,7 +1764,7 @@ submodule nokia-conf-router {
 
                                         leaf none {
                                             type empty;
-                                            description "Do not include the remote-id.";
+                                            description "Do not include the Remote ID";
                                         }
 
                                     }
@@ -1731,7 +1772,7 @@ submodule nokia-conf-router {
 
                                         leaf mac {
                                             type empty;
-                                            description "Use MAC address in the option.";
+                                            description "Use the MAC address for the Remote ID";
                                         }
 
                                     }
@@ -1741,7 +1782,7 @@ submodule nokia-conf-router {
                                             type types-sros:string-not-all-spaces {
                                                 length "1..32";
                                             }
-                                            description "Use user-defined ASCII string in the option.";
+                                            description "User-defined ASCII string for the Remote ID";
                                         }
 
                                     }
@@ -1754,38 +1795,38 @@ submodule nokia-conf-router {
                                 leaf system-id {
                                     type boolean;
                                     default "false";
-                                    description "Send the system ID in the Nokia vendor specific suboption.";
+                                    description "Send the system ID in the Vendor Specific Option";
                                 }
 
                                 leaf client-mac-address {
                                     type boolean;
                                     default "false";
-                                    description "Send the MAC address in the Nokia vendor specific suboption.";
+                                    description "Send the MAC address in the Vendor Specific Option";
                                 }
 
                                 leaf pool-name {
                                     type boolean;
                                     default "false";
-                                    description "Send the pool name in the Nokia vendor specific suboption.";
+                                    description "Send the pool name in the Vendor Specific Option";
                                 }
 
                                 leaf port-id {
                                     type boolean;
                                     default "false";
-                                    description "Send the port ID in the Nokia vendor specific suboption.";
+                                    description "Send the port ID in the Vendor Specific Option";
                                 }
 
                                 leaf service-id {
                                     type boolean;
                                     default "false";
-                                    description "Send the service ID in the Nokia vendor specific suboption.";
+                                    description "Send the service ID in the Vendor Specific Option";
                                 }
 
                                 leaf string {
                                     type types-sros:string-not-all-spaces {
                                         length "1..32";
                                     }
-                                    description "Send a user-defined string in the Nokia vendor specific suboption.";
+                                    description "User-defined ASCII string for Vendor Specific Option";
                                 }
 
                             } // container vendor-specific-option
@@ -1827,7 +1868,7 @@ submodule nokia-conf-router {
                                 range "3..20";
                             }
                             default "3";
-                            description "Number of missed consecutive BFD messages from peer before the BFD session state changes to down";
+                            description "Number of consecutive BFD messages missed from the peer";
                         }
 
                         leaf echo-receive {
@@ -1835,16 +1876,17 @@ submodule nokia-conf-router {
                                 range "100..100000";
                             }
                             units "milliseconds";
-                            description "BFD echo interval over this interface";
+                            description "Minimum echo interval over this interface";
                         }
 
                         leaf type {
                             type enumeration {
                                 enum "cpm-np"                       { value 1; }
                                 enum "auto"                         { value 2; }
+                                enum "fp"                           { value 3; }
                             }
                             default "auto";
-                            description "BFD session termination";
+                            description "Local termination point for BFD session";
                         }
 
                     } // container bfd
@@ -1954,7 +1996,7 @@ submodule nokia-conf-router {
                             when "../../../../router-name = 'Base'";
                             type boolean;
                             default "false";
-                            description "Allow ARP application to learn new entries based on any received ARP message";
+                            description "Learn new entries from any received NA message";
                         }
 
                         leaf proactive-refresh {
@@ -1994,13 +2036,13 @@ submodule nokia-conf-router {
 
                             leaf max-entries {
                                 type types-router:ipv4-neighbor-limit;
-                                description "Maximum number of  entries that can be learned on an IP interface";
+                                description "Maximum number of entries that can be learned";
                             }
 
                             leaf log-only {
                                 type boolean;
                                 default "false";
-                                description "Log warning messages at threshold or when limit is exceeded, however entries are learned above limit";
+                                description "Apply the limit to log entries only";
                             }
 
                             leaf threshold {
@@ -2009,7 +2051,7 @@ submodule nokia-conf-router {
                                 }
                                 units "percent";
                                 default "90";
-                                description "Threshold value that triggers a warning message to be sent";
+                                description "Threshold value that triggers a warning message";
                             }
 
                         } // container limit
@@ -2179,7 +2221,7 @@ submodule nokia-conf-router {
                                 leaf owner {
                                     type empty;
                                     sros-ext:immutable;
-                                    description "Designate virtual router instance as owning the virutal router IP addresses";
+                                    description "Designate virtual router instance as owning the virtual router IP addresses";
                                 }
 
                             }
@@ -2234,7 +2276,7 @@ submodule nokia-conf-router {
 
                     leaf tcp-mss {
                         when "../../../router-name = 'Base' and (../../flavor != 'control-tunnel' and ../../flavor != 'pdn')";
-                        type types-router:ipv6-tcp-mss;
+                        type types-router:ipv6-tcp-mss-ext;
                         description "TCP maximum segment size for the interface";
                     }
 
@@ -2460,7 +2502,7 @@ submodule nokia-conf-router {
                                 range "3..20";
                             }
                             default "3";
-                            description "Number of missed consecutive BFD messages from peer before the BFD session state changes to down";
+                            description "Number of consecutive BFD messages missed from the peer";
                         }
 
                         leaf echo-receive {
@@ -2468,16 +2510,17 @@ submodule nokia-conf-router {
                                 range "100..100000";
                             }
                             units "milliseconds";
-                            description "BFD echo interval over this interface";
+                            description "Minimum echo interval over this interface";
                         }
 
                         leaf type {
                             type enumeration {
                                 enum "cpm-np"                       { value 1; }
                                 enum "auto"                         { value 2; }
+                                enum "fp"                           { value 3; }
                             }
                             default "auto";
-                            description "BFD session termination";
+                            description "Local termination point for BFD session";
                         }
 
                     } // container bfd
@@ -2599,7 +2642,7 @@ submodule nokia-conf-router {
 
                             leaf max-entries {
                                 type types-router:ipv6-neighbor-limit;
-                                description "Maximum number of  entries that can be learned on an IP interface";
+                                description "Maximum number of entries that can be learned on an IP interface";
                             }
 
                             leaf log-only {
@@ -2759,7 +2802,7 @@ submodule nokia-conf-router {
                                 leaf owner {
                                     type empty;
                                     sros-ext:immutable;
-                                    description "Designate virtual router instance as owning the virutal router IP addresses";
+                                    description "Designate virtual router instance as owning the virtual router IP addresses";
                                 }
 
                             }
@@ -2812,7 +2855,7 @@ submodule nokia-conf-router {
                         type leafref {
                             path "../../../../qos/network/network-policy-name";
                         }
-                        description "Pre-existing network policy ID associated with a network interface";
+                        description "Network policy name associated with a network interface";
                     }
 
                     leaf egress-port-redirect-group {
@@ -2859,18 +2902,18 @@ submodule nokia-conf-router {
                             path "../../../../routing-options/if-attribute/admin-group/group-name";
                         }
                         max-elements 32;
-                        description "Name of the Admin group membership of the interface";
+                        description "Names of the admin group memberships of the interface";
                     }
 
                     list srlg-group {
                         key "name";
-                        description "Enter the srlg-group context";
+                        description "Add a list entry for srlg-group";
 
                         leaf name {
                             type leafref {
                                 path "../../../../../routing-options/if-attribute/srlg-group/name";
                             }
-                            description "Shared Risk Link Group (SRLG) name";
+                            description "Shared Risk Link Group name";
                         }
 
                     } // list srlg-group
@@ -2897,7 +2940,7 @@ submodule nokia-conf-router {
                     list network-domain {
                         key "domain-name";
                         max-elements 5;
-                        description "Enter the network-domain context";
+                        description "Add a list entry for network-domain";
 
                         leaf domain-name {
                             type leafref {
@@ -2928,7 +2971,7 @@ submodule nokia-conf-router {
                     leaf stale-time {
                         type types-router:neighbor-discovery-stale-time;
                         default "14400";
-                        description "Time during which a neighbor discovery cache entry remains stale before removal";
+                        description "Neighbor discovery cache entry stale time";
                     }
 
                 } // container neighbor-discovery
@@ -2978,13 +3021,13 @@ submodule nokia-conf-router {
                                 range "0..255";
                             }
                             default "64";
-                            description "Hop limit to advertise in ICMPv6 ND router advertisement messages";
+                            description "Hop limit to advertise in router advertisement messages";
                         }
 
                         leaf managed-configuration {
                             type boolean;
                             default "false";
-                            description "Managed address configuration flag in ICMPv6 ND router advertisement messages";
+                            description "Set the managed address configuration flag";
                         }
 
                         leaf max-advertisement-interval {
@@ -2993,7 +3036,7 @@ submodule nokia-conf-router {
                             }
                             units "seconds";
                             default "600";
-                            description "Maximum time between sending ICMPv6 ND router advertisement messages";
+                            description "Maximum time between sending router advertisement msgs";
                         }
 
                         leaf min-advertisement-interval {
@@ -3002,12 +3045,12 @@ submodule nokia-conf-router {
                             }
                             units "seconds";
                             default "200";
-                            description "Minimum time between sending ICMPv6 ND router advertisement messages";
+                            description "Minimum time between sending router advertisement msgs";
                         }
 
                         leaf mtu {
                             type uint32 {
-                                range "1280..9212";
+                                range "1280..9800";
                             }
                             description "MTU for sending packets to the router";
                         }
@@ -3015,7 +3058,7 @@ submodule nokia-conf-router {
                         leaf other-stateful-configuration {
                             type boolean;
                             default "false";
-                            description "Other configuration flag to assign in ICMPv6 ND router advertisement messages";
+                            description "Set the other configuration flag";
                         }
 
                         leaf reachable-time {
@@ -3024,7 +3067,7 @@ submodule nokia-conf-router {
                             }
                             units "milliseconds";
                             default "0";
-                            description "Time during which this router is considered reachable by other hosts or nodes on the subnet";
+                            description "Time the router is reachable by other hosts or nodes";
                         }
 
                         leaf retransmit-time {
@@ -3033,7 +3076,7 @@ submodule nokia-conf-router {
                             }
                             units "milliseconds";
                             default "0";
-                            description "Interval to advertise in ICMPv6 ND router advertisement messages";
+                            description "Time to advertise ICMPv6 ND router advertisement msgs";
                         }
 
                         leaf router-lifetime {
@@ -3042,19 +3085,19 @@ submodule nokia-conf-router {
                             }
                             units "seconds";
                             default "1800";
-                            description "Lifetime value that the router advertises in ICMPv6 ND router advertisement messages";
+                            description "Lifetime value in ICMPv6 ND router advertisement msgs";
                         }
 
                         leaf admin-state {
                             type types-sros:admin-state;
                             default "disable";
-                            description "Administrative state of router advertisement on an interface";
+                            description "Admin state of router advertisement on an interface";
                         }
 
                         leaf use-virtual-mac {
                             type boolean;
                             default "false";
-                            description "Router advertisement messages to send using VRRP virtual MAC address";
+                            description "Send router advert msg using VRRP virtual MAC addr";
                         }
 
                         container dns-options {
@@ -3064,7 +3107,7 @@ submodule nokia-conf-router {
                             leaf include-rdnss {
                                 type boolean;
                                 default "true";
-                                description "Include the RDNSS option in the router advertisement sent from this interface";
+                                description "Include the RDNSS option in the router advertisement";
                             }
 
                             leaf rdnss-lifetime {
@@ -3102,13 +3145,13 @@ submodule nokia-conf-router {
                             leaf autonomous {
                                 type boolean;
                                 default "true";
-                                description "Autonomous flag value";
+                                description "Set the autonomous flag value";
                             }
 
                             leaf on-link {
                                 type boolean;
                                 default "true";
-                                description "Use prefix for onlink determination";
+                                description "Use prefix for on-link determination";
                             }
 
                             leaf preferred-lifetime {
@@ -3136,7 +3179,7 @@ submodule nokia-conf-router {
                                 }
                                 units "seconds";
                                 default "2592000";
-                                description "Remaining time during which the prefix continues to be valid";
+                                description "Remaining time in which the prefix is still valid";
                             }
 
                         } // list prefix
@@ -3153,11 +3196,11 @@ submodule nokia-conf-router {
 
                 list nat-group {
                     key "id";
-                    description "Enter the nat-group context";
+                    description "Add a list entry for nat-group";
 
                     leaf id {
                         type uint32;
-                        description "ISA NAT group or ISA WLAN GW group used for the pools in EVPNs";
+                        description "ISA NAT group/ISA WLAN GW group ID for the EVPN pools";
                     }
 
                 } // list nat-group
@@ -3169,13 +3212,13 @@ submodule nokia-conf-router {
                     leaf start {
                         type types-sros:ip-unicast-without-local-address;
                         mandatory true;
-                        description "Start of the VXLAN VTEP range";
+                        description "Start address of the VXLAN VTEP range";
                     }
 
                     leaf end {
                         type types-sros:ip-unicast-without-local-address;
                         mandatory true;
-                        description "End of the VXLAN VTEP range";
+                        description "End address of the VXLAN VTEP range";
                     }
 
                 } // container vxlan-vtep-range
@@ -3211,7 +3254,7 @@ submodule nokia-conf-router {
 
                     leaf end {
                         type types-sros:mpls-label;
-                        description "End label  for the SRGB";
+                        description "End label for the SRGB";
                     }
 
                 } // container sr-labels
@@ -3433,7 +3476,7 @@ submodule nokia-conf-router {
                         range "1..max";
                     }
                     mandatory true;
-                    description "Maximum number of  the dynamically created LSP BFD session tail-ends";
+                    description "Maximum number of the dynamically created LSP BFD session tail-ends";
                 }
 
             } // container lsp-bfd
@@ -3483,7 +3526,7 @@ submodule nokia-conf-router {
                         range "0..262143";
                     }
                     default "512";
-                    description "Maximum number of entries in IP filter for flowspec rules";
+                    description "Maximum number of flowspec rule entries in IPv4 filter";
                 }
 
                 leaf ipv6-filter-max-size {
@@ -3491,7 +3534,7 @@ submodule nokia-conf-router {
                         range "0..262143";
                     }
                     default "512";
-                    description "Maximum number of entries in IPv6 filter for flowspec rules";
+                    description "Maximum number of flowspec rule entries in IPv6 filter";
                 }
 
             } // container flowspec
@@ -3502,6 +3545,7 @@ submodule nokia-conf-router {
 
                 list server {
                     key "name";
+                    max-elements 8;
                     description "Enter the server context";
 
                     leaf name {
@@ -3540,7 +3584,7 @@ submodule nokia-conf-router {
                     list interface {
                         key "name";
                         max-elements 32;
-                        description "Enter the interface context";
+                        description "Add a list entry for interface";
 
                         leaf name {
                             type leafref {

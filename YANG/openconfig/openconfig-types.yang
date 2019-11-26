@@ -21,7 +21,32 @@ module openconfig-types {
     are used across OpenConfig models. It can be imported by modules
     that make use of these types.";
 
-  oc-ext:openconfig-version "0.3.1";
+  oc-ext:openconfig-version "0.5.0";
+
+  revision "2018-05-05" {
+    description
+      "Add grouping of min-max-time and
+       included them to all stats with min/max/avg";
+    reference "0.5.0";
+  }
+
+  revision "2018-01-16" {
+    description
+      "Add interval to min/max/avg stats; add percentage stat";
+    reference "0.4.0";
+  }
+
+  revision "2017-08-16" {
+    description
+      "Apply fix for ieetfloat32 length parameter";
+    reference "0.3.3";
+  }
+
+  revision "2017-01-13" {
+    description
+      "Add ADDRESS_FAMILY identity";
+    reference "0.3.2";
+  }
 
   revision "2016-11-14" {
     description
@@ -64,21 +89,21 @@ module openconfig-types {
     description
      "This type is based on the timeticks type defined in
      RFC 6991, but with 64-bit width.  It represents the time,
-     modulo 2^64, in centiseconds between two epochs.";
+     modulo 2^64, in hundredths of a second between two epochs.";
     reference
       "RFC 6991 - Common YANG Data Types";
   }
 
   typedef ieeefloat32 {
     type binary {
-      length "32";
+      length "4";
     }
     description
       "An IEEE 32-bit floating point number. The format of this number
       is of the form:
         1-bit  sign
         8-bit  exponent
-        24-bit fraction
+        23-bit fraction
       The floating point value is calculated using:
         (-1)**S * 2**(Exponent-127) * (1+Fraction)";
   }
@@ -100,11 +125,58 @@ module openconfig-types {
       viewed by particular users.";
   }
 
+  typedef stat-interval {
+    type uint64;
+    units nanoseconds;
+    description
+      "A time interval over which a set of statistics is computed.
+      A common usage is to report the interval over which
+      avg/min/max stats are computed and reported.";
+  }
+
+  grouping stat-interval-state {
+    description
+      "Reusable leaf definition for stats computation interval";
+
+    leaf interval {
+      type oc-types:stat-interval;
+      description
+        "If supported by the system, this reports the time interval
+        over which the min/max/average statistics are computed by
+        the system.";
+    }
+  }
+
+  grouping min-max-time {
+    description
+      "Common grouping for recording the absolute time at which
+      the minimum and maximum values occurred in the statistics";
+
+    leaf min-time {
+      type oc-types:timeticks64;
+      description
+        "The absolute time at which the minimum value occurred.
+         The value is the timestamp in nanoseconds relative to
+          the Unix Epoch (Jan 1, 1970 00:00:00 UTC).";
+    }
+
+    leaf max-time {
+      type oc-types:timeticks64;
+      description
+        "The absolute time at which the maximum value occurred.
+         The value is the timestamp in nanoseconds relative to
+          the Unix Epoch (Jan 1, 1970 00:00:00 UTC).";
+    }
+  }
+
   grouping avg-min-max-stats-precision1 {
     description
       "Common nodes for recording average, minimum, and
       maximum values for a statistic.  These values all have
-      fraction-digits set to 1.";
+      fraction-digits set to 1.  Statistics are computed
+      and reported based on a moving time interval (e.g., the last
+      30s).  If supported by the device, the time interval over which
+      the statistics are computed is also reported.";
 
     leaf avg {
       type decimal64 {
@@ -112,7 +184,7 @@ module openconfig-types {
       }
       description
         "The arithmetic mean value of the statistic over the
-        sampling period.";
+        time interval.";
     }
 
     leaf min {
@@ -120,8 +192,8 @@ module openconfig-types {
         fraction-digits 1;
       }
       description
-        "The minimum value of the statistic over the sampling
-        period";
+        "The minimum value of the statistic over the time
+        interval.";
     }
 
     leaf max {
@@ -129,9 +201,12 @@ module openconfig-types {
         fraction-digits 1;
       }
       description
-        "The maximum value of the statitic over the sampling
-        period";
+        "The maximum value of the statitic over the time
+        interval.";
     }
+
+    uses stat-interval-state;
+    uses min-max-time;
   }
 
   grouping avg-min-max-instant-stats-precision1 {
@@ -154,13 +229,17 @@ module openconfig-types {
     description
       "Common grouping for recording dB values with 2 decimal
       precision. Values include the instantaneous, average,
-      minimum, and maximum statistics";
+      minimum, and maximum statistics.  Statistics are computed
+      and reported based on a moving time interval (e.g., the last
+      30s).  If supported by the device, the time interval over which
+      the statistics are computed, and the times at which the minimum
+      and maximum values occurred, are also reported.";
 
     leaf instant {
       type decimal64 {
         fraction-digits 2;
       }
-      units "decibels";
+      units dB;
       description
         "The instantaneous value of the statistic.";
     }
@@ -169,44 +248,50 @@ module openconfig-types {
       type decimal64 {
         fraction-digits 2;
       }
-      units "decibels";
+      units dB;
       description
         "The arithmetic mean value of the statistic over the
-        sampling period.";
+        time interval.";
     }
 
     leaf min {
       type decimal64 {
         fraction-digits 2;
       }
-      units "decibels";
+      units dB;
       description
-        "The minimum value of the statistic over the sampling
-        period";
+        "The minimum value of the statistic over the time interval.";
     }
 
     leaf max {
       type decimal64 {
         fraction-digits 2;
       }
-      units "decibels";
+      units dB;
       description
-        "The maximum value of the statistic over the sampling
-        period";
+        "The maximum value of the statistic over the time
+        interval.";
     }
+
+    uses stat-interval-state;
+    uses min-max-time;
   }
 
   grouping avg-min-max-instant-stats-precision2-dBm {
     description
       "Common grouping for recording dBm values with 2 decimal
       precision. Values include the instantaneous, average,
-      minimum, and maximum statistics";
+      minimum, and maximum statistics.  Statistics are computed
+      and reported based on a moving time interval (e.g., the last
+      30s).  If supported by the device, the time interval over which
+      the statistics are computed, and the times at which the minimum
+      and maximum values occurred, are also reported.";
 
     leaf instant {
       type decimal64 {
         fraction-digits 2;
       }
-      units "decibels per milliwatt";
+      units dBm;
       description
         "The instantaneous value of the statistic.";
     }
@@ -215,44 +300,50 @@ module openconfig-types {
       type decimal64 {
         fraction-digits 2;
       }
-      units "decibels per milliwatt";
+      units dBm;
       description
         "The arithmetic mean value of the statistic over the
-        sampling period.";
+        time interval.";
     }
 
     leaf min {
       type decimal64 {
         fraction-digits 2;
       }
-      units "decibels per milliwatt";
+      units dBm;
       description
-        "The minimum value of the statistic over the sampling
-        period";
+        "The minimum value of the statistic over the time
+        interval.";
     }
 
     leaf max {
       type decimal64 {
         fraction-digits 2;
       }
-      units "decibels per milliwatt";
+      units dBm;
       description
-        "The maximum value of the statistic over the sampling
-        period";
+        "The maximum value of the statistic over the time interval.";
     }
+
+    uses stat-interval-state;
+    uses min-max-time;
   }
 
   grouping avg-min-max-instant-stats-precision2-mA {
     description
       "Common grouping for recording mA values with 2 decimal
       precision. Values include the instantaneous, average,
-      minimum, and maximum statistics";
+      minimum, and maximum statistics.  Statistics are computed
+      and reported based on a moving time interval (e.g., the last
+      30s).  If supported by the device, the time interval over which
+      the statistics are computed, and the times at which the minimum
+      and maximum values occurred, are also reported.";
 
     leaf instant {
       type decimal64 {
         fraction-digits 2;
       }
-      units "milliamperes";
+      units mA;
       description
         "The instantaneous value of the statistic.";
     }
@@ -261,31 +352,75 @@ module openconfig-types {
       type decimal64 {
         fraction-digits 2;
       }
-      units "milliamperes";
+      units mA;
       description
         "The arithmetic mean value of the statistic over the
-        sampling period.";
+        time interval.";
     }
 
     leaf min {
       type decimal64 {
         fraction-digits 2;
       }
-      units "milliamperes";
+      units mA;
       description
-        "The minimum value of the statistic over the sampling
-        period";
+        "The minimum value of the statistic over the time
+        interval.";
     }
 
     leaf max {
       type decimal64 {
         fraction-digits 2;
       }
-      units "milliamperes";
+      units mA;
       description
-        "The maximum value of the statistic over the sampling
-        period";
+        "The maximum value of the statistic over the time
+        interval.";
     }
+
+    uses stat-interval-state;
+    uses min-max-time;
+  }
+
+  grouping avg-min-max-instant-stats-pct {
+    description
+      "Common grouping for percentage statistics.
+      Values include the instantaneous, average,
+      minimum, and maximum statistics.  Statistics are computed
+      and reported based on a moving time interval (e.g., the last
+      30s).  If supported by the device, the time interval over which
+      the statistics are computed, and the times at which the minimum
+      and maximum values occurred, are also reported.";
+
+    leaf instant {
+      type oc-types:percentage;
+      description
+        "The instantaneous percentage value.";
+    }
+
+    leaf avg {
+      type oc-types:percentage;
+      description
+        "The arithmetic mean value of the percentage measure of the
+        statistic over the time interval.";
+    }
+
+    leaf min {
+      type oc-types:percentage;
+      description
+        "The minimum value of the percentage measure of the
+        statistic over the time interval.";
+    }
+
+    leaf max {
+      type oc-types:percentage;
+      description
+        "The maximum value of the percentage measure of the
+        statistic over the time interval.";
+    }
+
+    uses stat-interval-state;
+    uses min-max-time;
   }
 
   identity ADDRESS_FAMILY {
@@ -304,4 +439,17 @@ module openconfig-types {
     description
       "The IPv6 address family";
   }
+
+  identity MPLS {
+    base ADDRESS_FAMILY;
+    description
+      "The MPLS address family";
+  }
+
+  identity L2_ETHERNET {
+    base ADDRESS_FAMILY;
+    description
+      "The 802.3 Ethernet address family";
+  }
+
 }
