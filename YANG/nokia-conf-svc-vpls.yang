@@ -61,7 +61,7 @@ submodule nokia-conf-svc-vpls {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-10-18";
+    revision "2019-11-27";
 
     grouping conf-svc-vpls {
         list vpls {
@@ -2086,9 +2086,6 @@ submodule nokia-conf-svc-vpls {
                 must "./admin-state != 'enable' or not(../routed-vpls) or ../pbb-type != 'i-vpls'" {
                     error-message "routed-vpls and pbb-type i-vpls are configured";
                 }
-                must "./admin-state != 'enable' or not(../vxlan) or not(../vxlan/source-vtep)" {
-                    error-message "configuration incompatible with vxlan source-vtep";
-                }
                 description "Enter the igmp-snooping context";
 
                 leaf admin-state {
@@ -2176,9 +2173,6 @@ submodule nokia-conf-svc-vpls {
                 must "./admin-state != 'enable' or ../mcast-ipv6-snooping-scope != 'sg-based'" {
                     error-message "not allowed when mcast-ipv6-snooping-scope is sg-based";
                 }
-                must "./admin-state != 'enable' or not(../vxlan) or not(../vxlan/source-vtep)" {
-                    error-message "configuration incompatible with vxlan source-vtep";
-                }
                 description "Enter the mld-snooping context";
 
                 leaf admin-state {
@@ -2262,9 +2256,6 @@ submodule nokia-conf-svc-vpls {
             container pim-snooping {
                 must "../pbb-type != 'i-vpls' or not(../routed-vpls)";
                 must "../pbb-type != 'b-vpls'";
-                must "not(../vxlan) or not(../vxlan/source-vtep)" {
-                    error-message "configuration incompatible with vxlan source-vtep";
-                }
                 presence "Enable PIM on this service.";
                 description "Enter the pim-snooping context";
 
@@ -2470,6 +2461,20 @@ submodule nokia-conf-svc-vpls {
                         }
 
                     } // container incl-mcast
+
+                    container sel-mcast {
+                        description "BGP-EVPN SMET routes information";
+
+                        leaf advertise {
+                            must ". = 'false' or ../../../../routed-vpls" {
+                                error-message "only supported on routed-vpls services";
+                            }
+                            type boolean;
+                            default "false";
+                            description "Status of SMET routes advertisement";
+                        }
+
+                    } // container sel-mcast
 
                 } // container routes
 
@@ -8578,8 +8583,8 @@ submodule nokia-conf-svc-vpls {
                         description "Enter the mst-instance list instance";
 
                         leaf mst-inst-number {
-                            type leafref {
-                                path "../../../../stp/mst-instance/mst-inst-number";
+                            type uint32 {
+                                range "1..4094";
                             }
                             description "Multiple Spanning Tree Instance number";
                         }
