@@ -58,9 +58,6 @@ submodule nokia-conf-svc-sdp {
             }
 
             leaf admin-state {
-                must ". = 'disable' or ../far-end/ip-address or ../far-end/node-id" {
-                    error-message "configure far-end first.";
-                }
                 type types-sros:admin-state;
                 default "disable";
                 description "Administrative state of SDP";
@@ -100,9 +97,6 @@ submodule nokia-conf-svc-sdp {
             }
 
             leaf local-end {
-                must ". != ../far-end/ip-address" {
-                    error-message "local-end and far-end ip-addr cannot be the same value.";
-                }
                 type types-sros:ip-address;
                 sros-ext:auto-restart-to-modify;
                 description "IP address of the local end of the tunnel defined by this SDP.";
@@ -147,27 +141,6 @@ submodule nokia-conf-svc-sdp {
             }
 
             leaf tunnel-far-end {
-                must "../far-end/ip-address" {
-                    error-message "Cannot set tunnel-far-end when far-end is not set.";
-                }
-                must "../ldp != 'false'" {
-                    error-message "enable ldp first.";
-                }
-                must "not(../far-end/node-id)" {
-                    error-message "Cannot configure tunnel-far-end with far-end node-id.";
-                }
-                must "../ldp != 'false'" {
-                    error-message "Cannot configure tunnel-far-end if ldp is disabled.";
-                }
-                must "not(../mixed-lsp-mode)" {
-                    error-message "mixed-lsp-mode and tunnel-far-end cannot be configured at the same time";
-                }
-                must "not(../far-end/ip-address) or . != ../far-end/ip-address" {
-                    error-message "Cannot set tunnel-far-end and far-end to the same address.";
-                }
-                must "not(../pw-port/binding-port)" {
-                    error-message "tunnel-far-end is not supported with binding-port.";
-                }
                 type types-sros:ip-address;
                 sros-ext:auto-restart-to-modify;
                 description "IP address of the remote of the tunnel defined by this SDP.";
@@ -186,12 +159,6 @@ submodule nokia-conf-svc-sdp {
             }
 
             leaf ldp {
-                must ". != 'true' or ../mixed-lsp-mode or ../bgp-tunnel != 'true'" {
-                    error-message "mixed-lsp-mode must be enabled to for ldp and bgp-tunnel to be enabled at the same time.";
-                }
-                must ". != 'true' or ../mixed-lsp-mode or not(../lsp)" {
-                    error-message "mixed-lsp-mode must be enabled to enable ldp and configure lsps together.";
-                }
                 type boolean;
                 sros-ext:auto-restart-to-modify;
                 default "false";
@@ -199,48 +166,18 @@ submodule nokia-conf-svc-sdp {
             }
 
             leaf bgp-tunnel {
-                must ". != 'true' or not(../lsp)" {
-                    error-message "lsps and bgp-tunnel cannot be configured at the same time";
-                }
                 type boolean;
                 default "false";
                 description "Whether the transport tunnel is BGP.";
             }
 
             leaf sr-isis {
-                must ". != 'true' or ../bgp-tunnel != 'true'" {
-                    error-message "bgp-tunnel and sr-isis cannot be enabled at the same time";
-                }
-                must ". != 'true' or ../ldp != 'true'" {
-                    error-message "ldp and sr-isis cannot be enabled at the same time";
-                }
-                must ". != 'true' or ../sr-ospf != 'true'" {
-                    error-message "sr-ospf and sr-isis cannot be enabled at the same time";
-                }
-                must ". != 'true' or not(../mixed-lsp-mode)" {
-                    error-message "mixed-lsp-mode and sr-isis cannot be enabled at the same time";
-                }
-                must ". != 'true' or not(../lsp)" {
-                    error-message "lsps and sr-ospf cannot be configured at the same time";
-                }
                 type boolean;
                 default "false";
                 description "Whether Segment Routing is enabled for IS-IS.";
             }
 
             leaf sr-ospf {
-                must ". != 'true' or ../bgp-tunnel != 'true'" {
-                    error-message "bgp-tunnel and sr-ospf cannot be enabled at the same time";
-                }
-                must ". != 'true' or ../ldp != 'true'" {
-                    error-message "ldp and sr-ospf cannot be enabled at the same time";
-                }
-                must ". != 'true' or not(../mixed-lsp-mode)" {
-                    error-message "mixed-lsp-mode and sr-ospf cannot be enabled at the same time";
-                }
-                must ". != 'true' or not(../lsp)" {
-                    error-message "lsps and sr-ospf cannot be configured at the same time";
-                }
                 type boolean;
                 default "false";
                 description "Whether Segment Routing is enabled for OSPF.";
@@ -265,9 +202,6 @@ submodule nokia-conf-svc-sdp {
                 description "Enter the keep-alive context";
 
                 leaf admin-state {
-                    must ". = 'disable' or not(../../far-end/node-id)" {
-                        error-message "keep-alive not supported with far-end node-id.";
-                    }
                     type types-sros:admin-state;
                     default "disable";
                     description "Administrative state of keepalive mechanism for the SDP";
@@ -343,20 +277,11 @@ submodule nokia-conf-svc-sdp {
                 description "Enter the source-bmac-lsb context";
 
                 leaf value {
-                    must "../../bgp-tunnel = 'false'" {
-                        error-message "unsupported with bgp-tunnel.";
-                    }
                     type types-services:bmac-lsb-no-zero;
                     description "16 least significant bits (lsb as 00:00 or 00-00) which when combined with the 32 most significant bits of the PBB source-bmac forms the virtual backbone MAC address.";
                 }
 
                 leaf control-pw-vc-id {
-                    must "../value" {
-                        error-message "Cannot set control-pw-vc-id when source-bmac-lsb value is not set.";
-                    }
-                    must "../../bgp-tunnel = 'false'" {
-                        error-message "unsupported with bgp-tunnel.";
-                    }
                     type types-services:vc-id;
                     description "Spoke-SDP VC identifier to be used as a control pseudo-wire to determine whether Shortest Path Bridging Module (SPBM) advertises the virtual backbone MAC.";
                 }
@@ -379,39 +304,12 @@ submodule nokia-conf-svc-sdp {
                     case node {
 
                         leaf node-id {
-                            must ". != '0.0.0.0'" {
-                                error-message "node-id can not be zero.";
-                            }
-                            must "../../ldp = 'false'" {
-                                error-message "ldp not supported when node-id is configured.";
-                            }
-                            must "../../bgp-tunnel = 'false'" {
-                                error-message "bgp-tunnel not supported when node-id is configured.";
-                            }
-                            must "../../sr-ospf = 'false'" {
-                                error-message "sr-ospf not supported when node-id is configured.";
-                            }
-                            must "../../sr-isis = 'false'" {
-                                error-message "sr-isis not supported when node-id is configured.";
-                            }
-                            must "../../adv-mtu-override = 'false'" {
-                                error-message "node-id and adv-mtu-override cannot be configured at the same time.";
-                            }
-                            must "not(../../mixed-lsp-mode)" {
-                                error-message "cannot enable mixed-lsp-mode when node-id is configured.";
-                            }
-                            must "../../booking-factor = 100" {
-                                error-message "far-end node-id is not supported with booking-factor.";
-                            }
                             type types-sros:ipv4-address;
                             sros-ext:auto-restart-to-modify;
                             description "Specifies the Node ID of the far-end.";
                         }
 
                         leaf global-id {
-                            must "../node-id" {
-                                error-message "far-end node-id must be configured if global-id is configured.";
-                            }
                             type uint32 {
                                 range "1..4294967295";
                             }
@@ -428,24 +326,12 @@ submodule nokia-conf-svc-sdp {
                 description "Enter the class-forwarding context";
 
                 leaf admin-state {
-                    must ". = 'disable' or ../default-lsp" {
-                        error-message "Cannot enable class-forwarding if default-lsp is not configured.";
-                    }
-                    must ". = 'disable' or not(../../far-end/node-id)" {
-                        error-message "Cannot enable class-forwarding when node-id is configured.";
-                    }
-                    must ". = 'disable' or ../../weighted-ecmp = 'false'" {
-                        error-message "Cannot enable class-forwarding when weighted-ecmp is enabled.";
-                    }
                     type types-sros:admin-state;
                     default "disable";
                     description "Administrative state of class-based forwarding on this SDP";
                 }
 
                 leaf default-lsp {
-                    must "not(../../far-end/node-id)" {
-                        error-message "Cannot configure default-lsp when node-id is configured.";
-                    }
                     type leafref {
                         path "../../lsp/lsp-name";
                     }
@@ -460,9 +346,6 @@ submodule nokia-conf-svc-sdp {
                 }
 
                 leaf multicast-lsp {
-                    must "not(../../far-end/node-id)" {
-                        error-message "Cannot configure multicast-lsp when node-id is configured.";
-                    }
                     type leafref {
                         path "../../lsp/lsp-name";
                     }
