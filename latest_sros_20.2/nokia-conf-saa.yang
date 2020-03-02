@@ -1,0 +1,335 @@
+submodule nokia-conf-saa {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-oam                { prefix "types-oam"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-log;
+
+    sros-ext:sros-major-release "rel20";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure Service Assurance Agent (SAA) on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-saa YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2020-01-09";
+
+    grouping conf-saa {
+        container saa {
+            description "Enter the saa context";
+
+            list owner {
+                key "owner-name test";
+                description "Enter the owner list instance";
+
+                leaf owner-name {
+                    type types-sros:named-item;
+                    description "An owner-name identifies a set of SAA tests.";
+                }
+
+                leaf test {
+                    type types-sros:named-item;
+                    description "An owner-name and a test-name identify an SAA test.";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of the SAA test";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf accounting-policy {
+                    type leafref {
+                        path "../../../log/accounting-policy/policy-id";
+                    }
+                    sros-ext:auto-restart-to-modify;
+                    description "Accounting policy used to record the results of an SAA test.";
+                }
+
+                leaf continuous {
+                    type boolean;
+                    sros-ext:auto-restart-to-modify;
+                    default "false";
+                    description "Repeat the test automatically while it is administratively enabled.";
+                }
+
+                leaf probe-history {
+                    type enumeration {
+                        enum "keep"                         { value 1; }
+                        enum "drop"                         { value 2; }
+                        enum "auto"                         { value 3; }
+                    }
+                    sros-ext:auto-restart-to-modify;
+                    default "auto";
+                    description "Keep or drop the per-probe test results after a test run completes. 'auto' allows SROS to decide.";
+                }
+
+                list jitter-event {
+                    key "direction threshold-type";
+                    description "Enter the jitter-event list instance";
+
+                    leaf direction {
+                        type types-oam:saa-threshold-direction;
+                        description "Inbound, outbound, or round trip packet flow.";
+                    }
+
+                    leaf threshold-type {
+                        type enumeration {
+                            enum "rising"                       { value 1; }
+                            enum "falling"                      { value 2; }
+                        }
+                        description "Rising or falling threshold.";
+                    }
+
+                    leaf threshold {
+                        type uint32 {
+                            range "0..2147483647";
+                        }
+                        units "microseconds";
+                        mandatory true;
+                        description "Rising or falling threshold (in microseconds) for jitter.";
+                    }
+
+                } // list jitter-event
+
+                list latency-event {
+                    key "direction threshold-type";
+                    description "Enter the latency-event list instance";
+
+                    leaf direction {
+                        type types-oam:saa-threshold-direction;
+                        description "Inbound, outbound, or round trip packet flow.";
+                    }
+
+                    leaf threshold-type {
+                        type enumeration {
+                            enum "rising"                       { value 1; }
+                            enum "falling"                      { value 2; }
+                        }
+                        description "Rising or falling threshold.";
+                    }
+
+                    leaf threshold {
+                        type uint32 {
+                            range "0..2147483647";
+                        }
+                        units "microseconds";
+                        mandatory true;
+                        description "Rising or falling threshold (in microseconds) for packet latency.";
+                    }
+
+                } // list latency-event
+
+                list loss-event {
+                    key "direction threshold-type";
+                    description "Enter the loss-event list instance";
+
+                    leaf direction {
+                        type types-oam:saa-threshold-direction;
+                        description "Inbound, outbound, or round trip packet flow.";
+                    }
+
+                    leaf threshold-type {
+                        type enumeration {
+                            enum "rising"                       { value 1; }
+                            enum "falling"                      { value 2; }
+                        }
+                        description "Rising or falling threshold.";
+                    }
+
+                    leaf threshold {
+                        type uint32 {
+                            range "0..2147483647";
+                        }
+                        units "packets";
+                        mandatory true;
+                        description "Rising or falling threshold for packet loss.";
+                    }
+
+                } // list loss-event
+
+                container type {
+                    description "Enter the type context";
+
+                    choice saa-types {
+                        case saa-icmp-ping {
+
+                            container icmp-ping {
+                                presence "Ping the destination using ICMP Echo Request packet(s).";
+                                sros-ext:auto-restart-to-modify;
+                                description "Enter the icmp-ping context";
+
+                                leaf destination-address {
+                                    type union {
+                                        type types-sros:ip-address;
+                                        type types-sros:string-not-all-spaces {
+                                            length "1..128";
+                                        }
+                                    }
+                                    mandatory true;
+                                    description "IP address or DNS name to be pinged.";
+                                }
+
+                                leaf count {
+                                    type uint32 {
+                                        range "1..100000";
+                                    }
+                                    units "packets";
+                                    default "5";
+                                    description "Number of ICMP Echo Request packet(s) to send.";
+                                }
+
+                                leaf do-not-fragment {
+                                    type boolean;
+                                    default "false";
+                                    description "Do not allow the ICMP Echo Request packet(s) to be fragmented (valid for IPv4 only).";
+                                }
+
+                                leaf interval {
+                                    type union {
+                                        type uint32 {
+                                            range "1..10000";
+                                        }
+                                        type decimal64 {
+                                            range "0.01..100.00";
+                                            fraction-digits 2;
+                                        }
+                                    }
+                                    units "seconds";
+                                    default "1";
+                                    description "Interval (in seconds) between ICMP Echo Request packets sent.";
+                                }
+
+                                leaf pattern {
+                                    type types-oam:padding-pattern;
+                                    default "sequential";
+                                    description "Two byte value used to pad the ICMP Echo Request packet(s). 'sequential' indicates bytes increasing by one.";
+                                }
+
+                                leaf router-instance {
+                                    type string;
+                                    default "Base";
+                                    description "Router used for the test ('Base', 'management', or a VPRN service name).";
+                                }
+
+                                leaf size {
+                                    type uint32 {
+                                        range "0..16384";
+                                    }
+                                    units "bytes";
+                                    default "56";
+                                    description "Number of bytes in the combined ICMP Header (8 bytes) and ICMP Payload (variable size) of the ICMP Echo Request packet(s).";
+                                }
+
+                                leaf source-address {
+                                    type types-sros:ip-address;
+                                    description "Source IP address to be loaded into the IP header of the ICMP Echo Request packet(s). Default: a system-selected address.";
+                                }
+
+                                leaf timeout {
+                                    type uint32 {
+                                        range "1..10";
+                                    }
+                                    units "seconds";
+                                    default "5";
+                                    description "Maximum time (in seconds) to wait for ICMP Echo Reply packet(s). The timer is started when the last ICMP Echo Request is sent.";
+                                }
+
+                                leaf ttl {
+                                    type uint32 {
+                                        range "1..128";
+                                    }
+                                    default "64";
+                                    description "Time To Live value (IPv4) or Hop Limit value (IPv6) to be loaded into the IP header of the ICMP Echo Request packet(s).";
+                                }
+
+                                choice saa-icmp-ping-routing {
+                                    default "case-bypass-routing";
+                                    case case-bypass-routing {
+
+                                        leaf bypass-routing {
+                                            type boolean;
+                                            default "false";
+                                            description "Bypass the routing table when sending to a host on a directly attached network.";
+                                        }
+
+                                    }
+                                    case case-interface {
+
+                                        leaf interface {
+                                            type types-sros:interface-name;
+                                            description "Sending interface for the ICMP Echo Request packet(s).";
+                                        }
+
+                                    }
+                                    case case-next-hop-address {
+
+                                        leaf next-hop-address {
+                                            type types-sros:ip-address;
+                                            description "Next hop IP address used when sending ICMP Echo Request packet(s).";
+                                        }
+
+                                    }
+                                }
+                                container qos {
+                                    description "Enter the qos context";
+
+                                    leaf fc {
+                                        type types-sros:fc-name;
+                                        default "nc";
+                                        description "Forwarding Class for the transmitted ICMP Echo Request packet(s).";
+                                    }
+
+                                    leaf tos {
+                                        type uint32 {
+                                            range "0..255";
+                                        }
+                                        default "0";
+                                        description "Type of Service value to be loaded into the DSCP and ECN fields of the IP header of the ICMP Echo Request packet(s).";
+                                    }
+
+                                } // container qos
+
+                            } // container icmp-ping
+
+                        }
+                    }
+                } // container type
+
+            } // list owner
+
+        } // container saa
+
+    } // grouping conf-saa
+
+}

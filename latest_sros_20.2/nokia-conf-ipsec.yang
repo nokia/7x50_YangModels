@@ -1,0 +1,1979 @@
+submodule nokia-conf-ipsec {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-ipsec              { prefix "types-ipsec"; }
+    import nokia-types-security           { prefix "types-security"; }
+    import nokia-types-services           { prefix "types-services"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-aaa;
+    include nokia-conf-system;
+    include nokia-conf-system-security;
+    include nokia-conf-system-security-pki;
+
+    sros-ext:sros-major-release "rel20";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure IPsec configuration on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-ipsec YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2019-05-20";
+
+    grouping conf-ipsec {
+        container ipsec {
+            description "Enter the ipsec context";
+
+            leaf show-ipsec-keys {
+                type boolean;
+                default "false";
+                description "Show IPsec IKE and ESP keys.";
+            }
+
+            list cert-profile {
+                key "name";
+                max-elements 10200;
+                description "Enter the cert-profile list instance";
+
+                leaf name {
+                    type types-sros:named-item;
+                    description "Certificate profile name.";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of the certificate profile.";
+                }
+
+                list entry {
+                    key "id";
+                    max-elements 8;
+                    description "Enter the entry list instance";
+
+                    leaf id {
+                        type uint32 {
+                            range "1..8";
+                        }
+                        description "Certificate profile entry ID";
+                    }
+
+                    leaf cert {
+                        type types-security:pki-file-name;
+                        description "Certificate file name for the certificate profile entry";
+                    }
+
+                    leaf key {
+                        type types-security:pki-file-name;
+                        description "File name of imported key used for authentication";
+                    }
+
+                    leaf rsa-signature {
+                        type enumeration {
+                            enum "pkcs1"                        { value 1; }
+                            enum "pss"                          { value 2; }
+                        }
+                        default "pkcs1";
+                        description "Signature scheme for the RSA key";
+                    }
+
+                    container send-chain {
+                        description "Enter the send-chain context";
+
+                        leaf-list ca-profile {
+                            type leafref {
+                                path "../../../../../system/security/pki/ca-profile/ca-profile-name";
+                            }
+                            max-elements 7;
+                            description "CA certificate to send to the peer";
+                        }
+
+                    } // container send-chain
+
+                } // list entry
+
+            } // list cert-profile
+
+            list client-db {
+                key "name";
+                max-elements 1000;
+                description "Enter the client-db list instance";
+
+                leaf name {
+                    type types-sros:named-item;
+                    description "IPsec client database name.";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    sros-ext:auto-restart-to-modify;
+                    default "disable";
+                    description "Administrative state of the client database.";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                container match-list {
+                    sros-ext:auto-restart-to-modify;
+                    description "Enter the match-list context";
+
+                    leaf idi {
+                        type boolean;
+                        sros-ext:auto-restart-to-modify;
+                        default "false";
+                        description "Use IDi type in the IPsec client matching process";
+                    }
+
+                    leaf peer-ip-prefix {
+                        type boolean;
+                        sros-ext:auto-restart-to-modify;
+                        default "false";
+                        description "Use the peer's tunnel IP address in matching process";
+                    }
+
+                } // container match-list
+
+                list client {
+                    key "id";
+                    sros-ext:auto-restart-to-modify;
+                    description "Enter the client list instance";
+
+                    leaf id {
+                        type uint32 {
+                            range "1..8000";
+                        }
+                        description "Client ID";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        sros-ext:auto-restart-to-modify;
+                        default "disable";
+                        description "Administrative state of the database client.";
+                    }
+
+                    leaf client-name {
+                        type types-sros:named-item;
+                        sros-ext:auto-restart-to-modify;
+                        description "Client name";
+                    }
+
+                    leaf private-interface {
+                        type types-sros:named-item;
+                        sros-ext:auto-restart-to-modify;
+                        description "Private interface name used for tunnel setup";
+                    }
+
+                    leaf private-service-name {
+                        type types-services:service-name;
+                        sros-ext:auto-restart-to-modify;
+                        description "Name of the private service used for tunnel setup";
+                    }
+
+                    leaf ts-list {
+                        type types-sros:named-item;
+                        sros-ext:auto-restart-to-modify;
+                        description "Traffic selector list used by the tunnel";
+                    }
+
+                    leaf tunnel-template {
+                        type uint32 {
+                            range "1..2048";
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        description "Tunnel template ID";
+                    }
+
+                    container credential {
+                        sros-ext:auto-restart-to-modify;
+                        description "Enter the credential context";
+
+                        leaf pre-shared-key {
+                            type types-sros:encrypted-leaf-hex-without-prefix {
+                                length "1..115";
+                            }
+                            sros-ext:auto-restart-to-modify;
+                            description "Pre-shared key used to authenticate peers";
+                        }
+
+                    } // container credential
+
+                    container identification {
+                        sros-ext:auto-restart-to-modify;
+                        description "Enter the identification context";
+
+                        container idi {
+                            presence "Use the Identification Initiator (IDi) field in the client ID.";
+                            sros-ext:auto-restart-to-modify;
+                            description "Enter the idi context";
+
+                            choice idi {
+                                mandatory true;
+                                case any {
+
+                                    leaf any {
+                                        type boolean;
+                                        sros-ext:auto-restart-to-modify;
+                                        description "Accept any IDi value as a match";
+                                    }
+
+                                }
+                                case ipv4-prefix {
+
+                                    leaf ipv4-prefix {
+                                        type types-sros:ipv4-prefix;
+                                        sros-ext:auto-restart-to-modify;
+                                        description "IPv4 prefix used as the match criteria for the IDi";
+                                    }
+
+                                }
+                                case ipv4-prefix-any {
+
+                                    leaf ipv4-prefix-any {
+                                        type boolean;
+                                        sros-ext:auto-restart-to-modify;
+                                        description "Accept any valid IPv4 prefix as a match for the IDi";
+                                    }
+
+                                }
+                                case ipv6-prefix {
+
+                                    leaf ipv6-prefix {
+                                        type types-sros:ipv6-prefix;
+                                        sros-ext:auto-restart-to-modify;
+                                        description "IPv6 prefix used as the match criteria for the IDi";
+                                    }
+
+                                }
+                                case ipv6-prefix-any {
+
+                                    leaf ipv6-prefix-any {
+                                        type boolean;
+                                        sros-ext:auto-restart-to-modify;
+                                        description "Accept any valid IPv6 prefix as a match for the IDi";
+                                    }
+
+                                }
+                                case fqdn {
+
+                                    leaf fqdn {
+                                        type types-sros:display-string-or-empty;
+                                        sros-ext:auto-restart-to-modify;
+                                        description "FQDN used as the match criteria for the IDi";
+                                    }
+
+                                }
+                                case fqdn-suffix {
+
+                                    leaf fqdn-suffix {
+                                        type types-sros:display-string-or-empty;
+                                        sros-ext:auto-restart-to-modify;
+                                        description "FQDN suffix used as the match criteria for the IDi";
+                                    }
+
+                                }
+                                case rfc822 {
+
+                                    leaf rfc822 {
+                                        type types-sros:display-string-or-empty;
+                                        sros-ext:auto-restart-to-modify;
+                                        description "Email address (RFC 822) used as match criteria for IDi";
+                                    }
+
+                                }
+                                case rfc822-suffix {
+
+                                    leaf rfc822-suffix {
+                                        type types-sros:display-string-or-empty;
+                                        sros-ext:auto-restart-to-modify;
+                                        description "Email address domain (RFC 822) as IDi match criteria";
+                                    }
+
+                                }
+                            }
+                        } // container idi
+
+                        container peer-ip-prefix {
+                            presence "Use the peer IP prefix field in the client ID.";
+                            sros-ext:auto-restart-to-modify;
+                            description "Enter the peer-ip-prefix context";
+
+                            choice prefix {
+                                mandatory true;
+                                case ipv4-only {
+
+                                    leaf ipv4-only {
+                                        type boolean;
+                                        sros-ext:auto-restart-to-modify;
+                                        description "Accept any valid IPv4 address as a match";
+                                    }
+
+                                }
+                                case ipv6-only {
+
+                                    leaf ipv6-only {
+                                        type boolean;
+                                        sros-ext:auto-restart-to-modify;
+                                        description "Accept any valid IPv6 address as a match";
+                                    }
+
+                                }
+                                case ip-prefix {
+
+                                    leaf ip-prefix {
+                                        type types-sros:ip-prefix;
+                                        sros-ext:auto-restart-to-modify;
+                                        description "IP prefix used as the match criteria";
+                                    }
+
+                                }
+                            }
+                        } // container peer-ip-prefix
+
+                    } // container identification
+
+                } // list client
+
+            } // list client-db
+
+            list ike-policy {
+                key "id";
+                max-elements 2048;
+                description "Enter the ike-policy list instance";
+
+                leaf id {
+                    type types-ipsec:ike-policy-id;
+                    description "The unique identifier of an IKE policy.";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf ipsec-lifetime {
+                    type types-ipsec:lifetime;
+                    default "3600";
+                    description "Phase 1 lifetime for the IKE transform session";
+                }
+
+                leaf match-peer-id-to-cert {
+                    type boolean;
+                    default "false";
+                    description "Check IKE peer's ID during certificate authentication";
+                }
+
+                leaf-list ike-transform {
+                    type leafref {
+                        path "../../ike-transform/id";
+                    }
+                    max-elements 4;
+                    description "IKE transform instance associated with the IKE policy";
+                }
+
+                choice ike-version {
+                    default "version-1";
+                    case version-1 {
+
+                        container ike-version-1 {
+                            description "Enter the ike-version-1 context";
+
+                            leaf auth-method {
+                                type enumeration {
+                                    enum "psk"                          { value 1; }
+                                    enum "plain-psk-xauth"              { value 4; }
+                                }
+                                default "psk";
+                                description "Authentication method used with the IKE policy";
+                            }
+
+                            leaf own-auth-method {
+                                type enumeration {
+                                    enum "symmetric"                    { value 0; }
+                                }
+                                default "symmetric";
+                                description "Authentication method used with policy on its own side";
+                            }
+
+                            leaf ike-mode {
+                                type enumeration {
+                                    enum "main"                         { value 1; }
+                                    enum "aggressive"                   { value 2; }
+                                }
+                                default "main";
+                                description "Mode of operation";
+                            }
+
+                            leaf ph1-responder-delete-notify {
+                                type boolean;
+                                default "true";
+                                description "Send delete notification for IKEv1 phase 1 removal";
+                            }
+
+                        } // container ike-version-1
+
+                    }
+                    case version-2 {
+
+                        container ike-version-2 {
+                            presence "IKE version 1.";
+                            description "Enter the ike-version-2 context";
+
+                            leaf auth-method {
+                                type enumeration {
+                                    enum "psk"                          { value 1; }
+                                    enum "cert"                         { value 5; }
+                                    enum "psk-radius"                   { value 6; }
+                                    enum "cert-radius"                  { value 7; }
+                                    enum "eap"                          { value 8; }
+                                    enum "auto-eap-radius"              { value 9; }
+                                    enum "auto-eap"                     { value 10; }
+                                }
+                                default "psk";
+                                description "Authentication method used with the IKE policy";
+                            }
+
+                            leaf own-auth-method {
+                                type enumeration {
+                                    enum "symmetric"                    { value 0; }
+                                    enum "psk"                          { value 1; }
+                                    enum "cert"                         { value 5; }
+                                    enum "eap-only"                     { value 8; }
+                                }
+                                default "symmetric";
+                                description "Authentication method used with IKE policy on own side";
+                            }
+
+                            leaf auto-eap-method {
+                                type enumeration {
+                                    enum "psk"                          { value 1; }
+                                    enum "cert"                         { value 2; }
+                                    enum "psk-or-cert"                  { value 3; }
+                                }
+                                default "cert";
+                                description "Authentication method";
+                            }
+
+                            leaf own-auto-eap-method {
+                                type enumeration {
+                                    enum "psk"                          { value 1; }
+                                    enum "cert"                         { value 2; }
+                                }
+                                default "cert";
+                                description "Authentication method";
+                            }
+
+                            leaf send-idr-after-eap-success {
+                                type boolean;
+                                default "true";
+                                description "Send IDr payload in last IKE authentication response";
+                            }
+
+                            container ikev2-fragment {
+                                presence "IKEv2 fragmentation.";
+                                description "Enter the ikev2-fragment context";
+
+                                leaf mtu {
+                                    type uint32 {
+                                        range "512..9000";
+                                    }
+                                    units "octets";
+                                    default "1500";
+                                    description "MTU of the IKEv2 messages";
+                                }
+
+                                leaf reassembly-timeout {
+                                    type uint32 {
+                                        range "1..5";
+                                    }
+                                    units "seconds";
+                                    default "2";
+                                    description "Timeout for reassembly of IKEv2 message fragments";
+                                }
+
+                            } // container ikev2-fragment
+
+                        } // container ike-version-2
+
+                    }
+                }
+                container limit-init-exchange {
+                    when "../ike-version-2";
+                    description "Enter the limit-init-exchange context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "enable";
+                        description "Administrative state of limiting initial IKE exchanges";
+                    }
+
+                    leaf reduced-max-exchange-timeout {
+                        type union {
+                            type uint32 {
+                                range "2..60";
+                            }
+                            type enumeration {
+                                enum "none"                         { value 0; }
+                            }
+                        }
+                        units "seconds";
+                        default "2";
+                        description "Max timeout for the in-progress initial IKE exchange";
+                    }
+
+                } // container limit-init-exchange
+
+                container dpd {
+                    presence "Dead Peer Detection (DPD).";
+                    description "Enter the dpd context";
+
+                    leaf reply-only {
+                        type boolean;
+                        default "false";
+                        description "Initiate DPD request for incoming ESP or IKE packets";
+                    }
+
+                    leaf interval {
+                        type uint32 {
+                            range "10..300";
+                        }
+                        units "seconds";
+                        default "30";
+                        description "DPD interval";
+                    }
+
+                    leaf max-retries {
+                        type uint32 {
+                            range "2..5";
+                        }
+                        default "3";
+                        description "Maximum number of retries before the tunnel is removed";
+                    }
+
+                } // container dpd
+
+                container nat-traversal {
+                    presence "Network Address Translation Traversal (NAT-T).";
+                    description "Enter the nat-traversal context";
+
+                    leaf force {
+                        type boolean;
+                        default "false";
+                        description "Force NAT-T to be enabled.";
+                    }
+
+                    leaf keep-alive-interval {
+                        type uint32 {
+                            range "120..600";
+                        }
+                        units "seconds";
+                        description "The keep alive interval for NAT-T.";
+                    }
+
+                    leaf force-keep-alive {
+                        type boolean;
+                        default "true";
+                        description "Send the keep alive packets only when behind a NAT.";
+                    }
+
+                } // container nat-traversal
+
+                container lockout {
+                    presence "IPsec client lockout.";
+                    description "Enter the lockout context";
+
+                    leaf failed-attempts {
+                        type uint32 {
+                            range "1..64";
+                        }
+                        default "3";
+                        description "Maximum failed authentications allowed in the duration";
+                    }
+
+                    leaf duration {
+                        type uint32 {
+                            range "1..60";
+                        }
+                        units "minutes";
+                        default "5";
+                        description "Time interval in which failed attempts must be exceeded";
+                    }
+
+                    leaf block {
+                        type union {
+                            type uint32 {
+                                range "1..1440";
+                            }
+                            type enumeration {
+                                enum "infinite"                     { value 0; }
+                            }
+                        }
+                        units "minutes";
+                        default "10";
+                        description "Time a client is blocked for failed authentications";
+                    }
+
+                    leaf max-port-per-ip {
+                        type uint32 {
+                            range "1..32000";
+                        }
+                        default "16";
+                        description "Max number of ports allowed behind the same IP address";
+                    }
+
+                } // container lockout
+
+                container pfs {
+                    presence
+                        "Perfect Forward Secrecy (PFS) for the IPsec tunnels using
+                         this IKE policy.";
+                    description "Enter the pfs context";
+
+                    leaf dh-group {
+                        type types-ipsec:dh-group;
+                        default "group-2";
+                        description "The new Diffie-Hellman (DH) group used when each time the SA(Security Association) key is renegotiated.";
+                    }
+
+                } // container pfs
+
+                container relay-unsolicited-cfg-attribute {
+                    description "Enter the relay-unsolicited-cfg-attribute context";
+
+                    leaf internal-ip4-address {
+                        type boolean;
+                        default "false";
+                        description "IPv4 address attribute.";
+                    }
+
+                    leaf internal-ip4-netmask {
+                        type boolean;
+                        default "false";
+                        description "IPv4 netmask attribute.";
+                    }
+
+                    leaf internal-ip4-dns {
+                        type boolean;
+                        default "false";
+                        description "IPv4 DNS attribute.";
+                    }
+
+                    leaf internal-ip6-address {
+                        type boolean;
+                        default "false";
+                        description "IPv6 address attribute.";
+                    }
+
+                    leaf internal-ip6-dns {
+                        type boolean;
+                        default "false";
+                        description "IPv6 DNS attribute.";
+                    }
+
+                } // container relay-unsolicited-cfg-attribute
+
+            } // list ike-policy
+
+            list ike-transform {
+                key "id";
+                max-elements 4096;
+                description "Enter the ike-transform list instance";
+
+                leaf id {
+                    type types-ipsec:ike-transform-id;
+                    description "The unique identifier of an IKE transform.";
+                }
+
+                leaf dh-group {
+                    type types-ipsec:dh-group;
+                    default "group-2";
+                    description "Diffie-Helman group used to calculate session keys";
+                }
+
+                leaf ike-auth-algorithm {
+                    type types-ipsec:ike-auth-algorithms;
+                    default "sha-1";
+                    description "IKE authentication algorithm for IKE transform instance";
+                }
+
+                leaf ike-encryption-algorithm {
+                    type types-ipsec:ike-encryption-algorithms;
+                    default "aes-128";
+                    description "IKE encryption algorith for the IKE transform instance";
+                }
+
+                leaf ike-prf-algorithm {
+                    type types-ipsec:prf-algorithms;
+                    default "same-as-auth";
+                    description "PRF algorithm for the IKE transform instance";
+                }
+
+                leaf isakmp-lifetime {
+                    type types-ipsec:lifetime;
+                    default "86400";
+                    description "Phase 1 lifetime for the IKE transform instance";
+                }
+
+            } // list ike-transform
+
+            list ipsec-transform {
+                key "id";
+                max-elements 2048;
+                description "Enter the ipsec-transform list instance";
+
+                leaf id {
+                    type uint32 {
+                        range "1..2048";
+                    }
+                    description "IPsec transform ID.";
+                }
+
+                leaf esp-auth-algorithm {
+                    type types-ipsec:auth-algorithms;
+                    default "sha-1";
+                    description "The authentication algorithm for this IPsec transform.";
+                }
+
+                leaf esp-encryption-algorithm {
+                    type types-ipsec:encryption-algorithms;
+                    default "aes-128";
+                    description "Encryption algorithm for the IPsec transform session";
+                }
+
+                leaf ipsec-lifetime {
+                    type types-ipsec:lifetime;
+                    description "Phase 2 lifetime for the IPsec transform session";
+                }
+
+                leaf pfs-dh-group {
+                    type enumeration {
+                        enum "none"                         { value 0; }
+                        enum "group-1"                      { value 1; }
+                        enum "group-2"                      { value 2; }
+                        enum "group-5"                      { value 5; }
+                        enum "group-14"                     { value 14; }
+                        enum "group-15"                     { value 15; }
+                        enum "group-19"                     { value 19; }
+                        enum "group-20"                     { value 20; }
+                        enum "group-21"                     { value 21; }
+                    }
+                    description "Diffie-Hellman group used for PFS compilation";
+                }
+
+            } // list ipsec-transform
+
+            list static-sa {
+                key "name";
+                max-elements 1000;
+                description "Enter the static-sa list instance";
+
+                leaf name {
+                    type types-sros:named-item;
+                    description "Static Security Association (SA) name.";
+                }
+
+                leaf description {
+                    type types-sros:named-item;
+                    description "Text description";
+                }
+
+                leaf direction {
+                    type enumeration {
+                        enum "inbound"                      { value 1; }
+                        enum "outbound"                     { value 2; }
+                        enum "bidirectional"                { value 3; }
+                    }
+                    default "bidirectional";
+                    description "Direction to which the static SA entry can be applied";
+                }
+
+                leaf protocol {
+                    type enumeration {
+                        enum "ah"                           { value 1; }
+                        enum "esp"                          { value 2; }
+                    }
+                    default "esp";
+                    description "IPsec protocol used with the static SA";
+                }
+
+                leaf spi {
+                    type uint32 {
+                        range "256..16383";
+                    }
+                    description "Security Parameter Index (SPI) for the static SA";
+                }
+
+                container authentication {
+                    presence "Authentication algorithm and key for this static SA..";
+                    description "Enter the authentication context";
+
+                    leaf algorithm {
+                        type enumeration {
+                            enum "md5"                          { value 2; }
+                            enum "sha1"                         { value 3; }
+                        }
+                        mandatory true;
+                        description "Authentication algorithm used for an IPsec manual SA";
+                    }
+
+                    leaf key {
+                        type types-sros:encrypted-leaf {
+                            length "1..54";
+                        }
+                        mandatory true;
+                        description "Key used for the authentication algorithm";
+                    }
+
+                } // container authentication
+
+            } // list static-sa
+
+            list ts-list {
+                key "name";
+                max-elements 32768;
+                description "Enter the ts-list list instance";
+
+                leaf name {
+                    type types-sros:named-item;
+                    description "IPsec Traffic Selector (TS) list name.";
+                }
+
+                container local {
+                    description "Enter the local context";
+
+                    list entry {
+                        key "id";
+                        description "Enter the entry list instance";
+
+                        leaf id {
+                            type uint32 {
+                                range "1..32";
+                            }
+                            description "The unique ID of this TS list entry.";
+                        }
+
+                        container address {
+                            presence "The IP addresses accepted by the TS list.";
+                            description "Enter the address context";
+
+                            choice address-range {
+                                mandatory true;
+                                case prefix {
+
+                                    leaf prefix {
+                                        type types-sros:ip-prefix;
+                                        description "IP prefix for address range in IKEv2 traffic selector";
+                                    }
+
+                                }
+                                case range {
+
+                                    container range {
+                                        presence "The begin and end IP of the supported address range.";
+                                        description "Enter the range context";
+
+                                        leaf begin {
+                                            type types-sros:ip-address;
+                                            mandatory true;
+                                            description "Beginning IP address of the range for the entry";
+                                        }
+
+                                        leaf end {
+                                            type types-sros:ip-address;
+                                            mandatory true;
+                                            description "The end IP address.";
+                                        }
+
+                                    } // container range
+
+                                }
+                            }
+                        } // container address
+
+                        container protocol {
+                            presence "The protocol ID and its port range accepted by the TS list.";
+                            description "Enter the protocol context";
+
+                            choice range {
+                                mandatory true;
+                                case any {
+
+                                    leaf any {
+                                        type empty;
+                                        description "Match any protocol ID";
+                                    }
+
+                                }
+                                case id {
+
+                                    container id {
+                                        presence "The accepted protocol ID and its port range.";
+                                        description "Enter the id context";
+
+                                        choice id {
+                                            mandatory true;
+                                            case tcp {
+
+                                                container tcp {
+                                                    description "Enter the tcp context";
+
+                                                    choice port {
+                                                        case opaque-port {
+
+                                                            leaf opaque {
+                                                                type empty;
+                                                                description "Match OPAQUE ports";
+                                                            }
+
+                                                        }
+                                                        case port-range {
+
+                                                            container port-range {
+                                                                presence "The accepted begin and end ports.";
+                                                                description "Enter the port-range context";
+
+                                                                leaf begin {
+                                                                    type uint32 {
+                                                                        range "0..65535";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Lower bound of the port range";
+                                                                }
+
+                                                                leaf end {
+                                                                    type uint32 {
+                                                                        range "0..65535";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Upper bound of the port range";
+                                                                }
+
+                                                            } // container port-range
+
+                                                        }
+                                                    }
+                                                } // container tcp
+
+                                            }
+                                            case udp {
+
+                                                container udp {
+                                                    description "Enter the udp context";
+
+                                                    choice port {
+                                                        case opaque-port {
+
+                                                            leaf opaque {
+                                                                type empty;
+                                                                description "Match OPAQUE ports";
+                                                            }
+
+                                                        }
+                                                        case port-range {
+
+                                                            container port-range {
+                                                                presence "The accepted begin and end ports.";
+                                                                description "Enter the port-range context";
+
+                                                                leaf begin {
+                                                                    type uint32 {
+                                                                        range "0..65535";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Lower bound of the port range";
+                                                                }
+
+                                                                leaf end {
+                                                                    type uint32 {
+                                                                        range "0..65535";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Upper bound of the port range";
+                                                                }
+
+                                                            } // container port-range
+
+                                                        }
+                                                    }
+                                                } // container udp
+
+                                            }
+                                            case sctp {
+
+                                                container sctp {
+                                                    description "Enter the sctp context";
+
+                                                    choice port {
+                                                        case opaque-port {
+
+                                                            leaf opaque {
+                                                                type empty;
+                                                                description "Match OPAQUE ports";
+                                                            }
+
+                                                        }
+                                                        case port-range {
+
+                                                            container port-range {
+                                                                presence "The accepted begin and end ports.";
+                                                                description "Enter the port-range context";
+
+                                                                leaf begin {
+                                                                    type uint32 {
+                                                                        range "0..65535";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Lower bound of the port range";
+                                                                }
+
+                                                                leaf end {
+                                                                    type uint32 {
+                                                                        range "0..65535";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Upper bound of the port range";
+                                                                }
+
+                                                            } // container port-range
+
+                                                        }
+                                                    }
+                                                } // container sctp
+
+                                            }
+                                            case icmp {
+
+                                                container icmp {
+                                                    description "Enter the icmp context";
+
+                                                    choice port {
+                                                        case opaque-port {
+
+                                                            leaf opaque {
+                                                                type empty;
+                                                                description "Match OPAQUE ports";
+                                                            }
+
+                                                        }
+                                                        case port-range {
+
+                                                            container port-range {
+                                                                presence "The accepted begin and end ICMP ports (type and code).";
+                                                                description "Enter the port-range context";
+
+                                                                leaf begin-icmp-type {
+                                                                    type uint16 {
+                                                                        range "0..255";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Lower bound of the ICMP type range";
+                                                                }
+
+                                                                leaf begin-icmp-code {
+                                                                    type uint16 {
+                                                                        range "0..255";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Lower bound of the ICMP code range";
+                                                                }
+
+                                                                leaf end-icmp-type {
+                                                                    type uint16 {
+                                                                        range "0..255";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Upper bound of the ICMP type range";
+                                                                }
+
+                                                                leaf end-icmp-code {
+                                                                    type uint16 {
+                                                                        range "0..255";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Upper bound of the ICMP code range";
+                                                                }
+
+                                                            } // container port-range
+
+                                                        }
+                                                    }
+                                                } // container icmp
+
+                                            }
+                                            case icmp6 {
+
+                                                container icmp6 {
+                                                    description "Enter the icmp6 context";
+
+                                                    choice port {
+                                                        case opaque-port {
+
+                                                            leaf opaque {
+                                                                type empty;
+                                                                description "Match OPAQUE ports";
+                                                            }
+
+                                                        }
+                                                        case port-range {
+
+                                                            container port-range {
+                                                                presence "The accepted begin and end ICMP ports (type and code).";
+                                                                description "Enter the port-range context";
+
+                                                                leaf begin-icmp-type {
+                                                                    type uint16 {
+                                                                        range "0..255";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Lower bound of the ICMP type range";
+                                                                }
+
+                                                                leaf begin-icmp-code {
+                                                                    type uint16 {
+                                                                        range "0..255";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Lower bound of the ICMP code range";
+                                                                }
+
+                                                                leaf end-icmp-type {
+                                                                    type uint16 {
+                                                                        range "0..255";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Upper bound of the ICMP type range";
+                                                                }
+
+                                                                leaf end-icmp-code {
+                                                                    type uint16 {
+                                                                        range "0..255";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Upper bound of the ICMP code range";
+                                                                }
+
+                                                            } // container port-range
+
+                                                        }
+                                                    }
+                                                } // container icmp6
+
+                                            }
+                                            case mipv6 {
+
+                                                container mipv6 {
+                                                    description "Enter the mipv6 context";
+
+                                                    choice port {
+                                                        case opaque-port {
+
+                                                            leaf opaque {
+                                                                type empty;
+                                                                description "Match OPAQUE ports";
+                                                            }
+
+                                                        }
+                                                        case port-range {
+
+                                                            container port-range {
+                                                                presence "The accepted begin and end MIPv6 ports (mobility header type).";
+                                                                description "Enter the port-range context";
+
+                                                                leaf begin {
+                                                                    type uint16 {
+                                                                        range "0..255";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "The begin mobility header type.";
+                                                                }
+
+                                                                leaf end {
+                                                                    type uint16 {
+                                                                        range "0..255";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "The end mobility header type.";
+                                                                }
+
+                                                            } // container port-range
+
+                                                        }
+                                                    }
+                                                } // container mipv6
+
+                                            }
+                                            case any {
+
+                                                leaf protocol-id-with-any-port {
+                                                    type union {
+                                                        type enumeration {
+                                                            enum "icmp"                         { value 1; }
+                                                            enum "tcp"                          { value 6; }
+                                                            enum "udp"                          { value 17; }
+                                                            enum "icmp6"                        { value 58; }
+                                                            enum "sctp"                         { value 132; }
+                                                            enum "mipv6"                        { value 135; }
+                                                        }
+                                                        type int32 {
+                                                            range "1..255";
+                                                        }
+                                                    }
+                                                    description "Protocol ID that accepts any port value";
+                                                }
+
+                                            }
+                                        }
+                                    } // container id
+
+                                }
+                            }
+                        } // container protocol
+
+                    } // list entry
+
+                } // container local
+
+                container remote {
+                    description "Enter the remote context";
+
+                    list entry {
+                        key "id";
+                        description "Enter the entry list instance";
+
+                        leaf id {
+                            type uint32 {
+                                range "1..32";
+                            }
+                            description "The unique ID of this TS list entry.";
+                        }
+
+                        container address {
+                            presence "The IP addresses accepted by the TS list.";
+                            description "Enter the address context";
+
+                            choice address-range {
+                                mandatory true;
+                                case prefix {
+
+                                    leaf prefix {
+                                        type types-sros:ip-prefix;
+                                        description "IP prefix for address range in IKEv2 traffic selector";
+                                    }
+
+                                }
+                                case range {
+
+                                    container range {
+                                        presence "The begin and end IP of the supported address range.";
+                                        description "Enter the range context";
+
+                                        leaf begin {
+                                            type types-sros:ip-address;
+                                            mandatory true;
+                                            description "Beginning IP address of the range for the entry";
+                                        }
+
+                                        leaf end {
+                                            type types-sros:ip-address;
+                                            mandatory true;
+                                            description "The end IP address.";
+                                        }
+
+                                    } // container range
+
+                                }
+                            }
+                        } // container address
+
+                        container protocol {
+                            presence "The protocol ID and its port range accepted by the TS list.";
+                            description "Enter the protocol context";
+
+                            choice range {
+                                mandatory true;
+                                case any {
+
+                                    leaf any {
+                                        type empty;
+                                        description "Match any protocol ID";
+                                    }
+
+                                }
+                                case id {
+
+                                    container id {
+                                        presence "The accepted protocol ID and its port range.";
+                                        description "Enter the id context";
+
+                                        choice id {
+                                            mandatory true;
+                                            case tcp {
+
+                                                container tcp {
+                                                    description "Enter the tcp context";
+
+                                                    choice port {
+                                                        case opaque-port {
+
+                                                            leaf opaque {
+                                                                type empty;
+                                                                description "Match OPAQUE ports";
+                                                            }
+
+                                                        }
+                                                        case port-range {
+
+                                                            container port-range {
+                                                                presence "The accepted begin and end ports.";
+                                                                description "Enter the port-range context";
+
+                                                                leaf begin {
+                                                                    type uint32 {
+                                                                        range "0..65535";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Lower bound of the port range";
+                                                                }
+
+                                                                leaf end {
+                                                                    type uint32 {
+                                                                        range "0..65535";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Upper bound of the port range";
+                                                                }
+
+                                                            } // container port-range
+
+                                                        }
+                                                    }
+                                                } // container tcp
+
+                                            }
+                                            case udp {
+
+                                                container udp {
+                                                    description "Enter the udp context";
+
+                                                    choice port {
+                                                        case opaque-port {
+
+                                                            leaf opaque {
+                                                                type empty;
+                                                                description "Match OPAQUE ports";
+                                                            }
+
+                                                        }
+                                                        case port-range {
+
+                                                            container port-range {
+                                                                presence "The accepted begin and end ports.";
+                                                                description "Enter the port-range context";
+
+                                                                leaf begin {
+                                                                    type uint32 {
+                                                                        range "0..65535";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Lower bound of the port range";
+                                                                }
+
+                                                                leaf end {
+                                                                    type uint32 {
+                                                                        range "0..65535";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Upper bound of the port range";
+                                                                }
+
+                                                            } // container port-range
+
+                                                        }
+                                                    }
+                                                } // container udp
+
+                                            }
+                                            case sctp {
+
+                                                container sctp {
+                                                    description "Enter the sctp context";
+
+                                                    choice port {
+                                                        case opaque-port {
+
+                                                            leaf opaque {
+                                                                type empty;
+                                                                description "Match OPAQUE ports";
+                                                            }
+
+                                                        }
+                                                        case port-range {
+
+                                                            container port-range {
+                                                                presence "The accepted begin and end ports.";
+                                                                description "Enter the port-range context";
+
+                                                                leaf begin {
+                                                                    type uint32 {
+                                                                        range "0..65535";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Lower bound of the port range";
+                                                                }
+
+                                                                leaf end {
+                                                                    type uint32 {
+                                                                        range "0..65535";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Upper bound of the port range";
+                                                                }
+
+                                                            } // container port-range
+
+                                                        }
+                                                    }
+                                                } // container sctp
+
+                                            }
+                                            case icmp {
+
+                                                container icmp {
+                                                    description "Enter the icmp context";
+
+                                                    choice port {
+                                                        case opaque-port {
+
+                                                            leaf opaque {
+                                                                type empty;
+                                                                description "Match OPAQUE ports";
+                                                            }
+
+                                                        }
+                                                        case port-range {
+
+                                                            container port-range {
+                                                                presence "The accepted begin and end ICMP ports (type and code).";
+                                                                description "Enter the port-range context";
+
+                                                                leaf begin-icmp-type {
+                                                                    type uint16 {
+                                                                        range "0..255";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Lower bound of the ICMP type range";
+                                                                }
+
+                                                                leaf begin-icmp-code {
+                                                                    type uint16 {
+                                                                        range "0..255";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Lower bound of the ICMP code range";
+                                                                }
+
+                                                                leaf end-icmp-type {
+                                                                    type uint16 {
+                                                                        range "0..255";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Upper bound of the ICMP type range";
+                                                                }
+
+                                                                leaf end-icmp-code {
+                                                                    type uint16 {
+                                                                        range "0..255";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Upper bound of the ICMP code range";
+                                                                }
+
+                                                            } // container port-range
+
+                                                        }
+                                                    }
+                                                } // container icmp
+
+                                            }
+                                            case icmp6 {
+
+                                                container icmp6 {
+                                                    description "Enter the icmp6 context";
+
+                                                    choice port {
+                                                        case opaque-port {
+
+                                                            leaf opaque {
+                                                                type empty;
+                                                                description "Match OPAQUE ports";
+                                                            }
+
+                                                        }
+                                                        case port-range {
+
+                                                            container port-range {
+                                                                presence "The accepted begin and end ICMP ports (type and code).";
+                                                                description "Enter the port-range context";
+
+                                                                leaf begin-icmp-type {
+                                                                    type uint16 {
+                                                                        range "0..255";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Lower bound of the ICMP type range";
+                                                                }
+
+                                                                leaf begin-icmp-code {
+                                                                    type uint16 {
+                                                                        range "0..255";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Lower bound of the ICMP code range";
+                                                                }
+
+                                                                leaf end-icmp-type {
+                                                                    type uint16 {
+                                                                        range "0..255";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Upper bound of the ICMP type range";
+                                                                }
+
+                                                                leaf end-icmp-code {
+                                                                    type uint16 {
+                                                                        range "0..255";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "Upper bound of the ICMP code range";
+                                                                }
+
+                                                            } // container port-range
+
+                                                        }
+                                                    }
+                                                } // container icmp6
+
+                                            }
+                                            case mipv6 {
+
+                                                container mipv6 {
+                                                    description "Enter the mipv6 context";
+
+                                                    choice port {
+                                                        case opaque-port {
+
+                                                            leaf opaque {
+                                                                type empty;
+                                                                description "Match OPAQUE ports";
+                                                            }
+
+                                                        }
+                                                        case port-range {
+
+                                                            container port-range {
+                                                                presence "The accepted begin and end MIPv6 ports (mobility header type).";
+                                                                description "Enter the port-range context";
+
+                                                                leaf begin {
+                                                                    type uint16 {
+                                                                        range "0..255";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "The begin mobility header type.";
+                                                                }
+
+                                                                leaf end {
+                                                                    type uint16 {
+                                                                        range "0..255";
+                                                                    }
+                                                                    mandatory true;
+                                                                    description "The end mobility header type.";
+                                                                }
+
+                                                            } // container port-range
+
+                                                        }
+                                                    }
+                                                } // container mipv6
+
+                                            }
+                                            case any {
+
+                                                leaf protocol-id-with-any-port {
+                                                    type union {
+                                                        type enumeration {
+                                                            enum "icmp"                         { value 1; }
+                                                            enum "tcp"                          { value 6; }
+                                                            enum "udp"                          { value 17; }
+                                                            enum "icmp6"                        { value 58; }
+                                                            enum "sctp"                         { value 132; }
+                                                            enum "mipv6"                        { value 135; }
+                                                        }
+                                                        type int32 {
+                                                            range "1..255";
+                                                        }
+                                                    }
+                                                    description "Protocol ID that accepts any port value";
+                                                }
+
+                                            }
+                                        }
+                                    } // container id
+
+                                }
+                            }
+                        } // container protocol
+
+                    } // list entry
+
+                } // container remote
+
+            } // list ts-list
+
+            list tunnel-template {
+                key "id";
+                max-elements 2048;
+                description "Enter the tunnel-template list instance";
+
+                leaf id {
+                    type types-ipsec:tunnel-template-id;
+                    description "Tunnel template ID";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf clear-df-bit {
+                    type boolean;
+                    default "false";
+                    description "Clear the Do-not-Fragment (DF) bit";
+                }
+
+                leaf encapsulated-ip-mtu {
+                    type uint32 {
+                        range "512..9000";
+                    }
+                    units "octets";
+                    description "Maximum size of the encapsulated tunnel packet";
+                }
+
+                leaf ip-mtu {
+                    type uint32 {
+                        range "512..9000";
+                    }
+                    units "octets";
+                    description "Maximum size of the IP MTU for the payload packets";
+                }
+
+                leaf private-tcp-mss-adjust {
+                    type int32 {
+                        range "512..9000";
+                    }
+                    units "octets";
+                    description "New TCP MSS value on the private side";
+                }
+
+                leaf public-tcp-mss-adjust {
+                    type union {
+                        type uint32 {
+                            range "512..9000";
+                        }
+                        type enumeration {
+                            enum "auto"                         { value 0; }
+                        }
+                    }
+                    units "octets";
+                    description "New TCP MSS value on the public side";
+                }
+
+                leaf replay-window {
+                    type uint32 {
+                        range "32|64|128|256|512";
+                    }
+                    description "Anti-replay window size for the tunnel template";
+                }
+
+                leaf sp-reverse-route {
+                    type enumeration {
+                        enum "none"                         { value 0; }
+                        enum "use-security-policy"          { value 1; }
+                    }
+                    default "none";
+                    description "Reverse route creation method in private service";
+                }
+
+                leaf-list ipsec-transform {
+                    type leafref {
+                        path "../../ipsec-transform/id";
+                    }
+                    max-elements 4;
+                    description "IPsec transform ID for the tunnel template";
+                }
+
+                leaf ignore-default-route {
+                    type boolean;
+                    default "false";
+                    description "Ignore any full range traffic selector in TSi";
+                }
+
+                container icmp6-generation {
+                    description "Enter the icmp6-generation context";
+
+                    container pkt-too-big {
+                        description "Enter the pkt-too-big context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "enable";
+                            description "Adminstrative state of the generation of ICMPv6 Packet Too Big messages";
+                        }
+
+                        leaf interval {
+                            type uint32 {
+                                range "1..60";
+                            }
+                            units "seconds";
+                            default "10";
+                            description "Maximum interval during which PTB messages can be sent";
+                        }
+
+                        leaf message-count {
+                            type uint32 {
+                                range "10..1000";
+                            }
+                            default "100";
+                            description "Max ICMPv6 messages that can be sent during interval";
+                        }
+
+                    } // container pkt-too-big
+
+                } // container icmp6-generation
+
+            } // list tunnel-template
+
+            list trust-anchor-profile {
+                key "name";
+                max-elements 10128;
+                description "Enter the trust-anchor-profile list instance";
+
+                leaf name {
+                    type types-sros:named-item;
+                    description "Trust anchor profile name.";
+                }
+
+                list trust-anchor {
+                    key "ca-profile";
+                    max-elements 8;
+                    description "Add a list entry for trust-anchor";
+
+                    leaf ca-profile {
+                        type leafref {
+                            path "../../../../system/security/pki/ca-profile/ca-profile-name";
+                        }
+                        description "Name of the CA profile as a trust anchor profile";
+                    }
+
+                } // list trust-anchor
+
+            } // list trust-anchor-profile
+
+            container radius {
+                description "Enter the radius context";
+
+                list accounting-policy {
+                    key "name";
+                    max-elements 100;
+                    description "Enter the accounting-policy list instance";
+
+                    leaf name {
+                        type types-sros:named-item;
+                        description "RADIUS accounting policy name";
+                    }
+
+                    leaf radius-server-policy {
+                        type leafref {
+                            path "../../../../aaa/radius/server-policy/name";
+                        }
+                        description "RADIUS server policy name";
+                    }
+
+                    container update-interval {
+                        description "Enter the update-interval context";
+
+                        leaf value {
+                            type int32 {
+                                range "0|5..259200";
+                            }
+                            units "minutes";
+                            default "10";
+                            description "The update interval of the RADIUS accounting data. Zero specifies that no intermediate updates will be sent.";
+                        }
+
+                        leaf jitter {
+                            type int32 {
+                                range "0..3600";
+                            }
+                            units "seconds";
+                            description "The jitter of the update interval. If not specified, the system will use 10% of the update interval value";
+                        }
+
+                    } // container update-interval
+
+                    container include-radius-attribute {
+                        description "Enter the include-radius-attribute context";
+
+                        leaf called-station-id {
+                            type boolean;
+                            default "false";
+                            description "Include the Called-Station-Id attribute";
+                        }
+
+                        leaf calling-station-id {
+                            type boolean;
+                            default "false";
+                            description "Include the Calling-Station-Id attribute";
+                        }
+
+                        leaf nas-identifier {
+                            type boolean;
+                            default "false";
+                            description "Include the NAS-Identifier attribute";
+                        }
+
+                        leaf nas-ip-addr {
+                            type boolean;
+                            default "false";
+                            description "Include the NAS-IP-Address attribute";
+                        }
+
+                        leaf nas-port-id {
+                            type boolean;
+                            default "false";
+                            description "Include the NAS-Port-Id attribute";
+                        }
+
+                        leaf acct-stats {
+                            type boolean;
+                            default "false";
+                            description "Include accounting attributes in RADIUS packets";
+                        }
+
+                        leaf framed-ip-addr {
+                            type boolean;
+                            default "false";
+                            description "Include the Framed-IP-Address attribute";
+                        }
+
+                        leaf framed-ipv6-prefix {
+                            type boolean;
+                            default "false";
+                            description "Include the Framed-IPv6-Prefix attribute";
+                        }
+
+                    } // container include-radius-attribute
+
+                } // list accounting-policy
+
+                list authentication-policy {
+                    key "name";
+                    max-elements 100;
+                    description "Enter the authentication-policy list instance";
+
+                    leaf name {
+                        type types-sros:named-item;
+                        description "RADIUS authentication policy name.";
+                    }
+
+                    leaf radius-server-policy {
+                        type leafref {
+                            path "../../../../aaa/radius/server-policy/name";
+                        }
+                        description "RADIUS server policy name";
+                    }
+
+                    leaf password {
+                        type types-sros:encrypted-leaf {
+                            length "1..115";
+                        }
+                        description "The default password to be used in access-request messages to the RADIUS server";
+                    }
+
+                    container include-radius-attribute {
+                        description "Enter the include-radius-attribute context";
+
+                        leaf called-station-id {
+                            type boolean;
+                            default "false";
+                            description "Include the Called-Station-Id attribute";
+                        }
+
+                        leaf calling-station-id {
+                            type boolean;
+                            default "false";
+                            description "Include the Calling-Station-Id attribute";
+                        }
+
+                        leaf nas-identifier {
+                            type boolean;
+                            default "false";
+                            description "Include the NAS-Identifier attribute";
+                        }
+
+                        leaf nas-ip-addr {
+                            type boolean;
+                            default "false";
+                            description "Include the NAS-IP-Address attribute";
+                        }
+
+                        leaf nas-port-id {
+                            type boolean;
+                            default "false";
+                            description "Include the NAS-Port-Id attribute";
+                        }
+
+                        leaf client-cert-subject-key-id {
+                            type boolean;
+                            default "false";
+                            description "Include the Subject-Key-Id attribute.";
+                        }
+
+                    } // container include-radius-attribute
+
+                } // list authentication-policy
+
+            } // container radius
+
+        } // container ipsec
+
+    } // grouping conf-ipsec
+
+}

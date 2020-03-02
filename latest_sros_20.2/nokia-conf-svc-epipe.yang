@@ -1,0 +1,3564 @@
+submodule nokia-conf-svc-epipe {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-eth-cfm            { prefix "types-eth-cfm"; }
+    import nokia-types-qos                { prefix "types-qos"; }
+    import nokia-types-router             { prefix "types-router"; }
+    import nokia-types-services           { prefix "types-services"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-bfd;
+    include nokia-conf-eth-cfm;
+    include nokia-conf-filter;
+    include nokia-conf-groups;
+    include nokia-conf-log;
+    include nokia-conf-policy-options;
+    include nokia-conf-qos;
+    include nokia-conf-service;
+    include nokia-conf-svc-vpls;
+    include nokia-conf-system;
+    include nokia-conf-system-security;
+
+    sros-ext:sros-major-release "rel20";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure epipe services on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-svc-epipe YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2020-01-15";
+
+    grouping conf-svc-epipe {
+        list epipe {
+            key "service-name";
+            description "Enter the epipe list instance";
+
+            leaf service-name {
+                type types-services:service-name;
+                description "Service name";
+            }
+
+            leaf service-id {
+                type types-services:external-service-id;
+                sros-ext:immutable;
+                description "Unique service ID; cannot be used by any other service, regardless of service type";
+            }
+
+            leaf description {
+                type types-sros:description;
+                description "Text description";
+            }
+
+            leaf customer {
+                type leafref {
+                    path "../../customer/customer-name";
+                }
+                sros-ext:immutable;
+                mandatory true;
+                description "Service customer ID";
+            }
+
+            leaf admin-state {
+                type types-sros:admin-state;
+                default "disable";
+                description "Administrative state of the mirror destination service";
+            }
+
+            leaf vpn-id {
+                type types-services:vpn-id;
+                sros-ext:immutable;
+                description "VPN identifier for the service";
+            }
+
+            leaf vc-switching {
+                type boolean;
+                sros-ext:immutable;
+                default "false";
+                description "PW switching signaling to be used by the spokes in the service";
+            }
+
+            leaf test {
+                type boolean;
+                sros-ext:immutable;
+                default "false";
+                description "Designate as a test service";
+            }
+
+            leaf service-mtu {
+                type int32 {
+                    range "1..9782";
+                }
+                default "1514";
+                description "MTU size";
+            }
+
+            leaf oper-group {
+                type leafref {
+                    path "../../oper-group/name";
+                }
+                description "Oper-group name";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            list bgp {
+                key "bgp-instance";
+                description "Enter the bgp list instance";
+
+                leaf bgp-instance {
+                    type int32 {
+                        range "1";
+                    }
+                    description "BGP instance";
+                }
+
+                leaf route-distinguisher {
+                    type types-services:vpn-route-distinguisher-or-auto-rd;
+                    description "High-order 6 bytes that are used as string to compose VSI-ID for use in NLRI";
+                }
+
+                leaf-list vsi-import {
+                    type leafref {
+                        path "../../../../policy-options/policy-statement/name";
+                    }
+                    max-elements 5;
+                    ordered-by user;
+                    description "VSI import policies";
+                }
+
+                leaf-list vsi-export {
+                    type leafref {
+                        path "../../../../policy-options/policy-statement/name";
+                    }
+                    max-elements 5;
+                    ordered-by user;
+                    description "VSI export policies";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                container route-target {
+                    description "Enter the route-target context";
+
+                    leaf export {
+                        type types-services:route-target;
+                        description "Extended community name for default import policy";
+                    }
+
+                    leaf import {
+                        type types-services:route-target;
+                        description "Extended community name for default import policy";
+                    }
+
+                } // container route-target
+
+                list pw-template-binding {
+                    key "pw-template-name";
+                    max-elements 100;
+                    description "Enter the pw-template-binding list instance";
+
+                    leaf pw-template-name {
+                        type leafref {
+                            path "../../../../pw-template/pw-template-name";
+                        }
+                        description "PW template policy name";
+                    }
+
+                    leaf bfd-template {
+                        type leafref {
+                            path "../../../../../bfd/bfd-template/name";
+                        }
+                        description "BFD template name for PW-Template binding";
+                    }
+
+                    leaf bfd-liveness {
+                        type boolean;
+                        default "false";
+                        description "Enable BFD";
+                    }
+
+                    leaf-list import-rt {
+                        type types-services:route-target;
+                        max-elements 5;
+                        description "Import route-target communities";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                } // list pw-template-binding
+
+            } // list bgp
+
+            container bgp-vpws {
+                presence "Enable BGP VPWS capability.";
+                description "Enter the bgp-vpws context";
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of the VPWS edge instance";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                container local-ve {
+                    description "Enter the local-ve context";
+
+                    leaf name {
+                        type types-sros:named-item;
+                        sros-ext:auto-restart-to-modify;
+                        description "VPWS edge name";
+                    }
+
+                    leaf id {
+                        type types-services:site-id;
+                        sros-ext:auto-restart-to-modify;
+                        description "Local VPWS edge ID";
+                    }
+
+                } // container local-ve
+
+                list remote-ve {
+                    key "name";
+                    max-elements 2;
+                    description "Enter the remote-ve list instance";
+
+                    leaf name {
+                        type types-sros:named-item;
+                        description "VPWS edge name";
+                    }
+
+                    leaf id {
+                        type types-services:site-id;
+                        description "Remote VPWS edge ID";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                } // list remote-ve
+
+            } // container bgp-vpws
+
+            list endpoint {
+                key "name";
+                max-elements 2;
+                description "Enter the endpoint list instance";
+
+                leaf name {
+                    type types-sros:named-item;
+                    description "Service endpoint name";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf revert-time {
+                    type types-services:revert-time;
+                    default "immediate";
+                    description "Time to wait before reverting back to the primary spoke-sdp defined on this service endpoint";
+                }
+
+                leaf hold-time-active {
+                    type types-services:hold-time-active;
+                    description "Time to hold the active state before entering standby when a local MC-LAG SAP goes down";
+                }
+
+                leaf standby-signaling {
+                    type enumeration {
+                        enum "master"                       { value 1; }
+                        enum "slave"                        { value 2; }
+                    }
+                    description "PW standby bit that is sent to T-LDP peer when spoke-SDPs are selected as standby";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+            } // list endpoint
+
+            container eth-cfm {
+                description "Enter the eth-cfm context";
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+            } // container eth-cfm
+
+            container load-balancing {
+                description "Enter the load-balancing context";
+
+                leaf per-service-hashing {
+                    type boolean;
+                    default "false";
+                    description "Service level hashing for Ethernet services";
+                }
+
+            } // container load-balancing
+
+            list nat-outside {
+                key "nat-group";
+                description "Enter the nat-outside list instance";
+
+                leaf nat-group {
+                    type uint32;
+                    description "NAT group";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of Epipe as a NAT outside service";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+            } // list nat-outside
+
+            container pbb {
+                description "Enter the pbb context";
+
+                leaf force-qtag-forwarding {
+                    type boolean;
+                    default "false";
+                    description "Add an IEEE 802.1q tag after the Customer MAC address when the PBB header is built";
+                }
+
+                container tunnel {
+                    presence "Enable PBB tunnel information";
+                    description "Enter the tunnel context";
+
+                    leaf backbone-vpls-service-name {
+                        type leafref {
+                            path "../../../../vpls/service-name";
+                        }
+                        sros-ext:immutable;
+                        mandatory true;
+                        description "Backbone VPLS service";
+                    }
+
+                    leaf isid {
+                        type types-services:isid;
+                        sros-ext:immutable;
+                        mandatory true;
+                        description "Service instance ID";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    choice backbone-mac {
+                        mandatory true;
+                        case backbone-dest-mac {
+
+                            leaf backbone-dest-mac {
+                                type types-sros:mac-unicast-address-no-zero;
+                                description "Backbone Destination MAC address";
+                            }
+
+                        }
+                        case backbone-dest-mac-name {
+
+                            leaf backbone-dest-mac-name {
+                                type leafref {
+                                    path "../../../../pbb/mac/name";
+                                }
+                                description "Name for backbone Destination MAC address";
+                            }
+
+                        }
+                    }
+                } // container tunnel
+
+            } // container pbb
+
+            list spoke-sdp {
+                key "sdp-bind-id";
+                description "Enter the spoke-sdp list instance";
+
+                leaf sdp-bind-id {
+                    type types-services:sdp-bind-id;
+                    description "SDP Binding identifier as <sdp-id>:<vc-id>. sdp-id - [1..32767] vc-id - [1..4294967295].";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "enable";
+                    description "Administrative state of the SDP binding to the service";
+                }
+
+                leaf vlan-vc-tag {
+                    type types-services:vlan-vc-tag;
+                    description "SDP bind VC tag";
+                }
+
+                leaf collect-stats {
+                    type boolean;
+                    default "false";
+                    description "Allow agent to collect accounting statistics";
+                }
+
+                leaf accounting-policy {
+                    type leafref {
+                        path "../../../../log/accounting-policy/policy-id";
+                    }
+                    description "Policy to collect accounting statistics";
+                }
+
+                leaf control-word {
+                    type boolean;
+                    default "false";
+                    description "Use the control word as preferred";
+                }
+
+                leaf force-vc-forwarding {
+                    type enumeration {
+                        enum "vlan"                         { value 1; }
+                        enum "qinq-c-tag-c-tag"             { value 2; }
+                        enum "qinq-s-tag-c-tag"             { value 3; }
+                    }
+                    description "VC forwarding action";
+                }
+
+                leaf bandwidth {
+                    type types-services:sdp-bind-bandwidth;
+                    units "kilobps";
+                    default "0";
+                    description "Bandwidth that is reserved for this SDP binding";
+                }
+
+                leaf bfd-template {
+                    type leafref {
+                        path "../../../../bfd/bfd-template/name";
+                    }
+                    description "BFD template associated with SDP binding";
+                }
+
+                leaf vc-type {
+                    type types-services:epipe-sdp-bind-vc-type;
+                    sros-ext:auto-restart-to-modify;
+                    default "ether";
+                    description "Type of virtual circuit (VC) associated with the SDP binding";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                choice label {
+                    case entropy {
+
+                        leaf entropy-label {
+                            type empty;
+                            description "Whether the use of entropy-label is enabled or not.";
+                        }
+
+                    }
+                    case hash {
+
+                        container hash-label {
+                            presence "Enable use of hash-label.";
+                            description "Enter the hash-label context";
+
+                            leaf signal-capability {
+                                type empty;
+                                description "To signal the hash label capability to the remote PE.";
+                            }
+
+                        } // container hash-label
+
+                    }
+                }
+                choice oper-group-association {
+                    case oper-group {
+
+                        leaf oper-group {
+                            type leafref {
+                                path "../../../oper-group/name";
+                            }
+                            description "Operational group identifier";
+                        }
+
+                    }
+                    case monitor-oper-group {
+
+                        leaf monitor-oper-group {
+                            type leafref {
+                                path "../../../oper-group/name";
+                            }
+                            description "Operational group identifier that affect the state of this SDP bind";
+                        }
+
+                    }
+                }
+                container ingress {
+                    description "Enter the ingress context";
+
+                    leaf vc-label {
+                        type types-services:ingress-vc-label;
+                        sros-ext:auto-restart-to-modify;
+                        description "Static MPLS VC label used by the far end device to send packets through this SDP";
+                    }
+
+                    container filter {
+                        description "Enter the filter context";
+
+                        leaf mac {
+                            type leafref {
+                                path "../../../../../../filter/mac-filter/filter-name";
+                            }
+                            description "MAC filter ID";
+                        }
+
+                        leaf ip {
+                            type leafref {
+                                path "../../../../../../filter/ip-filter/filter-name";
+                            }
+                            description "IP filter ID";
+                        }
+
+                        leaf ipv6 {
+                            type leafref {
+                                path "../../../../../../filter/ipv6-filter/filter-name";
+                            }
+                            description "IPv6 filter identifier";
+                        }
+
+                    } // container filter
+
+                    container qos {
+                        description "Enter the qos context";
+
+                        container network {
+                            description "Enter the network context";
+
+                            leaf policy-name {
+                                type leafref {
+                                    path "../../../../../../../qos/network/network-policy-name";
+                                }
+                                description "Ingress network policy name applied to this SDP binding";
+                            }
+
+                            container fp-redirect-group {
+                                description "Enter the fp-redirect-group context";
+
+                                leaf group-name {
+                                    type leafref {
+                                        path "../../../../../../../../qos/queue-group-templates/ingress/queue-group/ingress-queue-group-name";
+                                    }
+                                    description "Forwarding-plane queue group policy for this SDP binding";
+                                }
+
+                                leaf instance {
+                                    type types-services:qos-qgrp-instance-id;
+                                    description "Instance of the forwarding-plane ingress Queue Group for this SDP binding";
+                                }
+
+                            } // container fp-redirect-group
+
+                        } // container network
+
+                    } // container qos
+
+                    container l2tpv3 {
+                        description "Enter the l2tpv3 context";
+
+                        container cookie {
+                            description "Enter the cookie context";
+
+                            leaf cookie1 {
+                                type types-services:cookie-value;
+                                description "Value of cookie-1 for the tunnel";
+                            }
+
+                            leaf cookie2 {
+                                type types-services:cookie-value;
+                                description "Value of cookie-1 for the tunnel";
+                            }
+
+                        } // container cookie
+
+                    } // container l2tpv3
+
+                } // container ingress
+
+                container egress {
+                    description "Enter the egress context";
+
+                    leaf vc-label {
+                        type types-services:egress-vc-label;
+                        sros-ext:auto-restart-to-modify;
+                        description "Static MPLS VC label that is used to send packets to the far end device through this SDP";
+                    }
+
+                    container filter {
+                        description "Enter the filter context";
+
+                        leaf mac {
+                            type leafref {
+                                path "../../../../../../filter/mac-filter/filter-name";
+                            }
+                            description "MAC filter ID";
+                        }
+
+                        leaf ip {
+                            type leafref {
+                                path "../../../../../../filter/ip-filter/filter-name";
+                            }
+                            description "IP filter ID";
+                        }
+
+                        leaf ipv6 {
+                            type leafref {
+                                path "../../../../../../filter/ipv6-filter/filter-name";
+                            }
+                            description "IPv6 filter identifier";
+                        }
+
+                    } // container filter
+
+                    container qos {
+                        description "Enter the qos context";
+
+                        container network {
+                            description "Enter the network context";
+
+                            leaf policy-name {
+                                type leafref {
+                                    path "../../../../../../../qos/network/network-policy-name";
+                                }
+                                description "Egress network policy name applied to this SDP binding";
+                            }
+
+                            container port-redirect-group {
+                                description "Enter the port-redirect-group context";
+
+                                leaf group-name {
+                                    type leafref {
+                                        path "../../../../../../../../qos/queue-group-templates/egress/queue-group/egress-queue-group-name";
+                                    }
+                                    description "Policy for port queue group for this SDP binding";
+                                }
+
+                                leaf instance {
+                                    type types-services:qos-qgrp-instance-id;
+                                    description "Instance of the port egress Queue Group for this SDP binding.";
+                                }
+
+                            } // container port-redirect-group
+
+                        } // container network
+
+                    } // container qos
+
+                    container l2tpv3 {
+                        description "Enter the l2tpv3 context";
+
+                        leaf cookie {
+                            type types-services:cookie-value;
+                            description "Cookie parameters";
+                        }
+
+                    } // container l2tpv3
+
+                } // container egress
+
+                container eth-cfm {
+                    description "Enter the eth-cfm context";
+
+                    leaf collect-lmm-stats {
+                        type boolean;
+                        default "false";
+                        description "Collect statistics for loss measurement message tests";
+                    }
+
+                    leaf-list squelch-ingress-levels {
+                        type uint32 {
+                            range "0..7";
+                        }
+                        max-elements 8;
+                        description "ETH-CFM PDUs to be silently discarded";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container collect-lmm-fc-stats {
+                        description "Enter the collect-lmm-fc-stats context";
+
+                        leaf-list fc {
+                            type types-eth-cfm:fc-type;
+                            max-elements 8;
+                            description "Forwarding class name for profile-unaware counter";
+                        }
+
+                        leaf-list fc-in-profile {
+                            type types-eth-cfm:fc-type;
+                            max-elements 8;
+                            description "Forwarding class name for profile-aware counter";
+                        }
+
+                    } // container collect-lmm-fc-stats
+
+                    list mep {
+                        key "md-admin-name ma-admin-name mep-id";
+                        description "Enter the mep list instance";
+
+                        leaf md-admin-name {
+                            type leafref {
+                                path "../../../../../../eth-cfm/domain/md-admin-name";
+                            }
+                            description "Admin-assigned maintenance domain index value";
+                        }
+
+                        leaf ma-admin-name {
+                            type leafref {
+                                path "../../../../../../eth-cfm/domain[md-admin-name=current()/../md-admin-name]/association/ma-admin-name";
+                            }
+                            description "Admin-assigned maintenance association index value";
+                        }
+
+                        leaf mep-id {
+                            type types-eth-cfm:mep-id-type;
+                            description "MEP identifier";
+                        }
+
+                        leaf primary-vlan {
+                            type boolean;
+                            sros-ext:immutable;
+                            default "false";
+                            description "MEP provisioned using MA primary VLAN ID";
+                        }
+
+                        leaf direction {
+                            type types-eth-cfm:mp-direction;
+                            sros-ext:immutable;
+                            description "Direction the MEP faces";
+                        }
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of the MEP";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf mac-address {
+                            type types-sros:mac-unicast-address-no-zero;
+                            description "MAC address for the MEP";
+                        }
+
+                        leaf install-mep {
+                            type boolean;
+                            default "false";
+                            description "Install MEP in the forwarding plane";
+                        }
+
+                        leaf low-priority-defect {
+                            type types-eth-cfm:lowest-alarm-priority;
+                            default "mac-rem-err-xcon";
+                            description "Lowest priority defect that is allowed to generate a fault alarm";
+                        }
+
+                        leaf fault-propagation {
+                            type types-eth-cfm:fault-propagation-type;
+                            description "Fault propagation for the MEP";
+                        }
+
+                        leaf ccm {
+                            type boolean;
+                            default "false";
+                            description "Generate CCM messages";
+                        }
+
+                        leaf ccm-ltm-priority {
+                            type types-eth-cfm:frame-priority;
+                            default "7";
+                            description "Priority of CCM and LTM messages transmitted by the MEP";
+                        }
+
+                        leaf ccm-padding-size {
+                            type uint32 {
+                                range "3..1500";
+                            }
+                            description "Number of octets of padding to insert in CCM packets";
+                        }
+
+                        leaf lbm-svc-act-responder {
+                            type boolean;
+                            default "false";
+                            description "Process service activation streams in ETH-CFM LBM";
+                        }
+
+                        leaf one-way-delay-threshold {
+                            type uint32 {
+                                range "0..600";
+                            }
+                            units "seconds";
+                            default "3";
+                            description "Threshold time limit for one-way delay test";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        container alarm-notification {
+                            description "Enter the alarm-notification context";
+
+                            leaf fng-alarm-time {
+                                type int32 {
+                                    range "250|500|1000";
+                                }
+                                units "centiseconds";
+                                description "Time that must expire before an FNG alarm is raised";
+                            }
+
+                            leaf fng-reset-time {
+                                type int32 {
+                                    range "250|500|1000";
+                                }
+                                units "centiseconds";
+                                description "Time that must expire before an FNG alarm is reset";
+                            }
+
+                        } // container alarm-notification
+
+                        container ais {
+                            presence
+                                "The generation and reception of Alarm Indication Signal (AIS)
+                                 message parameters";
+                            description "Enter the ais context";
+
+                            leaf-list client-meg-level {
+                                type uint32 {
+                                    range "1..7";
+                                }
+                                max-elements 7;
+                                description "Client MEG level for AIS message generation";
+                            }
+
+                            leaf interface-support {
+                                type boolean;
+                                default "false";
+                                description "Allow generation of AIS PDUs based on the associated endpoint state";
+                            }
+
+                            leaf interval {
+                                type uint32 {
+                                    range "1|60";
+                                }
+                                units "seconds";
+                                default "1";
+                                description "Transmission interval for AIS messages";
+                            }
+
+                            leaf low-priority-defect {
+                                type enumeration {
+                                    enum "all-def"                      { value 1; }
+                                    enum "mac-rem-err-xcon"             { value 2; }
+                                }
+                                default "all-def";
+                                description "Lowest priority defect for MEP AIS generation";
+                            }
+
+                            leaf priority {
+                                type types-eth-cfm:frame-priority;
+                                default "7";
+                                description "Priority of AIS messages originated by the node";
+                            }
+
+                        } // container ais
+
+                        container csf {
+                            presence "The reception of Client Signal Fail (CSF) message parameters";
+                            description "Enter the csf context";
+
+                            leaf multiplier {
+                                type decimal64 {
+                                    range "0.0|2.0..30.0";
+                                    fraction-digits 1;
+                                }
+                                default "3.5";
+                                description "Receive period multiplier to time out CSF";
+                            }
+
+                        } // container csf
+
+                        container eth-test {
+                            presence "Enable/disable eth-test functionality on MEP.";
+                            description "Enter the eth-test context";
+
+                            leaf bit-error-threshold {
+                                type uint32 {
+                                    range "0..11840";
+                                }
+                                units "bit errors";
+                                default "1";
+                                description "Lowest priority defect allowed to generate fault alarm";
+                            }
+
+                            container test-pattern {
+                                description "Enter the test-pattern context";
+
+                                leaf pattern {
+                                    type enumeration {
+                                        enum "all-zeros"                    { value 0; }
+                                        enum "all-ones"                     { value 1; }
+                                    }
+                                    default "all-zeros";
+                                    description "Test pattern for ETH-test frames";
+                                }
+
+                                leaf crc-tlv {
+                                    type boolean;
+                                    default "false";
+                                    description "Generate a CRC checksum";
+                                }
+
+                            } // container test-pattern
+
+                        } // container eth-test
+
+                        container grace {
+                            description "Enter the grace context";
+
+                            container eth-ed {
+                                description "Enter the eth-ed context";
+
+                                leaf max-rx-defect-window {
+                                    type uint32 {
+                                        range "1..86400";
+                                    }
+                                    units "seconds";
+                                    description "Maximum received ETH-ED window duration";
+                                }
+
+                                leaf priority {
+                                    type int32 {
+                                        range "0..7";
+                                    }
+                                    description "Transmission priority for ETH-ED PDUs";
+                                }
+
+                                leaf rx-eth-ed {
+                                    type boolean;
+                                    default "true";
+                                    description "Receive and process ETH-ED ITU-T Y.1731 PDUs on the MEP";
+                                }
+
+                                leaf tx-eth-ed {
+                                    type boolean;
+                                    default "false";
+                                    description "Transmit ETH-ED PDUs from the MEP";
+                                }
+
+                            } // container eth-ed
+
+                            container eth-vsm-grace {
+                                description "Enter the eth-vsm-grace context";
+
+                                leaf rx-eth-vsm-grace {
+                                    type boolean;
+                                    default "true";
+                                    description "Receive and process Nokia ETH-CFM Grace PDU on the MEP";
+                                }
+
+                                leaf tx-eth-vsm-grace {
+                                    type boolean;
+                                    default "true";
+                                    description "Transmit ETH-ED PDUs from the MEP";
+                                }
+
+                            } // container eth-vsm-grace
+
+                        } // container grace
+
+                    } // list mep
+
+                } // container eth-cfm
+
+                container endpoint {
+                    description "Enter the endpoint context";
+
+                    leaf name {
+                        type leafref {
+                            path "../../../../epipe[service-name=current()/../../../service-name]/endpoint/name";
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        description "Name of endpoint to which this SDP bind is attached";
+                    }
+
+                    leaf precedence {
+                        type types-services:sdp-precedence;
+                        default "4";
+                        description "Precedence of this SDP bind when there are multiple SDP binds attached to one service endpoint";
+                    }
+
+                    leaf icb {
+                        type boolean;
+                        sros-ext:auto-restart-to-modify;
+                        default "false";
+                        description "Bind SDP as type Inter-Chassis Backup (ICB)";
+                    }
+
+                } // container endpoint
+
+                container cpu-protection {
+                    description "Enter the cpu-protection context";
+
+                    leaf policy-id {
+                        type leafref {
+                            path "../../../../../system/security/cpu-protection/policy/policy-id";
+                        }
+                        description "CPM protection policy";
+                    }
+
+                    choice monitoring {
+                        case mac {
+
+                            leaf mac-monitoring {
+                                type empty;
+                                description "Monitor MAC for CPU protection";
+                            }
+
+                        }
+                        case cfm {
+
+                            container eth-cfm-monitoring {
+                                presence "Enable ETH CFM monitoring configuration.";
+                                description "Enter the eth-cfm-monitoring context";
+
+                                leaf aggregate {
+                                    type empty;
+                                    description "Apply rate limit to the sum of the per peer packet rates";
+                                }
+
+                                leaf car {
+                                    type empty;
+                                    description "Eth-CFM packets to be ignored when enforcing overall rate";
+                                }
+
+                            } // container eth-cfm-monitoring
+
+                        }
+                    }
+                } // container cpu-protection
+
+                container pw-status {
+                    description "Enter the pw-status context";
+
+                    leaf signaling {
+                        type boolean;
+                        default "true";
+                        description "Allow SDP binding to support pseudowire status signaling";
+                    }
+
+                    choice sdp-bind-pw-status {
+                        case block-on-peer-fault {
+
+                            leaf block-on-peer-fault {
+                                type boolean;
+                                default "false";
+                                description "Block the user traffic on this SDP bind when peer PW status has fault bits set";
+                            }
+
+                        }
+                        case standby-signaling-slave {
+
+                            leaf standby-signaling-slave {
+                                type boolean;
+                                default "false";
+                                description "Block spoke transmission when the spoke receives standby status notification from peer";
+                            }
+
+                        }
+                    }
+                } // container pw-status
+
+                container source-bmac {
+                    description "Enter the source-bmac context";
+
+                    leaf use-sdp-bmac-lsb {
+                        type boolean;
+                        default "false";
+                        description "Allow the spoke SDP to be part of a redundant pseudo-wire within PBB Epipe service";
+                    }
+
+                } // container source-bmac
+
+                container bfd-liveness {
+                    presence "Enable BFD liveness information.";
+                    description "Enter the bfd-liveness context";
+
+                    leaf encap {
+                        type types-services:bfd-encap;
+                        default "ipv4";
+                        description "BFD encapsulation used on this SDP binding";
+                    }
+
+                } // container bfd-liveness
+
+            } // list spoke-sdp
+
+            list bgp-mh-site {
+                key "site-name";
+                max-elements 1;
+                description "Enter the bgp-mh-site list instance";
+
+                leaf site-name {
+                    type types-sros:named-item;
+                    description "Name for the specific site";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of the site";
+                }
+
+                leaf id {
+                    type types-services:site-id;
+                    sros-ext:auto-restart-to-modify;
+                    description "Site ID for the service";
+                }
+
+                leaf sap {
+                    type types-sros:sap;
+                    sros-ext:auto-restart-to-modify;
+                    description "SAP to be associated with this site";
+                }
+
+                leaf boot-timer {
+                    type types-services:site-boot-timer;
+                    units "seconds";
+                    description "Time that system waits after node reboot and before it runs DF election algorithm";
+                }
+
+                leaf activation-timer {
+                    type types-services:site-activation-timer;
+                    units "seconds";
+                    description "Time that the local sites are in standby status, waiting for BGP updates";
+                }
+
+                leaf preference {
+                    type uint32 {
+                        range "1..65535";
+                    }
+                    description "Preference value to advertise in the NLRI L2 extended community";
+                }
+
+                leaf min-down-timer {
+                    type types-services:site-min-down-timer;
+                    units "seconds";
+                    description "Minimum downtime for BGP multi-homing site after transition from up to down";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+            } // list bgp-mh-site
+
+            list sap {
+                key "sap-id";
+                max-elements 2;
+                description "Enter the sap list instance";
+
+                leaf sap-id {
+                    type types-sros:sap;
+                    description "SAP identifier";
+                }
+
+                leaf description {
+                    type types-sros:long-description;
+                    description "Text description";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "enable";
+                    description "Administrative state of the SAP";
+                }
+
+                leaf accounting-policy {
+                    type leafref {
+                        path "../../../../log/accounting-policy/policy-id";
+                    }
+                    description "Accounting policy";
+                }
+
+                leaf bandwidth {
+                    type types-services:sap-bandwidth;
+                    units "kilobps";
+                    description "SAP bandwidth";
+                }
+
+                leaf cflowd {
+                    type boolean;
+                    default "false";
+                    description "Enable Cflowd collection and analysis on this SAP";
+                }
+
+                leaf collect-stats {
+                    type boolean;
+                    default "false";
+                    description "Collect accounting statistics";
+                }
+
+                leaf dist-cpu-protection {
+                    type leafref {
+                        path "../../../../system/security/dist-cpu-protection/policy/policy-name";
+                    }
+                    description "Distributed CPU protection policy for SAP";
+                }
+
+                leaf ignore-oper-down {
+                    type boolean;
+                    default "false";
+                    description "Enable/disable whether service will ignore when sap is operationally down.";
+                }
+
+                leaf multi-service-site {
+                    type types-sros:named-item;
+                    description "Multi service site name";
+                }
+
+                leaf endpoint {
+                    type leafref {
+                        path "../../endpoint/name";
+                    }
+                    description "Name of the endpoint";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                choice oper-group-association {
+                    case oper-group {
+
+                        leaf oper-group {
+                            type leafref {
+                                path "../../../oper-group/name";
+                            }
+                            description "Operational group";
+                        }
+
+                    }
+                    case monitor-oper-group {
+
+                        leaf monitor-oper-group {
+                            type leafref {
+                                path "../../../oper-group/name";
+                            }
+                            description "Monitor operational group";
+                        }
+
+                    }
+                }
+                container ingress {
+                    description "Enter the ingress context";
+
+                    container qos {
+                        description "Enter the qos context";
+
+                        leaf match-qinq-dot1p {
+                            type enumeration {
+                                enum "top"                          { value 2; }
+                                enum "bottom"                       { value 3; }
+                            }
+                            description "Ingress match QinQ Dot1p";
+                        }
+
+                        container sap-ingress {
+                            description "Enter the sap-ingress context";
+
+                            leaf policy-name {
+                                type leafref {
+                                    path "../../../../../../../qos/sap-ingress/sap-ingress-policy-name";
+                                }
+                                description "Policy identifier";
+                            }
+
+                            leaf queuing-type {
+                                type types-services:services-sap-queuing-type;
+                                description "Ingress queuing type";
+                            }
+
+                            container fp-redirect-group {
+                                description "Enter the fp-redirect-group context";
+
+                                leaf group-name {
+                                    type leafref {
+                                        path "../../../../../../../../qos/queue-group-templates/ingress/queue-group/ingress-queue-group-name";
+                                    }
+                                    description "Forwarding-plane queue group policy";
+                                }
+
+                                leaf instance {
+                                    type types-services:qos-qgrp-instance-id;
+                                    description "Queue group instance";
+                                }
+
+                            } // container fp-redirect-group
+
+                            container overrides {
+                                description "Enter the overrides context";
+
+                                list queue {
+                                    key "queue-id";
+                                    description "Enter the queue list instance";
+
+                                    leaf queue-id {
+                                        type leafref {
+                                            path "../../../../../../../../../qos/sap-ingress[sap-ingress-policy-name=current()/../../../policy-name]/queue/queue-id";
+                                        }
+                                        description "Policer unique ID";
+                                    }
+
+                                    leaf cbs {
+                                        type union {
+                                            type uint32 {
+                                                range "0..1048576";
+                                            }
+                                            type enumeration {
+                                                enum "auto"                         { value -1; }
+                                            }
+                                        }
+                                        units "kilobytes";
+                                        description "CBS";
+                                    }
+
+                                    leaf mbs {
+                                        type union {
+                                            type types-qos:bytes {
+                                                range "0..1073741824";
+                                            }
+                                            type enumeration {
+                                                enum "auto"                         { value -1; }
+                                            }
+                                        }
+                                        units "bytes";
+                                        description "MBS";
+                                    }
+
+                                    leaf monitor-depth {
+                                        type boolean;
+                                        default "false";
+                                        description "Monitor queue depth";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                    choice queue-override-rate {
+                                        case rate {
+
+                                            container rate {
+                                                description "Enter the rate context";
+
+                                                leaf pir {
+                                                    type types-services:sap-pir-rate-ovr;
+                                                    units "kilobps";
+                                                    description "PIR rate";
+                                                }
+
+                                                leaf cir {
+                                                    type types-services:sap-cir-rate-ovr;
+                                                    units "kilobps";
+                                                    description "CIR rate";
+                                                }
+
+                                            } // container rate
+
+                                        }
+                                        case percent-rate {
+
+                                            container percent-rate {
+                                                description "Enter the percent-rate context";
+
+                                                leaf pir {
+                                                    type decimal64 {
+                                                        range "0.01..100.00";
+                                                        fraction-digits 2;
+                                                    }
+                                                    description "PIR percent rate";
+                                                }
+
+                                                leaf cir {
+                                                    type decimal64 {
+                                                        range "0.00..100.00";
+                                                        fraction-digits 2;
+                                                    }
+                                                    description "CIR percent rate";
+                                                }
+
+                                            } // container percent-rate
+
+                                        }
+                                    }
+                                    container adaptation-rule {
+                                        description "Enter the adaptation-rule context";
+
+                                        leaf pir {
+                                            type types-qos:adaptation-rule-override;
+                                            description "Constraint used when deriving the operational PIR value";
+                                        }
+
+                                        leaf cir {
+                                            type types-qos:adaptation-rule-override;
+                                            description "Constraint used when deriving the operational CIR value";
+                                        }
+
+                                    } // container adaptation-rule
+
+                                    container drop-tail {
+                                        description "Enter the drop-tail context";
+
+                                        container low {
+                                            description "Enter the low context";
+
+                                            leaf percent-reduction-from-mbs {
+                                                type types-qos:burst-percent-or-default-override;
+                                                description "Percentage reduction from the MBS for a queue drop tail";
+                                            }
+
+                                        } // container low
+
+                                    } // container drop-tail
+
+                                    container parent {
+                                        description "Enter the parent context";
+
+                                        leaf weight {
+                                            type types-qos:weight-override;
+                                            description "PIR parameter that overrides parent for queue group";
+                                        }
+
+                                        leaf cir-weight {
+                                            type types-qos:weight-override;
+                                            description "CIR parameter that overrides parent for queue group";
+                                        }
+
+                                    } // container parent
+
+                                } // list queue
+
+                                list policer {
+                                    key "policer-id";
+                                    description "Enter the policer list instance";
+
+                                    leaf policer-id {
+                                        type leafref {
+                                            path "../../../../../../../../../qos/sap-ingress[sap-ingress-policy-name=current()/../../../policy-name]/policer/policer-id";
+                                        }
+                                        description "Policer unique ID";
+                                    }
+
+                                    leaf cbs {
+                                        type union {
+                                            type types-qos:bytes {
+                                                range "0..16777216";
+                                            }
+                                            type enumeration {
+                                                enum "auto"                         { value -1; }
+                                            }
+                                        }
+                                        units "bytes";
+                                        description "CBS";
+                                    }
+
+                                    leaf mbs {
+                                        type union {
+                                            type types-qos:bytes {
+                                                range "0..1073741824";
+                                            }
+                                            type enumeration {
+                                                enum "auto"                         { value -1; }
+                                            }
+                                        }
+                                        description "MBS";
+                                    }
+
+                                    leaf packet-byte-offset {
+                                        type types-qos:ingress-per-packet-offset-override;
+                                        description "Size of each packet, handled by the policer, to be modified";
+                                    }
+
+                                    leaf stat-mode {
+                                        type types-qos:ingress-policer-stat-mode;
+                                        description "Mode of statistics collected by the policer";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                    choice policer-override-rate {
+                                        case rate {
+
+                                            container rate {
+                                                description "Enter the rate context";
+
+                                                leaf pir {
+                                                    type union {
+                                                        type int64 {
+                                                            range "1..6400000000";
+                                                        }
+                                                        type enumeration {
+                                                            enum "max"                          { value -1; }
+                                                        }
+                                                    }
+                                                    units "kilobps";
+                                                    description "PIR rate";
+                                                }
+
+                                                leaf cir {
+                                                    type union {
+                                                        type int64 {
+                                                            range "0..6400000000";
+                                                        }
+                                                        type enumeration {
+                                                            enum "max"                          { value -1; }
+                                                        }
+                                                    }
+                                                    units "kilobps";
+                                                    description "CIR rate";
+                                                }
+
+                                            } // container rate
+
+                                        }
+                                        case percent-rate {
+
+                                            container percent-rate {
+                                                description "Enter the percent-rate context";
+
+                                                leaf pir {
+                                                    type decimal64 {
+                                                        range "0.01..100.00";
+                                                        fraction-digits 2;
+                                                    }
+                                                    description "PIR percent rate";
+                                                }
+
+                                                leaf cir {
+                                                    type decimal64 {
+                                                        range "0.00..100.00";
+                                                        fraction-digits 2;
+                                                    }
+                                                    description "CIR percent rate";
+                                                }
+
+                                            } // container percent-rate
+
+                                        }
+                                    }
+                                } // list policer
+
+                            } // container overrides
+
+                        } // container sap-ingress
+
+                        container policer-control-policy {
+                            description "Enter the policer-control-policy context";
+
+                            leaf policy-name {
+                                type leafref {
+                                    path "../../../../../../../qos/policer-control-policy/policer-control-policy-name";
+                                }
+                                description "Policer control policy name";
+                            }
+
+                            container overrides {
+                                presence "Apply a policer control policy override.";
+                                description "Enter the overrides context";
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                container root {
+                                    description "Enter the root context";
+
+                                    leaf max-rate {
+                                        type types-services:sap-max-rate-ovr;
+                                        description "Maximum frame-based bandwidth limit";
+                                    }
+
+                                    container priority-mbs-thresholds {
+                                        description "Enter the priority-mbs-thresholds context";
+
+                                        leaf min-thresh-separation {
+                                            type union {
+                                                type types-qos:bytes {
+                                                    range "0..16777216";
+                                                }
+                                                type enumeration {
+                                                    enum "auto"                         { value -1; }
+                                                }
+                                            }
+                                            units "bytes";
+                                            description "Minimum amount of separation buffer space";
+                                        }
+
+                                        list priority {
+                                            key "priority-level";
+                                            description "Enter the priority list instance";
+
+                                            leaf priority-level {
+                                                type types-qos:hierarchy-level;
+                                                description "Priority level";
+                                            }
+
+                                            leaf mbs-contribution {
+                                                type union {
+                                                    type types-qos:bytes {
+                                                        range "0..16777216";
+                                                    }
+                                                    type enumeration {
+                                                        enum "auto"                         { value -1; }
+                                                    }
+                                                }
+                                                units "bytes";
+                                                description "Minimum amount of cumulative buffer space allowed";
+                                            }
+
+                                            leaf-list apply-groups {
+                                                type leafref {
+                                                    path "../../../../../../../../../../../groups/group/name";
+                                                }
+                                                max-elements 8;
+                                                ordered-by user;
+                                                description "Apply a configuration group at this level";
+                                            }
+
+                                        } // list priority
+
+                                    } // container priority-mbs-thresholds
+
+                                } // container root
+
+                            } // container overrides
+
+                        } // container policer-control-policy
+
+                        container scheduler-policy {
+                            description "Enter the scheduler-policy context";
+
+                            leaf policy-name {
+                                type leafref {
+                                    path "../../../../../../../qos/scheduler-policy/scheduler-policy-name";
+                                }
+                                description "Scheduler policy name";
+                            }
+
+                            container overrides {
+                                description "Enter the overrides context";
+
+                                list scheduler {
+                                    key "scheduler-name";
+                                    description "Enter the scheduler list instance";
+
+                                    leaf scheduler-name {
+                                        type types-sros:named-item;
+                                        description "Scheduler override policy name";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                    container parent {
+                                        description "Enter the parent context";
+
+                                        leaf weight {
+                                            type types-qos:weight;
+                                            description "Weight to be used by the scheduler for feeding this queue";
+                                        }
+
+                                        leaf cir-weight {
+                                            type types-qos:weight;
+                                            description "Weight that is used by the scheduler until the committed rate for feeding this queue";
+                                        }
+
+                                    } // container parent
+
+                                    container rate {
+                                        description "Enter the rate context";
+
+                                        leaf pir {
+                                            type union {
+                                                type int64 {
+                                                    range "1..6400000000";
+                                                }
+                                                type enumeration {
+                                                    enum "max"                          { value -1; }
+                                                }
+                                            }
+                                            description "Specifies the administrative PIR";
+                                        }
+
+                                        leaf cir {
+                                            type union {
+                                                type int64 {
+                                                    range "0..6400000000";
+                                                }
+                                                type enumeration {
+                                                    enum "sum"                          { value -3; }
+                                                    enum "max"                          { value -1; }
+                                                }
+                                            }
+                                            description "Specifies the administrative CIR";
+                                        }
+
+                                    } // container rate
+
+                                } // list scheduler
+
+                            } // container overrides
+
+                        } // container scheduler-policy
+
+                    } // container qos
+
+                    container filter {
+                        description "Enter the filter context";
+
+                        leaf mac {
+                            type leafref {
+                                path "../../../../../../filter/mac-filter/filter-name";
+                            }
+                            description "MAC filter identifier";
+                        }
+
+                        leaf ip {
+                            type leafref {
+                                path "../../../../../../filter/ip-filter/filter-name";
+                            }
+                            description "IP filter ID";
+                        }
+
+                        leaf ipv6 {
+                            type leafref {
+                                path "../../../../../../filter/ipv6-filter/filter-name";
+                            }
+                            description "IPv6 filter identifier";
+                        }
+
+                    } // container filter
+
+                    container qtag-manipulation {
+                        description "Enter the qtag-manipulation context";
+
+                        choice tags {
+                            case push-dot1q-vlan {
+
+                                leaf push-dot1q-vlan {
+                                    type types-services:qtag-manipulation-info;
+                                    description "VLAN translation information";
+                                }
+
+                            }
+                            case push-qinq-vlan {
+
+                                leaf s-tag {
+                                    type int32 {
+                                        range "0..4094";
+                                    }
+                                    description "Outer ingress VLN translation for two service delimiting VLAN values";
+                                }
+
+                                leaf c-tag {
+                                    type int32 {
+                                        range "0..4094";
+                                    }
+                                    description "Inner ingress VLAN translation for two service delimiting VLAN values";
+                                }
+
+                            }
+                        }
+                    } // container qtag-manipulation
+
+                } // container ingress
+
+                container egress {
+                    description "Enter the egress context";
+
+                    container qos {
+                        description "Enter the qos context";
+
+                        leaf qinq-mark-top-only {
+                            type boolean;
+                            default "false";
+                            description "Mark top Q-tags";
+                        }
+
+                        container sap-egress {
+                            description "Enter the sap-egress context";
+
+                            leaf policy-name {
+                                type leafref {
+                                    path "../../../../../../../qos/sap-egress/sap-egress-policy-name";
+                                }
+                                description "Policy identifier";
+                            }
+
+                            container port-redirect-group {
+                                description "Enter the port-redirect-group context";
+
+                                leaf group-name {
+                                    type leafref {
+                                        path "../../../../../../../../qos/queue-group-templates/egress/queue-group/egress-queue-group-name";
+                                    }
+                                    description "Policy for port redirect queue group";
+                                }
+
+                                leaf instance {
+                                    type types-services:qos-qgrp-instance-id;
+                                    description "Instance of port queue group";
+                                }
+
+                            } // container port-redirect-group
+
+                            container overrides {
+                                description "Enter the overrides context";
+
+                                leaf hs-secondary-shaper {
+                                    type types-sros:named-item;
+                                    description "HS Secondary Shaper";
+                                }
+
+                                container hsmda-queues {
+                                    description "Enter the hsmda-queues context";
+
+                                    leaf secondary-shaper {
+                                        type types-sros:named-item;
+                                        description "Secondary shaper for the HSMDA queue";
+                                    }
+
+                                    leaf packet-byte-offset {
+                                        type types-services:egress-hsmda-queue-packet-byte-offset;
+                                        description "Packet byte offset for HSMDA queue";
+                                    }
+
+                                    leaf wrr-policy {
+                                        type leafref {
+                                            path "../../../../../../../../../qos/hsmda-wrr-policy/hsmda-wrr-policy-name";
+                                        }
+                                        description "WRR policy for the HSMDA queue";
+                                    }
+
+                                    list queue {
+                                        key "queue-id";
+                                        description "Enter the queue list instance";
+
+                                        leaf queue-id {
+                                            type leafref {
+                                                path "../../../../../../../../../../qos/sap-egress[sap-egress-policy-name=current()/../../../../policy-name]/hsmda-queues/queue/queue-id";
+                                            }
+                                            description "Egress HSMDA queue ID";
+                                        }
+
+                                        leaf mbs {
+                                            type types-qos:hsmda-queue-burst-size-override;
+                                            units "bytes";
+                                            description "Buffer space allowed for the queue";
+                                        }
+
+                                        leaf rate {
+                                            type types-qos:hsmda-queue-pir-rate-override;
+                                            description "Administrative PIR rate.";
+                                        }
+
+                                        leaf slope-policy {
+                                            type leafref {
+                                                path "../../../../../../../../../../qos/hsmda-slope-policy/hsmda-slope-policy-name";
+                                            }
+                                            description "Name of the slope-policy which is used to override the default slope-policy for the named buffer pool.";
+                                        }
+
+                                        leaf wrr-weight {
+                                            type types-qos:hsmda-wrr-weight-override;
+                                            description "Weight value for the HSMDA queue";
+                                        }
+
+                                        leaf-list apply-groups {
+                                            type leafref {
+                                                path "../../../../../../../../../../groups/group/name";
+                                            }
+                                            max-elements 8;
+                                            ordered-by user;
+                                            description "Apply a configuration group at this level";
+                                        }
+
+                                    } // list queue
+
+                                } // container hsmda-queues
+
+                                list queue {
+                                    key "queue-id";
+                                    description "Enter the queue list instance";
+
+                                    leaf queue-id {
+                                        type leafref {
+                                            path "../../../../../../../../../qos/sap-egress[sap-egress-policy-name=current()/../../../policy-name]/queue/queue-id";
+                                        }
+                                        description "Policer unique ID";
+                                    }
+
+                                    leaf avg-frame-overhead {
+                                        type decimal64 {
+                                            range "0.00..100.00";
+                                            fraction-digits 2;
+                                        }
+                                        description "Encapsulation overhead, in centipercent, used to translate packet-based rate to frame-based rate and vice versa.";
+                                    }
+
+                                    leaf burst-limit {
+                                        type union {
+                                            type types-qos:bytes {
+                                                range "1..14000000";
+                                            }
+                                            type enumeration {
+                                                enum "auto"                         { value -1; }
+                                            }
+                                        }
+                                        description "Explicit shaping burst size of a queue.";
+                                    }
+
+                                    leaf cbs {
+                                        type union {
+                                            type uint32 {
+                                                range "0..1048576";
+                                            }
+                                            type enumeration {
+                                                enum "auto"                         { value -1; }
+                                            }
+                                        }
+                                        units "kilobytes";
+                                        description "CBS";
+                                    }
+
+                                    leaf mbs {
+                                        type union {
+                                            type types-qos:bytes {
+                                                range "0..1073741824";
+                                            }
+                                            type enumeration {
+                                                enum "auto"                         { value -1; }
+                                            }
+                                        }
+                                        units "bytes";
+                                        description "MBS";
+                                    }
+
+                                    leaf monitor-depth {
+                                        type boolean;
+                                        default "false";
+                                        description "Monitor queue depth";
+                                    }
+
+                                    leaf hs-wrr-weight {
+                                        type types-qos:hs-wrr-weight-override;
+                                        default "1";
+                                        description "Weighted Round Robin (WRR) weight to parent with this queue into the scheduler";
+                                    }
+
+                                    leaf hs-class-weight {
+                                        type types-qos:hs-class-weight-override;
+                                        description "Scheduling class weight.";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                    choice queue-override-rate {
+                                        case rate {
+
+                                            container rate {
+                                                description "Enter the rate context";
+
+                                                leaf pir {
+                                                    type types-services:sap-pir-rate-ovr;
+                                                    units "kilobps";
+                                                    description "PIR rate";
+                                                }
+
+                                                leaf cir {
+                                                    type types-services:sap-cir-rate-ovr;
+                                                    units "kilobps";
+                                                    description "CIR rate";
+                                                }
+
+                                            } // container rate
+
+                                        }
+                                        case percent-rate {
+
+                                            container percent-rate {
+                                                description "Enter the percent-rate context";
+
+                                                leaf pir {
+                                                    type decimal64 {
+                                                        range "0.01..100.00";
+                                                        fraction-digits 2;
+                                                    }
+                                                    description "PIR percent rate";
+                                                }
+
+                                                leaf cir {
+                                                    type decimal64 {
+                                                        range "0.00..100.00";
+                                                        fraction-digits 2;
+                                                    }
+                                                    description "CIR percent rate";
+                                                }
+
+                                            } // container percent-rate
+
+                                        }
+                                    }
+                                    container adaptation-rule {
+                                        description "Enter the adaptation-rule context";
+
+                                        leaf pir {
+                                            type types-qos:adaptation-rule-override;
+                                            description "Constraint used when deriving the operational PIR value";
+                                        }
+
+                                        leaf cir {
+                                            type types-qos:adaptation-rule-override;
+                                            description "Constraint used when deriving the operational CIR value";
+                                        }
+
+                                    } // container adaptation-rule
+
+                                    container drop-tail {
+                                        description "Enter the drop-tail context";
+
+                                        container low {
+                                            description "Enter the low context";
+
+                                            leaf percent-reduction-from-mbs {
+                                                type types-qos:burst-percent-or-default-override;
+                                                description "Percentage reduction from the MBS for a queue drop tail";
+                                            }
+
+                                        } // container low
+
+                                    } // container drop-tail
+
+                                    container parent {
+                                        description "Enter the parent context";
+
+                                        leaf weight {
+                                            type types-qos:weight-override;
+                                            description "PIR parameter that overrides parent for queue group";
+                                        }
+
+                                        leaf cir-weight {
+                                            type types-qos:weight-override;
+                                            description "CIR parameter that overrides parent for queue group";
+                                        }
+
+                                    } // container parent
+
+                                    container hs-wred-queue {
+                                        description "Enter the hs-wred-queue context";
+
+                                        leaf policy {
+                                            type leafref {
+                                                path "../../../../../../../../../../qos/slope-policy/slope-policy-name";
+                                            }
+                                            description "Name of slope-policy.";
+                                        }
+
+                                    } // container hs-wred-queue
+
+                                } // list queue
+
+                                list policer {
+                                    key "policer-id";
+                                    description "Enter the policer list instance";
+
+                                    leaf policer-id {
+                                        type leafref {
+                                            path "../../../../../../../../../qos/sap-egress[sap-egress-policy-name=current()/../../../policy-name]/policer/policer-id";
+                                        }
+                                        description "Policer unique ID";
+                                    }
+
+                                    leaf cbs {
+                                        type union {
+                                            type types-qos:bytes {
+                                                range "0..16777216";
+                                            }
+                                            type enumeration {
+                                                enum "auto"                         { value -1; }
+                                            }
+                                        }
+                                        units "bytes";
+                                        description "CBS";
+                                    }
+
+                                    leaf mbs {
+                                        type union {
+                                            type types-qos:bytes {
+                                                range "0..1073741824";
+                                            }
+                                            type enumeration {
+                                                enum "auto"                         { value -1; }
+                                            }
+                                        }
+                                        description "MBS";
+                                    }
+
+                                    leaf packet-byte-offset {
+                                        type types-qos:egress-per-packet-offset-override;
+                                        description "Size of each packet, handled by the policer, to be modified";
+                                    }
+
+                                    leaf stat-mode {
+                                        type types-qos:egress-policer-stat-mode;
+                                        description "Mode of statistics collected by the policer";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                    choice policer-override-rate {
+                                        case rate {
+
+                                            container rate {
+                                                description "Enter the rate context";
+
+                                                leaf pir {
+                                                    type union {
+                                                        type int64 {
+                                                            range "1..6400000000";
+                                                        }
+                                                        type enumeration {
+                                                            enum "max"                          { value -1; }
+                                                        }
+                                                    }
+                                                    units "kilobps";
+                                                    description "PIR rate";
+                                                }
+
+                                                leaf cir {
+                                                    type union {
+                                                        type int64 {
+                                                            range "0..6400000000";
+                                                        }
+                                                        type enumeration {
+                                                            enum "max"                          { value -1; }
+                                                        }
+                                                    }
+                                                    units "kilobps";
+                                                    description "CIR rate";
+                                                }
+
+                                            } // container rate
+
+                                        }
+                                        case percent-rate {
+
+                                            container percent-rate {
+                                                description "Enter the percent-rate context";
+
+                                                leaf pir {
+                                                    type decimal64 {
+                                                        range "0.01..100.00";
+                                                        fraction-digits 2;
+                                                    }
+                                                    description "PIR percent rate";
+                                                }
+
+                                                leaf cir {
+                                                    type decimal64 {
+                                                        range "0.00..100.00";
+                                                        fraction-digits 2;
+                                                    }
+                                                    description "CIR percent rate";
+                                                }
+
+                                            } // container percent-rate
+
+                                        }
+                                    }
+                                } // list policer
+
+                                list hs-wrr-group {
+                                    key "group-id";
+                                    description "Enter the hs-wrr-group list instance";
+
+                                    leaf group-id {
+                                        type leafref {
+                                            path "../../../../../../../../../qos/sap-egress[sap-egress-policy-name=current()/../../../policy-name]/hs-wrr-group/group-id";
+                                        }
+                                        description "HS WRR group identifier";
+                                    }
+
+                                    leaf hs-class-weight {
+                                        type types-qos:hs-class-weight-override;
+                                        description "Weight of scheduling class.";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                    choice rate-or-percent-rate {
+                                        case rate {
+
+                                            leaf rate {
+                                                type union {
+                                                    type uint32 {
+                                                        range "1..2000000000";
+                                                    }
+                                                    type enumeration {
+                                                        enum "max"                          { value -1; }
+                                                    }
+                                                }
+                                                units "kilobps";
+                                                description "Administrative PIR.";
+                                            }
+
+                                        }
+                                        case percent-rate {
+
+                                            leaf percent-rate {
+                                                type decimal64 {
+                                                    range "0.01..100.00";
+                                                    fraction-digits 2;
+                                                }
+                                                description "Administrative PIR percent.";
+                                            }
+
+                                        }
+                                    }
+                                } // list hs-wrr-group
+
+                            } // container overrides
+
+                        } // container sap-egress
+
+                        container policer-control-policy {
+                            description "Enter the policer-control-policy context";
+
+                            leaf policy-name {
+                                type leafref {
+                                    path "../../../../../../../qos/policer-control-policy/policer-control-policy-name";
+                                }
+                                description "Policer control policy name";
+                            }
+
+                            container overrides {
+                                presence "Apply a policer control policy override.";
+                                description "Enter the overrides context";
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                container root {
+                                    description "Enter the root context";
+
+                                    leaf max-rate {
+                                        type types-services:sap-max-rate-ovr;
+                                        description "Maximum frame-based bandwidth limit";
+                                    }
+
+                                    container priority-mbs-thresholds {
+                                        description "Enter the priority-mbs-thresholds context";
+
+                                        leaf min-thresh-separation {
+                                            type union {
+                                                type types-qos:bytes {
+                                                    range "0..16777216";
+                                                }
+                                                type enumeration {
+                                                    enum "auto"                         { value -1; }
+                                                }
+                                            }
+                                            units "bytes";
+                                            description "Minimum amount of separation buffer space";
+                                        }
+
+                                        list priority {
+                                            key "priority-level";
+                                            description "Enter the priority list instance";
+
+                                            leaf priority-level {
+                                                type types-qos:hierarchy-level;
+                                                description "Priority level";
+                                            }
+
+                                            leaf mbs-contribution {
+                                                type union {
+                                                    type types-qos:bytes {
+                                                        range "0..16777216";
+                                                    }
+                                                    type enumeration {
+                                                        enum "auto"                         { value -1; }
+                                                    }
+                                                }
+                                                units "bytes";
+                                                description "Minimum amount of cumulative buffer space allowed";
+                                            }
+
+                                            leaf-list apply-groups {
+                                                type leafref {
+                                                    path "../../../../../../../../../../../groups/group/name";
+                                                }
+                                                max-elements 8;
+                                                ordered-by user;
+                                                description "Apply a configuration group at this level";
+                                            }
+
+                                        } // list priority
+
+                                    } // container priority-mbs-thresholds
+
+                                } // container root
+
+                            } // container overrides
+
+                        } // container policer-control-policy
+
+                        container scheduler-policy {
+                            description "Enter the scheduler-policy context";
+
+                            leaf policy-name {
+                                type leafref {
+                                    path "../../../../../../../qos/scheduler-policy/scheduler-policy-name";
+                                }
+                                description "Scheduler policy name";
+                            }
+
+                            container overrides {
+                                description "Enter the overrides context";
+
+                                list scheduler {
+                                    key "scheduler-name";
+                                    description "Enter the scheduler list instance";
+
+                                    leaf scheduler-name {
+                                        type types-sros:named-item;
+                                        description "Scheduler override policy name";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                    container parent {
+                                        description "Enter the parent context";
+
+                                        leaf weight {
+                                            type types-qos:weight;
+                                            description "Weight to be used by the scheduler for feeding this queue";
+                                        }
+
+                                        leaf cir-weight {
+                                            type types-qos:weight;
+                                            description "Weight that is used by the scheduler until the committed rate for feeding this queue";
+                                        }
+
+                                    } // container parent
+
+                                    container rate {
+                                        description "Enter the rate context";
+
+                                        leaf pir {
+                                            type union {
+                                                type int64 {
+                                                    range "1..6400000000";
+                                                }
+                                                type enumeration {
+                                                    enum "max"                          { value -1; }
+                                                }
+                                            }
+                                            description "Specifies the administrative PIR";
+                                        }
+
+                                        leaf cir {
+                                            type union {
+                                                type int64 {
+                                                    range "0..6400000000";
+                                                }
+                                                type enumeration {
+                                                    enum "sum"                          { value -3; }
+                                                    enum "max"                          { value -1; }
+                                                }
+                                            }
+                                            description "Specifies the administrative CIR";
+                                        }
+
+                                    } // container rate
+
+                                } // list scheduler
+
+                            } // container overrides
+
+                        } // container scheduler-policy
+
+                        container vlan-qos-policy {
+                            description "Enter the vlan-qos-policy context";
+
+                            leaf policy-name {
+                                type leafref {
+                                    path "../../../../../../../qos/vlan-qos-policy/vlan-qos-policy-name";
+                                }
+                                description "Egress vlan-qos-policy name";
+                            }
+
+                        } // container vlan-qos-policy
+
+                        container egress-remark-policy {
+                            description "Enter the egress-remark-policy context";
+
+                            leaf policy-name {
+                                type leafref {
+                                    path "../../../../../../../qos/egress-remark-policy/egress-remark-policy-name";
+                                }
+                                description "Egress-remark-policy name";
+                            }
+
+                        } // container egress-remark-policy
+
+                    } // container qos
+
+                    container filter {
+                        description "Enter the filter context";
+
+                        leaf mac {
+                            type leafref {
+                                path "../../../../../../filter/mac-filter/filter-name";
+                            }
+                            description "MAC filter identifier";
+                        }
+
+                        leaf ip {
+                            type leafref {
+                                path "../../../../../../filter/ip-filter/filter-name";
+                            }
+                            description "MAC filter ID";
+                        }
+
+                        leaf ipv6 {
+                            type leafref {
+                                path "../../../../../../filter/ipv6-filter/filter-name";
+                            }
+                            description "IPv6 filter identifier";
+                        }
+
+                    } // container filter
+
+                    container agg-rate {
+                        description "Enter the agg-rate context";
+
+                        leaf limit-unused-bandwidth {
+                            type boolean;
+                            default "false";
+                            description "Enable aggregate rate overrun protection";
+                        }
+
+                        leaf rate {
+                            type types-services:agg-rate-rate;
+                            description "Maximum total rate of all egress queues in kbps.";
+                        }
+
+                        leaf queue-frame-based-accounting {
+                            type boolean;
+                            default "false";
+                            description "Enable frame-based accounting on all policers and queues associated with context";
+                        }
+
+                        leaf cir {
+                            type union {
+                                type int32 {
+                                    range "0..100000000";
+                                }
+                                type enumeration {
+                                    enum "max"                          { value -1; }
+                                }
+                            }
+                            units "kilobps";
+                            default "0";
+                            description "Specifies the administrative CIR.";
+                        }
+
+                    } // container agg-rate
+
+                } // container egress
+
+                container cpu-protection {
+                    description "Enter the cpu-protection context";
+
+                    leaf policy-id {
+                        type leafref {
+                            path "../../../../../system/security/cpu-protection/policy/policy-id";
+                        }
+                        description "CPM protection policy";
+                    }
+
+                    choice monitoring {
+                        case mac {
+
+                            leaf mac-monitoring {
+                                type empty;
+                                description "Monitor MAC for CPU protection";
+                            }
+
+                        }
+                        case cfm {
+
+                            container eth-cfm-monitoring {
+                                presence "Enable ETH CFM monitoring configuration.";
+                                description "Enter the eth-cfm-monitoring context";
+
+                                leaf aggregate {
+                                    type empty;
+                                    description "Apply rate limit to the sum of the per peer packet rates";
+                                }
+
+                                leaf car {
+                                    type empty;
+                                    description "Eth-CFM packets to be ignored when enforcing overall rate";
+                                }
+
+                            } // container eth-cfm-monitoring
+
+                        }
+                    }
+                } // container cpu-protection
+
+                container lag {
+                    description "Enter the lag context";
+
+                    leaf link-map-profile {
+                        type types-services:link-map-profile-id;
+                        description "Configure LAG link map profile.";
+                    }
+
+                    container per-link-hash {
+                        description "Enter the per-link-hash context";
+
+                        leaf class {
+                            type types-services:sap-lag-per-link-hash-class;
+                            default "1";
+                            description "Class used on LAG egress when using weighted per-link-hash";
+                        }
+
+                        leaf weight {
+                            type types-services:sap-lag-per-link-hash-weight;
+                            default "1";
+                            description "Weight used on LAG egress when using weighted per-link-hash";
+                        }
+
+                    } // container per-link-hash
+
+                } // container lag
+
+                container l2tpv3-session {
+                    presence "Enable L2TPv3 Session information.";
+                    description "Enter the l2tpv3-session context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of the session for the service";
+                    }
+
+                    leaf vc-id {
+                        type types-services:vc-id;
+                        sros-ext:auto-restart-to-modify;
+                        description "VC identifier.";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        sros-ext:auto-restart-to-modify;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container pseudo-wire {
+                        sros-ext:auto-restart-to-modify;
+                        description "Enter the pseudo-wire context";
+
+                        choice type {
+                            case ethernet {
+
+                                leaf ethernet {
+                                    type empty;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Ethernet type.";
+                                }
+
+                            }
+                            case ethernet-vlan-id {
+
+                                leaf ethernet-vlan-id {
+                                    type int32 {
+                                        range "0..4095";
+                                    }
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Ethernet VLAN identifier.";
+                                }
+
+                            }
+                        }
+                    } // container pseudo-wire
+
+                    container router {
+                        sros-ext:auto-restart-to-modify;
+                        description "Enter the router context";
+
+                        leaf group {
+                            type types-sros:named-item;
+                            sros-ext:auto-restart-to-modify;
+                            description "Tunnel group name.";
+                        }
+
+                        leaf router-instance {
+                            type types-sros:router-instance-base-vprn-loose;
+                            sros-ext:auto-restart-to-modify;
+                            description "Router instance hosting the l2tpv3 session.";
+                        }
+
+                    } // container router
+
+                } // container l2tpv3-session
+
+                container eth-cfm {
+                    description "Enter the eth-cfm context";
+
+                    leaf collect-lmm-stats {
+                        type boolean;
+                        default "false";
+                        description "Collect statistics for loss measurement message tests";
+                    }
+
+                    leaf-list squelch-ingress-levels {
+                        type uint32 {
+                            range "0..7";
+                        }
+                        max-elements 8;
+                        description "ETH-CFM PDUs to be silently discarded";
+                    }
+
+                    leaf ais {
+                        type boolean;
+                        default "false";
+                        description "Generate AIS frames for the SAP based on a facility fault.";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container collect-lmm-fc-stats {
+                        description "Enter the collect-lmm-fc-stats context";
+
+                        leaf-list fc {
+                            type types-eth-cfm:fc-type;
+                            max-elements 8;
+                            description "Forwarding class name for profile-unaware counter";
+                        }
+
+                        leaf-list fc-in-profile {
+                            type types-eth-cfm:fc-type;
+                            max-elements 8;
+                            description "Forwarding class name for profile-aware counter";
+                        }
+
+                    } // container collect-lmm-fc-stats
+
+                    list mep {
+                        key "md-admin-name ma-admin-name mep-id";
+                        description "Enter the mep list instance";
+
+                        leaf md-admin-name {
+                            type leafref {
+                                path "../../../../../../eth-cfm/domain/md-admin-name";
+                            }
+                            description "Admin-assigned maintenance domain index value";
+                        }
+
+                        leaf ma-admin-name {
+                            type leafref {
+                                path "../../../../../../eth-cfm/domain[md-admin-name=current()/../md-admin-name]/association/ma-admin-name";
+                            }
+                            description "Admin-assigned maintenance association index value";
+                        }
+
+                        leaf mep-id {
+                            type types-eth-cfm:mep-id-type;
+                            description "MEP identifier";
+                        }
+
+                        leaf primary-vlan {
+                            type boolean;
+                            sros-ext:immutable;
+                            default "false";
+                            description "MEP provisioned using MA primary VLAN ID";
+                        }
+
+                        leaf direction {
+                            type types-eth-cfm:mp-direction;
+                            sros-ext:immutable;
+                            description "Direction the MEP faces";
+                        }
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of the MEP";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf mac-address {
+                            type types-sros:mac-unicast-address-no-zero;
+                            description "MAC address for the MEP";
+                        }
+
+                        leaf install-mep {
+                            type boolean;
+                            default "false";
+                            description "Install MEP in the forwarding plane";
+                        }
+
+                        leaf low-priority-defect {
+                            type types-eth-cfm:lowest-alarm-priority;
+                            default "mac-rem-err-xcon";
+                            description "Lowest priority defect that is allowed to generate a fault alarm";
+                        }
+
+                        leaf fault-propagation {
+                            type types-eth-cfm:fault-propagation-type;
+                            description "Fault propagation for the MEP";
+                        }
+
+                        leaf ccm {
+                            type boolean;
+                            default "false";
+                            description "Generate CCM messages";
+                        }
+
+                        leaf ccm-ltm-priority {
+                            type types-eth-cfm:frame-priority;
+                            default "7";
+                            description "Priority of CCM and LTM messages transmitted by the MEP";
+                        }
+
+                        leaf ccm-padding-size {
+                            type uint32 {
+                                range "3..1500";
+                            }
+                            description "Number of octets of padding to insert in CCM packets";
+                        }
+
+                        leaf lbm-svc-act-responder {
+                            type boolean;
+                            default "false";
+                            description "Process service activation streams in ETH-CFM LBM";
+                        }
+
+                        leaf one-way-delay-threshold {
+                            type uint32 {
+                                range "0..600";
+                            }
+                            units "seconds";
+                            default "3";
+                            description "Threshold time limit for one-way delay test";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        container alarm-notification {
+                            description "Enter the alarm-notification context";
+
+                            leaf fng-alarm-time {
+                                type int32 {
+                                    range "250|500|1000";
+                                }
+                                units "centiseconds";
+                                description "Time that must expire before an FNG alarm is raised";
+                            }
+
+                            leaf fng-reset-time {
+                                type int32 {
+                                    range "250|500|1000";
+                                }
+                                units "centiseconds";
+                                description "Time that must expire before an FNG alarm is reset";
+                            }
+
+                        } // container alarm-notification
+
+                        container ais {
+                            presence
+                                "The generation and reception of Alarm Indication Signal (AIS)
+                                 message parameters";
+                            description "Enter the ais context";
+
+                            leaf-list client-meg-level {
+                                type uint32 {
+                                    range "1..7";
+                                }
+                                max-elements 7;
+                                description "Client MEG level for AIS message generation";
+                            }
+
+                            leaf interface-support {
+                                type boolean;
+                                default "false";
+                                description "Allow generation of AIS PDUs based on the associated endpoint state";
+                            }
+
+                            leaf interval {
+                                type uint32 {
+                                    range "1|60";
+                                }
+                                units "seconds";
+                                default "1";
+                                description "Transmission interval for AIS messages";
+                            }
+
+                            leaf low-priority-defect {
+                                type enumeration {
+                                    enum "all-def"                      { value 1; }
+                                    enum "mac-rem-err-xcon"             { value 2; }
+                                }
+                                default "all-def";
+                                description "Lowest priority defect for MEP AIS generation";
+                            }
+
+                            leaf priority {
+                                type types-eth-cfm:frame-priority;
+                                default "7";
+                                description "Priority of AIS messages originated by the node";
+                            }
+
+                        } // container ais
+
+                        container csf {
+                            presence "The reception of Client Signal Fail (CSF) message parameters";
+                            description "Enter the csf context";
+
+                            leaf multiplier {
+                                type decimal64 {
+                                    range "0.0|2.0..30.0";
+                                    fraction-digits 1;
+                                }
+                                default "3.5";
+                                description "Receive period multiplier to time out CSF";
+                            }
+
+                        } // container csf
+
+                        container eth-test {
+                            presence "Enable/disable eth-test functionality on MEP.";
+                            description "Enter the eth-test context";
+
+                            leaf bit-error-threshold {
+                                type uint32 {
+                                    range "0..11840";
+                                }
+                                units "bit errors";
+                                default "1";
+                                description "Lowest priority defect allowed to generate fault alarm";
+                            }
+
+                            container test-pattern {
+                                description "Enter the test-pattern context";
+
+                                leaf pattern {
+                                    type enumeration {
+                                        enum "all-zeros"                    { value 0; }
+                                        enum "all-ones"                     { value 1; }
+                                    }
+                                    default "all-zeros";
+                                    description "Test pattern for ETH-test frames";
+                                }
+
+                                leaf crc-tlv {
+                                    type boolean;
+                                    default "false";
+                                    description "Generate a CRC checksum";
+                                }
+
+                            } // container test-pattern
+
+                        } // container eth-test
+
+                        container grace {
+                            description "Enter the grace context";
+
+                            container eth-ed {
+                                description "Enter the eth-ed context";
+
+                                leaf max-rx-defect-window {
+                                    type uint32 {
+                                        range "1..86400";
+                                    }
+                                    units "seconds";
+                                    description "Maximum received ETH-ED window duration";
+                                }
+
+                                leaf priority {
+                                    type int32 {
+                                        range "0..7";
+                                    }
+                                    description "Transmission priority for ETH-ED PDUs";
+                                }
+
+                                leaf rx-eth-ed {
+                                    type boolean;
+                                    default "true";
+                                    description "Receive and process ETH-ED ITU-T Y.1731 PDUs on the MEP";
+                                }
+
+                                leaf tx-eth-ed {
+                                    type boolean;
+                                    default "false";
+                                    description "Transmit ETH-ED PDUs from the MEP";
+                                }
+
+                            } // container eth-ed
+
+                            container eth-vsm-grace {
+                                description "Enter the eth-vsm-grace context";
+
+                                leaf rx-eth-vsm-grace {
+                                    type boolean;
+                                    default "true";
+                                    description "Receive and process Nokia ETH-CFM Grace PDU on the MEP";
+                                }
+
+                                leaf tx-eth-vsm-grace {
+                                    type boolean;
+                                    default "true";
+                                    description "Transmit ETH-ED PDUs from the MEP";
+                                }
+
+                            } // container eth-vsm-grace
+
+                        } // container grace
+
+                    } // list mep
+
+                } // container eth-cfm
+
+                container mc-ring {
+                    presence "Prepare SAP for use in MC-ring";
+                    description "Enter the mc-ring context";
+
+                    leaf ring-node {
+                        type types-sros:named-item;
+                        mandatory true;
+                        description "Name for the ring node associated with this SAP";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                } // container mc-ring
+
+            } // list sap
+
+            container vxlan {
+                description "Enter the vxlan context";
+
+                leaf source-vtep {
+                    type types-sros:ip-unicast-address;
+                    description "Vxlan source virtual tunnel endpoint information";
+                }
+
+                list instance {
+                    key "vxlan-instance";
+                    max-elements 1;
+                    description "Enter the instance list instance";
+
+                    leaf vxlan-instance {
+                        type uint32 {
+                            range "1";
+                        }
+                        default "1";
+                        description "VXLAN instance";
+                    }
+
+                    leaf vni {
+                        type types-services:vxlan-vni;
+                        sros-ext:immutable;
+                        mandatory true;
+                        description "VNI of the VXLAN";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container egress-vtep {
+                        description "Enter the egress-vtep context";
+
+                        leaf ip-address {
+                            type types-sros:ip-unicast-address;
+                            description "VXLAN egress VTEP address";
+                        }
+
+                        leaf oper-group {
+                            type leafref {
+                                path "../../../../../oper-group/name";
+                            }
+                            description "Operational group associated with egress VTEP address";
+                        }
+
+                    } // container egress-vtep
+
+                } // list instance
+
+            } // container vxlan
+
+            container bgp-evpn {
+                presence "Enable VPWS BGP EVPN information.";
+                description "Enter the bgp-evpn context";
+
+                leaf evi {
+                    type types-services:evi;
+                    description "EVPN ID";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                container local-ac {
+                    description "Enter the local-ac context";
+
+                    leaf name {
+                        type types-sros:named-item;
+                        description "Attachment circuit name";
+                    }
+
+                    leaf eth-tag {
+                        type types-services:bgp-evpn-ac-eth-tag;
+                        description "Ethernet tag of the attachment circuit";
+                    }
+
+                } // container local-ac
+
+                container remote-ac {
+                    description "Enter the remote-ac context";
+
+                    leaf name {
+                        type types-sros:named-item;
+                        description "Attachment circuit name";
+                    }
+
+                    leaf eth-tag {
+                        type types-services:bgp-evpn-ac-eth-tag;
+                        description "Ethernet tag of the attachment circuit";
+                    }
+
+                } // container remote-ac
+
+                list vxlan {
+                    key "bgp-instance";
+                    description "Enter the vxlan list instance";
+
+                    leaf bgp-instance {
+                        type int32 {
+                            range "1..2";
+                        }
+                        description "BGP instance";
+                    }
+
+                    leaf vxlan-instance {
+                        type leafref {
+                            path "../../../vxlan/instance/vxlan-instance";
+                        }
+                        sros-ext:immutable;
+                        mandatory true;
+                        description "VXLAN instance";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of BGP EVPN VXLAN";
+                    }
+
+                    leaf send-tunnel-encap {
+                        type boolean;
+                        sros-ext:auto-restart-to-modify;
+                        default "true";
+                        description "Enable/Disable sending Vxlan Encap.";
+                    }
+
+                    leaf ecmp {
+                        type types-services:ecmp-value;
+                        default "1";
+                        description "Maximum ECMP routes information";
+                    }
+
+                    leaf default-route-tag {
+                        type types-services:one-byte-value;
+                        sros-ext:auto-restart-to-modify;
+                        description "Default route tag to match against export policies: value as 0xXX.";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                } // list vxlan
+
+                list mpls {
+                    key "bgp-instance";
+                    description "Enter the mpls list instance";
+
+                    leaf bgp-instance {
+                        type int32 {
+                            range "1..2";
+                        }
+                        description "BGP instance";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of BGP EVPN MPLS";
+                    }
+
+                    leaf control-word {
+                        type boolean;
+                        default "false";
+                        description "Enable/disable setting the CW bit in the label message.";
+                    }
+
+                    leaf ecmp {
+                        type types-services:ecmp-value;
+                        default "1";
+                        description "Maximum ECMP routes information";
+                    }
+
+                    leaf entropy-label {
+                        type boolean;
+                        default "false";
+                        description "Enable/disable use of entropy-label.";
+                    }
+
+                    leaf default-route-tag {
+                        type types-services:one-byte-value;
+                        sros-ext:auto-restart-to-modify;
+                        description "Default route tag to match against export policies: value as 0xXX.";
+                    }
+
+                    leaf force-vc-forwarding {
+                        type enumeration {
+                            enum "vlan"                         { value 1; }
+                            enum "qinq-c-tag-c-tag"             { value 2; }
+                            enum "qinq-s-tag-c-tag"             { value 3; }
+                        }
+                        description "VC forwarding action";
+                    }
+
+                    leaf oper-group {
+                        type leafref {
+                            path "../../../../oper-group/name";
+                        }
+                        description "Operational group identifier";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container send-tunnel-encap {
+                        description "Enter the send-tunnel-encap context";
+
+                        leaf mpls {
+                            type boolean;
+                            sros-ext:auto-restart-to-modify;
+                            default "true";
+                            description "Enable/disable MPLS encapsulation for this service.";
+                        }
+
+                        leaf mpls-over-udp {
+                            type boolean;
+                            sros-ext:auto-restart-to-modify;
+                            default "false";
+                            description "Enable/disable MPLS over UDP encapsulation for this service.";
+                        }
+
+                    } // container send-tunnel-encap
+
+                    container auto-bind-tunnel {
+                        description "Enter the auto-bind-tunnel context";
+
+                        leaf resolution {
+                            type types-services:resolve-status;
+                            default "none";
+                            description "Resolution method for tunnel selection";
+                        }
+
+                        leaf enforce-strict-tunnel-tagging {
+                            type boolean;
+                            default "false";
+                            description "Enable/disable enforcement of strict tunnel tagging";
+                        }
+
+                        leaf ecmp {
+                            type types-router:mpls-ecmp;
+                            default "1";
+                            description "Maximum ECMP routes information";
+                        }
+
+                        container resolution-filter {
+                            description "Enter the resolution-filter context";
+
+                            leaf bgp {
+                                type boolean;
+                                default "false";
+                                description "Set BGP type for auto bind tunnel";
+                            }
+
+                            leaf ldp {
+                                type boolean;
+                                default "false";
+                                description "Enable/disable setting LDP type for auto-bind-tunnel";
+                            }
+
+                            leaf rsvp {
+                                type boolean;
+                                default "false";
+                                description "Enable/disable setting RSVP-TE type for auto-bind-tunnel";
+                            }
+
+                            leaf sr-isis {
+                                type boolean;
+                                default "false";
+                                description "Enable/disable setting SR-ISIS type for auto-bind-tunnel";
+                            }
+
+                            leaf sr-ospf {
+                                type boolean;
+                                default "false";
+                                description "Segment Routing (SR) tunnel type programed by an OSPF instance in TTM";
+                            }
+
+                            leaf sr-te {
+                                type boolean;
+                                default "false";
+                                description "Enable/disable setting SR-TE type for auto-bind-tunnel";
+                            }
+
+                            leaf udp {
+                                type boolean;
+                                default "false";
+                                description "Set UDP type for auto-bind-tunnel";
+                            }
+
+                            leaf mpls-fwd-policy {
+                                type boolean;
+                                default "false";
+                                description "Use MPLS forwarding policy to determine BGP next hop";
+                            }
+
+                            leaf sr-policy {
+                                type boolean;
+                                default "false";
+                                description "Enable/disable setting SR Policy type for auto-bind-tunnel";
+                            }
+
+                            leaf rib-api {
+                                type boolean;
+                                default "false";
+                                description "Use tunnels from RibApi gRPC service for BGP next hop";
+                            }
+
+                            leaf sr-ospf3 {
+                                type boolean;
+                                default "false";
+                                description "Use segment routing ospf3 for next hop resolution.";
+                            }
+
+                        } // container resolution-filter
+
+                    } // container auto-bind-tunnel
+
+                    container route-next-hop {
+                        description "Enter the route-next-hop context";
+
+                        choice tag {
+                            default "ipv4";
+                            case ipv4 {
+
+                                leaf system-ipv4 {
+                                    type empty;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Use system IPv4 address";
+                                }
+
+                            }
+                            case ipv6 {
+
+                                leaf system-ipv6 {
+                                    type empty;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Use system IPv6 address";
+                                }
+
+                            }
+                            case explicit {
+
+                                leaf ip-address {
+                                    type types-sros:ip-address;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Use specific unicast IPv4/IPv6 address";
+                                }
+
+                            }
+                        }
+                    } // container route-next-hop
+
+                    container endpoint {
+                        description "Enter the endpoint context";
+
+                        leaf name {
+                            type leafref {
+                                path "../../../../endpoint/name";
+                            }
+                            sros-ext:immutable;
+                            description "Name of endpoint the bgp-evpn mpls instance is associated with";
+                        }
+
+                    } // container endpoint
+
+                } // list mpls
+
+            } // container bgp-evpn
+
+        } // list epipe
+
+    } // grouping conf-svc-epipe
+
+}
