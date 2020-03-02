@@ -10,6 +10,7 @@ submodule nokia-conf-router {
     import nokia-types-eth-cfm            { prefix "types-eth-cfm"; }
     import nokia-types-ipsec              { prefix "types-ipsec"; }
     import nokia-types-qos                { prefix "types-qos"; }
+    import nokia-types-redundancy         { prefix "types-redundancy"; }
     import nokia-types-router             { prefix "types-router"; }
     import nokia-types-services           { prefix "types-services"; }
     import nokia-types-sros               { prefix "types-sros"; }
@@ -56,11 +57,12 @@ submodule nokia-conf-router {
     include nokia-conf-submgt-gtp;
     include nokia-conf-subscriber-mgmt;
     include nokia-conf-svc-nat;
+    include nokia-conf-svc-vprn;
     include nokia-conf-system;
     include nokia-conf-system-security;
     include nokia-conf-vrrp;
 
-    sros-ext:sros-major-release "rel19";
+    sros-ext:sros-major-release "rel20";
 
     organization "Nokia";
 
@@ -87,7 +89,7 @@ submodule nokia-conf-router {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2020-01-27";
+    revision "2020-01-24";
 
     grouping conf-router {
         list router {
@@ -424,6 +426,47 @@ submodule nokia-conf-router {
 
             } // container bfd
 
+            container dns {
+                when "../router-name = 'Base'";
+                description "Enter the dns context";
+
+                container redirect-vprn {
+                    description "Enter the redirect-vprn context";
+
+                    list service {
+                        key "service-name";
+                        max-elements 1;
+                        description "Enter the service list instance";
+
+                        leaf service-name {
+                            type leafref {
+                                path "../../../../../service/vprn/service-name";
+                            }
+                            description "VPRN service name";
+                        }
+
+                        leaf preference {
+                            type uint32 {
+                                range "0..255";
+                            }
+                            description "Preference";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                    } // list service
+
+                } // container redirect-vprn
+
+            } // container dns
+
             container aggregates {
                 when "../router-name = 'Base'";
                 description "Enter the aggregates context";
@@ -640,6 +683,15 @@ submodule nokia-conf-router {
                 presence "WLAN Gateway functionality for VPRN services";
                 description "Enter the wlan-gw context";
 
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
                 container mobility-triggered-accounting {
                     description "Enter the mobility-triggered-accounting context";
 
@@ -675,6 +727,15 @@ submodule nokia-conf-router {
                         description "Insert or decrease the TCP Maximum Segment Size option to this value for upstream IPv6 SYN messages";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                 } // container distributed-subscriber-mgmt
 
                 container xconnect {
@@ -698,6 +759,15 @@ submodule nokia-conf-router {
                         }
                         sros-ext:auto-restart-to-modify;
                         description "ISA WLAN-GW Group";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                 } // container xconnect
@@ -1024,7 +1094,7 @@ submodule nokia-conf-router {
                                 leaf pir {
                                     type union {
                                         type int32 {
-                                            range "0..100000000";
+                                            range "1..100000000";
                                         }
                                         type enumeration {
                                             enum "max"                          { value -1; }
@@ -1705,7 +1775,7 @@ submodule nokia-conf-router {
                             leaf admin-state {
                                 type types-sros:admin-state;
                                 default "enable";
-                                description "Administrative state of sending parameter-problem messages";
+                                description "Administrative state of sent Parameter Problem messages";
                             }
 
                             leaf number {
@@ -2000,7 +2070,7 @@ submodule nokia-conf-router {
                         leaf admin-state {
                             type types-sros:admin-state;
                             default "disable";
-                            description "Administrative state of BFD sessions established on this interface";
+                            description "Administrative state of BFD sessions";
                         }
 
                         leaf transmit-interval {
@@ -2023,7 +2093,7 @@ submodule nokia-conf-router {
 
                         leaf multiplier {
                             type uint32 {
-                                range "3..20";
+                                range "1..20";
                             }
                             default "3";
                             description "Number of consecutive BFD messages missed from the peer";
@@ -2416,6 +2486,12 @@ submodule nokia-conf-router {
                                     description "Allow non-owner master to reply to SSH requests";
                                 }
 
+                                leaf ntp-reply {
+                                    type boolean;
+                                    default "false";
+                                    description "Allow/disallow non-owner master to reply to NTP requests.";
+                                }
+
                             }
                             case owner {
 
@@ -2686,7 +2762,7 @@ submodule nokia-conf-router {
                         leaf admin-state {
                             type types-sros:admin-state;
                             default "disable";
-                            description "Administrative state of BFD sessions established on this interface";
+                            description "Administrative state of BFD sessions";
                         }
 
                         leaf transmit-interval {
@@ -2709,7 +2785,7 @@ submodule nokia-conf-router {
 
                         leaf multiplier {
                             type uint32 {
-                                range "3..20";
+                                range "1..20";
                             }
                             default "3";
                             description "Number of consecutive BFD messages missed from the peer";
@@ -3031,6 +3107,12 @@ submodule nokia-conf-router {
                                     type boolean;
                                     default "false";
                                     description "Allow the forwarding of packets by a standby router";
+                                }
+
+                                leaf ntp-reply {
+                                    type boolean;
+                                    default "false";
+                                    description "Allow/disallow non-owner master to reply to NTP requests.";
                                 }
 
                             }
@@ -3526,6 +3608,7 @@ submodule nokia-conf-router {
             } // container isa-service-chaining
 
             container mpls-labels {
+                when "../router-name = 'Base'";
                 description "Enter the mpls-labels context";
 
                 leaf bgp-labels-hold-timer {
@@ -3611,7 +3694,7 @@ submodule nokia-conf-router {
                 leaf admin-state {
                     type types-sros:admin-state;
                     default "disable";
-                    description "Administrative state of UDP based multicast traceroute tests (mstat2 and mtrace2)";
+                    description "Administrative state of multicast path tracing";
                 }
 
                 leaf udp-port {
@@ -3743,6 +3826,15 @@ submodule nokia-conf-router {
                         description "Text description";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                 } // list rsvp-p2mp-root
 
                 list rsvp-p2mp-leaf {
@@ -3762,6 +3854,15 @@ submodule nokia-conf-router {
                     leaf description {
                         type types-sros:description;
                         description "Text description";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                 } // list rsvp-p2mp-leaf
@@ -3787,6 +3888,15 @@ submodule nokia-conf-router {
                         description "Text description";
                     }
 
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
                 } // list ldp-p2mp-root
 
                 list ldp-p2mp-leaf {
@@ -3806,6 +3916,15 @@ submodule nokia-conf-router {
                     leaf description {
                         type types-sros:description;
                         description "Text description";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
                     }
 
                 } // list ldp-p2mp-leaf

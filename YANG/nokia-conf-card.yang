@@ -16,7 +16,7 @@ submodule nokia-conf-card {
     include nokia-conf-port;
     include nokia-conf-qos;
 
-    sros-ext:sros-major-release "rel19";
+    sros-ext:sros-major-release "rel20";
 
     organization "Nokia";
 
@@ -43,7 +43,7 @@ submodule nokia-conf-card {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2019-10-18";
+    revision "2020-02-14";
 
     grouping conf-card {
         list card {
@@ -123,6 +123,15 @@ submodule nokia-conf-card {
                     sros-ext:immutable;
                     mandatory true;
                     description "Provisions the functional level upgrade path of the I/O module for this slot.";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
                 }
 
             } // list upgrade
@@ -356,22 +365,6 @@ submodule nokia-conf-card {
                         description "Provisions the functional level upgrade path of the MDA for this slot.";
                     }
 
-                } // list upgrade
-
-                list event {
-                    key "type";
-                    description "Enter the event list instance";
-
-                    leaf type {
-                        type types-chassis:hw-event-type;
-                        description "The unique value which identifies the event type to be monitored on this MDA in the system.";
-                    }
-
-                    leaf action {
-                        type types-chassis:hw-event-action;
-                        description "Provisions action to be taken on the MDA when the event is detected.";
-                    }
-
                     leaf-list apply-groups {
                         type leafref {
                             path "../../../../groups/group/name";
@@ -381,7 +374,7 @@ submodule nokia-conf-card {
                         description "Apply a configuration group at this level";
                     }
 
-                } // list event
+                } // list upgrade
 
                 container access {
                     description "Enter the access context";
@@ -579,19 +572,6 @@ submodule nokia-conf-card {
 
                 } // container access
 
-                container atm {
-                    description "Enter the atm context";
-
-                    leaf mode {
-                        type enumeration {
-                            enum "max8k-vc"                     { value 1; }
-                            enum "max16k-vc"                    { value 2; }
-                        }
-                        description "Mode of operation";
-                    }
-
-                } // container atm
-
                 container egress {
                     description "Enter the egress context";
 
@@ -623,6 +603,31 @@ submodule nokia-conf-card {
                     } // container hsmda-aggregate-queue-burst
 
                 } // container egress
+
+                list event {
+                    key "type";
+                    description "Enter the event list instance";
+
+                    leaf type {
+                        type types-chassis:hw-event-type;
+                        description "The unique value which identifies the event type to be monitored on this MDA in the system.";
+                    }
+
+                    leaf action {
+                        type types-chassis:hw-event-action;
+                        description "Provisions action to be taken on the MDA when the event is detected.";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                } // list event
 
                 container network {
                     description "Enter the network context";
@@ -840,6 +845,142 @@ submodule nokia-conf-card {
                 } // container network
 
             } // list mda
+
+            list xiom {
+                key "xiom-slot";
+                description "Enter the xiom list instance";
+
+                leaf xiom-slot {
+                    type string {
+                        length "2";
+                        pattern "x[1-2]" {
+                            error-message "Invalid xiom-slot.";
+                        }
+                    }
+                    description "The unique value which identifies this XIOM slot within a specific IOM card in the system.";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "enable";
+                    description "Administrative state of the XIOM";
+                }
+
+                leaf fail-on-error {
+                    type boolean;
+                    default "false";
+                    description "Configure the behavior of the XIOM state when an error is detected.";
+                }
+
+                leaf level {
+                    type types-card:sros-xiom-level;
+                    sros-ext:immutable;
+                    description "Provisions the functional level of the XIOM in this slot.";
+                }
+
+                leaf reset-on-recoverable-error {
+                    type boolean;
+                    default "false";
+                    description
+                        "Configure the behavior of the XIOM state when a fatal memory
+                         parity error is detected on a Q-chip of the XIOM.";
+                }
+
+                leaf xiom-type {
+                    type types-card:sros-xiom-type;
+                    sros-ext:immutable;
+                    description "Provisions/de-provisions an XIOM to/from the device configuration for the slot.";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                list mda {
+                    key "mda-slot";
+                    description "Enter the mda list instance";
+
+                    leaf mda-slot {
+                        type uint32 {
+                            range "1..2";
+                        }
+                        description "The unique value which identifies this MDA slot within a specific XIOM card in the system.";
+                    }
+
+                    leaf mda-type {
+                        type types-card:sros-xiom-mda-type;
+                        sros-ext:immutable;
+                        description "Provisions/de-provisions an MDA to/from the device configuration for the XIOM slot.";
+                    }
+
+                    leaf power-priority-level {
+                        type uint32 {
+                            range "1..200";
+                        }
+                        default "150";
+                        description "Configure the power priority level of the XIOM MDA.";
+                    }
+
+                    leaf sync-e {
+                        type enumeration {
+                            enum "true"                         { value 1; }
+                            enum "false"                        { value 2; }
+                        }
+                        description "Enable/Disable Synchronous Ethernet.";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "enable";
+                        description "Administrative state of MDA";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                } // list mda
+
+                list upgrade {
+                    key "upgrade-index";
+                    description "Enter the upgrade list instance";
+
+                    leaf upgrade-index {
+                        type uint32 {
+                            range "1..6";
+                        }
+                        description "The unique value which identifies the functional upgrade number on this XIOM on the system.";
+                    }
+
+                    leaf path {
+                        type types-card:sros-xiom-level-upgrade-path;
+                        sros-ext:immutable;
+                        mandatory true;
+                        description "Provisions the functional level upgrade path of the XIOM for this slot.";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                } // list upgrade
+
+            } // list xiom
 
             uses conf-card-fp;
         } // list card
