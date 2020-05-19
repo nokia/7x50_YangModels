@@ -1,0 +1,1160 @@
+submodule nokia-conf-redundancy {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-l2tp               { prefix "types-l2tp"; }
+    import nokia-types-mcr                { prefix "types-mcr"; }
+    import nokia-types-redundancy         { prefix "types-redundancy"; }
+    import nokia-types-services           { prefix "types-services"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-aaa;
+    include nokia-conf-groups;
+    include nokia-conf-isa;
+    include nokia-conf-lag;
+    include nokia-conf-port;
+    include nokia-conf-pw-port;
+    include nokia-conf-system;
+    include nokia-conf-system-security;
+
+    sros-ext:sros-major-release "rel20";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure redundancy configuration on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-redundancy YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2020-02-26";
+
+    grouping conf-redundancy {
+        container redundancy {
+            description "Enter the redundancy context";
+
+            leaf cert-sync {
+                type boolean;
+                default "true";
+                description "Synchronize redundancy certificate files between the primary and secondary CPMs";
+            }
+
+            leaf rollback-sync {
+                type enumeration {
+                    enum "rollback-single"              { value 2; }
+                    enum "rollback-all"                 { value 3; }
+                }
+                description "Parameters for redundancy rollback synchronization";
+            }
+
+            leaf synchronize {
+                type enumeration {
+                    enum "config"                       { value 2; }
+                    enum "boot-env"                     { value 3; }
+                }
+                description "Parameters for redundancy synchronization";
+            }
+
+            leaf switchover-exec {
+                type types-sros:url {
+                    length "1..100";
+                }
+                description "Location and name of the CLI script file executed after a redundancy switchover";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            container mgmt-ethernet {
+                presence "Management ethernet redundancy";
+                description "Enter the mgmt-ethernet context";
+
+                leaf revert {
+                    type uint32 {
+                        range "1..300";
+                    }
+                    units "seconds";
+                    default "5";
+                    description "Time before reverting standby CPM management Ethernet port to active CPM";
+                }
+
+            } // container mgmt-ethernet
+
+            container multi-chassis {
+                description "Enter the multi-chassis context";
+
+                list peer {
+                    key "ip-address";
+                    max-elements 20;
+                    description "Enter the peer list instance";
+
+                    leaf ip-address {
+                        type types-sros:ip-unicast-address;
+                        description "IP address for server";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of the peer instance";
+                    }
+
+                    leaf authentication-key {
+                        type types-sros:encrypted-leaf {
+                            length "1..54";
+                        }
+                        description "Authentication key used between this node and the multi-chassis peer";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf peer-name {
+                        type types-sros:named-item;
+                        description "Multi-chassis peer name";
+                    }
+
+                    leaf source-address {
+                        type types-sros:ip-unicast-address;
+                        description "Source address to communicate with the multi-chassis peer";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container sync {
+                        presence "Enable sync functionality.";
+                        description "Enter the sync context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of the synchronization";
+                        }
+
+                        leaf diameter-proxy {
+                            type boolean;
+                            default "false";
+                            description "Synchronize the Diameter proxy data with the multi-chassis peer";
+                        }
+
+                        leaf igmp {
+                            type boolean;
+                            default "false";
+                            description "Synchronize IGMP protocol information with the multi-chassis peer";
+                        }
+
+                        leaf igmp-snooping {
+                            type boolean;
+                            default "false";
+                            description "Synchronize IGMP snooping information";
+                        }
+
+                        leaf ipsec {
+                            type boolean;
+                            default "false";
+                            description "Synchronize IPsec information";
+                        }
+
+                        leaf l2tp {
+                            type boolean;
+                            default "false";
+                            description "Synchronize Layer Two Tunnel Protocol (L2TP)";
+                        }
+
+                        leaf local-dhcp-server {
+                            type boolean;
+                            default "false";
+                            description "Synchronize DHCP Server information";
+                        }
+
+                        leaf mc-ring {
+                            type boolean;
+                            default "false";
+                            description "Synchronize ring information";
+                        }
+
+                        leaf mld {
+                            type boolean;
+                            default "false";
+                            description "Synchronize MLD protocol information";
+                        }
+
+                        leaf mld-snooping {
+                            type boolean;
+                            default "false";
+                            description "Synchronize MLD snooping information";
+                        }
+
+                        leaf python {
+                            type boolean;
+                            default "false";
+                            description "Synchronize Python";
+                        }
+
+                        leaf srrp {
+                            type boolean;
+                            default "false";
+                            description "Synchronize SRRP information";
+                        }
+
+                        leaf sub-host-trk {
+                            type boolean;
+                            default "false";
+                            description "Synchronize subscriber host tracking information";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        container pim-snooping {
+                            description "Enter the pim-snooping context";
+
+                            leaf saps {
+                                type boolean;
+                                default "false";
+                                description "Synchronize PIM snooping data with the multi-chassis peer on SDP endpoints";
+                            }
+
+                            leaf spoke-sdps {
+                                type boolean;
+                                default "false";
+                                description "Synchronize PIM snooping data with the multi-chassis peer on SDP endpoints";
+                            }
+
+                        } // container pim-snooping
+
+                        container sub-mgmt {
+                            description "Enter the sub-mgmt context";
+
+                            leaf ipoe {
+                                type boolean;
+                                default "false";
+                                description "Synchronize subscriber management IPoE information";
+                            }
+
+                            leaf pppoe {
+                                type boolean;
+                                default "false";
+                                description "Synchronize subscriber management PPPoE information";
+                            }
+
+                        } // container sub-mgmt
+
+                        container tags {
+                            description "Enter the tags context";
+
+                            list port {
+                                key "id";
+                                description "Enter the port list instance";
+
+                                leaf id {
+                                    type leafref {
+                                        path "../../../../../../../port/port-id";
+                                    }
+                                    description "ID of port to be synchronized with multi-chassis peer";
+                                }
+
+                                leaf sync-tag {
+                                    type types-sros:named-item;
+                                    sros-ext:immutable;
+                                    description "Synchronization tag";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                list range {
+                                    key "start end";
+                                    description "Enter the range list instance";
+
+                                    leaf start {
+                                        type types-sros:vlan-encap;
+                                        description "First encapsulation value";
+                                    }
+
+                                    leaf end {
+                                        type types-sros:vlan-encap;
+                                        description "Last encapsulation value";
+                                    }
+
+                                    leaf sync-tag {
+                                        type types-sros:named-item;
+                                        sros-ext:immutable;
+                                        mandatory true;
+                                        description "Synchronization tag";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                } // list range
+
+                            } // list port
+
+                            list lag {
+                                key "id";
+                                description "Enter the lag list instance";
+
+                                leaf id {
+                                    type leafref {
+                                        path "../../../../../../../lag/lag-index";
+                                    }
+                                    description "ID of LAG to be synchronized with multi-chassis peer";
+                                }
+
+                                leaf sync-tag {
+                                    type types-sros:named-item;
+                                    sros-ext:immutable;
+                                    description "Synchronization tag";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                list range {
+                                    key "start end";
+                                    description "Enter the range list instance";
+
+                                    leaf start {
+                                        type types-sros:vlan-encap;
+                                        description "First encapsulation value";
+                                    }
+
+                                    leaf end {
+                                        type types-sros:vlan-encap;
+                                        description "Last encapsulation value";
+                                    }
+
+                                    leaf sync-tag {
+                                        type types-sros:named-item;
+                                        sros-ext:immutable;
+                                        mandatory true;
+                                        description "Synchronization tag";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                } // list range
+
+                            } // list lag
+
+                            list pw-port {
+                                key "id";
+                                description "Enter the pw-port list instance";
+
+                                leaf id {
+                                    type leafref {
+                                        path "../../../../../../../pw-port/pw-port-id";
+                                    }
+                                    description "ID of pseudowire port to be synchronized with MC peer";
+                                }
+
+                                leaf sync-tag {
+                                    type types-sros:named-item;
+                                    sros-ext:immutable;
+                                    description "Synchronization tag";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                list range {
+                                    key "start end";
+                                    description "Enter the range list instance";
+
+                                    leaf start {
+                                        type types-sros:vlan-encap;
+                                        description "First encapsulation value";
+                                    }
+
+                                    leaf end {
+                                        type types-sros:vlan-encap;
+                                        description "Last encapsulation value";
+                                    }
+
+                                    leaf sync-tag {
+                                        type types-sros:named-item;
+                                        sros-ext:immutable;
+                                        mandatory true;
+                                        description "Synchronization tag";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                } // list range
+
+                            } // list pw-port
+
+                            list sdp {
+                                key "id";
+                                description "Enter the sdp list instance";
+
+                                leaf id {
+                                    type types-services:sdp-id;
+                                    description "ID of SDP to be synchronized with multi-chassis peer";
+                                }
+
+                                leaf sync-tag {
+                                    type types-sros:named-item;
+                                    sros-ext:immutable;
+                                    description "Synchronization tag";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                list range {
+                                    key "start end";
+                                    description "Enter the range list instance";
+
+                                    leaf start {
+                                        type types-services:vc-id;
+                                        description "First virtual circuit ID";
+                                    }
+
+                                    leaf end {
+                                        type types-services:vc-id;
+                                        description "Last virtual circuit ID";
+                                    }
+
+                                    leaf sync-tag {
+                                        type types-sros:named-item;
+                                        sros-ext:immutable;
+                                        mandatory true;
+                                        description "Synchronization tag";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                } // list range
+
+                            } // list sdp
+
+                        } // container tags
+
+                        list tunnel-group {
+                            key "tunnel-group-id";
+                            description "Enter the tunnel-group list instance";
+
+                            leaf tunnel-group-id {
+                                type types-redundancy:tunnel-group-id;
+                                description "Multi-active tunnel group ID";
+                            }
+
+                            leaf sync-tag {
+                                type types-sros:named-item;
+                                mandatory true;
+                                description "Synchronization tag for this tunnel group on this multi-chassis peer";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                        } // list tunnel-group
+
+                        list track-srrp {
+                            key "id";
+                            description "Enter the track-srrp list instance";
+
+                            leaf id {
+                                type uint32 {
+                                    range "1..4294967295";
+                                }
+                                description "ID of the tracked SRRP instance";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            container l2tp-tunnel-id-range {
+                                description "Enter the l2tp-tunnel-id-range context";
+
+                                leaf start {
+                                    type types-l2tp:loc-tunnel-id;
+                                    description "Start value of range";
+                                }
+
+                                leaf end {
+                                    type types-l2tp:loc-tunnel-id;
+                                    description "End value of range";
+                                }
+
+                            } // container l2tp-tunnel-id-range
+
+                        } // list track-srrp
+
+                        container diameter-node {
+                            presence "Synchronize Diameter nodes";
+                            description "Enter the diameter-node context";
+
+                            list node {
+                                key "host-name";
+                                description "Enter the node list instance";
+
+                                leaf host-name {
+                                    type leafref {
+                                        path "../../../../../../../aaa/diameter/node/origin-host";
+                                    }
+                                    description "Origin-Host of the node";
+                                }
+
+                                leaf sync-tag {
+                                    type types-sros:named-item;
+                                    mandatory true;
+                                    description "The sync tag to be used for synchronization";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                            } // list node
+
+                        } // container diameter-node
+
+                    } // container sync
+
+                    container mc-ipsec {
+                        presence "Multi-chassis ipsec information.";
+                        description "Enter the mc-ipsec context";
+
+                        leaf bfd-liveness {
+                            type boolean;
+                            default "false";
+                            description "Enable BFD";
+                        }
+
+                        leaf hold-on-neighbor-failure {
+                            type uint32 {
+                                range "2..25";
+                            }
+                            default "3";
+                            description "Hold time on neighbor failure";
+                        }
+
+                        leaf keep-alive-interval {
+                            type uint32 {
+                                range "5..500";
+                            }
+                            units "deciseconds";
+                            default "10";
+                            description "Keepalive interval";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        container discovery-interval {
+                            description "Enter the discovery-interval context";
+
+                            leaf interval-secs {
+                                type uint32 {
+                                    range "1..1800";
+                                }
+                                units "seconds";
+                                default "300";
+                                description "Maximum discovery interval";
+                            }
+
+                            leaf boot {
+                                type uint32 {
+                                    range "1..1800";
+                                }
+                                units "seconds";
+                                default "300";
+                                description "Maximum interval after system bootup";
+                            }
+
+                        } // container discovery-interval
+
+                        list tunnel-group {
+                            key "tunnel-group-id";
+                            description "Enter the tunnel-group list instance";
+
+                            leaf tunnel-group-id {
+                                type leafref {
+                                    path "../../../../../../isa/tunnel-group/id";
+                                }
+                                description "Tunnel group ID";
+                            }
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "disable";
+                                description "Administrative state of the peer IPsec tunnel group instance";
+                            }
+
+                            leaf peer-group {
+                                type types-redundancy:tunnel-group-id;
+                                description "Peer tunnel group";
+                            }
+
+                            leaf priority {
+                                type uint32 {
+                                    range "0..255";
+                                }
+                                default "100";
+                                description "Tunnel group priority";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                        } // list tunnel-group
+
+                    } // container mc-ipsec
+
+                    container mc-lag {
+                        description "Enter the mc-lag context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of MC-LAG";
+                        }
+
+                        leaf keep-alive-interval {
+                            type uint32 {
+                                range "5..500";
+                            }
+                            units "deciseconds";
+                            default "10";
+                            description "Keepalive timer value";
+                        }
+
+                        leaf hold-on-neighbor-failure {
+                            type uint32 {
+                                range "2..25";
+                            }
+                            default "3";
+                            description "Intervals before standby node assumes that redundant neighbor node has failed";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        list lag {
+                            key "lag-index";
+                            description "Enter the lag list instance";
+
+                            leaf lag-index {
+                                type leafref {
+                                    path "../../../../../../lag/lag-index";
+                                }
+                                description "LAG index";
+                            }
+
+                            leaf lacp-key {
+                                type uint32 {
+                                    range "1..65535";
+                                }
+                                sros-ext:immutable;
+                                description "Key based on the remote MC-LAG";
+                            }
+
+                            leaf system-id {
+                                type yang:mac-address;
+                                sros-ext:immutable;
+                                description "ID based on the remote MC-LAG";
+                            }
+
+                            leaf system-priority {
+                                type int32 {
+                                    range "1..65535";
+                                }
+                                sros-ext:immutable;
+                                description "Priority based on the remote MC-LAG";
+                            }
+
+                            leaf remote-lag {
+                                type types-sros:lag-interface;
+                                description "Lag ID of the remote MC-LAG";
+                            }
+
+                            leaf source-bmac-lsb {
+                                type union {
+                                    type enumeration {
+                                        enum "use-lacp-key"                 { value -1; }
+                                    }
+                                    type types-services:bmac-lsb;
+                                }
+                                description "MAC address value to apply to all ingress traffic";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                        } // list lag
+
+                    } // container mc-lag
+
+                    container mc-ring {
+                        description "Enter the mc-ring context";
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        list ring {
+                            key "sync-tag";
+                            description "Enter the ring list instance";
+
+                            leaf sync-tag {
+                                type types-sros:named-item;
+                                description "Synchronization tag for this ring on this multi-chassis peer";
+                            }
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "disable";
+                                description "Administrative state of the multi-chassis ring";
+                            }
+
+                            leaf type {
+                                type enumeration {
+                                    enum "layer-2"                      { value 1; }
+                                    enum "layer-3"                      { value 2; }
+                                }
+                                sros-ext:immutable;
+                                mandatory true;
+                                description "Type of the multi-chassis ring";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            container in-band-control-path {
+                                description "Enter the in-band-control-path context";
+
+                                leaf debounce {
+                                    type boolean;
+                                    default "true";
+                                    description "Exponential back-off timer to use for delay path switching after consecutive failures";
+                                }
+
+                                leaf max-debounce-time {
+                                    type uint32 {
+                                        range "5..200";
+                                    }
+                                    units "seconds";
+                                    default "10";
+                                    description "Maximum delay after a failure when debouncing is active";
+                                }
+
+                                leaf dst-ip {
+                                    type types-sros:ipv4-unicast-address;
+                                    description "IP address of the in-band control path peer";
+                                }
+
+                                leaf service-name {
+                                    type types-services:service-name;
+                                    description "Name of the service to verify the in-band control path";
+                                }
+
+                                leaf interface {
+                                    type types-sros:interface-name;
+                                    description "Interface to verify in-band control path";
+                                }
+
+                            } // container in-band-control-path
+
+                            container path-b {
+                                description "Enter the path-b context";
+
+                                leaf wildcard-saps {
+                                    type boolean;
+                                    default "false";
+                                    description "Include the SAPs starting with a wildcard '*'";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                list range {
+                                    key "start end";
+                                    description "Add a list entry for range";
+
+                                    leaf start {
+                                        type uint32 {
+                                            range "0..4094";
+                                        }
+                                        description "First VLAN in the range";
+                                    }
+
+                                    leaf end {
+                                        type uint32 {
+                                            range "0..4094";
+                                        }
+                                        description "Last VLAN in the range";
+                                    }
+
+                                } // list range
+
+                            } // container path-b
+
+                            container path-excl {
+                                description "Enter the path-excl context";
+
+                                leaf wildcard-saps {
+                                    type boolean;
+                                    default "false";
+                                    description "Include the SAPs starting with a wildcard '*'";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                list range {
+                                    key "start end";
+                                    description "Add a list entry for range";
+
+                                    leaf start {
+                                        type uint32 {
+                                            range "0..4094";
+                                        }
+                                        description "First VLAN in the range";
+                                    }
+
+                                    leaf end {
+                                        type uint32 {
+                                            range "0..4094";
+                                        }
+                                        description "Last VLAN in the range";
+                                    }
+
+                                } // list range
+
+                            } // container path-excl
+
+                            list srrp-instance {
+                                key "id";
+                                max-elements 2;
+                                description "Add a list entry for srrp-instance";
+
+                                leaf id {
+                                    type uint32 {
+                                        range "1..4294967295";
+                                    }
+                                    description "SRRP ID";
+                                }
+
+                            } // list srrp-instance
+
+                            list ring-node {
+                                key "name";
+                                description "Enter the ring-node list instance";
+
+                                leaf name {
+                                    type types-sros:named-item;
+                                    description "Name of a multi-chassis ring access node";
+                                }
+
+                                leaf admin-state {
+                                    type types-sros:admin-state;
+                                    default "disable";
+                                    description "Administrative state of the ring node verification";
+                                }
+
+                                leaf interval {
+                                    type uint32 {
+                                        range "1..6000";
+                                    }
+                                    units "minutes";
+                                    default "5";
+                                    description "Connection verification interval";
+                                }
+
+                                leaf service-name {
+                                    type types-services:service-name;
+                                    description "Service name for access node connection";
+                                }
+
+                                leaf dst-ip {
+                                    type types-sros:ipv4-unicast-address;
+                                    description "Destination IP address for access node connection";
+                                }
+
+                                leaf src-ip {
+                                    type types-sros:ipv4-unicast-address;
+                                    description "Source IP address for access node connection";
+                                }
+
+                                leaf src-mac {
+                                    type union {
+                                        type enumeration {
+                                            enum "system-mac-address"           { value 0; }
+                                        }
+                                        type types-mcr:ring-node-mac-address;
+                                    }
+                                    default "system-mac-address";
+                                    description "Source MAC address for the access node connection";
+                                }
+
+                                leaf vlan {
+                                    type types-sros:ext-vlan-encap;
+                                    description "VLAN ID for access node connection";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                            } // list ring-node
+
+                        } // list ring
+
+                    } // container mc-ring
+
+                } // list peer
+
+            } // container multi-chassis
+
+            container bgp-mh {
+                description "Enter the bgp-mh context";
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                container site {
+                    description "Enter the site context";
+
+                    leaf boot-timer {
+                        type int32 {
+                            range "0..600";
+                        }
+                        units "seconds";
+                        default "10";
+                        description "Time that system waits after node reboot and before it runs DF election algorithm";
+                    }
+
+                    leaf activation-timer {
+                        type int32 {
+                            range "0..100";
+                        }
+                        units "seconds";
+                        default "2";
+                        description "Time to keep local sites in standby status before running DF election algorithm";
+                    }
+
+                    leaf min-down-timer {
+                        type int32 {
+                            range "1..100";
+                        }
+                        units "seconds";
+                        description "Minimum downtime for BGP multi-homing site after transition from up to down";
+                    }
+
+                } // container site
+
+            } // container bgp-mh
+
+            container bgp-evpn {
+                description "Enter the bgp-evpn context";
+
+                container ethernet-segment {
+                    description "Enter the ethernet-segment context";
+
+                    leaf boot-timer {
+                        type uint32 {
+                            range "0..600";
+                        }
+                        units "seconds";
+                        default "10";
+                        description "Time before running BGP EVPN multi-homing DF election algorithm";
+                    }
+
+                    leaf activation-timer {
+                        type uint32 {
+                            range "0..100";
+                        }
+                        units "seconds";
+                        default "3";
+                        description "Time before activating specified Ethernet segment on specified PE that is elected as DF";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                } // container ethernet-segment
+
+            } // container bgp-evpn
+
+        } // container redundancy
+
+    } // grouping conf-redundancy
+
+}
