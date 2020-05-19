@@ -4,6 +4,7 @@ submodule nokia-conf-service {
 
     belongs-to nokia-conf { prefix "conf"; }
 
+    import ietf-yang-types                { prefix "yang"; }
     import nokia-sros-yang-extensions     { prefix "sros-ext"; }
     import nokia-types-igmp               { prefix "types-igmp"; }
     import nokia-types-isa                { prefix "types-isa"; }
@@ -55,7 +56,7 @@ submodule nokia-conf-service {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2020-01-17";
+    revision "2020-04-09";
 
     grouping conf-service {
         container service {
@@ -182,7 +183,7 @@ submodule nokia-conf-service {
                             case port {
 
                                 leaf port {
-                                    type types-sros:port;
+                                    type types-sros:port-named;
                                     description "Port for this binding.";
                                 }
 
@@ -194,6 +195,16 @@ submodule nokia-conf-service {
                                         range "1..20";
                                     }
                                     description "Card for this binding.";
+                                }
+
+                            }
+                            case fpe {
+
+                                leaf fpe {
+                                    type leafref {
+                                        path "../../../../../fwd-path-ext/fpe/fpe-id";
+                                    }
+                                    description "Forward path extension for this binding.";
                                 }
 
                             }
@@ -833,17 +844,17 @@ submodule nokia-conf-service {
 
                         leaf mac {
                             type types-sros:named-item-64;
-                            description "IPv6 filter";
+                            description "MAC filter policy name";
                         }
 
                         leaf ip {
                             type types-sros:named-item-64;
-                            description "IP filter";
+                            description "IPv4 filter policy name";
                         }
 
                         leaf ipv6 {
                             type types-sros:named-item-64;
-                            description "IPv6 filter";
+                            description "IPv6 filter policy name";
                         }
 
                     } // container filter
@@ -1100,6 +1111,11 @@ submodule nokia-conf-service {
                         description "Enable automatic update of MAC protect list";
                     }
 
+                    leaf auto-learn-mac-protect-exclude-list {
+                        type types-sros:named-item;
+                        description "Configure mac protect exclusion list";
+                    }
+
                     leaf protected-src-mac-violation-action {
                         type types-services:sdp-protected-src-mac-violation-action;
                         description "Action for protected source MAC restriction";
@@ -1132,17 +1148,17 @@ submodule nokia-conf-service {
 
                         leaf mac {
                             type types-sros:named-item-64;
-                            description "IPv6 filter";
+                            description "MAC filter policy name";
                         }
 
                         leaf ip {
                             type types-sros:named-item-64;
-                            description "IP filter";
+                            description "IPv4 filter policy name";
                         }
 
                         leaf ipv6 {
                             type types-sros:named-item-64;
-                            description "IPv6 filter";
+                            description "IPv6 filter policy name";
                         }
 
                     } // container filter
@@ -1689,7 +1705,7 @@ submodule nokia-conf-service {
                                                         description "Enter the s-tag-c-tag list instance";
 
                                                         leaf s-tag {
-                                                            type types-services:ethernet-segment-vlan-range-encap;
+                                                            type types-services:ethernet-segment-vlan-range-encap-with-null;
                                                             description "Starting value of the qinq s-tag range associated with a virtual ethernet segment";
                                                         }
 
@@ -1817,7 +1833,7 @@ submodule nokia-conf-service {
                                                         description "Enter the s-tag-c-tag list instance";
 
                                                         leaf s-tag {
-                                                            type types-services:ethernet-segment-vlan-range-encap;
+                                                            type types-services:ethernet-segment-vlan-range-encap-with-null;
                                                             description "Starting value of the qinq s-tag range associated with a virtual ethernet segment";
                                                         }
 
@@ -2063,7 +2079,7 @@ submodule nokia-conf-service {
                                                         description "Enter the s-tag-c-tag list instance";
 
                                                         leaf s-tag {
-                                                            type types-services:ethernet-segment-vlan-range-encap;
+                                                            type types-services:ethernet-segment-vlan-range-encap-with-null;
                                                             description "Starting value of the qinq s-tag range associated with a virtual ethernet segment";
                                                         }
 
@@ -2170,6 +2186,57 @@ submodule nokia-conf-service {
                 } // container bgp
 
             } // container system
+
+            list mac-list {
+                key "name";
+                description "Enter the mac-list list instance";
+
+                leaf name {
+                    type types-sros:named-item;
+                    description "Specify name for mac list";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Description of this mac-list";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                list mac {
+                    key "address";
+                    description "Enter the mac list instance";
+
+                    leaf address {
+                        type yang:mac-address;
+                        description "Mac address for mac list";
+                    }
+
+                    leaf mask {
+                        type yang:mac-address;
+                        default "ff:ff:ff:ff:ff:ff";
+                        description "Six byte mask for mac list";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                } // list mac
+
+            } // list mac-list
 
             container md-auto-id {
                 description "Enter the md-auto-id context";
@@ -2302,21 +2369,21 @@ submodule nokia-conf-service {
                                 type leafref {
                                     path "../../../../../../filter/mac-filter/filter-name";
                                 }
-                                description "MAC filter ID";
+                                description "MAC filter policy name";
                             }
 
                             leaf ip {
                                 type leafref {
                                     path "../../../../../../filter/ip-filter/filter-name";
                                 }
-                                description "IPv4 filter identifier";
+                                description "IPv4 filter policy name";
                             }
 
                             leaf ipv6 {
                                 type leafref {
                                     path "../../../../../../filter/ipv6-filter/filter-name";
                                 }
-                                description "IPv6 filter identifier";
+                                description "IPv6 filter policy name";
                             }
 
                         } // container filter
@@ -2345,21 +2412,21 @@ submodule nokia-conf-service {
                                 type leafref {
                                     path "../../../../../../filter/mac-filter/filter-name";
                                 }
-                                description "MAC filter ID";
+                                description "MAC filter policy name";
                             }
 
                             leaf ip {
                                 type leafref {
                                     path "../../../../../../filter/ip-filter/filter-name";
                                 }
-                                description "IPv4 filter identifier";
+                                description "IPv4 filter policy name";
                             }
 
                             leaf ipv6 {
                                 type leafref {
                                     path "../../../../../../filter/ipv6-filter/filter-name";
                                 }
-                                description "IPv6 filter identifier";
+                                description "IPv6 filter policy name";
                             }
 
                         } // container filter

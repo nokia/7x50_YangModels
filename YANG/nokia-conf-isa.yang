@@ -13,9 +13,9 @@ submodule nokia-conf-isa {
 
     include nokia-conf-aaa;
     include nokia-conf-card;
+    include nokia-conf-esa;
     include nokia-conf-groups;
     include nokia-conf-isa-video-group;
-    include nokia-conf-port;
     include nokia-conf-port-policy;
     include nokia-conf-service;
 
@@ -46,7 +46,7 @@ submodule nokia-conf-isa {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2020-01-20";
+    revision "2020-04-06";
 
     grouping conf-isa {
         container isa {
@@ -141,17 +141,47 @@ submodule nokia-conf-isa {
                                 description "The number of active ISAs to be used by this tunnel group to load-balance IPsec traffic.";
                             }
 
-                            list isa {
-                                key "isa-id";
-                                description "Add a list entry for isa";
+                            choice group-members {
+                                default "isa";
+                                description "MDA or ESA-VM members of this tunnel group";
+                                case isa {
 
-                                leaf isa-id {
-                                    type types-isa:slot-mda;
-                                    description "The ISA associated with this tunnel group.";
+                                    list isa {
+                                        key "isa-id";
+                                        description "Add a list entry for isa";
+
+                                        leaf isa-id {
+                                            type types-isa:slot-mda;
+                                            description "The ISA associated with this tunnel group.";
+                                        }
+
+                                    } // list isa
+
                                 }
+                                case esa {
 
-                            } // list isa
+                                    list esa {
+                                        key "esa-id vm";
+                                        description "Add a list entry for esa";
 
+                                        leaf esa-id {
+                                            type leafref {
+                                                path "../../../../../esa/esa-id";
+                                            }
+                                            description "The ESA associated with this tunnel group.";
+                                        }
+
+                                        leaf vm {
+                                            type leafref {
+                                                path "../../../../../esa[esa-id=current()/../esa-id]/vm/vm-id";
+                                            }
+                                            description "The ESA VM associated with this tunnel group.";
+                                        }
+
+                                    } // list esa
+
+                                }
+                            }
                         } // container multi-active
 
                     }
@@ -362,6 +392,26 @@ submodule nokia-conf-isa {
 
                 } // list mda
 
+                list esa {
+                    key "esa-id vm";
+                    description "Add a list entry for esa";
+
+                    leaf esa-id {
+                        type leafref {
+                            path "../../../../esa/esa-id";
+                        }
+                        description "ESA used by the ISA NAT group";
+                    }
+
+                    leaf vm {
+                        type leafref {
+                            path "../../../../esa[esa-id=current()/../esa-id]/vm/vm-id";
+                        }
+                        description "VM used by the ISA NAT group";
+                    }
+
+                } // list esa
+
             } // list nat-group
 
             list wlan-gw-group {
@@ -430,6 +480,14 @@ submodule nokia-conf-isa {
                     }
                     sros-ext:auto-restart-to-modify;
                     description "Base port configuration for WLAN-GW group ports that take part in per-tunnel QoS processing";
+                }
+
+                leaf scaling-profile {
+                    type types-sros:isa-scaling-profile;
+                    sros-ext:auto-restart-to-modify;
+                    sros-ext:isa-auto-clear-on-modify;
+                    default "profile1";
+                    description "The ISA scaling profile identifier.";
                 }
 
                 leaf-list apply-groups {

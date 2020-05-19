@@ -4,6 +4,7 @@ submodule nokia-conf-svc-epipe {
 
     belongs-to nokia-conf { prefix "conf"; }
 
+    import nokia-features                 { prefix "nokia-features"; }
     import nokia-sros-yang-extensions     { prefix "sros-ext"; }
     import nokia-types-eth-cfm            { prefix "types-eth-cfm"; }
     import nokia-types-qos                { prefix "types-qos"; }
@@ -50,7 +51,7 @@ submodule nokia-conf-svc-epipe {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2020-01-15";
+    revision "2020-05-01";
 
     grouping conf-svc-epipe {
         list epipe {
@@ -219,6 +220,14 @@ submodule nokia-conf-svc-epipe {
                         type types-services:route-target;
                         max-elements 5;
                         description "Import route-target communities";
+                    }
+
+                    leaf endpoint {
+                        type leafref {
+                            path "../../../endpoint/name";
+                        }
+                        sros-ext:immutable;
+                        description "Name of endpoint the bgp pw-template is associated with";
                     }
 
                     leaf-list apply-groups {
@@ -602,21 +611,21 @@ submodule nokia-conf-svc-epipe {
                             type leafref {
                                 path "../../../../../../filter/mac-filter/filter-name";
                             }
-                            description "MAC filter ID";
+                            description "MAC filter policy name";
                         }
 
                         leaf ip {
                             type leafref {
                                 path "../../../../../../filter/ip-filter/filter-name";
                             }
-                            description "IP filter ID";
+                            description "IPv4 filter policy name";
                         }
 
                         leaf ipv6 {
                             type leafref {
                                 path "../../../../../../filter/ipv6-filter/filter-name";
                             }
-                            description "IPv6 filter identifier";
+                            description "IPv6 filter policy name";
                         }
 
                     } // container filter
@@ -693,21 +702,21 @@ submodule nokia-conf-svc-epipe {
                             type leafref {
                                 path "../../../../../../filter/mac-filter/filter-name";
                             }
-                            description "MAC filter ID";
+                            description "MAC filter policy name";
                         }
 
                         leaf ip {
                             type leafref {
                                 path "../../../../../../filter/ip-filter/filter-name";
                             }
-                            description "IP filter ID";
+                            description "IPv4 filter policy name";
                         }
 
                         leaf ipv6 {
                             type leafref {
                                 path "../../../../../../filter/ipv6-filter/filter-name";
                             }
-                            description "IPv6 filter identifier";
+                            description "IPv6 filter policy name";
                         }
 
                     } // container filter
@@ -1871,26 +1880,27 @@ submodule nokia-conf-svc-epipe {
                             type leafref {
                                 path "../../../../../../filter/mac-filter/filter-name";
                             }
-                            description "MAC filter identifier";
+                            description "MAC filter policy name";
                         }
 
                         leaf ip {
                             type leafref {
                                 path "../../../../../../filter/ip-filter/filter-name";
                             }
-                            description "IP filter ID";
+                            description "IPv4 filter policy name";
                         }
 
                         leaf ipv6 {
                             type leafref {
                                 path "../../../../../../filter/ipv6-filter/filter-name";
                             }
-                            description "IPv6 filter identifier";
+                            description "IPv6 filter policy name";
                         }
 
                     } // container filter
 
                     container qtag-manipulation {
+                        if-feature nokia-features:sros-qtag-manipulation;
                         description "Enter the qtag-manipulation context";
 
                         choice tags {
@@ -1921,6 +1931,46 @@ submodule nokia-conf-svc-epipe {
                             }
                         }
                     } // container qtag-manipulation
+
+                    container vlan-manipulation {
+                        if-feature nokia-features:sros-vlan-manipulation;
+                        description "Enter the vlan-manipulation context";
+
+                        leaf action {
+                            type types-services:vlan-manipulation-ingress-action-type;
+                            description "Action to manipulate the VLAN tag(s) of the packets.";
+                        }
+
+                        leaf outer-tag {
+                            type types-services:vlan-manipulate-ingress-vlan-type;
+                            default "null";
+                            description "Outer VLAN tag to be applied.";
+                        }
+
+                        leaf inner-tag {
+                            type types-services:vlan-manipulate-ingress-vlan-type;
+                            default "null";
+                            description "Inner VLAN tag to be applied in case of QinQ encapsulation.";
+                        }
+
+                    } // container vlan-manipulation
+
+                    container aggregate-policer {
+                        description "Enter the aggregate-policer context";
+
+                        leaf rate {
+                            type types-qos:aggr-policer-rate;
+                            default "max";
+                            description "Aggregate policer rate to be used in kbps";
+                        }
+
+                        leaf burst {
+                            type types-qos:aggr-policer-burst;
+                            default "default";
+                            description "Aggregate policer burst";
+                        }
+
+                    } // container aggregate-policer
 
                 } // container ingress
 
@@ -2054,7 +2104,7 @@ submodule nokia-conf-svc-epipe {
                                             range "0.00..100.00";
                                             fraction-digits 2;
                                         }
-                                        description "Encapsulation overhead, in centipercent, used to translate packet-based rate to frame-based rate and vice versa.";
+                                        description "Average packet-to-frame encapsulation overhead";
                                     }
 
                                     leaf burst-limit {
@@ -2606,21 +2656,21 @@ submodule nokia-conf-svc-epipe {
                             type leafref {
                                 path "../../../../../../filter/mac-filter/filter-name";
                             }
-                            description "MAC filter identifier";
+                            description "MAC filter policy name";
                         }
 
                         leaf ip {
                             type leafref {
                                 path "../../../../../../filter/ip-filter/filter-name";
                             }
-                            description "MAC filter ID";
+                            description "IPv4 filter policy name";
                         }
 
                         leaf ipv6 {
                             type leafref {
                                 path "../../../../../../filter/ipv6-filter/filter-name";
                             }
-                            description "IPv6 filter identifier";
+                            description "IPv6 filter policy name";
                         }
 
                     } // container filter
@@ -2660,6 +2710,23 @@ submodule nokia-conf-svc-epipe {
                         }
 
                     } // container agg-rate
+
+                    container vlan-manipulation {
+                        if-feature nokia-features:sros-vlan-manipulation;
+                        description "Enter the vlan-manipulation context";
+
+                        leaf action {
+                            type types-services:vlan-manipulation-egress-action-type;
+                            description "Action to manipulate the VLAN tag(s) of the packets.";
+                        }
+
+                        leaf tag {
+                            type types-services:vlan-manipulation-egress-vlan-type;
+                            default "null";
+                            description "VLAN tag to be applied by action.";
+                        }
+
+                    } // container vlan-manipulation
 
                 } // container egress
 
@@ -3161,6 +3228,22 @@ submodule nokia-conf-svc-epipe {
                     }
 
                 } // container mc-ring
+
+                container ethernet {
+                    description "Enter the ethernet context";
+
+                    container llf {
+                        description "Enter the llf context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of the entry.";
+                        }
+
+                    } // container llf
+
+                } // container ethernet
 
             } // list sap
 

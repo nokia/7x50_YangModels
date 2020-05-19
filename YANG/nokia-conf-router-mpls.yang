@@ -64,7 +64,7 @@ submodule nokia-conf-router-mpls {
 
             leaf bypass-resignal-timer {
                 type uint32 {
-                    range "30..10080";
+                    range "1..10080";
                 }
                 units "minutes";
                 description "Value for the LSP resignal timer";
@@ -266,6 +266,15 @@ submodule nokia-conf-router-mpls {
                     }
                     default "300";
                     description "MPLS LSP Self Ping timeout value";
+                }
+
+                leaf timeout-action {
+                    type enumeration {
+                        enum "retry"                        { value 1; }
+                        enum "switch"                       { value 2; }
+                    }
+                    default "retry";
+                    description "Configure mpls lsp self ping timeout-action.";
                 }
 
             } // container lsp-self-ping
@@ -899,6 +908,17 @@ submodule nokia-conf-router-mpls {
                     description "Configure path computation method";
                 }
 
+                leaf family {
+                    when "not(../type) or ../type = 'p2p-sr-te-one-hop' or ../type = 'p2p-sr-te-mesh'";
+                    type enumeration {
+                        enum "ipv4"                         { value 1; }
+                        enum "ipv6"                         { value 2; }
+                    }
+                    sros-ext:auto-restart-to-modify;
+                    default "ipv4";
+                    description "Configure address family";
+                }
+
                 leaf metric-type {
                     when "not(../type) or ../type = 'p2mp-rsvp' or ../type = 'p2p-rsvp-one-hop' or ../type = 'p2p-rsvp-mesh' or ../type = 'p2p-sr-te-one-hop' or ../type = 'p2p-sr-te-mesh'";
                     type enumeration {
@@ -1041,6 +1061,7 @@ submodule nokia-conf-router-mpls {
                         status obsolete;
                         type types-sros:admin-state;
                         sros-ext:auto-restart-to-modify;
+                        default "disable";
                         description "Administrative state of the CSPF support for LSP";
                     }
 
@@ -2109,19 +2130,16 @@ submodule nokia-conf-router-mpls {
                 } // container auto-bandwidth
 
                 container egress-statistics {
-                    when "../type = 'p2p-rsvp' or ../type = 'p2mp-rsvp' or not(../type) or ../type = 'p2p-static-mpls-tp' or ../type = 'p2p-sr-te'";
                     presence "Enable/disable LSP egress statistics.";
                     description "Enter the egress-statistics context";
 
                     leaf collect-stats {
-                        when "not(../../type) or ../../type = 'p2p-rsvp' or ../../type = 'p2mp-rsvp' or ../../type = 'p2p-static-mpls-tp'";
                         type boolean;
                         default "false";
                         description "Collect statistics";
                     }
 
                     leaf accounting-policy {
-                        when "not(../../type) or ../../type = 'p2p-rsvp' or ../../type = 'p2mp-rsvp' or ../../type = 'p2p-static-mpls-tp'";
                         type leafref {
                             path "../../../../../log/accounting-policy/policy-id";
                         }
@@ -2129,7 +2147,6 @@ submodule nokia-conf-router-mpls {
                     }
 
                     leaf admin-state {
-                        when "not(../../type) or ../../type = 'p2p-rsvp' or ../../type = 'p2mp-rsvp' or ../../type = 'p2p-static-mpls-tp' or ../../type = 'p2p-sr-te'";
                         type types-sros:admin-state;
                         default "disable";
                         description "Administrative state of ingress statistics for LSP";
@@ -2145,41 +2162,6 @@ submodule nokia-conf-router-mpls {
                     }
 
                 } // container egress-statistics
-
-                container ingress-statistics {
-                    when "not(../type) or ../type = 'p2p-static-mpls-tp'";
-                    presence "Enable/disable LSP ingress statistics.";
-                    description "Enter the ingress-statistics context";
-
-                    leaf collect-stats {
-                        type boolean;
-                        default "false";
-                        description "Collect statistics";
-                    }
-
-                    leaf accounting-policy {
-                        type leafref {
-                            path "../../../../../log/accounting-policy/policy-id";
-                        }
-                        description "Accounting policy ID";
-                    }
-
-                    leaf admin-state {
-                        type types-sros:admin-state;
-                        default "disable";
-                        description "Administrative state of ingress statistics for LSP";
-                    }
-
-                    leaf-list apply-groups {
-                        type leafref {
-                            path "../../../../../groups/group/name";
-                        }
-                        max-elements 8;
-                        ordered-by user;
-                        description "Apply a configuration group at this level";
-                    }
-
-                } // container ingress-statistics
 
                 container bfd {
                     when "not(../type) or ../type = 'p2p-rsvp' or ../type = 'p2p-sr-te'";
@@ -2225,7 +2207,7 @@ submodule nokia-conf-router-mpls {
                     }
 
                     leaf wait-for-up-timer {
-                        when "not(../../type) or ../../type = 'p2p-sr-te'";
+                        when "not(../../type) or ../../type = 'p2p-sr-te' or ../../type = 'p2p-rsvp'";
                         type uint32 {
                             range "1..60";
                         }
@@ -2428,7 +2410,7 @@ submodule nokia-conf-router-mpls {
                         }
 
                         leaf wait-for-up-timer {
-                            when "not(../../../type) or ../../../type = 'p2p-sr-te'";
+                            when "not(../../../type) or ../../../type = 'p2p-sr-te' or ../../../type = 'p2p-rsvp'";
                             type uint32 {
                                 range "1..60";
                             }
@@ -2588,7 +2570,7 @@ submodule nokia-conf-router-mpls {
                     } // container exclude-admin-group
 
                     container bfd {
-                        when "not(../../type) or ../../type = 'p2p-sr-te'";
+                        when "not(../../type) or ../../type = 'p2p-rsvp' or ../../type = 'p2p-sr-te'";
                         description "Enter the bfd context";
 
                         leaf bfd-liveness {
@@ -2620,7 +2602,7 @@ submodule nokia-conf-router-mpls {
                         }
 
                         leaf wait-for-up-timer {
-                            when "not(../../../type) or ../../../type = 'p2p-sr-te'";
+                            when "not(../../../type) or ../../../type = 'p2p-sr-te' or ../../../type = 'p2p-rsvp'";
                             type uint32 {
                                 range "1..60";
                             }
