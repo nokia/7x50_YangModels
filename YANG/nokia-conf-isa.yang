@@ -46,7 +46,7 @@ submodule nokia-conf-isa {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2020-04-06";
+    revision "2020-05-19";
 
     grouping conf-isa {
         container isa {
@@ -247,7 +247,7 @@ submodule nokia-conf-isa {
                     sros-ext:auto-restart-to-modify;
                     sros-ext:isa-auto-clear-on-modify;
                     default "profile1";
-                    description "The ISA scaling profile identifier";
+                    description "Scaling profile for the NAT group";
                 }
 
                 leaf-list apply-groups {
@@ -319,6 +319,149 @@ submodule nokia-conf-isa {
                                     }
                                 }
                             } // container intra-chassis
+
+                        }
+                        case inter-chassis {
+
+                            container inter-chassis {
+                                presence "Inter-chassis redundancy";
+                                description "Enter the inter-chassis context";
+
+                                leaf replication-threshold {
+                                    type uint32 {
+                                        range "0..300";
+                                    }
+                                    units "seconds";
+                                    default "20";
+                                    description "Minimum time to wait before a NAT flow is synchronized";
+                                }
+
+                                leaf flow-timeout-on-switchover {
+                                    type types-sros:percent {
+                                        range "1..50";
+                                    }
+                                    default "50";
+                                    description "Flow timeout immediately following a switchover";
+                                }
+
+                                leaf router-instance {
+                                    type string;
+                                    sros-ext:auto-restart-to-modify;
+                                    sros-ext:isa-auto-clear-on-modify;
+                                    description "Router instance for the ISA-to-ISA communication";
+                                }
+
+                                leaf local-ip-range-start {
+                                    type types-sros:ipv4-unicast-address;
+                                    sros-ext:auto-restart-to-modify;
+                                    sros-ext:isa-auto-clear-on-modify;
+                                    description "Starting IP address for ISAs in the NAT group";
+                                }
+
+                                leaf remote-ip-range-start {
+                                    type types-sros:ipv4-unicast-address;
+                                    sros-ext:auto-restart-to-modify;
+                                    sros-ext:isa-auto-clear-on-modify;
+                                    description "Starting IP address for ISAs on the remote node";
+                                }
+
+                                leaf ip-mtu {
+                                    type uint32 {
+                                        range "512..9000";
+                                    }
+                                    default "1500";
+                                    description "IP MTU for ISA-to-ISA communication";
+                                }
+
+                                leaf preferred {
+                                    type boolean;
+                                    default "false";
+                                    description "Set the preferred activity status for the node";
+                                }
+
+                                container keepalive {
+                                    description "Enter the keepalive context";
+
+                                    leaf interval {
+                                        type types-sros:time-duration {
+                                            range "2..250";
+                                        }
+                                        units "deciseconds";
+                                        default "30";
+                                        description "Interval between two consecutive keepalive messages";
+                                    }
+
+                                    leaf dropcount {
+                                        type uint32 {
+                                            range "2..20";
+                                        }
+                                        default "2";
+                                        description "Threshold for lost consecutive keepalive messages";
+                                    }
+
+                                } // container keepalive
+
+                                list monitor-port {
+                                    key "port-id";
+                                    max-elements 16;
+                                    description "Enter the monitor-port list instance";
+
+                                    leaf port-id {
+                                        type types-sros:port-named;
+                                        description "Port ID";
+                                    }
+
+                                    leaf health-drop {
+                                        type uint32 {
+                                            range "1..255";
+                                        }
+                                        default "1";
+                                        description "Overall health drop of the NAT group on a state change";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                } // list monitor-port
+
+                                list monitor-oper-group {
+                                    key "oper-group";
+                                    max-elements 4;
+                                    description "Enter the monitor-oper-group list instance";
+
+                                    leaf oper-group {
+                                        type leafref {
+                                            path "../../../../../../service/oper-group/name";
+                                        }
+                                        description "Operational group name";
+                                    }
+
+                                    leaf health-drop {
+                                        type uint32 {
+                                            range "1..255";
+                                        }
+                                        default "1";
+                                        description "Overall health drop of the NAT group on a state change";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                } // list monitor-oper-group
+
+                            } // container inter-chassis
 
                         }
                     }
@@ -400,14 +543,14 @@ submodule nokia-conf-isa {
                         type leafref {
                             path "../../../../esa/esa-id";
                         }
-                        description "ESA used by the ISA NAT group";
+                        description "ESA ID";
                     }
 
                     leaf vm {
                         type leafref {
                             path "../../../../esa[esa-id=current()/../esa-id]/vm/vm-id";
                         }
-                        description "VM used by the ISA NAT group";
+                        description "VM ID";
                     }
 
                 } // list esa

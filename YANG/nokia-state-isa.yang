@@ -45,7 +45,7 @@ submodule nokia-state-isa {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2020-04-06";
+    revision "2020-05-19";
 
     grouping state-isa {
         container isa {
@@ -1554,6 +1554,121 @@ submodule nokia-state-isa {
                     description "Enter the redundancy context";
 
                     choice redundancy-mode {
+                        case inter-chassis {
+
+                            container inter-chassis {
+                                description "Enter the inter-chassis context";
+
+                                leaf state {
+                                    type enumeration {
+                                        enum "disabled"                     { value 0; }
+                                        enum "initial-wait-for-peer"        { value 2; }
+                                        enum "wait-for-peer"                { value 3; }
+                                        enum "peer-timed-out"               { value 4; }
+                                        enum "active"                       { value 5; }
+                                        enum "standby"                      { value 6; }
+                                        enum "cleaning-up"                  { value 7; }
+                                    }
+                                    description "The state of the inter-chassis redundancy synchronization of this ISA NAT group";
+                                }
+
+                                leaf state-changes {
+                                    type yang:counter32;
+                                    description "The number of times the state has changed";
+                                }
+
+                                leaf state-last-changed {
+                                    type yang:date-and-time;
+                                    description "Time of the last state change";
+                                }
+
+                                leaf in-control {
+                                    type boolean;
+                                    description "Indication that this system is in control of the inter-chassis redundancy sychronization, not the peer";
+                                }
+
+                                leaf health {
+                                    type uint32;
+                                    description "The actual health of the ISA NAT group on this system";
+                                }
+
+                                leaf peer-health {
+                                    type uint32;
+                                    description "The actual health of the ISA NAT group on the peer";
+                                }
+
+                                leaf peer-preferred {
+                                    type boolean;
+                                    description "Indicates if the peer is configured as preferred";
+                                }
+
+                                list monitor-port {
+                                    key "port-id";
+                                    description "Enter the monitor-port list instance";
+
+                                    leaf port-id {
+                                        type types-sros:port-named;
+                                        description "Port ID";
+                                    }
+
+                                    leaf actual-health-drop {
+                                        type uint32;
+                                        description "The actual health drop of the ISA NAT group caused by this monitor port or operational group";
+                                    }
+
+                                } // list monitor-port
+
+                                list monitor-oper-group {
+                                    key "oper-group";
+                                    description "Enter the monitor-oper-group list instance";
+
+                                    leaf oper-group {
+                                        type leafref {
+                                            path "../../../../../../service/oper-group/name";
+                                        }
+                                        description "Operational group name";
+                                    }
+
+                                    leaf actual-health-drop {
+                                        type uint32;
+                                        description "The actual health drop of the ISA NAT group caused by this monitor port or operational group";
+                                    }
+
+                                } // list monitor-oper-group
+
+                                container statistics {
+                                    description "Enter the statistics context";
+
+                                    leaf transmitted-frames {
+                                        type yang:counter64;
+                                        description "Number of frames transmitted to the peer";
+                                    }
+
+                                    leaf transmission-failures {
+                                        type yang:counter64;
+                                        description "Number of transmission failures";
+                                    }
+
+                                    leaf received-frames {
+                                        type yang:counter64;
+                                        description "Number of frames received from the peer";
+                                    }
+
+                                    leaf receive-failures-wrong-peer {
+                                        type yang:counter64;
+                                        description "Number of frames dropped because not sent by the configured peer";
+                                    }
+
+                                    leaf keepalive-timeouts {
+                                        type yang:counter64;
+                                        description "Number of times a keepalive timeout occurred";
+                                    }
+
+                                } // container statistics
+
+                            } // container inter-chassis
+
+                        }
                     }
                 } // container redundancy
 
@@ -1635,6 +1750,158 @@ submodule nokia-state-isa {
                         }
 
                     } // container associated-esa-vm
+
+                    container inter-chassis-redundancy {
+                        description "Enter the inter-chassis-redundancy context";
+
+                        leaf state {
+                            type enumeration {
+                                enum "disabled"                     { value 0; }
+                                enum "waiting-selection"            { value 1; }
+                                enum "cleaning-up"                  { value 2; }
+                                enum "negotiating"                  { value 3; }
+                                enum "active"                       { value 4; }
+                                enum "standby"                      { value 5; }
+                            }
+                            description "The state of the inter-chassis redundancy synchronization of this ISA NAT group member";
+                        }
+
+                        leaf peer-state {
+                            type enumeration {
+                                enum "active"                       { value 1; }
+                                enum "standby"                      { value 2; }
+                            }
+                            description "The state of the peer for this ISA NAT group member";
+                        }
+
+                        leaf local-ip-address {
+                            type types-sros:ipv4-unicast-address;
+                            description "IP address used by this system for this member";
+                        }
+
+                        leaf remote-ip-address {
+                            type types-sros:ipv4-unicast-address;
+                            description "IP address used by the peer for this member";
+                        }
+
+                        leaf last-failed {
+                            type yang:date-and-time;
+                            description "Time of the last failure";
+                        }
+
+                        leaf failure-reason {
+                            type string {
+                                length "0..255";
+                            }
+                            description "Reason of the last failure";
+                        }
+
+                        leaf unsupported-flows {
+                            type yang:gauge64;
+                            description "The number of unsupported flows (e.g. ALG pinholes)";
+                        }
+
+                        leaf tracked-flows {
+                            type yang:gauge64;
+                            description "The number of flows tracked for synchronization";
+                        }
+
+                        leaf tracked-flows-not-synced {
+                            type yang:gauge64;
+                            description "The number of tracked flows not yet synchronized";
+                        }
+
+                        leaf tracked-flows-pending {
+                            type yang:gauge64;
+                            description "The number of tracked flows for which synchronization is requested but not yet confirmed";
+                        }
+
+                        leaf flows-synced {
+                            type yang:gauge64;
+                            description "The number of tracked flows for which synchronization is confirmed";
+                        }
+
+                        leaf flows-marked-to-delete {
+                            type yang:gauge64;
+                            description "The number of flows that are deleted on the active node and synchronization not yet requested";
+                        }
+
+                        leaf flows-delete-pending {
+                            type yang:gauge64;
+                            description "The number of flows that are deleted on the active node for which synchronization is requested but not yet confirmed";
+                        }
+
+                    } // container inter-chassis-redundancy
+
+                    container statistics {
+                        description "Enter the statistics context";
+
+                        container inter-chassis-redundancy {
+                            description "Enter the inter-chassis-redundancy context";
+
+                            leaf transmitted-frames {
+                                type yang:counter64;
+                                description "Number of frames transmitted to the peer";
+                            }
+
+                            leaf retransmitted-frames {
+                                type yang:counter64;
+                                description "Number of frames retransmitted to the peer";
+                            }
+
+                            leaf transmitted-flow-creates {
+                                type yang:counter64;
+                                description "Number of transmitted flow create messages";
+                            }
+
+                            leaf transmitted-flow-deletes {
+                                type yang:counter64;
+                                description "Number of transmitted flow delete messages";
+                            }
+
+                            leaf transmitted-alg-frames {
+                                type yang:counter64;
+                                description "Number of transmitted Application Level Gateway (ALG) frames";
+                            }
+
+                            leaf received-frames {
+                                type yang:counter64;
+                                description "Number of frames received from the peer";
+                            }
+
+                            leaf received-flow-creates {
+                                type yang:counter64;
+                                description "Number of flow create messages received";
+                            }
+
+                            leaf received-flow-deletes {
+                                type yang:counter64;
+                                description "Number of flow delete messages received";
+                            }
+
+                            leaf received-alg-frames {
+                                type yang:counter64;
+                                description "Number of ALG frames received";
+                            }
+
+                            leaf dropped-flow-creates-no-policy {
+                                type yang:counter64;
+                                description "Number of flow create messages dropped because the nat-policy could not be found";
+                            }
+
+                            leaf dropped-flow-creates-no-port-block {
+                                type yang:counter64;
+                                description "Number of flow create messages dropped because the port block could not be found";
+                            }
+
+                            leaf received-fragments {
+                                type yang:counter64;
+                                description "Number of fragments received";
+                            }
+
+                        } // container inter-chassis-redundancy
+
+                    } // container statistics
 
                     container resources {
                         description "Enter the resources context";
@@ -3425,14 +3692,14 @@ submodule nokia-state-isa {
                         type leafref {
                             path "../../../../esa/esa-id";
                         }
-                        description "ESA used by the ISA NAT group";
+                        description "ESA ID";
                     }
 
                     leaf vm {
                         type leafref {
                             path "../../../../esa[esa-id=current()/../esa-id]/vm/vm-id";
                         }
-                        description "VM used by the ISA NAT group";
+                        description "VM ID";
                     }
 
                     leaf layer-2-hosts-bypassed {

@@ -12,6 +12,7 @@ submodule nokia-conf-filter {
     import nokia-types-sros               { prefix "types-sros"; }
     import nokia-types-subscriber-mgmt    { prefix "types-submgt"; }
 
+    include nokia-conf-cflowd;
     include nokia-conf-filter-dhcp;
     include nokia-conf-groups;
     include nokia-conf-log;
@@ -48,7 +49,7 @@ submodule nokia-conf-filter {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2020-04-24";
+    revision "2020-07-17";
 
     grouping conf-filter {
         container filter {
@@ -380,6 +381,44 @@ submodule nokia-conf-filter {
                     description "Apply a configuration group at this level";
                 }
 
+                list protocol-list {
+                    key "protocol-list-name";
+                    max-elements 512;
+                    description "Enter the protocol-list list instance";
+
+                    leaf protocol-list-name {
+                        type types-sros:named-item;
+                        description "Protocol list name";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    list protocol {
+                        key "protocol-id";
+                        max-elements 32;
+                        description "Add a list entry for protocol";
+
+                        leaf protocol-id {
+                            type types-sros:ip-protocol;
+                            description "IP protocol identifier";
+                        }
+
+                    } // list protocol
+
+                } // list protocol-list
+
                 list ip-prefix-list {
                     key "prefix-list-name";
                     description "Enter the ip-prefix-list list instance";
@@ -669,9 +708,10 @@ submodule nokia-conf-filter {
                         enum "normal"                       { value 0; }
                         enum "src-mac"                      { value 1; }
                         enum "packet-length"                { value 2; }
+                        enum "destination-class"            { value 3; }
                     }
                     default "normal";
-                    description "Filter policy type";
+                    description "Set of match criteria for the filter policy";
                 }
 
                 leaf chain-to-system-filter {
@@ -885,12 +925,6 @@ submodule nokia-conf-filter {
                         description "PBR that has an effect when this filter is applied on egress";
                     }
 
-                    leaf filter-sample {
-                        type boolean;
-                        default "false";
-                        description "Sample matching traffic if IP interface is set to cflowd ACL mode";
-                    }
-
                     leaf interface-sample {
                         type boolean;
                         default "true";
@@ -906,6 +940,18 @@ submodule nokia-conf-filter {
                         description "Apply a configuration group at this level";
                     }
 
+                    choice cflowd-sample-choice {
+                        default "filter-sample";
+                        case filter-sample {
+
+                            leaf filter-sample {
+                                type boolean;
+                                default "false";
+                                description "Sample matching traffic if IP interface is set to cflowd ACL mode";
+                            }
+
+                        }
+                    }
                     container match {
                         description "Enter the match context";
 
@@ -939,12 +985,27 @@ submodule nokia-conf-filter {
                             description "Match based on presence of source route option";
                         }
 
+                        leaf destination-class {
+                            type types-sros:class-index;
+                            description "Destination class as a match criterion";
+                        }
+
                         choice match-protocol-choice {
                             case protocol {
 
                                 leaf protocol {
                                     type types-sros:ipv4-match-protocol;
-                                    description "IP protocol used as an IP filter match criterion";
+                                    description "IP protocol identifier as a match criterion";
+                                }
+
+                            }
+                            case protocol-list {
+
+                                leaf protocol-list {
+                                    type leafref {
+                                        path "../../../../match-list/protocol-list/protocol-list-name";
+                                    }
+                                    description "Name of the protocol list as a match criterion";
                                 }
 
                             }
@@ -1364,7 +1425,7 @@ submodule nokia-conf-filter {
 
                                     leaf eq {
                                         type types-filter:pkt-len-or-payload-len-value;
-                                        description "Equal to value assigned as match condition";
+                                        description "Equal value assigned for comparison";
                                     }
 
                                 }
@@ -1372,7 +1433,7 @@ submodule nokia-conf-filter {
 
                                     leaf lt {
                                         type types-filter:pkt-len-or-payload-len-lt-value;
-                                        description "Less than value assigned as match condition";
+                                        description "Less than assigned for comparison";
                                     }
 
                                 }
@@ -1380,7 +1441,7 @@ submodule nokia-conf-filter {
 
                                     leaf gt {
                                         type types-filter:pkt-len-or-payload-len-gt-value;
-                                        description "Greater than value assigned as match condition";
+                                        description "Greater than value assigned for comparison";
                                     }
 
                                 }
@@ -1393,13 +1454,13 @@ submodule nokia-conf-filter {
                                         leaf start {
                                             type types-filter:pkt-len-or-payload-len-gt-value;
                                             mandatory true;
-                                            description "Lower bound of the range";
+                                            description "Lower bound of the packet length range";
                                         }
 
                                         leaf end {
                                             type types-filter:pkt-len-or-payload-len-lt-value;
                                             mandatory true;
-                                            description "Upper bound of the range";
+                                            description "Upper bound of the packet length range";
                                         }
 
                                     } // container range
@@ -1947,7 +2008,7 @@ submodule nokia-conf-filter {
 
                                                 leaf eq {
                                                     type types-filter:pkt-len-or-payload-len-value;
-                                                    description "Equal to value assigned as match condition";
+                                                    description "Equal value assigned for comparison";
                                                 }
 
                                             }
@@ -1955,7 +2016,7 @@ submodule nokia-conf-filter {
 
                                                 leaf lt {
                                                     type types-filter:pkt-len-or-payload-len-lt-value;
-                                                    description "Less than value assigned as match condition";
+                                                    description "Less than assigned for comparison";
                                                 }
 
                                             }
@@ -1963,7 +2024,7 @@ submodule nokia-conf-filter {
 
                                                 leaf gt {
                                                     type types-filter:pkt-len-or-payload-len-gt-value;
-                                                    description "Greater than value assigned as match condition";
+                                                    description "Greater than value assigned for comparison";
                                                 }
 
                                             }
@@ -1976,13 +2037,13 @@ submodule nokia-conf-filter {
                                                     leaf start {
                                                         type types-filter:pkt-len-or-payload-len-gt-value;
                                                         mandatory true;
-                                                        description "Lower bound of the range";
+                                                        description "Lower bound of the packet length range";
                                                     }
 
                                                     leaf end {
                                                         type types-filter:pkt-len-or-payload-len-lt-value;
                                                         mandatory true;
-                                                        description "Upper bound of the range";
+                                                        description "Upper bound of the packet length range";
                                                     }
 
                                                 } // container range
@@ -2118,7 +2179,7 @@ submodule nokia-conf-filter {
 
                                                 leaf eq {
                                                     type types-filter:pkt-len-or-payload-len-value;
-                                                    description "Equal to value assigned as match condition";
+                                                    description "Equal value assigned for comparison";
                                                 }
 
                                             }
@@ -2126,7 +2187,7 @@ submodule nokia-conf-filter {
 
                                                 leaf lt {
                                                     type types-filter:pkt-len-or-payload-len-lt-value;
-                                                    description "Less than value assigned as match condition";
+                                                    description "Less than assigned for comparison";
                                                 }
 
                                             }
@@ -2134,7 +2195,7 @@ submodule nokia-conf-filter {
 
                                                 leaf gt {
                                                     type types-filter:pkt-len-or-payload-len-gt-value;
-                                                    description "Greater than value assigned as match condition";
+                                                    description "Greater than value assigned for comparison";
                                                 }
 
                                             }
@@ -2147,13 +2208,13 @@ submodule nokia-conf-filter {
                                                     leaf start {
                                                         type types-filter:pkt-len-or-payload-len-gt-value;
                                                         mandatory true;
-                                                        description "Lower bound of the range";
+                                                        description "Lower bound of the packet length range";
                                                     }
 
                                                     leaf end {
                                                         type types-filter:pkt-len-or-payload-len-lt-value;
                                                         mandatory true;
-                                                        description "Upper bound of the range";
+                                                        description "Upper bound of the packet length range";
                                                     }
 
                                                 } // container range
@@ -2614,9 +2675,10 @@ submodule nokia-conf-filter {
                         enum "normal"                       { value 0; }
                         enum "src-mac"                      { value 1; }
                         enum "packet-length"                { value 2; }
+                        enum "destination-class"            { value 3; }
                     }
                     default "normal";
-                    description "Filter policy type";
+                    description "Set of match criteria for the filter policy";
                 }
 
                 leaf chain-to-system-filter {
@@ -2830,12 +2892,6 @@ submodule nokia-conf-filter {
                         description "PBR that has an effect when this filter is applied on egress";
                     }
 
-                    leaf filter-sample {
-                        type boolean;
-                        default "false";
-                        description "Sample matching traffic if IP interface is set to cflowd ACL mode";
-                    }
-
                     leaf interface-sample {
                         type boolean;
                         default "true";
@@ -2851,6 +2907,18 @@ submodule nokia-conf-filter {
                         description "Apply a configuration group at this level";
                     }
 
+                    choice cflowd-sample-choice {
+                        default "filter-sample";
+                        case filter-sample {
+
+                            leaf filter-sample {
+                                type boolean;
+                                default "false";
+                                description "Sample matching traffic if IP interface is set to cflowd ACL mode";
+                            }
+
+                        }
+                    }
                     container match {
                         description "Enter the match context";
 
@@ -2869,12 +2937,27 @@ submodule nokia-conf-filter {
                             description "Match criterion for fragmented packages";
                         }
 
-                        choice match-protocol-choice {
+                        leaf destination-class {
+                            type types-sros:class-index;
+                            description "Destination class as a match criterion";
+                        }
+
+                        choice match-next-header-choice {
                             case next-header {
 
                                 leaf next-header {
                                     type types-sros:ipv6-match-protocol;
-                                    description "IPv6 next header to match";
+                                    description "IPv6 next header as a match criterion";
+                                }
+
+                            }
+                            case next-header-list {
+
+                                leaf next-header-list {
+                                    type leafref {
+                                        path "../../../../match-list/protocol-list/protocol-list-name";
+                                    }
+                                    description "Name of the protocol list as a match criterion";
                                 }
 
                             }
@@ -3317,7 +3400,7 @@ submodule nokia-conf-filter {
 
                                     leaf eq {
                                         type types-filter:ipv6-match-packet-length-value;
-                                        description "Equal to value assigned as match condition";
+                                        description "Equal value assigned as a match criterion";
                                     }
 
                                 }
@@ -3325,7 +3408,7 @@ submodule nokia-conf-filter {
 
                                     leaf lt {
                                         type types-filter:ipv6-match-packet-length-lt-value;
-                                        description "Less than value assigned as match condition";
+                                        description "Less than value assigned as a match criterion";
                                     }
 
                                 }
@@ -3333,7 +3416,7 @@ submodule nokia-conf-filter {
 
                                     leaf gt {
                                         type types-filter:ipv6-match-packet-length-gt-value;
-                                        description "Greater than value assigned as match condition";
+                                        description "Greater than value assigned as a match criterion";
                                     }
 
                                 }
@@ -3346,13 +3429,13 @@ submodule nokia-conf-filter {
                                         leaf start {
                                             type types-filter:ipv6-match-packet-length-gt-value;
                                             mandatory true;
-                                            description "Lower bound of the range";
+                                            description "Lower bound of packet length range as match criterion";
                                         }
 
                                         leaf end {
                                             type types-filter:ipv6-match-packet-length-lt-value;
                                             mandatory true;
-                                            description "Upper bound of the range";
+                                            description "Upper bound of packet length range as match criterion";
                                         }
 
                                     } // container range
@@ -3875,7 +3958,7 @@ submodule nokia-conf-filter {
 
                                                 leaf eq {
                                                     type types-filter:pkt-len-or-payload-len-value;
-                                                    description "Equal to value assigned as match condition";
+                                                    description "Equal value assigned for comparison";
                                                 }
 
                                             }
@@ -3883,7 +3966,7 @@ submodule nokia-conf-filter {
 
                                                 leaf lt {
                                                     type types-filter:pkt-len-or-payload-len-lt-value;
-                                                    description "Less than value assigned as match condition";
+                                                    description "Less than assigned for comparison";
                                                 }
 
                                             }
@@ -3891,7 +3974,7 @@ submodule nokia-conf-filter {
 
                                                 leaf gt {
                                                     type types-filter:pkt-len-or-payload-len-gt-value;
-                                                    description "Greater than value assigned as match condition";
+                                                    description "Greater than value assigned for comparison";
                                                 }
 
                                             }
@@ -3904,13 +3987,13 @@ submodule nokia-conf-filter {
                                                     leaf start {
                                                         type types-filter:pkt-len-or-payload-len-gt-value;
                                                         mandatory true;
-                                                        description "Lower bound of the range";
+                                                        description "Lower bound of the packet length range";
                                                     }
 
                                                     leaf end {
                                                         type types-filter:pkt-len-or-payload-len-lt-value;
                                                         mandatory true;
-                                                        description "Upper bound of the range";
+                                                        description "Upper bound of the packet length range";
                                                     }
 
                                                 } // container range
@@ -4046,7 +4129,7 @@ submodule nokia-conf-filter {
 
                                                 leaf eq {
                                                     type types-filter:pkt-len-or-payload-len-value;
-                                                    description "Equal to value assigned as match condition";
+                                                    description "Equal value assigned for comparison";
                                                 }
 
                                             }
@@ -4054,7 +4137,7 @@ submodule nokia-conf-filter {
 
                                                 leaf lt {
                                                     type types-filter:pkt-len-or-payload-len-lt-value;
-                                                    description "Less than value assigned as match condition";
+                                                    description "Less than assigned for comparison";
                                                 }
 
                                             }
@@ -4062,7 +4145,7 @@ submodule nokia-conf-filter {
 
                                                 leaf gt {
                                                     type types-filter:pkt-len-or-payload-len-gt-value;
-                                                    description "Greater than value assigned as match condition";
+                                                    description "Greater than value assigned for comparison";
                                                 }
 
                                             }
@@ -4075,13 +4158,13 @@ submodule nokia-conf-filter {
                                                     leaf start {
                                                         type types-filter:pkt-len-or-payload-len-gt-value;
                                                         mandatory true;
-                                                        description "Lower bound of the range";
+                                                        description "Lower bound of the packet length range";
                                                     }
 
                                                     leaf end {
                                                         type types-filter:pkt-len-or-payload-len-lt-value;
                                                         mandatory true;
-                                                        description "Upper bound of the range";
+                                                        description "Upper bound of the packet length range";
                                                     }
 
                                                 } // container range
