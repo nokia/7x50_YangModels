@@ -1,0 +1,4524 @@
+submodule nokia-conf-svc-ies-sub-if {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-eth-cfm            { prefix "types-eth-cfm"; }
+    import nokia-types-qos                { prefix "types-qos"; }
+    import nokia-types-router             { prefix "types-router"; }
+    import nokia-types-services           { prefix "types-services"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+    import nokia-types-subscriber-mgmt    { prefix "types-submgt"; }
+
+    include nokia-conf-aaa;
+    include nokia-conf-eth-cfm;
+    include nokia-conf-filter;
+    include nokia-conf-filter-dhcp;
+    include nokia-conf-groups;
+    include nokia-conf-log;
+    include nokia-conf-policy-options;
+    include nokia-conf-pxc;
+    include nokia-conf-python;
+    include nokia-conf-qos;
+    include nokia-conf-router;
+    include nokia-conf-router-dhcp-server;
+    include nokia-conf-routing-options;
+    include nokia-conf-service;
+    include nokia-conf-submgt-local-user-db;
+    include nokia-conf-submgt-vrgw;
+    include nokia-conf-subscriber-mgmt;
+    include nokia-conf-svc-epipe;
+    include nokia-conf-svc-ies;
+    include nokia-conf-svc-ies-grp-if-wlangw;
+    include nokia-conf-svc-ies-sub-if-wlangw;
+    include nokia-conf-svc-vprn;
+    include nokia-conf-svc-vprn-sub-if;
+    include nokia-conf-system;
+    include nokia-conf-system-security;
+    include nokia-conf-vrrp;
+
+    sros-ext:sros-major-release "rel20";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure ies service subscriber interfaces on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-svc-ies-sub-if YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2020-06-29";
+
+    grouping conf-svc-ies-sub-if-subscriber-interface {
+        list subscriber-interface {
+            key "interface-name";
+            description "Enter the subscriber-interface list instance";
+
+            leaf interface-name {
+                type types-sros:interface-name;
+                description "Interface name";
+            }
+
+            leaf admin-state {
+                type types-sros:admin-state;
+                default "enable";
+                description "Administrative state of the subscriber interface";
+            }
+
+            leaf description {
+                type types-sros:very-long-description;
+                description "Text description";
+            }
+
+            leaf fwd-service {
+                type leafref {
+                    path "../../../vprn/service-name";
+                }
+                sros-ext:immutable;
+                description "Configure the forwarding service.";
+            }
+
+            leaf fwd-subscriber-interface {
+                type leafref {
+                    path "../../../vprn[service-name=current()/../fwd-service]/subscriber-interface/interface-name";
+                }
+                sros-ext:immutable;
+                description "Configure the forwarding subscriber interface.";
+            }
+
+            leaf wan-mode {
+                type enumeration {
+                    enum "mode64"                       { value 1; }
+                    enum "mode128"                      { value 2; }
+                }
+                sros-ext:immutable;
+                default "mode64";
+                description "The mode of operation for hosts that have a /128 WAN IPv6 address.";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            container ipv4 {
+                description "Enter the ipv4 context";
+
+                leaf allow-unmatching-subnets {
+                    type boolean;
+                    default "false";
+                    description "Allow subscriber hosts without a matching subnet";
+                }
+
+                leaf export-host-routes {
+                    when "../../fwd-service";
+                    type boolean;
+                    default "false";
+                    description "Allow export of subscriber management host routes";
+                }
+
+                leaf-list default-dns {
+                    type types-sros:ipv4-unicast-address;
+                    max-elements 2;
+                    ordered-by user;
+                    description "Default DNS server addresses";
+                }
+
+                list address {
+                    key "ipv4-address";
+                    description "Enter the address list instance";
+
+                    leaf ipv4-address {
+                        type types-sros:ipv4-unicast-address;
+                        description "IP address associated with the subscriber subnet";
+                    }
+
+                    leaf prefix-length {
+                        type uint32 {
+                            range "0..32";
+                        }
+                        mandatory true;
+                        description "IPv4 address prefix length";
+                    }
+
+                    leaf gateway {
+                        type types-sros:ipv4-unicast-address;
+                        description "Gateway IP address within the subnet for SRRP routing";
+                    }
+
+                    leaf track-srrp {
+                        type uint32 {
+                            range "1..4294967295";
+                        }
+                        description "SRRP instance whose state is tracked on this IP address";
+                    }
+
+                    leaf populate-host-routes {
+                        type boolean;
+                        default "false";
+                        description "Populate subscriber host routes in local FIB";
+                    }
+
+                    leaf holdup-time {
+                        type uint32 {
+                            range "100..5000";
+                        }
+                        units "milliseconds";
+                        description "Wait time before accepting new state attribute";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                } // list address
+
+                container unnumbered {
+                    description "Enter the unnumbered context";
+
+                    choice source {
+                        case ip-address {
+
+                            leaf ip-address {
+                                type types-sros:ipv4-unicast-address;
+                                description "IP address of the interface";
+                            }
+
+                        }
+                        case ip-int-name {
+
+                            leaf ip-int-name {
+                                type types-sros:interface-name;
+                                description "Interface name";
+                            }
+
+                        }
+                    }
+                } // container unnumbered
+
+                container dhcp {
+                    description "Enter the dhcp context";
+
+                    leaf admin-state {
+                        when "../../../fwd-service";
+                        type types-sros:admin-state;
+                        default "enable";
+                        description "Administrative state of DHCP";
+                    }
+
+                    leaf description {
+                        when "../../../fwd-service";
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf python-policy {
+                        when "../../../fwd-service";
+                        type leafref {
+                            path "../../../../../../python/python-policy/name";
+                        }
+                        description "Python policy";
+                    }
+
+                    leaf-list server {
+                        when "../../../fwd-service";
+                        type types-sros:ipv4-unicast-address;
+                        max-elements 8;
+                        ordered-by user;
+                        description "Configure the DHCP server IP addresses.";
+                    }
+
+                    leaf gi-address {
+                        type types-sros:ipv4-unicast-address;
+                        description "Gateway interface address for the DHCP relay";
+                    }
+
+                    leaf src-ip-addr {
+                        type enumeration {
+                            enum "auto"                         { value 0; }
+                            enum "gi-address"                   { value 1; }
+                        }
+                        default "auto";
+                        description "Type of source address to use for DHCP relay";
+                    }
+
+                    leaf virtual-subnet {
+                        when "not(../../../fwd-service)";
+                        type boolean;
+                        default "false";
+                        description "Enable/disable virtual subnetting.";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container proxy-server {
+                        when "../../../fwd-service";
+                        description "Enter the proxy-server context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of the DHCP proxy server";
+                        }
+
+                        leaf emulated-server {
+                            type types-sros:ipv4-unicast-address;
+                            description "IP address used as the DHCP server address in the context of this service";
+                        }
+
+                        container lease-time {
+                            description "Enter the lease-time context";
+
+                            leaf value {
+                                type types-sros:time-duration {
+                                    range "300..315446399";
+                                }
+                                units "seconds";
+                                description "DHCP lease time";
+                            }
+
+                            leaf radius-override {
+                                type boolean;
+                                default "false";
+                                description "Use lease time information provided by RADIUS server";
+                            }
+
+                        } // container lease-time
+
+                    } // container proxy-server
+
+                    container option-82 {
+                        when "../../../fwd-service";
+                        description "Enter the option-82 context";
+
+                        container vendor-specific-option {
+                            description "Enter the vendor-specific-option context";
+
+                            leaf system-id {
+                                type boolean;
+                                default "false";
+                                description "Send the system ID in the Vendor Specific Option";
+                            }
+
+                            leaf client-mac-address {
+                                type boolean;
+                                default "false";
+                                description "Send the MAC address in the Vendor Specific Option";
+                            }
+
+                            leaf service-id {
+                                type boolean;
+                                default "false";
+                                description "Send the service ID in the Vendor Specific Option";
+                            }
+
+                            leaf sap-id {
+                                type boolean;
+                                default "false";
+                                description "Send the SAP ID in the Nokia vendor specific suboption.";
+                            }
+
+                            leaf string {
+                                type types-sros:string-not-all-spaces {
+                                    length "1..32";
+                                }
+                                description "User-defined ASCII string for Vendor Specific Option";
+                            }
+
+                        } // container vendor-specific-option
+
+                    } // container option-82
+
+                    container lease-populate {
+                        when "../../../fwd-service";
+                        description "Enter the lease-populate context";
+
+                        leaf max-leases {
+                            type uint32 {
+                                range "0..511999";
+                            }
+                            description "The maximum number of DHCPv4 leases.";
+                        }
+
+                    } // container lease-populate
+
+                    container client-applications {
+                        when "../../../fwd-service";
+                        description "Enter the client-applications context";
+
+                        leaf dhcp {
+                            type boolean;
+                            default "true";
+                            description "Enable/disable DHCP as client application.";
+                        }
+
+                        leaf ppp {
+                            type boolean;
+                            default "false";
+                            description "Enable/disable PPP as client application.";
+                        }
+
+                    } // container client-applications
+
+                    container relay-proxy {
+                        when "../../../fwd-service";
+                        presence
+                            "Enable/disable relaying of unicast DHCP client messages and optional DHCP
+                             server ip address hiding.";
+                        description "Enter the relay-proxy context";
+
+                        leaf release-update-src-ip {
+                            type boolean;
+                            default "false";
+                            description "Specify whether or not to relay release messages.";
+                        }
+
+                        leaf siaddr-override {
+                            type types-sros:ipv4-unicast-address;
+                            description "Specify the IP address to use.";
+                        }
+
+                    } // container relay-proxy
+
+                } // container dhcp
+
+            } // container ipv4
+
+            container ipv6 {
+                presence "IPv6 parameters.";
+                description "Enter the ipv6 context";
+
+                leaf allow-multiple-wan-addresses {
+                    when "../../fwd-service";
+                    type boolean;
+                    default "false";
+                    description "Configure if the interface will accept multiple WAN addresses.";
+                }
+
+                leaf ipoe-bridged-mode {
+                    when "../../fwd-service";
+                    type boolean;
+                    default "false";
+                    description "Enable/Disable IPv6 IPoE Bridged Mode.";
+                }
+
+                leaf allow-unmatching-prefixes {
+                    type boolean;
+                    default "false";
+                    description "Allow subscriber hosts without a matching prefix";
+                }
+
+                leaf delegated-prefix-length {
+                    when "not(../../fwd-service)";
+                    type union {
+                        type uint32 {
+                            range "48..64";
+                        }
+                        type enumeration {
+                            enum "variable"                     { value 0; }
+                        }
+                    }
+                    default "64";
+                    description "IPv6 delegated prefix length";
+                }
+
+                leaf-list default-dns {
+                    type types-sros:ipv6-unicast-address;
+                    max-elements 2;
+                    ordered-by user;
+                    description "Default DNS server addresses";
+                }
+
+                list address {
+                    key "ipv6-address";
+                    description "Enter the address list instance";
+
+                    leaf ipv6-address {
+                        type types-sros:ipv6-address;
+                        description "IPv6 address for the subscriber interface";
+                    }
+
+                    leaf prefix-length {
+                        type uint32 {
+                            range "0..128";
+                        }
+                        mandatory true;
+                        description "IPv6 address prefix length";
+                    }
+
+                    leaf host-type {
+                        type enumeration {
+                            enum "pd"                           { value 0; description "Configure to make this aggregate to be used by IPv6 ESM hosts for DHCPv6 prefix-delegation."; }
+                            enum "wan"                          { value 1; description "Configure to make this aggregate to be used by ESM hosts for DHCPv6 addresses or by WAN interface."; }
+                            enum "pd-wan"                       { value 2; description "Configure to make this aggregate to be used by both prefix-delegation and ESM hosts."; }
+                        }
+                        sros-ext:immutable;
+                        default "pd";
+                        description "Host type for subscriber interface prefixes";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                } // list address
+
+                list prefix {
+                    key "ipv6-prefix";
+                    description "Enter the prefix list instance";
+
+                    leaf ipv6-prefix {
+                        type types-sros:ipv6-prefix;
+                        description "IPv6 address for a router interface";
+                    }
+
+                    leaf track-srrp {
+                        type uint32 {
+                            range "1..4294967295";
+                        }
+                        description "SRRP instance whose state is tracked on this IP address";
+                    }
+
+                    leaf holdup-time {
+                        type uint32 {
+                            range "100..5000";
+                        }
+                        units "milliseconds";
+                        description "Configures the time to wait, in milliseconds, for the route before it accepts the new state attribute.";
+                    }
+
+                    leaf host-type {
+                        type enumeration {
+                            enum "pd"                           { value 0; description "Configure to make this aggregate to be used by IPv6 ESM hosts for DHCPv6 prefix-delegation."; }
+                            enum "wan"                          { value 1; description "Configure to make this aggregate to be used by ESM hosts for DHCPv6 addresses or by WAN interface."; }
+                            enum "pd-wan"                       { value 2; description "Configure to make this aggregate to be used by both prefix-delegation and ESM hosts."; }
+                        }
+                        sros-ext:immutable;
+                        default "pd";
+                        description "Host type for subscriber interface prefixes";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                } // list prefix
+
+                container link-local-address {
+                    description "Enter the link-local-address context";
+
+                    leaf address {
+                        type types-sros:ipv6-address;
+                        description "IPv6 link local address";
+                    }
+
+                } // container link-local-address
+
+                container dhcp6 {
+                    when "../../fwd-service";
+                    description "Enter the dhcp6 context";
+
+                    leaf override-slaac {
+                        type boolean;
+                        default "false";
+                        description "Allow WAN address offered by DHCP to overwrite the WAN address acquired from SLAAC";
+                    }
+
+                    leaf python-policy {
+                        type leafref {
+                            path "../../../../../../python/python-policy/name";
+                        }
+                        description "Python policy";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container pd-managed-route {
+                        presence "Enable installation of dhcp6 delegated prefixes as managed routes.";
+                        description "Enter the pd-managed-route context";
+
+                        leaf next-hop {
+                            type types-services:dhcp6-pd-managed-route-nh;
+                            default "ipv6";
+                            description "Next hop type";
+                        }
+
+                    } // container pd-managed-route
+
+                    container relay {
+                        description "Enter the relay context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of DHCPv6 Relay";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf source-address {
+                            type types-sros:ipv6-unicast-address;
+                            description "Source IPv6 address for the DHCPv6 relay messages";
+                        }
+
+                        leaf link-address {
+                            type types-sros:ipv6-address;
+                            description "Link address for the DHCPv6 relay messages";
+                        }
+
+                        leaf-list server {
+                            type types-sros:ipv6-address-with-zone;
+                            max-elements 8;
+                            ordered-by user;
+                            description "DHCP6 server(s) to which the DHCP6 requests are forwarded";
+                        }
+
+                        container client-applications {
+                            description "Enter the client-applications context";
+
+                            leaf dhcp {
+                                type boolean;
+                                default "true";
+                                description "Allow the DHCP application to make use of the DHCP relay functionality on this interface.";
+                            }
+
+                            leaf ppp {
+                                type boolean;
+                                default "false";
+                                description "Allow the PPP application to use DHCP relay functionality";
+                            }
+
+                        } // container client-applications
+
+                    } // container relay
+
+                    container proxy-server {
+                        description "Enter the proxy-server context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of DHCPv6 proxy server";
+                        }
+
+                        leaf preferred-lifetime {
+                            type types-submgt:dhcp6-prefix-lifetime;
+                            default "3600";
+                            description "Time for prefix to remain preferred on this interface";
+                        }
+
+                        leaf valid-lifetime {
+                            type types-submgt:dhcp6-prefix-lifetime;
+                            default "86400";
+                            description "Time for prefix to remain valid on this interface";
+                        }
+
+                        leaf renew-timer {
+                            type types-submgt:dhcp6-renew-timer;
+                            description "Renew timer (T1)";
+                        }
+
+                        leaf rebind-timer {
+                            type types-submgt:dhcp6-rebind-timer;
+                            description "Rebind timer (T2) for this interface";
+                        }
+
+                        container client-applications {
+                            description "Enter the client-applications context";
+
+                            leaf dhcp {
+                                type boolean;
+                                default "true";
+                                description "Allow the DHCP application to make use of the DHCP relay functionality on this interface.";
+                            }
+
+                            leaf ppp {
+                                type boolean;
+                                default "false";
+                                description "Allow the PPP application to use DHCP relay functionality";
+                            }
+
+                        } // container client-applications
+
+                        container server-id {
+                            description "Enter the server-id context";
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            choice server-id {
+                                default "duid-ll";
+                                case duid-ll {
+
+                                    leaf duid-ll {
+                                        type empty;
+                                        description "Use link-layer address (DUID-LL) as DUID";
+                                    }
+
+                                }
+                                case duid-en-hex {
+
+                                    leaf duid-en-hex {
+                                        type string {
+                                            length "1..118";
+                                        }
+                                        description "Vendor-assigned unique ID based on Enterprise Number (DUID-EN) as a hexadecimal string";
+                                    }
+
+                                }
+                                case duid-en-ascii {
+
+                                    leaf duid-en-ascii {
+                                        type types-sros:string-not-all-spaces {
+                                            length "1..58";
+                                        }
+                                        description "Vendor-assigned unique ID based on Enterprise Number (DUID-EN) as an ASCII string";
+                                    }
+
+                                }
+                            }
+                        } // container server-id
+
+                    } // container proxy-server
+
+                } // container dhcp6
+
+                container router-advertisements {
+                    when "../../fwd-service";
+                    description "Enter the router-advertisements context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of router advertisement";
+                    }
+
+                    leaf max-advertisement-interval {
+                        type types-sros:time-duration {
+                            range "900..1800";
+                        }
+                        units "seconds";
+                        default "1800";
+                        description "Maximum advertisement interval";
+                    }
+
+                    leaf min-advertisement-interval {
+                        type types-sros:time-duration {
+                            range "900..1350";
+                        }
+                        units "seconds";
+                        default "900";
+                        description "Minimum advertisement interval";
+                    }
+
+                    leaf force-mcast {
+                        type enumeration {
+                            enum "ip"                           { value 1; }
+                            enum "ip-mac"                       { value 2; }
+                        }
+                        description "Send router advertisement to a multicast address instead of unicast for IPoE";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container options {
+                        description "Enter the options context";
+
+                        leaf current-hop-limit {
+                            type uint32 {
+                                range "0..255";
+                            }
+                            default "64";
+                            description "Hop limit to be advertised";
+                        }
+
+                        leaf managed-configuration {
+                            type boolean;
+                            default "false";
+                            description "Managed address configuration flag";
+                        }
+
+                        leaf mtu {
+                            type union {
+                                type uint32 {
+                                    range "1280..9212";
+                                }
+                                type enumeration {
+                                    enum "not-included"                 { value 0; }
+                                }
+                            }
+                            units "bytes";
+                            default "not-included";
+                            description "Advertised MTU value";
+                        }
+
+                        leaf other-stateful-configuration {
+                            type boolean;
+                            default "false";
+                            description "Other stateful configuration flag";
+                        }
+
+                        leaf reachable-time {
+                            type types-sros:time-duration {
+                                range "0..3600000";
+                            }
+                            units "milliseconds";
+                            default "0";
+                            description "Neighbor discovery reachable time that is advertised for this group interface";
+                        }
+
+                        leaf retransmit-timer {
+                            type uint32 {
+                                range "0..1800000";
+                            }
+                            units "seconds";
+                            default "0";
+                            description "Neighbor discovery retransmit timer that is advertised for this group interface";
+                        }
+
+                        leaf router-lifetime {
+                            type union {
+                                type types-sros:time-duration {
+                                    range "2700..9000";
+                                }
+                                type enumeration {
+                                    enum "no-default-router"            { value 0; }
+                                }
+                            }
+                            units "seconds";
+                            default "4500";
+                            description "Router lifetime";
+                        }
+
+                        container dns {
+                            description "Enter the dns context";
+
+                            leaf include-rdnss {
+                                type boolean;
+                                default "false";
+                                description "Include the RDNSS server option 25";
+                            }
+
+                            leaf rdnss-lifetime {
+                                type union {
+                                    type types-sros:time-duration {
+                                        range "900..3600";
+                                    }
+                                    type enumeration {
+                                        enum "infinite"                     { value -1; }
+                                    }
+                                }
+                                units "seconds";
+                                default "3600";
+                                description "Maximum time for the RDNSS address to remain valid";
+                            }
+
+                        } // container dns
+
+                    } // container options
+
+                    container prefix-options {
+                        description "Enter the prefix-options context";
+
+                        leaf autonomous {
+                            type boolean;
+                            default "false";
+                            description "Value of the autonomous flag";
+                        }
+
+                        leaf on-link {
+                            type boolean;
+                            default "true";
+                            description "Assign the prefix to an interface on the specified link";
+                        }
+
+                        leaf preferred-lifetime {
+                            type types-submgt:router-advertisement-prefix-options-lifetime;
+                            units "seconds";
+                            default "3600";
+                            description "Time for a prefix to remain preferred";
+                        }
+
+                        leaf valid-lifetime {
+                            type types-submgt:router-advertisement-prefix-options-lifetime;
+                            units "seconds";
+                            default "86400";
+                            description "Time for a prefix to remain valid";
+                        }
+
+                    } // container prefix-options
+
+                } // container router-advertisements
+
+                container router-solicit {
+                    when "../../fwd-service";
+                    description "Enter the router-solicit context";
+
+                    leaf inactivity-timer {
+                        type union {
+                            type types-sros:time-duration {
+                                range "1..31536000";
+                            }
+                            type enumeration {
+                                enum "infinite"                     { value -1; }
+                            }
+                        }
+                        units "seconds";
+                        default "300";
+                        description "Time before an inactive host is removed";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                } // container router-solicit
+
+            } // container ipv6
+
+            container hold-time {
+                description "Enter the hold-time context";
+
+                container ipv4 {
+                    description "Enter the ipv4 context";
+
+                    container up {
+                        description "Enter the up context";
+
+                        leaf seconds {
+                            type types-router:hold-time-seconds;
+                            units "seconds";
+                            description "Up hold time for the IP interface";
+                        }
+
+                    } // container up
+
+                    container down {
+                        description "Enter the down context";
+
+                        leaf seconds {
+                            type types-router:hold-time-seconds;
+                            units "seconds";
+                            description "Down hold time for the IP interface";
+                        }
+
+                        leaf init-only {
+                            type boolean;
+                            default "false";
+                            description "Apply delay only at interface configuration or reboot";
+                        }
+
+                    } // container down
+
+                } // container ipv4
+
+                container ipv6 {
+                    description "Enter the ipv6 context";
+
+                    container up {
+                        description "Enter the up context";
+
+                        leaf seconds {
+                            type types-router:hold-time-seconds;
+                            units "seconds";
+                            description "Up hold time for the IP interface";
+                        }
+
+                    } // container up
+
+                    container down {
+                        description "Enter the down context";
+
+                        leaf seconds {
+                            type types-router:hold-time-seconds;
+                            units "seconds";
+                            description "Down hold time for the IP interface";
+                        }
+
+                        leaf init-only {
+                            type boolean;
+                            default "false";
+                            description "Apply delay only at interface configuration or reboot";
+                        }
+
+                    } // container down
+
+                } // container ipv6
+
+            } // container hold-time
+
+            container ipoe-linking {
+                when "../fwd-service";
+                description "Enter the ipoe-linking context";
+
+                leaf gratuitous-router-advertisement {
+                    type boolean;
+                    default "false";
+                    description "Send unsolicited router advertisement after DHCP setup";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+            } // container ipoe-linking
+
+            container ipoe-session {
+                when "../fwd-service";
+                description "Enter the ipoe-session context";
+
+                leaf session-limit {
+                    type uint32 {
+                        range "1..500000";
+                    }
+                    description "Maximum number of sessions on this group interface";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+            } // container ipoe-session
+
+            container pppoe {
+                when "../fwd-service";
+                description "Enter the pppoe context";
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf session-limit {
+                    type uint32 {
+                        range "1..262143";
+                    }
+                    default "1";
+                    description "Maximum PPPoE sessions";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+            } // container pppoe
+
+            container local-address-assignment {
+                when "../fwd-service";
+                description "Enter the local-address-assignment context";
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of local address assignment";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                container ipv4 {
+                    description "Enter the ipv4 context";
+
+                    leaf server {
+                        type leafref {
+                            path "../../../../../../router/dhcp-server/dhcpv4/name";
+                        }
+                        description "Local DHCP server that contains pools for local address assignment";
+                    }
+
+                    leaf-list default-pool {
+                        type types-sros:named-item;
+                        max-elements 2;
+                        ordered-by user;
+                        description "Default pools";
+                    }
+
+                    container client-applications {
+                        description "Enter the client-applications context";
+
+                        leaf ppp {
+                            type boolean;
+                            default "false";
+                            description "Request local addresses for PPP IPCP hosts";
+                        }
+
+                    } // container client-applications
+
+                } // container ipv4
+
+                container ipv6 {
+                    description "Enter the ipv6 context";
+
+                    leaf server {
+                        type leafref {
+                            path "../../../../../../router/dhcp-server/dhcpv6/name";
+                        }
+                        description "Local DHCPv6 server that contains pools for local address assignment";
+                    }
+
+                    container client-applications {
+                        description "Enter the client-applications context";
+
+                        leaf ppp-slaac {
+                            type boolean;
+                            default "false";
+                            description "Request local addresses for PPP SLAAC hosts";
+                        }
+
+                        leaf ipoe-wan {
+                            type boolean;
+                            default "false";
+                            description "Request local addresses for IPoE IA NA hosts";
+                        }
+
+                        leaf ipoe-slaac {
+                            type boolean;
+                            default "false";
+                            description "Request local addresses for IPoE SLAAC hosts";
+                        }
+
+                    } // container client-applications
+
+                } // container ipv6
+
+            } // container local-address-assignment
+
+            list group-interface {
+                when "not(../fwd-service)";
+                key "group-interface-name";
+                description "Enter the group-interface list instance";
+
+                leaf group-interface-name {
+                    type types-sros:interface-name;
+                    description "Interface name";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "enable";
+                    description "Administrative state of the interface";
+                }
+
+                leaf description {
+                    type types-sros:very-long-description;
+                    description "Text description";
+                }
+
+                leaf type {
+                    type types-services:group-interface-type;
+                    sros-ext:immutable;
+                    default "plain";
+                    description "Group interface type";
+                }
+
+                leaf radius-auth-policy {
+                    type leafref {
+                        path "../../../../../subscriber-mgmt/radius-authentication-policy/name";
+                    }
+                    description "RADIUS authentication policy";
+                }
+
+                leaf gx-policy {
+                    when "../type = 'plain' or ../type = 'lns' or ../type = 'wlan-gw' or ../type = 'gtp'";
+                    type leafref {
+                        path "../../../../../subscriber-mgmt/diameter-gx-policy/name";
+                    }
+                    description "Diameter application policy";
+                }
+
+                leaf nasreq-auth-policy {
+                    when "../type = 'plain'";
+                    type leafref {
+                        path "../../../../../subscriber-mgmt/diameter-nasreq-policy/name";
+                    }
+                    description "Diameter NASREQ application policy to use for authentication";
+                }
+
+                leaf ingress-stats {
+                    type boolean;
+                    default "false";
+                    description "Collect ingress interface statistics";
+                }
+
+                leaf ip-mtu {
+                    when "not(../type = 'bonding')";
+                    type types-router:ip-mtu-ext;
+                    units "bytes";
+                    description "Interface IP MTU";
+                }
+
+                leaf mac {
+                    when "not(../type = 'wlan-gw') and not(../type = 'gtp') and not(../type = 'bonding')";
+                    type types-sros:mac-unicast-address;
+                    description "MAC address for the interface";
+                }
+
+                leaf oper-up-while-empty {
+                    when "../type = 'plain' or ../type = 'lns'";
+                    type boolean;
+                    default "false";
+                    description "Enable this group interface without any active SAPs";
+                }
+
+                leaf redundant-interface {
+                    when "../type = 'plain' or ../type = 'lns'";
+                    type leafref {
+                        path "../../../redundant-interface/interface-name";
+                    }
+                    description "Redundant interface";
+                }
+
+                leaf shcv-policy {
+                    when "../type = 'plain' or ../type = 'lns' or ../type = 'wlan-gw'";
+                    type leafref {
+                        path "../../../../../subscriber-mgmt/shcv-policy/name";
+                    }
+                    description "Subscriber host connectivity verification policy for IPv4 and IPv6";
+                }
+
+                leaf shcv-policy-ipv4 {
+                    when "../type = 'plain' or ../type = 'lns' or ../type = 'wlan-gw'";
+                    type leafref {
+                        path "../../../../../subscriber-mgmt/shcv-policy/name";
+                    }
+                    description "Subscriber host connectivity verification policy for IPv4";
+                }
+
+                leaf shcv-policy-ipv6 {
+                    when "../type = 'plain' or ../type = 'lns' or ../type = 'wlan-gw'";
+                    type leafref {
+                        path "../../../../../subscriber-mgmt/shcv-policy/name";
+                    }
+                    description "Subscriber host connectivity verification policy for IPv6";
+                }
+
+                leaf suppress-aa-sub {
+                    type boolean;
+                    default "false";
+                    description "Enable application assurance suppression for ESM subscribers";
+                }
+
+                leaf tos-marking-state {
+                    type types-router:tos-marking-state;
+                    default "untrusted";
+                    description "TOS marking state";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                container ingress {
+                    description "Enter the ingress context";
+
+                    leaf policy-accounting {
+                        type leafref {
+                            path "../../../../../../routing-options/policy-accounting/policy-acct-template/name";
+                        }
+                        description "Configure ingress policy accounting.";
+                    }
+
+                } // container ingress
+
+                container dynamic-routes-track-srrp {
+                    when "../type = 'plain' or ../type = 'lns'";
+                    presence
+                        "Track the group interface SRRP state in order to populate or withdraw
+                         dynamic routes such as host routes and managed routes.";
+                    description "Enter the dynamic-routes-track-srrp context";
+
+                    leaf hold-time {
+                        type uint32 {
+                            range "1..50";
+                        }
+                        units "deciseconds";
+                        description "Delay before updating the route state after the last SRRP transition";
+                    }
+
+                } // container dynamic-routes-track-srrp
+
+                container ipv4 {
+                    description "Enter the ipv4 context";
+
+                    leaf qos-route-lookup {
+                        type types-router:qos-route-lookup-grp-if;
+                        description "QoS route lookup";
+                    }
+
+                    leaf ignore-df-bit {
+                        when "../../type = 'wlan-gw'";
+                        type boolean;
+                        default "false";
+                        description "Ignore the DF bit in the IPv4 header when fragmenting";
+                    }
+
+                    container icmp {
+                        description "Enter the icmp context";
+
+                        leaf mask-reply {
+                            type boolean;
+                            default "true";
+                            description "Allow responses to ICMP mask requests";
+                        }
+
+                        container redirects {
+                            description "Enter the redirects context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "enable";
+                                description "Administrative state of sending ICMP redirects";
+                            }
+
+                            leaf number {
+                                type uint16 {
+                                    range "10..1000";
+                                }
+                                default "100";
+                                description "Maximum number of ICMP redirect messages to send";
+                            }
+
+                            leaf seconds {
+                                type uint16 {
+                                    range "1..60";
+                                }
+                                units "seconds";
+                                default "10";
+                                description "Time used to limit the number of ICMP redirect messages";
+                            }
+
+                        } // container redirects
+
+                        container ttl-expired {
+                            description "Enter the ttl-expired context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "enable";
+                                description "Administrative state of sending TTL expired messages";
+                            }
+
+                            leaf number {
+                                type uint16 {
+                                    range "10..2000";
+                                }
+                                default "100";
+                                description "Maximum number of TTL-expired messages to send";
+                            }
+
+                            leaf seconds {
+                                type uint16 {
+                                    range "1..60";
+                                }
+                                units "seconds";
+                                default "10";
+                                description "Time used to limit the number of TTL-expired messages";
+                            }
+
+                        } // container ttl-expired
+
+                        container unreachables {
+                            description "Enter the unreachables context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "enable";
+                                description "Administrative state of sending unreachable messages";
+                            }
+
+                            leaf number {
+                                type uint16 {
+                                    range "10..2000";
+                                }
+                                default "100";
+                                description "Maximum number of unreachable messages to send";
+                            }
+
+                            leaf seconds {
+                                type uint16 {
+                                    range "1..60";
+                                }
+                                units "seconds";
+                                default "10";
+                                description "Time to limit the number of ICMP unreachable messages";
+                            }
+
+                        } // container unreachables
+
+                        container param-problem {
+                            description "Enter the param-problem context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "enable";
+                                description "Administrative state of sent Parameter Problem messages";
+                            }
+
+                            leaf number {
+                                type uint32 {
+                                    range "10..1000";
+                                }
+                                default "100";
+                                description "Maximum number of parameter problem messages to send";
+                            }
+
+                            leaf seconds {
+                                type uint32 {
+                                    range "1..60";
+                                }
+                                units "seconds";
+                                default "10";
+                                description "Time used to limit number of parameter problem messages";
+                            }
+
+                        } // container param-problem
+
+                    } // container icmp
+
+                    container urpf-check {
+                        when "not(../../type = 'bonding')";
+                        presence "Configure uRPF information.";
+                        description "Enter the urpf-check context";
+
+                        leaf mode {
+                            type types-router:urpf-check-mode;
+                            default "strict";
+                            description "Unicast RPF check mode";
+                        }
+
+                    } // container urpf-check
+
+                    container arp-host {
+                        when "../../type = 'plain' or ../../type = 'lns'";
+                        description "Enter the arp-host context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of ARP hosts";
+                        }
+
+                        leaf host-limit {
+                            type uint32 {
+                                range "1..524287";
+                            }
+                            default "1";
+                            description "Maximum number of ARP triggered hosts.";
+                        }
+
+                        leaf sap-host-limit {
+                            type uint32 {
+                                range "1..131071";
+                            }
+                            default "1";
+                            description "Maximum number of ARP triggered hosts allowed per SAP.";
+                        }
+
+                        leaf min-auth-interval {
+                            type types-sros:time-duration {
+                                range "1..6000";
+                            }
+                            units "minutes";
+                            default "15";
+                            description "Minimal time that has to pass before incoming ARPs of an active ARP host are re-authenticated.";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                    } // container arp-host
+
+                    container neighbor-discovery {
+                        when "../../type = 'plain' or ../../type = 'lns' or ../../type = 'wlan-gw'";
+                        description "Enter the neighbor-discovery context";
+
+                        leaf local-proxy-arp {
+                            type boolean;
+                            default "true";
+                            description "Enable local proxy ARP on interface";
+                        }
+
+                        leaf remote-proxy-arp {
+                            type boolean;
+                            default "false";
+                            description "Enable remote proxy ARP on interface";
+                        }
+
+                        leaf-list proxy-arp-policy {
+                            type leafref {
+                                path "../../../../../../../policy-options/policy-statement/name";
+                            }
+                            max-elements 5;
+                            ordered-by user;
+                            description "Proxy ARP policy name";
+                        }
+
+                        leaf populate {
+                            when "../../../type = 'plain' or ../../../type = 'lns'";
+                            type boolean;
+                            description "Allow static and dynamic hosts to be populated in system ARP cache";
+                        }
+
+                        leaf timeout {
+                            when "../../../type = 'plain' or ../../../type = 'lns'";
+                            type uint32 {
+                                range "0..65535";
+                            }
+                            units "seconds";
+                            default "14400";
+                            description "Timeout for an ARP entry learned on the interface";
+                        }
+
+                    } // container neighbor-discovery
+
+                    container dhcp {
+                        when "../../type = 'plain' or ../../type = 'lns' or ../../type = 'wlan-gw' or ../../type = 'gtp'";
+                        description "Enter the dhcp context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of DHCP";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf filter {
+                            type leafref {
+                                path "../../../../../../../filter/dhcp-filter/filter-id";
+                            }
+                            description "DHCP filter.";
+                        }
+
+                        leaf python-policy {
+                            type leafref {
+                                path "../../../../../../../python/python-policy/name";
+                            }
+                            description "Python policy name";
+                        }
+
+                        leaf-list server {
+                            type types-sros:ipv4-unicast-address;
+                            max-elements 8;
+                            ordered-by user;
+                            description "IP addresses for DHCP server requests";
+                        }
+
+                        leaf trusted {
+                            type boolean;
+                            default "false";
+                            description "Relay untrusted packets";
+                        }
+
+                        leaf gi-address {
+                            type types-sros:ipv4-unicast-address;
+                            description "Gateway interface address for the DHCP relay";
+                        }
+
+                        leaf src-ip-addr {
+                            type enumeration {
+                                enum "auto"                         { value 0; }
+                                enum "gi-address"                   { value 1; }
+                            }
+                            default "auto";
+                            description "Type of source address to use for DHCP relay";
+                        }
+
+                        leaf match-circuit-id {
+                            when "not(../../../type = 'gtp')";
+                            type boolean;
+                            default "false";
+                            description "Configure match Opt82 circuit ID on relayed DHCP packets.";
+                        }
+
+                        leaf user-db {
+                            when "not(../../../type = 'gtp')";
+                            type leafref {
+                                path "../../../../../../../subscriber-mgmt/local-user-db/name";
+                            }
+                            description "Configure the local user database to use for authentication.";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        container proxy-server {
+                            description "Enter the proxy-server context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "disable";
+                                description "Administrative state of DHCP proxy";
+                            }
+
+                            leaf emulated-server {
+                                type types-sros:ipv4-unicast-address;
+                                description "IP address used as the DHCP server address in the context of this service";
+                            }
+
+                            container lease-time {
+                                description "Enter the lease-time context";
+
+                                leaf value {
+                                    type types-sros:time-duration {
+                                        range "300..315446399";
+                                    }
+                                    units "seconds";
+                                    description "DHCP lease time";
+                                }
+
+                                leaf radius-override {
+                                    type boolean;
+                                    default "false";
+                                    description "Use lease time information provided by RADIUS server";
+                                }
+
+                            } // container lease-time
+
+                        } // container proxy-server
+
+                        container option-82 {
+                            description "Enter the option-82 context";
+
+                            leaf action {
+                                type enumeration {
+                                    enum "replace"                      { value 1; }
+                                    enum "drop"                         { value 2; }
+                                    enum "keep"                         { value 3; }
+                                }
+                                default "keep";
+                                description "Action to take with received DHCP Option 82";
+                            }
+
+                            container circuit-id {
+                                description "Enter the circuit-id context";
+
+                                choice circuit-id {
+                                    default "ascii-tuple";
+                                    case none {
+
+                                        leaf none {
+                                            type empty;
+                                            description "Do not include the Circuit ID";
+                                        }
+
+                                    }
+                                    case ifindex {
+
+                                        leaf ifindex {
+                                            type empty;
+                                            description "Use the interface index for the Circuit ID";
+                                        }
+
+                                    }
+                                    case ascii-tuple {
+
+                                        leaf ascii-tuple {
+                                            type empty;
+                                            description "Use the ASCII-encoded tuple for the Circuit ID";
+                                        }
+
+                                    }
+                                    case sap-id {
+
+                                        leaf sap-id {
+                                            type empty;
+                                            description "Use SAP ID in the option.";
+                                        }
+
+                                    }
+                                    case vlan-ascii-tuple {
+
+                                        leaf vlan-ascii-tuple {
+                                            type empty;
+                                            description "Include the VLAN ID and dot1p bits in the ASCII tuple";
+                                        }
+
+                                    }
+                                }
+                            } // container circuit-id
+
+                            container remote-id {
+                                description "Enter the remote-id context";
+
+                                choice remote-id {
+                                    default "none";
+                                    case none {
+
+                                        leaf none {
+                                            type empty;
+                                            description "Do not include the Remote ID";
+                                        }
+
+                                    }
+                                    case mac {
+
+                                        leaf mac {
+                                            type empty;
+                                            description "Use the MAC address for the Remote ID";
+                                        }
+
+                                    }
+                                    case ascii-string {
+
+                                        leaf ascii-string {
+                                            type types-sros:string-not-all-spaces {
+                                                length "1..32";
+                                            }
+                                            description "User-defined ASCII string for the Remote ID";
+                                        }
+
+                                    }
+                                }
+                            } // container remote-id
+
+                            container vendor-specific-option {
+                                description "Enter the vendor-specific-option context";
+
+                                leaf system-id {
+                                    type boolean;
+                                    default "false";
+                                    description "Send the system ID in the Vendor Specific Option";
+                                }
+
+                                leaf client-mac-address {
+                                    type boolean;
+                                    default "false";
+                                    description "Send the MAC address in the Vendor Specific Option";
+                                }
+
+                                leaf pool-name {
+                                    type boolean;
+                                    default "false";
+                                    description "Send the pool name in the Vendor Specific Option";
+                                }
+
+                                leaf service-id {
+                                    type boolean;
+                                    default "false";
+                                    description "Send the service ID in the Vendor Specific Option";
+                                }
+
+                                leaf sap-id {
+                                    type boolean;
+                                    default "false";
+                                    description "Send the SAP ID in the Nokia vendor specific suboption.";
+                                }
+
+                                leaf string {
+                                    type types-sros:string-not-all-spaces {
+                                        length "1..32";
+                                    }
+                                    description "User-defined ASCII string for Vendor Specific Option";
+                                }
+
+                            } // container vendor-specific-option
+
+                        } // container option-82
+
+                        container lease-populate {
+                            description "Enter the lease-populate context";
+
+                            leaf max-leases {
+                                type uint32 {
+                                    range "1..511999";
+                                }
+                                default "1";
+                                description "The maximum number of DHCPv4 leases.";
+                            }
+
+                            container l2-header {
+                                when "../../../../type = 'plain' or ../../../../type = 'lns'";
+                                presence "Indicates the source MAC from the Layer 2 header will be used for host anti-spoofing.";
+                                description "Enter the l2-header context";
+
+                                leaf mac {
+                                    type types-sros:mac-unicast-address;
+                                    description "Specify the MAC address.";
+                                }
+
+                            } // container l2-header
+
+                        } // container lease-populate
+
+                        container client-applications {
+                            when "../../../type = 'plain' or ../../../type = 'lns' or ../../../type = 'bonding'";
+                            description "Enter the client-applications context";
+
+                            leaf dhcp {
+                                type boolean;
+                                default "true";
+                                description "Enable/disable DHCP as client application.";
+                            }
+
+                            leaf ppp {
+                                type boolean;
+                                default "false";
+                                description "Enable/disable PPP as client application.";
+                            }
+
+                        } // container client-applications
+
+                        container relay-proxy {
+                            when "not(../../../type = 'gtp')";
+                            presence
+                                "Enable/disable relaying of unicast DHCP client messages and optional DHCP
+                                 server ip address hiding.";
+                            description "Enter the relay-proxy context";
+
+                            leaf release-update-src-ip {
+                                type boolean;
+                                default "false";
+                                description "Specify whether or not to relay release messages.";
+                            }
+
+                            leaf siaddr-override {
+                                type types-sros:ipv4-unicast-address;
+                                description "Specify the IP address to use.";
+                            }
+
+                        } // container relay-proxy
+
+                    } // container dhcp
+
+                } // container ipv4
+
+                container ipv6 {
+                    presence "IPv6 parameters.";
+                    description "Enter the ipv6 context";
+
+                    leaf allow-multiple-wan-addresses {
+                        when "../../type = 'plain' or ../../type = 'lns' or ../../type = 'wlan-gw' or ../../type = 'gtp'";
+                        type boolean;
+                        default "false";
+                        description "Configure if the interface will accept multiple WAN addresses.";
+                    }
+
+                    leaf ipoe-bridged-mode {
+                        when "../../type = 'plain' or ../../type = 'lns'";
+                        type boolean;
+                        default "false";
+                        description "Enable/Disable IPv6 IPoE Bridged Mode.";
+                    }
+
+                    leaf qos-route-lookup {
+                        type types-router:qos-route-lookup-grp-if;
+                        description "QoS route lookup";
+                    }
+
+                    container auto-reply {
+                        when "../../type = 'plain' or ../../type = 'lns' or ../../type = 'wlan-gw'";
+                        description "Enter the auto-reply context";
+
+                        leaf neighbor-solicitation {
+                            type boolean;
+                            default "false";
+                            description "Enable auto-reply for NS";
+                        }
+
+                        leaf router-solicitation {
+                            type boolean;
+                            default "false";
+                            description "Enable auto-reply for RS";
+                        }
+
+                    } // container auto-reply
+
+                    container urpf-check {
+                        when "not(../../type = 'bonding')";
+                        presence "Enables/Configures unicast RPF check for Ipv6 on this interface.";
+                        description "Enter the urpf-check context";
+
+                        leaf mode {
+                            type types-router:urpf-check-mode;
+                            default "strict";
+                            description "Unicast RPF check mode";
+                        }
+
+                    } // container urpf-check
+
+                    container dhcp6 {
+                        when "../../type = 'plain' or ../../type = 'lns' or ../../type = 'wlan-gw' or ../../type = 'gtp'";
+                        description "Enter the dhcp6 context";
+
+                        leaf filter {
+                            type leafref {
+                                path "../../../../../../../filter/dhcp6-filter/filter-id";
+                            }
+                            description "DHCPv6 filter";
+                        }
+
+                        leaf override-slaac {
+                            type boolean;
+                            default "false";
+                            description "Allow WAN address offered by DHCP to overwrite the WAN address acquired from SLAAC";
+                        }
+
+                        leaf python-policy {
+                            type leafref {
+                                path "../../../../../../../python/python-policy/name";
+                            }
+                            description "Python policy";
+                        }
+
+                        leaf user-db {
+                            when "not(../../../type = 'gtp')";
+                            type leafref {
+                                path "../../../../../../../subscriber-mgmt/local-user-db/name";
+                            }
+                            description "Assign a local user database.";
+                        }
+
+                        leaf user-ident {
+                            type types-services:dhcp6-user-ident;
+                            default "mac";
+                            description "DHCP6 user identification for this interface";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        container pd-managed-route {
+                            presence "Enable installation of dhcp6 delegated prefixes as managed routes.";
+                            description "Enter the pd-managed-route context";
+
+                            leaf next-hop {
+                                type types-services:dhcp6-pd-managed-route-nh;
+                                default "ipv6";
+                                description "Next hop type";
+                            }
+
+                        } // container pd-managed-route
+
+                        container snooping {
+                            description "Enter the snooping context";
+
+                            leaf admin-state {
+                                when "not(../../../../type = 'gtp')";
+                                type types-sros:admin-state;
+                                default "disable";
+                                description "Administrative state of DHCPv6 snooping";
+                            }
+
+                        } // container snooping
+
+                        container relay {
+                            description "Enter the relay context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "disable";
+                                description "Administrative state of DHCPv6 Relay";
+                            }
+
+                            leaf description {
+                                type types-sros:description;
+                                description "Text description";
+                            }
+
+                            leaf source-address {
+                                type types-sros:ipv6-unicast-address;
+                                description "Source IPv6 address for the DHCPv6 relay messages";
+                            }
+
+                            leaf link-address {
+                                type types-sros:ipv6-address;
+                                description "Link address for the DHCPv6 relay messages";
+                            }
+
+                            leaf-list server {
+                                type types-sros:ipv6-address-with-zone;
+                                max-elements 8;
+                                ordered-by user;
+                                description "DHCP6 server(s) to which the DHCP6 requests are forwarded";
+                            }
+
+                            container client-applications {
+                                description "Enter the client-applications context";
+
+                                leaf dhcp {
+                                    type boolean;
+                                    default "true";
+                                    description "Allow the DHCP application to make use of the DHCP relay functionality on this interface.";
+                                }
+
+                                leaf ppp {
+                                    type boolean;
+                                    default "false";
+                                    description "Allow the PPP application to use DHCP relay functionality";
+                                }
+
+                            } // container client-applications
+
+                        } // container relay
+
+                        container proxy-server {
+                            description "Enter the proxy-server context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "disable";
+                                description "Administrative state of DHCPv6 proxy server";
+                            }
+
+                            leaf preferred-lifetime {
+                                type types-submgt:dhcp6-prefix-lifetime;
+                                default "3600";
+                                description "Time for prefix to remain preferred on this interface";
+                            }
+
+                            leaf valid-lifetime {
+                                type types-submgt:dhcp6-prefix-lifetime;
+                                default "86400";
+                                description "Time for prefix to remain valid on this interface";
+                            }
+
+                            leaf renew-timer {
+                                type types-submgt:dhcp6-renew-timer;
+                                description "Renew timer (T1)";
+                            }
+
+                            leaf rebind-timer {
+                                type types-submgt:dhcp6-rebind-timer;
+                                description "Rebind timer (T2) for this interface";
+                            }
+
+                            container client-applications {
+                                when "not(../../../../type = 'gtp')";
+                                description "Enter the client-applications context";
+
+                                leaf dhcp {
+                                    type boolean;
+                                    default "true";
+                                    description "Allow the DHCP application to make use of the DHCP relay functionality on this interface.";
+                                }
+
+                                leaf ppp {
+                                    when "not(../../../../../type = 'wlan-gw')";
+                                    type boolean;
+                                    default "false";
+                                    description "Allow the PPP application to use DHCP relay functionality";
+                                }
+
+                            } // container client-applications
+
+                            container server-id {
+                                description "Enter the server-id context";
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                choice server-id {
+                                    default "duid-ll";
+                                    case duid-ll {
+
+                                        leaf duid-ll {
+                                            type empty;
+                                            description "Use link-layer address (DUID-LL) as DUID";
+                                        }
+
+                                    }
+                                    case duid-en-hex {
+
+                                        leaf duid-en-hex {
+                                            type string {
+                                                length "1..118";
+                                            }
+                                            description "Vendor-assigned unique ID based on Enterprise Number (DUID-EN) as a hexadecimal string";
+                                        }
+
+                                    }
+                                    case duid-en-ascii {
+
+                                        leaf duid-en-ascii {
+                                            type types-sros:string-not-all-spaces {
+                                                length "1..58";
+                                            }
+                                            description "Vendor-assigned unique ID based on Enterprise Number (DUID-EN) as an ASCII string";
+                                        }
+
+                                    }
+                                }
+                            } // container server-id
+
+                        } // container proxy-server
+
+                        container option {
+                            description "Enter the option context";
+
+                            leaf remote-id {
+                                type boolean;
+                                default "false";
+                                description "Allow remote ID option to be sent in the DHCPv6 relay packet";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            container interface-id {
+                                description "Enter the interface-id context";
+
+                                choice interface-id {
+                                    case ascii-tuple {
+
+                                        leaf ascii-tuple {
+                                            type empty;
+                                            description "Use ASCII-encoded concatenated tuple in interface ID option in DHCPv6 relay packet";
+                                        }
+
+                                    }
+                                    case sap-id {
+
+                                        leaf sap-id {
+                                            type empty;
+                                            description "Use SAP ID in interface ID option in DHCPv6 relay packet";
+                                        }
+
+                                    }
+                                    case if-index {
+
+                                        leaf if-index {
+                                            type empty;
+                                            description "Use interface index in interface ID option in DHCPv6 relay packet";
+                                        }
+
+                                    }
+                                    case string {
+
+                                        leaf string {
+                                            type types-sros:string-not-all-spaces {
+                                                length "1..80";
+                                            }
+                                            description "String for interface ID option in DHCPv6 relay packet";
+                                        }
+
+                                    }
+                                }
+                            } // container interface-id
+
+                        } // container option
+
+                    } // container dhcp6
+
+                    container neighbor-discovery {
+                        when "../../type = 'plain' or ../../type = 'lns' or ../../type = 'wlan-gw'";
+                        description "Enter the neighbor-discovery context";
+
+                        leaf dad-snooping {
+                            type boolean;
+                            default "false";
+                            description "Duplicate address detection packets that are snooped to populate new neighbor entries for SLAAC hosts";
+                        }
+
+                        leaf neighbor-limit {
+                            type int32 {
+                                range "1..8";
+                            }
+                            default "1";
+                            description "Maximum number of neighbor entries learned per SLAAC host";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                    } // container neighbor-discovery
+
+                    container router-advertisements {
+                        when "../../type = 'plain' or ../../type = 'lns' or ../../type = 'wlan-gw' or ../../type = 'gtp'";
+                        description "Enter the router-advertisements context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of router advertisement";
+                        }
+
+                        leaf max-advertisement-interval {
+                            type types-sros:time-duration {
+                                range "900..1800";
+                            }
+                            units "seconds";
+                            default "1800";
+                            description "Maximum advertisement interval";
+                        }
+
+                        leaf min-advertisement-interval {
+                            type types-sros:time-duration {
+                                range "900..1350";
+                            }
+                            units "seconds";
+                            default "900";
+                            description "Minimum advertisement interval";
+                        }
+
+                        leaf force-mcast {
+                            type enumeration {
+                                enum "ip"                           { value 1; }
+                                enum "ip-mac"                       { value 2; }
+                            }
+                            description "Send router advertisement to a multicast address instead of unicast for IPoE";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        container options {
+                            description "Enter the options context";
+
+                            leaf current-hop-limit {
+                                type uint32 {
+                                    range "0..255";
+                                }
+                                default "64";
+                                description "Hop limit to be advertised";
+                            }
+
+                            leaf managed-configuration {
+                                type boolean;
+                                default "false";
+                                description "Managed address configuration flag";
+                            }
+
+                            leaf mtu {
+                                type union {
+                                    type uint32 {
+                                        range "1280..9212";
+                                    }
+                                    type enumeration {
+                                        enum "not-included"                 { value 0; }
+                                    }
+                                }
+                                units "bytes";
+                                default "not-included";
+                                description "Advertised MTU value";
+                            }
+
+                            leaf other-stateful-configuration {
+                                type boolean;
+                                default "false";
+                                description "Other stateful configuration flag";
+                            }
+
+                            leaf reachable-time {
+                                type types-sros:time-duration {
+                                    range "0..3600000";
+                                }
+                                units "milliseconds";
+                                default "0";
+                                description "Neighbor discovery reachable time that is advertised for this group interface";
+                            }
+
+                            leaf retransmit-timer {
+                                type uint32 {
+                                    range "0..1800000";
+                                }
+                                units "seconds";
+                                default "0";
+                                description "Neighbor discovery retransmit timer that is advertised for this group interface";
+                            }
+
+                            leaf router-lifetime {
+                                type union {
+                                    type types-sros:time-duration {
+                                        range "2700..9000";
+                                    }
+                                    type enumeration {
+                                        enum "no-default-router"            { value 0; }
+                                    }
+                                }
+                                units "seconds";
+                                default "4500";
+                                description "Router lifetime";
+                            }
+
+                            container dns {
+                                description "Enter the dns context";
+
+                                leaf include-rdnss {
+                                    type boolean;
+                                    default "false";
+                                    description "Include the RDNSS server option 25";
+                                }
+
+                                leaf rdnss-lifetime {
+                                    type union {
+                                        type types-sros:time-duration {
+                                            range "900..3600";
+                                        }
+                                        type enumeration {
+                                            enum "infinite"                     { value -1; }
+                                        }
+                                    }
+                                    units "seconds";
+                                    default "3600";
+                                    description "Maximum time for the RDNSS address to remain valid";
+                                }
+
+                            } // container dns
+
+                        } // container options
+
+                        container prefix-options {
+                            description "Enter the prefix-options context";
+
+                            leaf autonomous {
+                                type boolean;
+                                default "false";
+                                description "Value of the autonomous flag";
+                            }
+
+                            leaf on-link {
+                                type boolean;
+                                default "true";
+                                description "Assign the prefix to an interface on the specified link";
+                            }
+
+                            leaf preferred-lifetime {
+                                type types-submgt:router-advertisement-prefix-options-lifetime;
+                                units "seconds";
+                                default "3600";
+                                description "Time for a prefix to remain preferred";
+                            }
+
+                            leaf valid-lifetime {
+                                type types-submgt:router-advertisement-prefix-options-lifetime;
+                                units "seconds";
+                                default "86400";
+                                description "Time for a prefix to remain valid";
+                            }
+
+                        } // container prefix-options
+
+                    } // container router-advertisements
+
+                    container router-solicit {
+                        when "../../type = 'plain' or ../../type = 'lns' or ../../type = 'wlan-gw'";
+                        description "Enter the router-solicit context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of router-solicit based authentication";
+                        }
+
+                        leaf inactivity-timer {
+                            type union {
+                                type types-sros:time-duration {
+                                    range "1..31536000";
+                                }
+                                type enumeration {
+                                    enum "infinite"                     { value -1; }
+                                }
+                            }
+                            units "seconds";
+                            default "300";
+                            description "Time before an inactive host is removed";
+                        }
+
+                        leaf min-auth-interval {
+                            type types-sros:time-duration {
+                                range "1..360000";
+                            }
+                            units "seconds";
+                            default "300";
+                            description "Minimum interval between two consecutive authentication attempts for the same host";
+                        }
+
+                        leaf user-db {
+                            type leafref {
+                                path "../../../../../../../subscriber-mgmt/local-user-db/name";
+                            }
+                            description "Local user-database that is used for router solicit based authentication";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                    } // container router-solicit
+
+                } // container ipv6
+
+                container cflowd-parameters {
+                    description "Enter the cflowd-parameters context";
+
+                    list sampling {
+                        key "sampling-type";
+                        description "Enter the sampling list instance";
+
+                        leaf sampling-type {
+                            type types-router:cflowd-sampling;
+                            description "Unicast or multicast traffic";
+                        }
+
+                        leaf type {
+                            when "not(../sampling-type = 'both')";
+                            type enumeration {
+                                enum "acl"                          { value 1; }
+                                enum "interface"                    { value 2; }
+                            }
+                            mandatory true;
+                            description "Type of cflowd analysis";
+                        }
+
+                        leaf direction {
+                            type enumeration {
+                                enum "ingress-only"                 { value 1; }
+                                enum "egress-only"                  { value 2; }
+                                enum "both"                         { value 3; }
+                            }
+                            default "ingress-only";
+                            description "Direction of traffic for cflowd sampling";
+                        }
+
+                        leaf sample-profile {
+                            type union {
+                                type enumeration {
+                                    enum "1"                            { value 1; }
+                                }
+                                type uint32;
+                            }
+                            description "Sample profile ID";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                    } // list sampling
+
+                } // container cflowd-parameters
+
+                container ipoe-linking {
+                    when "../type = 'plain' or ../type = 'lns' or ../type = 'wlan-gw'";
+                    description "Enter the ipoe-linking context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        sros-ext:auto-restart-to-modify;
+                        default "disable";
+                        description "Administrative state of IPoE host linking";
+                    }
+
+                    leaf gratuitous-router-advertisement {
+                        type boolean;
+                        sros-ext:auto-restart-to-modify;
+                        default "false";
+                        description "Send unsolicited router advertisement after DHCP setup";
+                    }
+
+                    leaf shared-circuit-id {
+                        when "not(../../type = 'wlan-gw')";
+                        type boolean;
+                        sros-ext:auto-restart-to-modify;
+                        default "false";
+                        description "Block DHCPv6 with unknown interface-id (circuit-id) until a circuit-id is learned from DHCP.";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        sros-ext:auto-restart-to-modify;
+                        description "Apply a configuration group at this level";
+                    }
+
+                } // container ipoe-linking
+
+                container ipoe-session {
+                    when "../type = 'plain' or ../type = 'wlan-gw' or ../type = 'gtp' or ../type = 'bonding'";
+                    description "Enter the ipoe-session context";
+
+                    leaf admin-state {
+                        when "../../type = 'plain'";
+                        type types-sros:admin-state;
+                        description "Administrative state of IPoE session management";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf ipoe-session-policy {
+                        when "../../type = 'plain'";
+                        type leafref {
+                            path "../../../../../../subscriber-mgmt/ipoe-session-policy/name";
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        description "IPoE Session policy to be used for new sessions";
+                    }
+
+                    leaf user-db {
+                        type leafref {
+                            path "../../../../../../subscriber-mgmt/local-user-db/name";
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        description "Local user database that is used to (pre-)authenticate new sessions";
+                    }
+
+                    leaf session-limit {
+                        type uint32 {
+                            range "1..500000";
+                        }
+                        description "Maximum number of sessions on this group interface";
+                    }
+
+                    leaf sap-session-limit {
+                        when "../../type = 'plain'";
+                        type uint32 {
+                            range "1..131071";
+                        }
+                        description "Maximum number of sessions per SAP";
+                    }
+
+                    leaf min-auth-interval {
+                        type types-submgt:ipoe-session-min-auth-interval;
+                        units "seconds";
+                        default "infinite";
+                        description "Minimum time between two authentication attempts";
+                    }
+
+                    leaf radius-session-timeout {
+                        when "../../type = 'wlan-gw'";
+                        type types-submgt:ipoe-session-radius-session-timeout;
+                        description "Session timeout attribute to be interpreted";
+                    }
+
+                    leaf stateless-redundancy {
+                        when "not(../../type = 'wlan-gw')";
+                        type boolean;
+                        sros-ext:auto-restart-to-modify;
+                        default "false";
+                        description "Remove IPoE sessions when the system becomes stand-by in a stateless multi-chassis redundancy setup";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container force-auth {
+                        description "Enter the force-auth context";
+
+                        leaf cid-change {
+                            when "../../../type = 'plain' or ../../../type = 'wlan-gw'";
+                            type boolean;
+                            description "Ignore min-auth-interval when circuit ID changed";
+                        }
+
+                        leaf rid-change {
+                            when "../../../type = 'plain' or ../../../type = 'wlan-gw'";
+                            type boolean;
+                            description "Ignore min-auth-interval when remote ID changed";
+                        }
+
+                    } // container force-auth
+
+                } // container ipoe-session
+
+                container brg {
+                    when "../type = 'plain'";
+                    description "Enter the brg context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        sros-ext:auto-restart-to-modify;
+                        default "disable";
+                        description "Administrative state of BRG";
+                    }
+
+                    leaf authenticated-brg-only {
+                        type boolean;
+                        sros-ext:auto-restart-to-modify;
+                        default "false";
+                        description "Allow BRGs that have been pre-authenticated";
+                    }
+
+                    leaf default-brg-profile {
+                        type leafref {
+                            path "../../../../../../subscriber-mgmt/vrgw/brg-profile/brg-profile-name";
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        description "Default BRG profile that can be overridden during authentication";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        sros-ext:auto-restart-to-modify;
+                        description "Apply a configuration group at this level";
+                    }
+
+                } // container brg
+
+                container pppoe {
+                    when "../type = 'plain'";
+                    description "Enter the pppoe context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of PPPoE";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf anti-spoof {
+                        type types-submgt:pppoe-anti-spoof;
+                        default "mac-sid";
+                        description "PPPoE anti-spoof filtering";
+                    }
+
+                    leaf policy {
+                        type leafref {
+                            path "../../../../../../subscriber-mgmt/ppp-policy/name";
+                        }
+                        description "PPPoE policy";
+                    }
+
+                    leaf session-limit {
+                        type uint32 {
+                            range "1..262143";
+                        }
+                        default "1";
+                        description "Maximum PPPoE sessions";
+                    }
+
+                    leaf sap-session-limit {
+                        type uint32 {
+                            range "1..131071";
+                        }
+                        default "1";
+                        description "Maximum PPPoE sessions per SAP";
+                    }
+
+                    leaf python-policy {
+                        type leafref {
+                            path "../../../../../../python/python-policy/name";
+                        }
+                        description "Python policy used to modify PPPoE packets";
+                    }
+
+                    leaf user-db {
+                        type leafref {
+                            path "../../../../../../subscriber-mgmt/local-user-db/name";
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        description "Local user database for authentication";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container dhcp-client {
+                        description "Enter the dhcp-client context";
+
+                        leaf client-id {
+                            type enumeration {
+                                enum "mac-pppoe-session-id"         { value 2; }
+                            }
+                            description "The type of information that DHCP option 61 will contain";
+                        }
+
+                    } // container dhcp-client
+
+                } // container pppoe
+
+                container data-trigger {
+                    when "../type = 'plain'";
+                    description "Enter the data-trigger context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of data-triggered host creation";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                } // container data-trigger
+
+                container local-address-assignment {
+                    description "Enter the local-address-assignment context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of local address assignment";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container ipv4 {
+                        description "Enter the ipv4 context";
+
+                        leaf server {
+                            when "../../../type = 'plain' or ../../../type = 'lns' or ../../../type = 'gtp' or ../../../type = 'bonding'";
+                            type leafref {
+                                path "../../../../../../../router/dhcp-server/dhcpv4/name";
+                            }
+                            description "Local DHCP server that contains pools for local address assignment";
+                        }
+
+                        leaf-list default-pool {
+                            when "../../../type = 'plain' or ../../../type = 'lns'";
+                            type types-sros:named-item;
+                            max-elements 2;
+                            ordered-by user;
+                            description "Default pools";
+                        }
+
+                        container client-applications {
+                            description "Enter the client-applications context";
+
+                            leaf ppp {
+                                when "../../../../type = 'plain' or ../../../../type = 'lns' or ../../../../type = 'gtp' or ../../../../type = 'bonding'";
+                                type boolean;
+                                default "false";
+                                description "Request local addresses for PPP IPCP hosts";
+                            }
+
+                            leaf ipoe {
+                                when "../../../../type = 'gtp' or ../../../../type = 'bonding'";
+                                type boolean;
+                                default "false";
+                                description "Request local addresses for non-DHCP/managed IPoE hosts";
+                            }
+
+                        } // container client-applications
+
+                    } // container ipv4
+
+                    container ipv6 {
+                        description "Enter the ipv6 context";
+
+                        leaf server {
+                            type leafref {
+                                path "../../../../../../../router/dhcp-server/dhcpv6/name";
+                            }
+                            description "Local DHCPv6 server that contains pools for local address assignment";
+                        }
+
+                        container client-applications {
+                            description "Enter the client-applications context";
+
+                            leaf ppp-slaac {
+                                when "../../../../type = 'plain' or ../../../../type = 'lns' or ../../../../type = 'gtp' or ../../../../type = 'bonding'";
+                                type boolean;
+                                default "false";
+                                description "Request local addresses for PPP SLAAC hosts";
+                            }
+
+                            leaf ipoe-wan {
+                                type boolean;
+                                default "false";
+                                description "Request local addresses for IPoE IA NA hosts";
+                            }
+
+                            leaf ipoe-slaac {
+                                type boolean;
+                                default "false";
+                                description "Request local addresses for IPoE SLAAC hosts";
+                            }
+
+                        } // container client-applications
+
+                    } // container ipv6
+
+                } // container local-address-assignment
+
+                list srrp {
+                    when "../type = 'plain' or ../type = 'lns'";
+                    key "srrp-id";
+                    max-elements 1;
+                    description "Enter the srrp list instance";
+
+                    leaf srrp-id {
+                        type uint32 {
+                            range "1..4294967295";
+                        }
+                        description "SRRP instance ID";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of SRRP";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf gw-mac {
+                        type types-sros:mac-unicast-address;
+                        description "Gateway MAC address";
+                    }
+
+                    leaf keep-alive-interval {
+                        type uint32 {
+                            range "1..100";
+                        }
+                        units "deciseconds";
+                        default "10";
+                        description "Interval between SRRP advertisements";
+                    }
+
+                    leaf message-path {
+                        type leafref {
+                            path "../../sap/sap-id";
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        description "SAP to use as the SRRP message path";
+                    }
+
+                    leaf-list policy {
+                        type leafref {
+                            path "../../../../../../vrrp/policy/policy-id";
+                        }
+                        max-elements 2;
+                        ordered-by user;
+                        description "VRRP priority control policy associated with the SRRP";
+                    }
+
+                    leaf priority {
+                        type uint32 {
+                            range "1..254";
+                        }
+                        default "100";
+                        description "Priority for this interface at this level";
+                    }
+
+                    leaf send-fib-population-packets {
+                        type enumeration {
+                            enum "all"                          { value 1; }
+                            enum "outer-tag-only"               { value 2; }
+                        }
+                        default "all";
+                        description "Mode used to send FIB population packets (such as ARP) on switchover";
+                    }
+
+                    leaf preempt {
+                        type boolean;
+                        default "true";
+                        description "Allow the SRRP instance to override an existing master";
+                    }
+
+                    leaf one-garp-per-sap {
+                        type boolean;
+                        default "false";
+                        description "Send one gratuitous ARP to each SAP";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container monitor-oper-group {
+                        description "Enter the monitor-oper-group context";
+
+                        leaf group-name {
+                            type leafref {
+                                path "../../../../../../oper-group/name";
+                            }
+                            description "Operational group name";
+                        }
+
+                        leaf priority-step {
+                            type uint8 {
+                                range "1..10";
+                            }
+                            description "Value with which the group priority increases or decreases if the state of this messaging-SAP changes.";
+                        }
+
+                    } // container monitor-oper-group
+
+                    container bfd-liveness {
+                        presence "Enable bfd on this srrp.";
+                        description "Enter the bfd-liveness context";
+
+                        leaf dest-ip {
+                            type types-sros:ipv4-address;
+                            sros-ext:immutable;
+                            mandatory true;
+                            description "Destination IPv4 prefix";
+                        }
+
+                        leaf service-name {
+                            type types-services:service-name;
+                            sros-ext:immutable;
+                            description "Service name of interface running BFD";
+                        }
+
+                        leaf interface-name {
+                            type types-sros:interface-name;
+                            sros-ext:immutable;
+                            mandatory true;
+                            description "Name of interface running BFD";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                    } // container bfd-liveness
+
+                } // list srrp
+
+                container sap-parameters {
+                    when "../type = 'lns' or ../type = 'wlan-gw' or ../type = 'gtp' or ../type = 'bonding'";
+                    description "Enter the sap-parameters context";
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf anti-spoof {
+                        when "../../type = 'wlan-gw'";
+                        type enumeration {
+                            enum "ip-mac"                       { value 3; }
+                            enum "nh-mac"                       { value 4; }
+                        }
+                        default "ip-mac";
+                        description "Anti-spoofing type.";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container sub-sla-mgmt {
+                        description "Enter the sub-sla-mgmt context";
+
+                        leaf sub-ident-policy {
+                            type leafref {
+                                path "../../../../../../../subscriber-mgmt/sub-ident-policy/name";
+                            }
+                            description "Subscriber identification policy";
+                        }
+
+                        container defaults {
+                            description "Enter the defaults context";
+
+                            leaf sub-profile {
+                                type leafref {
+                                    path "../../../../../../../../subscriber-mgmt/sub-profile/name";
+                                }
+                                description "Default subscriber profile";
+                            }
+
+                            leaf sla-profile {
+                                type leafref {
+                                    path "../../../../../../../../subscriber-mgmt/sla-profile/name";
+                                }
+                                description "Default SLA profile";
+                            }
+
+                            container subscriber-id {
+                                description "Enter the subscriber-id context";
+
+                                choice subscriber-id {
+                                    case string {
+
+                                        leaf string {
+                                            type types-submgt:subscriber-id;
+                                            description "String to be used as default subscriber ID";
+                                        }
+
+                                    }
+                                    case auto-id {
+
+                                        leaf auto-id {
+                                            type empty;
+                                            description "Subscriber ID that is autogenerated";
+                                        }
+
+                                    }
+                                }
+                            } // container subscriber-id
+
+                        } // container defaults
+
+                    } // container sub-sla-mgmt
+
+                } // container sap-parameters
+
+                container bonding-parameters {
+                    when "../type = 'bonding'";
+                    description "Enter the bonding-parameters context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of ESM connection bonding";
+                    }
+
+                    leaf fpe {
+                        type leafref {
+                            path "../../../../../../fwd-path-ext/fpe/fpe-id";
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        description "FPE that provisions bonding functionality";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container multicast {
+                        description "Enter the multicast context";
+
+                        leaf connection {
+                            type types-submgt:multicast-bonding-connection;
+                            sros-ext:auto-restart-to-modify;
+                            default "use-incoming";
+                            description "Multicast connection";
+                        }
+
+                    } // container multicast
+
+                    list connection {
+                        key "connection-index";
+                        sros-ext:auto-restart-to-modify;
+                        description "Enter the connection list instance";
+
+                        leaf connection-index {
+                            type types-submgt:bonding-connection-index;
+                            description "Bonding connection index";
+                        }
+
+                        leaf service {
+                            type types-services:service-name;
+                            description "Connection service";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                    } // list connection
+
+                } // container bonding-parameters
+
+                container gtp-parameters {
+                    when "../type = 'gtp'";
+                    description "Enter the gtp-parameters context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of GTP access";
+                    }
+
+                    leaf fpe {
+                        type leafref {
+                            path "../../../../../../fwd-path-ext/fpe/fpe-id";
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        description "PE that provisions the GTP user interface";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                } // container gtp-parameters
+
+                container wpp {
+                    when "../type = 'plain'";
+                    presence "Configure Web Portal Protocol parameters";
+                    description "Enter the wpp context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of WPP";
+                    }
+
+                    leaf restore-to-initial-on-disconnect {
+                        type boolean;
+                        default "true";
+                        description "Restore initial profiles after a host has disconnected";
+                    }
+
+                    leaf user-db {
+                        type leafref {
+                            path "../../../../../../subscriber-mgmt/local-user-db/name";
+                        }
+                        description "User database";
+                    }
+
+                    leaf lease-time {
+                        type types-sros:time-duration {
+                            range "10..315446399";
+                        }
+                        default "600";
+                        description "Lease time";
+                    }
+
+                    leaf triggered-hosts {
+                        type boolean;
+                        default "false";
+                        description "Enable/disable triggered hosts";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    container portal {
+                        description "Enter the portal context";
+
+                        choice portal {
+                            case portal {
+
+                                leaf router-instance {
+                                    type string;
+                                    description "The virtual router instance of the WPP portal for this interface";
+                                }
+
+                                leaf name {
+                                    type types-sros:named-item;
+                                    description "Name for the WPP portal of the interface";
+                                }
+
+                            }
+                            case portal-group {
+
+                                leaf portal-group {
+                                    type leafref {
+                                        path "../../../../../../../aaa/wpp/portal-group/group-name";
+                                    }
+                                    description "WPP portal group for this interface";
+                                }
+
+                            }
+                        }
+                    } // container portal
+
+                    container initial {
+                        description "Enter the initial context";
+
+                        leaf sub-profile {
+                            type leafref {
+                                path "../../../../../../../subscriber-mgmt/sub-profile/name";
+                            }
+                            description "Initial subscriber profile";
+                        }
+
+                        leaf sla-profile {
+                            type leafref {
+                                path "../../../../../../../subscriber-mgmt/sla-profile/name";
+                            }
+                            description "Initial SLA profile";
+                        }
+
+                    } // container initial
+
+                } // container wpp
+
+                list sap {
+                    when "../type = 'plain'";
+                    key "sap-id";
+                    description "Enter the sap list instance";
+
+                    leaf sap-id {
+                        type types-sros:sap;
+                        description "SAP identifier";
+                    }
+
+                    leaf description {
+                        type types-sros:long-description;
+                        description "Text description";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "enable";
+                        description "Administrative state of the SAP";
+                    }
+
+                    leaf accounting-policy {
+                        type leafref {
+                            path "../../../../../../log/accounting-policy/policy-id";
+                        }
+                        description "Accounting policy";
+                    }
+
+                    leaf anti-spoof {
+                        type types-services:anti-spoof-option-ip;
+                        default "source-ip-and-mac-addr";
+                        description "Type of anti-spoof filtering";
+                    }
+
+                    leaf calling-station-id {
+                        type types-sros:string-not-all-spaces {
+                            length "1..64";
+                        }
+                        description "Calling station ID";
+                    }
+
+                    leaf collect-stats {
+                        type boolean;
+                        default "false";
+                        description "Collect accounting statistics";
+                    }
+
+                    leaf dist-cpu-protection {
+                        type leafref {
+                            path "../../../../../../system/security/dist-cpu-protection/policy/policy-name";
+                        }
+                        description "Distributed CPU protection policy for SAP";
+                    }
+
+                    leaf host-admin-state {
+                        type types-sros:admin-state;
+                        default "enable";
+                        description "Administrative state of hosts";
+                    }
+
+                    leaf host-lockout-policy {
+                        type leafref {
+                            path "../../../../../../subscriber-mgmt/host-lockout-policy/name";
+                        }
+                        description "Host lockout policy";
+                    }
+
+                    leaf multi-service-site {
+                        type types-sros:named-item;
+                        description "Multi service site name";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    choice oper-group-association {
+                        case oper-group {
+
+                            leaf oper-group {
+                                type leafref {
+                                    path "../../../../../oper-group/name";
+                                }
+                                description "Operational group";
+                            }
+
+                        }
+                        case monitor-oper-group {
+
+                            leaf monitor-oper-group {
+                                type leafref {
+                                    path "../../../../../oper-group/name";
+                                }
+                                description "Monitor operational group";
+                            }
+
+                        }
+                    }
+                    container ingress {
+                        description "Enter the ingress context";
+
+                        container qos {
+                            description "Enter the qos context";
+
+                            leaf match-qinq-dot1p {
+                                type enumeration {
+                                    enum "top"                          { value 2; }
+                                    enum "bottom"                       { value 3; }
+                                }
+                                description "Ingress match QinQ Dot1p";
+                            }
+
+                            container sap-ingress {
+                                description "Enter the sap-ingress context";
+
+                                leaf policy-name {
+                                    type leafref {
+                                        path "../../../../../../../../../qos/sap-ingress/sap-ingress-policy-name";
+                                    }
+                                    description "Policy identifier";
+                                }
+
+                                leaf queuing-type {
+                                    type types-services:services-sap-queuing-type;
+                                    description "Ingress queuing type";
+                                }
+
+                            } // container sap-ingress
+
+                            container policer-control-policy {
+                                description "Enter the policer-control-policy context";
+
+                                leaf policy-name {
+                                    type leafref {
+                                        path "../../../../../../../../../qos/policer-control-policy/policer-control-policy-name";
+                                    }
+                                    description "Policer control policy name";
+                                }
+
+                            } // container policer-control-policy
+
+                            container scheduler-policy {
+                                description "Enter the scheduler-policy context";
+
+                                leaf policy-name {
+                                    type leafref {
+                                        path "../../../../../../../../../qos/scheduler-policy/scheduler-policy-name";
+                                    }
+                                    description "Scheduler policy name";
+                                }
+
+                            } // container scheduler-policy
+
+                        } // container qos
+
+                        container filter {
+                            description "Enter the filter context";
+
+                            leaf ip {
+                                type leafref {
+                                    path "../../../../../../../../filter/ip-filter/filter-name";
+                                }
+                                description "IPv4 filter policy name";
+                            }
+
+                            leaf ipv6 {
+                                type leafref {
+                                    path "../../../../../../../../filter/ipv6-filter/filter-name";
+                                }
+                                description "IPv6 filter policy name";
+                            }
+
+                        } // container filter
+
+                        container aggregate-policer {
+                            description "Enter the aggregate-policer context";
+
+                            leaf rate {
+                                type types-qos:aggr-policer-rate;
+                                default "max";
+                                description "Aggregate policer rate to be used in kbps";
+                            }
+
+                            leaf burst {
+                                type types-qos:aggr-policer-burst;
+                                default "default";
+                                description "Aggregate policer burst";
+                            }
+
+                        } // container aggregate-policer
+
+                    } // container ingress
+
+                    container egress {
+                        description "Enter the egress context";
+
+                        container qos {
+                            description "Enter the qos context";
+
+                            leaf qinq-mark-top-only {
+                                type boolean;
+                                default "false";
+                                description "Mark top Q-tags";
+                            }
+
+                            container sap-egress {
+                                description "Enter the sap-egress context";
+
+                                leaf policy-name {
+                                    type leafref {
+                                        path "../../../../../../../../../qos/sap-egress/sap-egress-policy-name";
+                                    }
+                                    description "Policy identifier";
+                                }
+
+                            } // container sap-egress
+
+                            container policer-control-policy {
+                                description "Enter the policer-control-policy context";
+
+                                leaf policy-name {
+                                    type leafref {
+                                        path "../../../../../../../../../qos/policer-control-policy/policer-control-policy-name";
+                                    }
+                                    description "Policer control policy name";
+                                }
+
+                            } // container policer-control-policy
+
+                            container scheduler-policy {
+                                description "Enter the scheduler-policy context";
+
+                                leaf policy-name {
+                                    type leafref {
+                                        path "../../../../../../../../../qos/scheduler-policy/scheduler-policy-name";
+                                    }
+                                    description "Scheduler policy name";
+                                }
+
+                            } // container scheduler-policy
+
+                        } // container qos
+
+                        container filter {
+                            description "Enter the filter context";
+
+                            leaf ip {
+                                type leafref {
+                                    path "../../../../../../../../filter/ip-filter/filter-name";
+                                }
+                                description "IPv4 filter policy name";
+                            }
+
+                            leaf ipv6 {
+                                type leafref {
+                                    path "../../../../../../../../filter/ipv6-filter/filter-name";
+                                }
+                                description "IPv6 filter policy name";
+                            }
+
+                        } // container filter
+
+                        container agg-rate {
+                            description "Enter the agg-rate context";
+
+                            leaf limit-unused-bandwidth {
+                                type boolean;
+                                default "false";
+                                description "Enable aggregate rate overrun protection";
+                            }
+
+                            leaf rate {
+                                type types-services:agg-rate-rate;
+                                description "Maximum total rate of all egress queues in kbps.";
+                            }
+
+                            leaf queue-frame-based-accounting {
+                                type boolean;
+                                default "false";
+                                description "Enable frame-based accounting on all policers and queues associated with context";
+                            }
+
+                            leaf cir {
+                                type union {
+                                    type int32 {
+                                        range "0..100000000";
+                                    }
+                                    type enumeration {
+                                        enum "max"                          { value -1; }
+                                    }
+                                }
+                                units "kilobps";
+                                default "0";
+                                description "Specifies the administrative CIR.";
+                            }
+
+                        } // container agg-rate
+
+                    } // container egress
+
+                    container cpu-protection {
+                        description "Enter the cpu-protection context";
+
+                        leaf policy-id {
+                            type leafref {
+                                path "../../../../../../../system/security/cpu-protection/policy/policy-id";
+                            }
+                            description "CPM protection policy";
+                        }
+
+                        choice monitoring {
+                            case mac {
+
+                                leaf mac-monitoring {
+                                    type empty;
+                                    description "Monitor MAC for CPU protection";
+                                }
+
+                            }
+                            case cfm {
+
+                                container eth-cfm-monitoring {
+                                    presence "Enable ETH CFM monitoring configuration.";
+                                    description "Enter the eth-cfm-monitoring context";
+
+                                    leaf aggregate {
+                                        type empty;
+                                        description "Apply rate limit to the sum of the per peer packet rates";
+                                    }
+
+                                    leaf car {
+                                        type empty;
+                                        description "Eth-CFM packets to be ignored when enforcing overall rate";
+                                    }
+
+                                } // container eth-cfm-monitoring
+
+                            }
+                            case ip {
+
+                                leaf ip-src-monitoring {
+                                    type empty;
+                                    description "Enable IP source monitoring for CPU protection";
+                                }
+
+                            }
+                        }
+                    } // container cpu-protection
+
+                    container lag {
+                        description "Enter the lag context";
+
+                        leaf link-map-profile {
+                            type types-services:link-map-profile-id;
+                            description "LAG link map profile applied to a SAP or network interface";
+                        }
+
+                        container per-link-hash {
+                            description "Enter the per-link-hash context";
+
+                            leaf class {
+                                type types-services:sap-lag-per-link-hash-class;
+                                default "1";
+                                description "Class used on LAG egress when using weighted per-link-hash";
+                            }
+
+                            leaf weight {
+                                type types-services:sap-lag-per-link-hash-weight;
+                                default "1";
+                                description "Weight used on LAG egress when using weighted per-link-hash";
+                            }
+
+                        } // container per-link-hash
+
+                    } // container lag
+
+                    container fwd-wholesale {
+                        description "Enter the fwd-wholesale context";
+
+                        leaf pppoe-service {
+                            type leafref {
+                                path "../../../../../../epipe/service-name";
+                            }
+                            description "PPPoE service name";
+                        }
+
+                    } // container fwd-wholesale
+
+                    container eth-cfm {
+                        description "Enter the eth-cfm context";
+
+                        leaf collect-lmm-stats {
+                            type boolean;
+                            default "false";
+                            description "Collect statistics for loss measurement message tests";
+                        }
+
+                        leaf-list squelch-ingress-levels {
+                            type uint32 {
+                                range "0..7";
+                            }
+                            max-elements 8;
+                            description "ETH-CFM PDUs to be silently discarded";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        container collect-lmm-fc-stats {
+                            description "Enter the collect-lmm-fc-stats context";
+
+                            leaf-list fc {
+                                type types-eth-cfm:fc-type;
+                                max-elements 8;
+                                description "Forwarding class name for profile-unaware counter";
+                            }
+
+                            leaf-list fc-in-profile {
+                                type types-eth-cfm:fc-type;
+                                max-elements 8;
+                                description "Forwarding class name for profile-aware counter";
+                            }
+
+                        } // container collect-lmm-fc-stats
+
+                        list mep {
+                            key "md-admin-name ma-admin-name mep-id";
+                            description "Enter the mep list instance";
+
+                            leaf md-admin-name {
+                                type leafref {
+                                    path "../../../../../../../../eth-cfm/domain/md-admin-name";
+                                }
+                                description "Admin-assigned maintenance domain index value";
+                            }
+
+                            leaf ma-admin-name {
+                                type leafref {
+                                    path "../../../../../../../../eth-cfm/domain[md-admin-name=current()/../md-admin-name]/association/ma-admin-name";
+                                }
+                                description "Admin-assigned maintenance association index value";
+                            }
+
+                            leaf mep-id {
+                                type types-eth-cfm:mep-id-type;
+                                description "MEP identifier";
+                            }
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "disable";
+                                description "Administrative state of the MEP";
+                            }
+
+                            leaf description {
+                                type types-sros:description;
+                                description "Text description";
+                            }
+
+                            leaf install-mep {
+                                type boolean;
+                                default "false";
+                                description "Install MEP in the forwarding plane";
+                            }
+
+                            leaf low-priority-defect {
+                                type types-eth-cfm:lowest-alarm-priority;
+                                default "mac-rem-err-xcon";
+                                description "Lowest priority defect that is allowed to generate a fault alarm";
+                            }
+
+                            leaf fault-propagation {
+                                type types-eth-cfm:fault-propagation-type;
+                                description "Fault propagation for the MEP";
+                            }
+
+                            leaf ccm {
+                                type boolean;
+                                default "false";
+                                description "Generate CCM messages";
+                            }
+
+                            leaf ccm-ltm-priority {
+                                type types-eth-cfm:frame-priority;
+                                default "7";
+                                description "Priority of CCM and LTM messages transmitted by the MEP";
+                            }
+
+                            leaf ccm-padding-size {
+                                type uint32 {
+                                    range "3..1500";
+                                }
+                                description "Number of octets of padding to insert in CCM packets";
+                            }
+
+                            leaf one-way-delay-threshold {
+                                type uint32 {
+                                    range "0..600";
+                                }
+                                units "seconds";
+                                default "3";
+                                description "Threshold time limit for one-way delay test";
+                            }
+
+                            leaf ais {
+                                type boolean;
+                                default "false";
+                                description "Generate AIS frames from the Maintenance Entity Group (MEG).";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            container alarm-notification {
+                                description "Enter the alarm-notification context";
+
+                                leaf fng-alarm-time {
+                                    type int32 {
+                                        range "250|500|1000";
+                                    }
+                                    units "centiseconds";
+                                    description "Time that must expire before an FNG alarm is raised";
+                                }
+
+                                leaf fng-reset-time {
+                                    type int32 {
+                                        range "250|500|1000";
+                                    }
+                                    units "centiseconds";
+                                    description "Time that must expire before an FNG alarm is reset";
+                                }
+
+                            } // container alarm-notification
+
+                            container csf {
+                                presence "The reception of Client Signal Fail (CSF) message parameters";
+                                description "Enter the csf context";
+
+                                leaf multiplier {
+                                    type decimal64 {
+                                        range "0.0|2.0..30.0";
+                                        fraction-digits 1;
+                                    }
+                                    default "3.5";
+                                    description "Receive period multiplier to time out CSF";
+                                }
+
+                            } // container csf
+
+                            container eth-test {
+                                presence "Enable/disable eth-test functionality on MEP.";
+                                description "Enter the eth-test context";
+
+                                leaf bit-error-threshold {
+                                    type uint32 {
+                                        range "0..11840";
+                                    }
+                                    units "bit errors";
+                                    default "1";
+                                    description "Lowest priority defect allowed to generate fault alarm";
+                                }
+
+                                container test-pattern {
+                                    description "Enter the test-pattern context";
+
+                                    leaf pattern {
+                                        type enumeration {
+                                            enum "all-zeros"                    { value 0; }
+                                            enum "all-ones"                     { value 1; }
+                                        }
+                                        default "all-zeros";
+                                        description "Test pattern for ETH-test frames";
+                                    }
+
+                                    leaf crc-tlv {
+                                        type boolean;
+                                        default "false";
+                                        description "Generate a CRC checksum";
+                                    }
+
+                                } // container test-pattern
+
+                            } // container eth-test
+
+                            container grace {
+                                description "Enter the grace context";
+
+                                container eth-ed {
+                                    description "Enter the eth-ed context";
+
+                                    leaf max-rx-defect-window {
+                                        type uint32 {
+                                            range "1..86400";
+                                        }
+                                        units "seconds";
+                                        description "Maximum received ETH-ED window duration";
+                                    }
+
+                                    leaf priority {
+                                        type int32 {
+                                            range "0..7";
+                                        }
+                                        description "Transmission priority for ETH-ED PDUs";
+                                    }
+
+                                    leaf rx-eth-ed {
+                                        type boolean;
+                                        default "true";
+                                        description "Receive and process ETH-ED ITU-T Y.1731 PDUs on the MEP";
+                                    }
+
+                                    leaf tx-eth-ed {
+                                        type boolean;
+                                        default "false";
+                                        description "Transmit ETH-ED PDUs from the MEP";
+                                    }
+
+                                } // container eth-ed
+
+                                container eth-vsm-grace {
+                                    description "Enter the eth-vsm-grace context";
+
+                                    leaf rx-eth-vsm-grace {
+                                        type boolean;
+                                        default "true";
+                                        description "Receive and process Nokia ETH-CFM Grace PDU on the MEP";
+                                    }
+
+                                    leaf tx-eth-vsm-grace {
+                                        type boolean;
+                                        default "true";
+                                        description "Transmit ETH-ED PDUs from the MEP";
+                                    }
+
+                                } // container eth-vsm-grace
+
+                            } // container grace
+
+                        } // list mep
+
+                    } // container eth-cfm
+
+                    container sub-sla-mgmt {
+                        description "Enter the sub-sla-mgmt context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of subscriber management on this SAP";
+                        }
+
+                        leaf sub-ident-policy {
+                            type leafref {
+                                path "../../../../../../../subscriber-mgmt/sub-ident-policy/name";
+                            }
+                            description "Subscriber identification policy used on this SAP";
+                        }
+
+                        leaf subscriber-limit {
+                            type types-submgt:sap-subscriber-limit;
+                            default "1";
+                            description "Maximum number of subscribers on this SAP";
+                        }
+
+                        container defaults {
+                            description "Enter the defaults context";
+
+                            leaf sub-profile {
+                                type leafref {
+                                    path "../../../../../../../../subscriber-mgmt/sub-profile/name";
+                                }
+                                description "Default subscriber profile used for subscribers on this SAP";
+                            }
+
+                            leaf sla-profile {
+                                type leafref {
+                                    path "../../../../../../../../subscriber-mgmt/sla-profile/name";
+                                }
+                                description "Default SLA profile for hosts on this SAP";
+                            }
+
+                            container subscriber-id {
+                                description "Enter the subscriber-id context";
+
+                                choice subscriber-id {
+                                    case auto-id {
+
+                                        leaf auto-id {
+                                            type empty;
+                                            description "Use auto-generated subscriber identification string";
+                                        }
+
+                                    }
+                                    case sap-id {
+
+                                        leaf sap-id {
+                                            type empty;
+                                            description "Use SAP ID as default subscriber identification string";
+                                        }
+
+                                    }
+                                    case string {
+
+                                        leaf string {
+                                            type types-submgt:subscriber-id;
+                                            description "Default subscriber identification string for the SAP";
+                                        }
+
+                                    }
+                                }
+                            } // container subscriber-id
+
+                            container int-dest-id {
+                                description "Enter the int-dest-id context";
+
+                                choice int-dest-id {
+                                    case top-q-tag {
+
+                                        leaf top-q-tag {
+                                            type empty;
+                                            description "Use the top Q-tag of this SAP";
+                                        }
+
+                                    }
+                                    case string {
+
+                                        leaf string {
+                                            type types-submgt:int-dest-id;
+                                            description "Use the configured string";
+                                        }
+
+                                    }
+                                }
+                            } // container int-dest-id
+
+                        } // container defaults
+
+                        container single-sub-parameters {
+                            description "Enter the single-sub-parameters context";
+
+                            leaf profiled-traffic-only {
+                                type boolean;
+                                default "false";
+                                description "Include all traffic in subscriber profile";
+                            }
+
+                            container non-sub-traffic {
+                                presence "true";
+                                description "Enter the non-sub-traffic context";
+
+                                leaf sub-profile {
+                                    type leafref {
+                                        path "../../../../../../../../../subscriber-mgmt/sub-profile/name";
+                                    }
+                                    mandatory true;
+                                    description "Subscriber ID profile applied for all non-subscriber traffic";
+                                }
+
+                                leaf sla-profile {
+                                    type leafref {
+                                        path "../../../../../../../../../subscriber-mgmt/sla-profile/name";
+                                    }
+                                    mandatory true;
+                                    description "SLA profile applicable for all non-subscriber traffic";
+                                }
+
+                                leaf subscriber-id {
+                                    type types-submgt:subscriber-id;
+                                    sros-ext:immutable;
+                                    description "Subscriber ID applied for all non-subscriber traffic";
+                                }
+
+                            } // container non-sub-traffic
+
+                        } // container single-sub-parameters
+
+                    } // container sub-sla-mgmt
+
+                    container static-host {
+                        description "Enter the static-host context";
+
+                        container mac-learning {
+                            description "Enter the mac-learning context";
+
+                            leaf data-triggered {
+                                type boolean;
+                                default "false";
+                                description "Enable learning of MAC addresses from data packets.";
+                            }
+
+                            leaf single-mac {
+                                type boolean;
+                                default "false";
+                                description "Enforce the limit of a single MAC address per SAP, learned by means of ICMPv6.";
+                            }
+
+                        } // container mac-learning
+
+                        list ipv4 {
+                            key "ip mac";
+                            description "Enter the ipv4 list instance";
+
+                            leaf ip {
+                                type types-sros:ipv4-unicast-address;
+                                description "IP address used by the static host.";
+                            }
+
+                            leaf mac {
+                                type types-sros:mac-unicast-address;
+                                description "MAC address of the static host.";
+                            }
+
+                            leaf rip-policy {
+                                type leafref {
+                                    path "../../../../../../../../subscriber-mgmt/rip-policy/name";
+                                }
+                                description "RIP policy name";
+                            }
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "disable";
+                                description "Administrative state of the static host";
+                            }
+
+                            leaf sub-profile {
+                                type leafref {
+                                    path "../../../../../../../../subscriber-mgmt/sub-profile/name";
+                                }
+                                description "Sub-profile name";
+                            }
+
+                            leaf sla-profile {
+                                type leafref {
+                                    path "../../../../../../../../subscriber-mgmt/sla-profile/name";
+                                }
+                                description "SLA profile name";
+                            }
+
+                            leaf ancp-string {
+                                type types-submgt:ancp-string;
+                                description "ANCP string";
+                            }
+
+                            leaf int-dest-id {
+                                type types-submgt:int-dest-id;
+                                description "Intermediate destination ID";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            container subscriber-id {
+                                description "Enter the subscriber-id context";
+
+                                choice subscriber-id {
+                                    case string {
+
+                                        leaf string {
+                                            type types-submgt:subscriber-id;
+                                            description "Subscriber identification";
+                                        }
+
+                                    }
+                                    case use-sap-id {
+
+                                        leaf use-sap-id {
+                                            type empty;
+                                            description "Use the SAP id as subscriber ID";
+                                        }
+
+                                    }
+                                }
+                            } // container subscriber-id
+
+                            container shcv {
+                                description "Enter the shcv context";
+
+                            } // container shcv
+
+                            list managed-route {
+                                key "prefix";
+                                max-elements 16;
+                                description "Add a list entry for managed-route";
+
+                                leaf prefix {
+                                    type types-sros:ipv4-unicast-prefix;
+                                    description "Managed route prefix.";
+                                }
+
+                            } // list managed-route
+
+                        } // list ipv4
+
+                        list ipv6 {
+                            key "prefix mac";
+                            description "Enter the ipv6 list instance";
+
+                            leaf prefix {
+                                type types-sros:ipv6-unicast-prefix;
+                                description "IPv6 prefix";
+                            }
+
+                            leaf mac {
+                                type types-sros:mac-unicast-address;
+                                description "MAC address";
+                            }
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "disable";
+                                description "Administrative state of the static host";
+                            }
+
+                            leaf sub-profile {
+                                type leafref {
+                                    path "../../../../../../../../subscriber-mgmt/sub-profile/name";
+                                }
+                                description "Sub-profile name";
+                            }
+
+                            leaf sla-profile {
+                                type leafref {
+                                    path "../../../../../../../../subscriber-mgmt/sla-profile/name";
+                                }
+                                description "SLA profile name";
+                            }
+
+                            leaf ancp-string {
+                                type types-submgt:ancp-string;
+                                description "ANCP string";
+                            }
+
+                            leaf int-dest-id {
+                                type types-submgt:int-dest-id;
+                                description "Intermediate destination ID";
+                            }
+
+                            leaf mac-linking {
+                                type types-sros:ipv4-unicast-address;
+                                description "IPv6 host associated with the IPv4 host through the learned MAC address";
+                            }
+
+                            leaf retail-svc-id {
+                                type types-services:external-service-id;
+                                description "Retail service ID";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            container subscriber-id {
+                                description "Enter the subscriber-id context";
+
+                                choice subscriber-id {
+                                    case string {
+
+                                        leaf string {
+                                            type types-submgt:subscriber-id;
+                                            description "Subscriber identification";
+                                        }
+
+                                    }
+                                    case use-sap-id {
+
+                                        leaf use-sap-id {
+                                            type empty;
+                                            description "Use the SAP id as subscriber ID";
+                                        }
+
+                                    }
+                                }
+                            } // container subscriber-id
+
+                            container shcv {
+                                description "Enter the shcv context";
+
+                            } // container shcv
+
+                            list managed-route {
+                                key "ipv6-prefix";
+                                max-elements 16;
+                                description "Enter the managed-route list instance";
+
+                                leaf ipv6-prefix {
+                                    type types-sros:ipv6-unicast-prefix;
+                                    description "Managed route prefix.";
+                                }
+
+                                leaf metric {
+                                    type uint32;
+                                    default "0";
+                                    description "Managed route metric.";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                            } // list managed-route
+
+                        } // list ipv6
+
+                    } // container static-host
+
+                    container igmp-host-tracking {
+                        description "Enter the igmp-host-tracking context";
+
+                        leaf expiry-time {
+                            type types-sros:time-duration {
+                                range "1..65535";
+                            }
+                            units "seconds";
+                            description "Time during which the system continues to track inactive hosts";
+                        }
+
+                        leaf import-policy {
+                            type leafref {
+                                path "../../../../../../../policy-options/policy-statement/name";
+                            }
+                            description "Import policy that filters IGMP packets";
+                        }
+
+                        leaf maximum-number-groups {
+                            type uint32 {
+                                range "1..16000";
+                            }
+                            description "Maximum number of multicast groups to be tracked";
+                        }
+
+                        leaf maximum-number-group-sources {
+                            type uint32 {
+                                range "1..32000";
+                            }
+                            description "Maximum number of multicast groups to be tracked per group";
+                        }
+
+                        leaf maximum-number-sources {
+                            type uint32 {
+                                range "1..1000";
+                            }
+                            description "Maximum number of multicast sources to be tracked";
+                        }
+
+                        leaf router-alert-check {
+                            type boolean;
+                            default "true";
+                            description "Enable IGMP router alert check option";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                    } // container igmp-host-tracking
+
+                    container default-host {
+                        description "Enter the default-host context";
+
+                        list ipv4 {
+                            key "address prefix-length";
+                            description "Enter the ipv4 list instance";
+
+                            leaf address {
+                                type leafref {
+                                    path "../../../../../ipv4/address/ipv4-address";
+                                }
+                                description "IPv4 default host address.";
+                            }
+
+                            leaf prefix-length {
+                                type uint32 {
+                                    range "0..32";
+                                }
+                                description "IPv4 address prefix length";
+                            }
+
+                            leaf next-hop {
+                                type types-sros:ipv4-unicast-address;
+                                sros-ext:immutable;
+                                mandatory true;
+                                description "Next-hop used to forward default-host traffic on this SAP.";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                        } // list ipv4
+
+                        list ipv6 {
+                            key "address prefix-length";
+                            description "Enter the ipv6 list instance";
+
+                            leaf address {
+                                type types-sros:ipv6-unicast-address;
+                                description "IPv6 default host address.";
+                            }
+
+                            leaf prefix-length {
+                                type uint32 {
+                                    range "0..128";
+                                }
+                                description "IPv6 address prefix length";
+                            }
+
+                            leaf next-hop {
+                                type types-sros:ipv6-unicast-address;
+                                sros-ext:immutable;
+                                mandatory true;
+                                description "Next-hop used to forward default-host traffic on this SAP.";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                        } // list ipv6
+
+                    } // container default-host
+
+                } // list sap
+
+                uses conf-svc-ies-grp-if-wlangw-wlan-gw;
+            } // list group-interface
+
+            uses conf-svc-ies-sub-if-wlangw-wlan-gw;
+        } // list subscriber-interface
+
+    } // grouping conf-svc-ies-sub-if-subscriber-interface
+
+}
