@@ -1,0 +1,1093 @@
+submodule nokia-conf-lag {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-eth-cfm            { prefix "types-eth-cfm"; }
+    import nokia-types-port               { prefix "types-port"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-eth-cfm;
+    include nokia-conf-groups;
+    include nokia-conf-port;
+    include nokia-conf-service;
+
+    sros-ext:sros-major-release "rel20";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure link aggregation group on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-lag YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2020-09-02";
+
+    grouping conf-lag {
+        list lag {
+            key "lag-index";
+            description "Enter the lag list instance";
+
+            leaf lag-index {
+                type types-sros:lag-interface;
+                description "LAG index";
+            }
+
+            leaf encap-type {
+                type enumeration {
+                    enum "null"                         { value 1; }
+                    enum "dot1q"                        { value 2; }
+                    enum "qinq"                         { value 10; }
+                }
+                sros-ext:immutable;
+                sros-ext:auto-restart-to-modify;
+                description "Encapsulation type";
+            }
+
+            leaf mac-address {
+                type yang:mac-address;
+                default "00:00:00:00:00:00";
+                description "Static MAC address for the LAG";
+            }
+
+            leaf mode {
+                type types-port:mode;
+                sros-ext:immutable;
+                sros-ext:auto-restart-to-modify;
+                default "network";
+                description "Port mode of the LAG";
+            }
+
+            leaf description {
+                type types-sros:long-description;
+                description "Text description";
+            }
+
+            leaf admin-state {
+                type types-sros:admin-state;
+                default "disable";
+                description "Administrative state of LAG";
+            }
+
+            leaf dynamic-cost {
+                type boolean;
+                default "false";
+                description "Allow OSPF or ISIS costing of a LAG based on available aggregated, operational bandwidth";
+            }
+
+            leaf lacp-xmit-interval {
+                type enumeration {
+                    enum "slow"                         { value 1; }
+                    enum "fast"                         { value 2; }
+                }
+                default "fast";
+                description "Time for periodic transmission";
+            }
+
+            leaf lacp-xmit-stdby {
+                type boolean;
+                default "true";
+                description "Allow LACP message transmission on standby links";
+            }
+
+            leaf standby-signaling {
+                type enumeration {
+                    enum "lacp"                         { value 1; }
+                    enum "power-off"                    { value 2; }
+                }
+                default "lacp";
+                description "Way of signaling a member port to the remote side";
+            }
+
+            leaf hold-time-down {
+                type uint32 {
+                    range "1..2000";
+                }
+                units "deciseconds";
+                description "Delay time between detecting that a LAG is down and reporting to higher levels";
+            }
+
+            leaf port-type {
+                type enumeration {
+                    enum "standard"                     { value 1; }
+                    enum "hsmda"                        { value 3; }
+                    enum "hs"                           { value 4; }
+                }
+                default "standard";
+                description "Port type of the LAG";
+            }
+
+            leaf port-weight-speed {
+                type uint32 {
+                    range "1|10";
+                }
+                units "gigabps";
+                description "Speed corresponding to a port weight unit";
+            }
+
+            leaf lacp-mux-control {
+                type enumeration {
+                    enum "coupled"                      { value 1; }
+                    enum "independent"                  { value 2; }
+                }
+                sros-ext:auto-restart-to-modify;
+                default "coupled";
+                description "Machine control to us in a LAG with LACP in active or passive modes";
+            }
+
+            leaf monitor-oper-group {
+                type leafref {
+                    path "../../service/oper-group/name";
+                }
+                description "Operational group to monitor";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            leaf-list apply-groups-exclude {
+                type leafref {
+                    path "../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Exclude a configuration group at this level";
+            }
+
+            container port-threshold {
+                description "Enter the port-threshold context";
+
+                leaf value {
+                    type int32 {
+                        range "0..63";
+                    }
+                    description "Number of operational links for the LAG at or below which the configured action is invoked";
+                }
+
+                leaf action {
+                    type enumeration {
+                        enum "down"                         { value 1; }
+                        enum "dynamic-cost"                 { value 2; }
+                        enum "static-cost"                  { value 3; }
+                    }
+                    default "down";
+                    description "Action to take if the number of operational links is equal or below a threshold level";
+                }
+
+                leaf cost {
+                    type uint32 {
+                        range "1..16777215";
+                    }
+                    description "Cost of the LAG if the action is equal to static-cost. The cost can be used by IGP such as OSPF and ISIS.";
+                }
+
+            } // container port-threshold
+
+            container lacp {
+                presence "Enter the 'lacp' context";
+                description "Enable the lacp context";
+
+                leaf mode {
+                    type enumeration {
+                        enum "passive"                      { value 1; }
+                        enum "active"                       { value 2; }
+                    }
+                    default "passive";
+                    description "Mode in which LACP operates";
+                }
+
+                leaf system-id {
+                    type yang:mac-address;
+                    default "00:00:00:00:00:00";
+                    description "System identifier for the system";
+                }
+
+                leaf system-priority {
+                    type int32 {
+                        range "0..65535";
+                    }
+                    description "System priority value";
+                }
+
+                leaf administrative-key {
+                    type int32 {
+                        range "1..65535";
+                    }
+                    mandatory true;
+                    description "LACP key";
+                }
+
+            } // container lacp
+
+            container adaptive-load-balancing {
+                presence "Enter the 'adaptive-load-balancing' context";
+                description "Enable the adaptive-load-balancing context";
+
+                leaf tolerance {
+                    type types-sros:percent {
+                        range "1..100";
+                    }
+                    default "20";
+                    description "Maximum range from least to most-loaded link in the LAG";
+                }
+
+            } // container adaptive-load-balancing
+
+            container access {
+                when "../mode = 'access' or ../mode = 'hybrid'" {
+                    description "access is only valid for access and hybrid lags.";
+                }
+                description "Enter the access context";
+
+                leaf bandwidth {
+                    type uint64 {
+                        range "1..6400000000";
+                    }
+                    units "bps";
+                    description "Administrative bandwidth applied to this LAG";
+                }
+
+                leaf booking-factor {
+                    type uint32 {
+                        range "1..1000";
+                    }
+                    default "100";
+                    description "Booking factor against the administrative bandwidth";
+                }
+
+                leaf per-fp-ing-queuing {
+                    type boolean;
+                    default "false";
+                    description "Per-fp-ing-queuing to be set if no port members exists in the LAG";
+                }
+
+                leaf per-fp-egr-queuing {
+                    type boolean;
+                    default "false";
+                    description "Per FP egress queuing";
+                }
+
+                leaf per-fp-sap-instance {
+                    type boolean;
+                    default "false";
+                    description "SAP instance allocation on a LAG";
+                }
+
+                container adapt-qos {
+                    description "Enter the adapt-qos context";
+
+                    leaf mode {
+                        type enumeration {
+                            enum "link"                         { value 1; }
+                            enum "distribute"                   { value 2; }
+                            enum "port-fair"                    { value 3; }
+                        }
+                        description "QoS adaptation mode";
+                    }
+
+                    leaf include-egr-hash-cfg {
+                        type boolean;
+                        default "false";
+                        description "Factor explicitly configured hashing into the egress buffering and rate distribution";
+                    }
+
+                } // container adapt-qos
+
+            } // container access
+
+            container selection-criteria {
+                description "Enter the selection-criteria context";
+
+                leaf mode {
+                    type enumeration {
+                        enum "highest-count"                { value 1; }
+                        enum "highest-weight"               { value 2; }
+                        enum "best-port"                    { value 3; }
+                    }
+                    default "highest-count";
+                    description "Criteria to select the active subgroup";
+                }
+
+                leaf slave-to-partner {
+                    type boolean;
+                    default "false";
+                    description "Use slave-to-partner for selection criteria";
+                }
+
+                leaf subgroup-hold-time {
+                    type union {
+                        type int32 {
+                            range "0..2000";
+                        }
+                        type enumeration {
+                            enum "infinite"                     { value -1; }
+                        }
+                    }
+                    units "deciseconds";
+                    default "0";
+                    description "Time to delay when switching to a newly selected active sub-group from the existing active sub-group";
+                }
+
+            } // container selection-criteria
+
+            container per-link-hash {
+                presence "Enter the 'per-link-hash' context";
+                description "Enable the per-link-hash context";
+
+                container weighted {
+                    presence "Enter the 'weighted' context";
+                    description "Enable the weighted context";
+
+                    leaf auto-rebalance {
+                        type boolean;
+                        default "false";
+                        description "Automatically rebalance existing SAPs, subscribers, or interfaces when new links are added to a LAG";
+                    }
+
+                } // container weighted
+
+            } // container per-link-hash
+
+            container weight-threshold {
+                description "Enter the weight-threshold context";
+
+                leaf value {
+                    type int32 {
+                        range "0..63";
+                    }
+                    description "Integer threshold number of operational links for the LAG";
+                }
+
+                leaf action {
+                    type enumeration {
+                        enum "down"                         { value 1; }
+                        enum "dynamic-cost"                 { value 2; }
+                        enum "static-cost"                  { value 3; }
+                    }
+                    default "down";
+                    description "Action to take if the number of active links in the LAG is at or below the threshold value";
+                }
+
+                leaf cost {
+                    type uint32 {
+                        range "1..16777215";
+                    }
+                    description "Cost of the LAG if the action is equal to static-cost. The cost can be used by IGP such as OSPF and ISIS.";
+                }
+
+            } // container weight-threshold
+
+            container hash-weight-threshold {
+                description "Enter the hash-weight-threshold context";
+
+                leaf value {
+                    type int32 {
+                        range "1..6400000";
+                    }
+                    description "Threshold value.";
+                }
+
+                leaf action {
+                    type enumeration {
+                        enum "down"                         { value 1; }
+                        enum "dynamic-cost"                 { value 2; }
+                        enum "static-cost"                  { value 3; }
+                    }
+                    default "down";
+                    description "Action to take.";
+                }
+
+                leaf cost {
+                    type uint32 {
+                        range "1..16777215";
+                    }
+                    description "Cost of the LAG if the action is equal to static-cost. The cost can be used by IGP such as OSPF and ISIS.";
+                }
+
+            } // container hash-weight-threshold
+
+            container bfd-liveness {
+                description "Enter the bfd-liveness context";
+
+                leaf soft-reset-extension {
+                    type boolean;
+                    default "true";
+                    description "Extend BFD timers during soft reset";
+                }
+
+                container ipv4 {
+                    description "Enter the ipv4 context";
+
+                    leaf bfd-on-distributing-only {
+                        type boolean;
+                        default "false";
+                        description "Restrict micro-BFD sessions to links in LACP state distributing";
+                    }
+
+                    leaf max-admin-down-time {
+                        type union {
+                            type int32 {
+                                range "0..3600";
+                            }
+                            type enumeration {
+                                enum "infinite"                     { value -1; }
+                            }
+                        }
+                        units "seconds";
+                        default "0";
+                        description "Maximum time to behave as if the micro-BFD session was up while the remote end is down";
+                    }
+
+                    leaf max-setup-time {
+                        type union {
+                            type int32 {
+                                range "0..60000";
+                            }
+                            type enumeration {
+                                enum "infinite"                     { value -1; }
+                            }
+                        }
+                        units "milliseconds";
+                        default "infinite";
+                        description "Maximum time to behave as if the micro-BFD session was up while it is actually still being set up";
+                    }
+
+                    leaf multiplier {
+                        type uint32 {
+                            range "3..20";
+                        }
+                        default "3";
+                        description "Number of BFD messages to miss before the micro-BFD session goes down";
+                    }
+
+                    leaf receive-interval {
+                        type uint32 {
+                            range "10..100000";
+                        }
+                        units "milliseconds";
+                        default "100";
+                        description "Receive timer for micro-BFD session over the associated LAG links";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of micro-BFD sessions for this address family";
+                    }
+
+                    leaf transmit-interval {
+                        type uint32 {
+                            range "10..100000";
+                        }
+                        units "milliseconds";
+                        default "100";
+                        description "Transmit timer for micro-BFD session over the associated LAG links";
+                    }
+
+                    leaf local-ip-address {
+                        type types-sros:ipv4-unicast-address;
+                        description "BFD source address";
+                    }
+
+                    leaf remote-ip-address {
+                        type types-sros:ipv4-unicast-address;
+                        description "BFD destination address";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // container ipv4
+
+                container ipv6 {
+                    description "Enter the ipv6 context";
+
+                    leaf bfd-on-distributing-only {
+                        type boolean;
+                        default "false";
+                        description "Restrict micro-BFD sessions to links in LACP state distributing";
+                    }
+
+                    leaf max-admin-down-time {
+                        type union {
+                            type int32 {
+                                range "0..3600";
+                            }
+                            type enumeration {
+                                enum "infinite"                     { value -1; }
+                            }
+                        }
+                        units "seconds";
+                        default "0";
+                        description "Maximum time to behave as if the micro-BFD session was up while the remote end is down";
+                    }
+
+                    leaf max-setup-time {
+                        type union {
+                            type int32 {
+                                range "0..60000";
+                            }
+                            type enumeration {
+                                enum "infinite"                     { value -1; }
+                            }
+                        }
+                        units "milliseconds";
+                        default "infinite";
+                        description "Maximum time to behave as if the micro-BFD session was up while it is actually still being set up";
+                    }
+
+                    leaf multiplier {
+                        type uint32 {
+                            range "3..20";
+                        }
+                        default "3";
+                        description "Number of BFD messages to miss before the micro-BFD session goes down";
+                    }
+
+                    leaf receive-interval {
+                        type uint32 {
+                            range "10..100000";
+                        }
+                        units "milliseconds";
+                        default "100";
+                        description "Receive timer for micro-BFD session over the associated LAG links";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of micro-BFD sessions for this address family";
+                    }
+
+                    leaf transmit-interval {
+                        type uint32 {
+                            range "10..100000";
+                        }
+                        units "milliseconds";
+                        default "100";
+                        description "Transmit timer for micro-BFD session over the associated LAG links";
+                    }
+
+                    leaf local-ip-address {
+                        type types-sros:ipv6-unicast-address;
+                        description "BFD source address";
+                    }
+
+                    leaf remote-ip-address {
+                        type types-sros:ipv6-unicast-address;
+                        description "BFD destination address";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // container ipv6
+
+            } // container bfd-liveness
+
+            container eth-cfm {
+                description "Enter the eth-cfm context";
+
+                list mep {
+                    key "md-admin-name ma-admin-name mep-id";
+                    description "Enter the mep list instance";
+
+                    leaf md-admin-name {
+                        type leafref {
+                            path "../../../../eth-cfm/domain/md-admin-name";
+                        }
+                        description "Admin-assigned maintenance domain index value";
+                    }
+
+                    leaf ma-admin-name {
+                        type leafref {
+                            path "../../../../eth-cfm/domain[md-admin-name=current()/../md-admin-name]/association/ma-admin-name";
+                        }
+                        description "Admin-assigned maintenance association index value";
+                    }
+
+                    leaf mep-id {
+                        type types-eth-cfm:mep-id-type;
+                        description "MEP identifier";
+                    }
+
+                    leaf vlan {
+                        type types-eth-cfm:vlan-id-or-none;
+                        sros-ext:immutable;
+                        default "none";
+                        description "Unique VLAN ID for a specific VLAN";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of the MEP";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf mac-address {
+                        type types-sros:mac-unicast-address-no-zero;
+                        description "MAC address for the MEP";
+                    }
+
+                    leaf low-priority-defect {
+                        type types-eth-cfm:lowest-alarm-priority;
+                        default "mac-rem-err-xcon";
+                        description "Lowest priority defect that is allowed to generate a fault alarm";
+                    }
+
+                    leaf ccm {
+                        type boolean;
+                        default "false";
+                        description "Generate CCM messages";
+                    }
+
+                    leaf ccm-ltm-priority {
+                        type types-eth-cfm:frame-priority;
+                        default "7";
+                        description "Priority of CCM and LTM messages transmitted by the MEP";
+                    }
+
+                    leaf ccm-padding-size {
+                        type uint32 {
+                            range "3..1500";
+                        }
+                        description "Number of octets of padding to insert in CCM packets";
+                    }
+
+                    leaf one-way-delay-threshold {
+                        type uint32 {
+                            range "0..600";
+                        }
+                        units "seconds";
+                        default "3";
+                        description "Threshold time limit for one-way delay test";
+                    }
+
+                    leaf collect-lmm-stats {
+                        type boolean;
+                        default "false";
+                        description "Collect statistics for loss measurement message tests";
+                    }
+
+                    leaf facility-fault {
+                        type boolean;
+                        default "false";
+                        description "Allow the facility MEP to generate a network action";
+                    }
+
+                    leaf-list ccm-tlv-ignore {
+                        type types-eth-cfm:ccm-tlv-ignore-type;
+                        max-elements 2;
+                        description "TLV to ignore on reception";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container alarm-notification {
+                        description "Enter the alarm-notification context";
+
+                        leaf fng-alarm-time {
+                            type int32 {
+                                range "250|500|1000";
+                            }
+                            units "centiseconds";
+                            description "Time that must expire before an FNG alarm is raised";
+                        }
+
+                        leaf fng-reset-time {
+                            type int32 {
+                                range "250|500|1000";
+                            }
+                            units "centiseconds";
+                            description "Time that must expire before an FNG alarm is reset";
+                        }
+
+                    } // container alarm-notification
+
+                    container ais {
+                        presence "Enter the 'ais' context";
+                        description "Enable the ais context";
+
+                        leaf-list client-meg-level {
+                            type uint32 {
+                                range "1..7";
+                            }
+                            max-elements 7;
+                            description "Client MEG level for AIS message generation";
+                        }
+
+                        leaf interface-support {
+                            type boolean;
+                            default "false";
+                            description "Allow generation of AIS PDUs based on the associated endpoint state";
+                        }
+
+                        leaf interval {
+                            type uint32 {
+                                range "1|60";
+                            }
+                            units "seconds";
+                            default "1";
+                            description "Transmission interval for AIS messages";
+                        }
+
+                        leaf low-priority-defect {
+                            type enumeration {
+                                enum "all-def"                      { value 1; }
+                                enum "mac-rem-err-xcon"             { value 2; }
+                            }
+                            default "all-def";
+                            description "Lowest priority defect for MEP AIS generation";
+                        }
+
+                        leaf priority {
+                            type types-eth-cfm:frame-priority;
+                            default "7";
+                            description "Priority of AIS messages originated by the node";
+                        }
+
+                    } // container ais
+
+                    container csf {
+                        presence "Enter the 'csf' context";
+                        description "Enable the csf context";
+
+                        leaf multiplier {
+                            type decimal64 {
+                                range "0.0|2.0..30.0";
+                                fraction-digits 1;
+                            }
+                            default "3.5";
+                            description "Receive period multiplier to time out CSF";
+                        }
+
+                    } // container csf
+
+                    container eth-test {
+                        presence "Enter the 'eth-test' context";
+                        description "Enable the eth-test context";
+
+                        leaf bit-error-threshold {
+                            type uint32 {
+                                range "0..11840";
+                            }
+                            units "bit errors";
+                            default "1";
+                            description "Lowest priority defect allowed to generate fault alarm";
+                        }
+
+                        container test-pattern {
+                            description "Enter the test-pattern context";
+
+                            leaf pattern {
+                                type enumeration {
+                                    enum "all-zeros"                    { value 0; }
+                                    enum "all-ones"                     { value 1; }
+                                }
+                                default "all-zeros";
+                                description "Test pattern for ETH-test frames";
+                            }
+
+                            leaf crc-tlv {
+                                type boolean;
+                                default "false";
+                                description "Generate a CRC checksum";
+                            }
+
+                        } // container test-pattern
+
+                    } // container eth-test
+
+                    container grace {
+                        description "Enter the grace context";
+
+                        container eth-ed {
+                            description "Enter the eth-ed context";
+
+                            leaf max-rx-defect-window {
+                                type uint32 {
+                                    range "1..86400";
+                                }
+                                units "seconds";
+                                description "Maximum received ETH-ED window duration";
+                            }
+
+                            leaf priority {
+                                type int32 {
+                                    range "0..7";
+                                }
+                                description "Transmission priority for ETH-ED PDUs";
+                            }
+
+                            leaf rx-eth-ed {
+                                type boolean;
+                                default "true";
+                                description "Receive and process ETH-ED ITU-T Y.1731 PDUs on the MEP";
+                            }
+
+                            leaf tx-eth-ed {
+                                type boolean;
+                                default "false";
+                                description "Transmit ETH-ED PDUs from the MEP";
+                            }
+
+                        } // container eth-ed
+
+                        container eth-vsm-grace {
+                            description "Enter the eth-vsm-grace context";
+
+                            leaf rx-eth-vsm-grace {
+                                type boolean;
+                                default "true";
+                                description "Receive and process Nokia ETH-CFM Grace PDU on the MEP";
+                            }
+
+                            leaf tx-eth-vsm-grace {
+                                type boolean;
+                                default "true";
+                                description "Transmit ETH-ED PDUs from the MEP";
+                            }
+
+                        } // container eth-vsm-grace
+
+                    } // container grace
+
+                } // list mep
+
+            } // container eth-cfm
+
+            list port {
+                key "port-id";
+                description "Enter the port list instance";
+
+                leaf port-id {
+                    type leafref {
+                        path "../../../port/port-id";
+                    }
+                    description "Identifier to uniquely identify the port in the LAG";
+                }
+
+                leaf priority {
+                    type uint32 {
+                        range "1..65535";
+                    }
+                    default "32768";
+                    description "Priority of the port in the LAG";
+                }
+
+                leaf sub-group {
+                    type union {
+                        type uint32 {
+                            range "1..8";
+                        }
+                        type enumeration {
+                            enum "auto-iom"                     { value -2; }
+                            enum "auto-mda"                     { value -1; }
+                        }
+                    }
+                    sros-ext:immutable;
+                    default "1";
+                    description "Subgroup of the port in the LAG";
+                }
+
+                leaf hash-weight {
+                    type union {
+                        type uint32 {
+                            range "1..100000";
+                        }
+                        type enumeration {
+                            enum "port-speed"                   { value -1; }
+                        }
+                    }
+                    description "Flow hashing distribution between LAG ports";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+            } // list port
+
+            list link-map-profile {
+                key "link-map-profile-id";
+                description "Enter the link-map-profile list instance";
+
+                leaf link-map-profile-id {
+                    type int32 {
+                        range "1..64";
+                    }
+                    description "Link map profile to control LAG ports";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf failure-mode {
+                    type enumeration {
+                        enum "per-link-hash"                { value 1; }
+                        enum "discard"                      { value 2; }
+                    }
+                    default "per-link-hash";
+                    description "Failure mode of LAG link profile";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                list link {
+                    key "port-id";
+                    description "Enter the link list instance";
+
+                    leaf port-id {
+                        type leafref {
+                            path "../../../port/port-id";
+                        }
+                        description "Port associated with the link map profile";
+                    }
+
+                    leaf port-type {
+                        type enumeration {
+                            enum "primary"                      { value 1; }
+                            enum "secondary"                    { value 2; }
+                        }
+                        sros-ext:immutable;
+                        mandatory true;
+                        description "Type of the associated port for this entry";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // list link
+
+            } // list link-map-profile
+
+        } // list lag
+
+    } // grouping conf-lag
+
+}
