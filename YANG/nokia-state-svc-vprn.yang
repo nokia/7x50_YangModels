@@ -23,7 +23,6 @@ submodule nokia-state-svc-vprn {
     import nokia-types-services           { prefix "types-services"; }
     import nokia-types-sros               { prefix "types-sros"; }
     import nokia-types-subscriber-mgmt    { prefix "types-submgt"; }
-    import nokia-types-system             { prefix "types-system"; }
     import nokia-types-wlan               { prefix "types-wlan"; }
     import nokia-types-wlangw             { prefix "types-wlangw"; }
 
@@ -69,7 +68,7 @@ submodule nokia-state-svc-vprn {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2020-06-25";
+    revision "2020-10-16";
 
     grouping state-svc-vprn {
         list vprn {
@@ -12705,6 +12704,119 @@ submodule nokia-state-svc-vprn {
 
                     } // list host
 
+                    list session {
+                        key "id";
+                        description "Enter the session list instance";
+
+                        leaf id {
+                            type uint32;
+                            description "The unique identifier of this session.";
+                        }
+
+                        leaf state {
+                            type enumeration {
+                                enum "idle"                         { value 1; }
+                                enum "challenged"                   { value 2; }
+                                enum "authenticating"               { value 3; }
+                                enum "authenticated"                { value 4; }
+                                enum "established"                  { value 5; }
+                                enum "logging-out"                  { value 6; }
+                            }
+                            description "The state of the WPP session.";
+                        }
+
+                        leaf serial-number {
+                            type uint32 {
+                                range "1..4294967295";
+                            }
+                            description "The serial number of the WPP session.";
+                        }
+
+                        leaf request-id {
+                            type uint32 {
+                                range "1..4294967295";
+                            }
+                            description "The request-id of the WPP session.";
+                        }
+
+                        leaf remote-port {
+                            type inet:port-number;
+                            description "The UDP source port used by the portal while sending a message for this session.";
+                        }
+
+                        leaf local-address {
+                            type types-sros:ipv4-unicast-address;
+                            description "The destination address used by the portal while sending a message for this session.";
+                        }
+
+                        leaf user-name {
+                            type types-sros:display-string;
+                            description "The WPP user name of this WPP session.";
+                        }
+
+                        leaf service {
+                            type types-services:service-name;
+                            description "The service to which the WPP session belongs.";
+                        }
+
+                        leaf mac-address {
+                            type yang:mac-address;
+                            description "The mac-address of the WPP session.";
+                        }
+
+                        leaf is-triggered {
+                            type boolean;
+                            description "True if the creation of the session was triggered by the portal, false otherwise.";
+                        }
+
+                        leaf track-srrp-instance {
+                            type uint32;
+                            description
+                                "The SRRP instance whose state is tracked by this WPP session to determine if
+                                 it is on the MCS master or backup node.";
+                        }
+
+                        leaf is-mcs-backup {
+                            type boolean;
+                            description "True if the WPP session is on the MCS backup node, false otherwise.";
+                        }
+
+                        leaf client-address {
+                            type types-sros:ip-address;
+                            description "The source address the client used to contact the WPP portal.";
+                        }
+
+                        container ipoe-session {
+                            description "Enter the ipoe-session context";
+
+                            leaf sap-id {
+                                type types-sros:sap;
+                                description "Indicates the SAP used by this session.";
+                            }
+
+                            leaf mac-address {
+                                type yang:mac-address;
+                                description "Indicates the MAC address of this session.";
+                            }
+
+                            leaf remote-id {
+                                type binary {
+                                    length "0..256";
+                                }
+                                description "Indicates the value of the remote-id sub-option.";
+                            }
+
+                            leaf circuit-id {
+                                type binary {
+                                    length "0..256";
+                                }
+                                description "Indicates the value of the circuit-id sub-option.";
+                            }
+
+                        } // container ipoe-session
+
+                    } // list session
+
                 } // list portal
 
                 list statistics {
@@ -12756,6 +12868,41 @@ submodule nokia-state-svc-vprn {
                 }
 
             } // container mvpn
+
+            container bgp-evpn {
+                description "Enter the bgp-evpn context";
+
+                list mpls {
+                    key "bgp-instance";
+                    description "Enter the mpls list instance";
+
+                    leaf bgp-instance {
+                        type int32 {
+                            range "1";
+                        }
+                        description "BGP instance ID";
+                    }
+
+                    leaf oper-route-distinguisher {
+                        type types-services:vprn-bgp-evpn-mpls-rd;
+                        description "The route-distinguisher value that is currently in use by the system for this service.";
+                    }
+
+                    leaf oper-rd-type {
+                        type enumeration {
+                            enum "none"                         { value 0; }
+                            enum "configured"                   { value 1; }
+                            enum "derived-vpls"                 { value 2; }
+                            enum "derived-evi"                  { value 3; }
+                            enum "auto"                         { value 4; }
+                            enum "default"                      { value 5; }
+                        }
+                        description "The type of route-distinguisher that is currently in use by the system for this service.";
+                    }
+
+                } // list mpls
+
+            } // container bgp-evpn
 
             container aaa {
                 description "Enter the aaa context";
@@ -14311,6 +14458,7 @@ submodule nokia-state-svc-vprn {
                 }
 
                 leaf if-oper-status {
+                    status deprecated;
                     type enumeration {
                         enum "up"                           { value 1; }
                         enum "down"                         { value 2; }
@@ -14363,6 +14511,116 @@ submodule nokia-state-svc-vprn {
                     } // container ipv6
 
                 } // container hold-time
+
+                container ping-template {
+                    description "Enter the ping-template context";
+
+                    leaf dscp {
+                        type types-qos:dscp-name;
+                        description "The DSCP value used in the outgoing ping packet";
+                    }
+
+                    leaf dot1p {
+                        type types-qos:dot1p-priority;
+                        description "The dot1p value used in the Ethernet header of the outgoing ping packet";
+                    }
+
+                    leaf interval {
+                        type uint32 {
+                            range "1..60";
+                        }
+                        units "seconds";
+                        description "The ping interval";
+                    }
+
+                    leaf timeout {
+                        type uint32 {
+                            range "1..60";
+                        }
+                        units "seconds";
+                        description "The ping timeout";
+                    }
+
+                    leaf failure-threshold {
+                        type uint32 {
+                            range "1..10";
+                        }
+                        description "The number of consecutive failed ping attempts needed to declare the interconnectivity down";
+                    }
+
+                    leaf fail-counter {
+                        type yang:counter32;
+                        description "The number of consecutive failed ping attempts while interconnectivity is up";
+                    }
+
+                    leaf reactivation-interval {
+                        type uint32 {
+                            range "1..60";
+                        }
+                        units "seconds";
+                        description "The ping reactivation interval";
+                    }
+
+                    leaf reactivation-failure-threshold {
+                        type uint32 {
+                            range "0..10";
+                        }
+                        description "The number of consecutive failures without previous successes";
+                    }
+
+                    leaf reactivation-timeout {
+                        type uint32 {
+                            range "1..60";
+                        }
+                        units "seconds";
+                        description "The ping reactivation timeout";
+                    }
+
+                    leaf reactivation-threshold {
+                        type uint32 {
+                            range "1..10";
+                        }
+                        description "The number of consecutive successful ping attempts needed to declare the interconnectivity up";
+                    }
+
+                    leaf pass-counter {
+                        type yang:counter32;
+                        description "The number of consecutive successful ping attempts while interconnectivity is down";
+                    }
+
+                    leaf size {
+                        type uint32 {
+                            range "12..9786";
+                        }
+                        units "octets";
+                        description "The size of the Data (i.e. padding) field of the outgoing ICMP Echo packet";
+                    }
+
+                    leaf ttl {
+                        type uint32 {
+                            range "1..255";
+                        }
+                        description "The TTL value used in the outgoing ping packet";
+                    }
+
+                    leaf current-interval {
+                        type enumeration {
+                            enum "interval"                     { value 0; }
+                            enum "reactivation"                 { value 1; }
+                        }
+                        description "The ping template current interval";
+                    }
+
+                    leaf current-state {
+                        type enumeration {
+                            enum "operational"                  { value 0; }
+                            enum "recovering"                   { value 1; }
+                            enum "failed"                       { value 2; }
+                        }
+                        description "The ping template current state";
+                    }
+
+                } // container ping-template
 
                 container ipv4 {
                     description "Enter the ipv4 context";
@@ -17201,6 +17459,107 @@ submodule nokia-state-svc-vprn {
                                         type types-qos:egress-queue-id;
                                         description "The unique identifier for the queue.";
                                     }
+
+                                    container queue-depth {
+                                        description "Enter the queue-depth context";
+
+                                        leaf elapsed-time {
+                                            type types-sros:time-interval;
+                                            description "Indicated the elapsed time.";
+                                        }
+
+                                        leaf last-violation {
+                                            type yang:date-and-time;
+                                            description "Indicates the last violation time.";
+                                        }
+
+                                        leaf depth-0-to-10-percent {
+                                            type decimal64 {
+                                                fraction-digits 2;
+                                            }
+                                            description "Indicated the depth 0 to 10 percent.";
+                                        }
+
+                                        leaf depth-11-to-20-percent {
+                                            type decimal64 {
+                                                fraction-digits 2;
+                                            }
+                                            description "Indicated the depth 0 to 20 percent.";
+                                        }
+
+                                        leaf depth-21-to-30-percent {
+                                            type decimal64 {
+                                                fraction-digits 2;
+                                            }
+                                            description "Indicated the depth 0 to 30 percent.";
+                                        }
+
+                                        leaf depth-31-to-40-percent {
+                                            type decimal64 {
+                                                fraction-digits 2;
+                                            }
+                                            description "Indicated the depth 0 to 40 percent.";
+                                        }
+
+                                        leaf depth-41-to-50-percent {
+                                            type decimal64 {
+                                                fraction-digits 2;
+                                            }
+                                            description "Indicated the depth 0 to 50 percent.";
+                                        }
+
+                                        leaf depth-51-to-60-percent {
+                                            type decimal64 {
+                                                fraction-digits 2;
+                                            }
+                                            description "Indicated the depth 0 to 60 percent.";
+                                        }
+
+                                        leaf depth-61-to-70-percent {
+                                            type decimal64 {
+                                                fraction-digits 2;
+                                            }
+                                            description "Indicated the depth 0 to 70 percent.";
+                                        }
+
+                                        leaf depth-71-to-80-percent {
+                                            type decimal64 {
+                                                fraction-digits 2;
+                                            }
+                                            description "Indicated the depth 0 to 80 percent.";
+                                        }
+
+                                        leaf depth-81-to-90-percent {
+                                            type decimal64 {
+                                                fraction-digits 2;
+                                            }
+                                            description "Indicated the depth 0 to 90 percent.";
+                                        }
+
+                                        leaf depth-91-to-100-percent {
+                                            type decimal64 {
+                                                fraction-digits 2;
+                                            }
+                                            description "Indicated the depth 0 to 100 percent.";
+                                        }
+
+                                        leaf total-threshold-violations {
+                                            type yang:counter32;
+                                            description "Indicates the total threshold violations.";
+                                        }
+
+                                        leaf high-water-mark-polling-interval {
+                                            type types-sros:time-duration;
+                                            units "microseconds";
+                                            description "Indicates the high water mark polling interval.";
+                                        }
+
+                                        leaf queue-polling-interval {
+                                            type types-sros:time-interval;
+                                            description "Indicates the queue polling interval.";
+                                        }
+
+                                    } // container queue-depth
 
                                     container statistics {
                                         description "Enter the statistics context";
@@ -21646,6 +22005,7 @@ submodule nokia-state-svc-vprn {
                 }
 
                 leaf if-oper-status {
+                    status deprecated;
                     type enumeration {
                         enum "up"                           { value 1; }
                         enum "down"                         { value 2; }
@@ -22196,16 +22556,6 @@ submodule nokia-state-svc-vprn {
                             description "The number of directed-broadcast octets dropped.";
                         }
 
-                        leaf in-ip-helper-redirects-packets {
-                            type yang:counter64;
-                            description "The number of packets redirected to the ip-helper gateway.";
-                        }
-
-                        leaf in-ip-helper-redirects-octets {
-                            type yang:counter64;
-                            description "The number of bytes redirected to the ip-helper gateway.";
-                        }
-
                     } // container statistics
 
                 } // container ipv4
@@ -22243,6 +22593,7 @@ submodule nokia-state-svc-vprn {
                 }
 
                 leaf if-oper-status {
+                    status deprecated;
                     type enumeration {
                         enum "up"                           { value 1; }
                         enum "down"                         { value 2; }
@@ -23547,7 +23898,7 @@ submodule nokia-state-svc-vprn {
                     }
 
                     leaf oper-status {
-                        type types-system:server-oper-status;
+                        type types-sros:up-down-status;
                         description "Indicates the operational status of the source IP entry.";
                     }
 
@@ -23570,7 +23921,7 @@ submodule nokia-state-svc-vprn {
                     }
 
                     leaf oper-status {
-                        type types-system:server-oper-status;
+                        type types-sros:up-down-status;
                         description "Indicates the operational status of the soure IPv6 entry.";
                     }
 
@@ -24378,6 +24729,11 @@ submodule nokia-state-svc-vprn {
                                         description "Received PCP requests containing the port-reservation option";
                                     }
 
+                                    leaf port-set {
+                                        type yang:counter64;
+                                        description "Received PCP requests containing the port-set option";
+                                    }
+
                                     leaf prefer-failure {
                                         type yang:counter64;
                                         description "Received requests containing the prefer-failure option";
@@ -24523,6 +24879,11 @@ submodule nokia-state-svc-vprn {
                                 leaf tx-error {
                                     type yang:counter64;
                                     description "Replies that could not be sent due to transmission errors";
+                                }
+
+                                leaf out-of-resources {
+                                    type yang:counter64;
+                                    description "Replies that could not be sent due to lack of resources";
                                 }
 
                             } // container dropped
@@ -24699,6 +25060,57 @@ submodule nokia-state-svc-vprn {
                                 }
 
                             } // container direct
+
+                            container evpn-iff {
+                                description "Enter the evpn-iff context";
+
+                                leaf active-routes {
+                                    type uint32;
+                                    description "Count of routes of a routing protocol active in the FIB.";
+                                }
+
+                                leaf available-routes {
+                                    type uint32;
+                                    description
+                                        "Count of routes of a routing protocol, both active in the FIB
+                                         and inactive in the RIB.";
+                                }
+
+                            } // container evpn-iff
+
+                            container evpn-ifl {
+                                description "Enter the evpn-ifl context";
+
+                                leaf active-routes {
+                                    type uint32;
+                                    description "Count of routes of a routing protocol active in the FIB.";
+                                }
+
+                                leaf available-routes {
+                                    type uint32;
+                                    description
+                                        "Count of routes of a routing protocol, both active in the FIB
+                                         and inactive in the RIB.";
+                                }
+
+                            } // container evpn-ifl
+
+                            container evpn-ifl-backup {
+                                description "Enter the evpn-ifl-backup context";
+
+                                leaf active-routes {
+                                    type uint32;
+                                    description "Count of routes of a routing protocol active in the FIB.";
+                                }
+
+                                leaf available-routes {
+                                    type uint32;
+                                    description
+                                        "Count of routes of a routing protocol, both active in the FIB
+                                         and inactive in the RIB.";
+                                }
+
+                            } // container evpn-ifl-backup
 
                             container host {
                                 description "Enter the host context";
@@ -25495,6 +25907,57 @@ submodule nokia-state-svc-vprn {
                                 }
 
                             } // container direct
+
+                            container evpn-iff {
+                                description "Enter the evpn-iff context";
+
+                                leaf active-routes {
+                                    type uint32;
+                                    description "Count of routes of a routing protocol active in the FIB.";
+                                }
+
+                                leaf available-routes {
+                                    type uint32;
+                                    description
+                                        "Count of routes of a routing protocol, both active in the FIB
+                                         and inactive in the RIB.";
+                                }
+
+                            } // container evpn-iff
+
+                            container evpn-ifl {
+                                description "Enter the evpn-ifl context";
+
+                                leaf active-routes {
+                                    type uint32;
+                                    description "Count of routes of a routing protocol active in the FIB.";
+                                }
+
+                                leaf available-routes {
+                                    type uint32;
+                                    description
+                                        "Count of routes of a routing protocol, both active in the FIB
+                                         and inactive in the RIB.";
+                                }
+
+                            } // container evpn-ifl
+
+                            container evpn-ifl-backup {
+                                description "Enter the evpn-ifl-backup context";
+
+                                leaf active-routes {
+                                    type uint32;
+                                    description "Count of routes of a routing protocol active in the FIB.";
+                                }
+
+                                leaf available-routes {
+                                    type uint32;
+                                    description
+                                        "Count of routes of a routing protocol, both active in the FIB
+                                         and inactive in the RIB.";
+                                }
+
+                            } // container evpn-ifl-backup
 
                             container host {
                                 description "Enter the host context";
@@ -27613,6 +28076,120 @@ submodule nokia-state-svc-vprn {
 
             container subscriber-management {
                 description "Enter the subscriber-management context";
+
+                container statistics {
+                    description "Enter the statistics context";
+
+                    leaf last-reset-peak-values {
+                        type yang:date-and-time;
+                        description "Timestamp of the last reset of the peak values";
+                    }
+
+                    list ipv4-hosts {
+                        key "counter";
+                        description "Enter the ipv4-hosts list instance";
+
+                        leaf counter {
+                            type types-submgt:submgt-statistics-ipv4-type;
+                            description "Type of submgt ipv4 hosts counter";
+                        }
+
+                        leaf current-value {
+                            type uint32;
+                            description "Current value of submgt counter";
+                        }
+
+                        leaf peak-value {
+                            type uint32;
+                            description "Peak value of submgt counter";
+                        }
+
+                        leaf peak-timestamp {
+                            type yang:date-and-time;
+                            description "Peak timestamp of submgt counter";
+                        }
+
+                    } // list ipv4-hosts
+
+                    list ipv6-hosts {
+                        key "counter";
+                        description "Enter the ipv6-hosts list instance";
+
+                        leaf counter {
+                            type types-submgt:submgt-statistics-ipv6-type;
+                            description "Type of submgt ipv6 hosts counter";
+                        }
+
+                        leaf current-value {
+                            type uint32;
+                            description "Current value of submgt counter";
+                        }
+
+                        leaf peak-value {
+                            type uint32;
+                            description "Peak value of submgt counter";
+                        }
+
+                        leaf peak-timestamp {
+                            type yang:date-and-time;
+                            description "Peak timestamp of submgt counter";
+                        }
+
+                    } // list ipv6-hosts
+
+                    list total-hosts {
+                        key "counter";
+                        description "Enter the total-hosts list instance";
+
+                        leaf counter {
+                            type types-submgt:submgt-statistics-total-type;
+                            description "Type of submgt total hosts counter";
+                        }
+
+                        leaf current-value {
+                            type uint32;
+                            description "Current value of submgt counter";
+                        }
+
+                        leaf peak-value {
+                            type uint32;
+                            description "Peak value of submgt counter";
+                        }
+
+                        leaf peak-timestamp {
+                            type yang:date-and-time;
+                            description "Peak timestamp of submgt counter";
+                        }
+
+                    } // list total-hosts
+
+                    list sessions {
+                        key "counter";
+                        description "Enter the sessions list instance";
+
+                        leaf counter {
+                            type types-submgt:submgt-statistics-session-type;
+                            description "Type of submgt sessions counter";
+                        }
+
+                        leaf current-value {
+                            type uint32;
+                            description "Current value of submgt counter";
+                        }
+
+                        leaf peak-value {
+                            type uint32;
+                            description "Peak value of submgt counter";
+                        }
+
+                        leaf peak-timestamp {
+                            type yang:date-and-time;
+                            description "Peak timestamp of submgt counter";
+                        }
+
+                    } // list sessions
+
+                } // container statistics
 
             } // container subscriber-management
 
