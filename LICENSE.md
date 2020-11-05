@@ -1,8 +1,5 @@
 # LICENSE
 
-Nokia YANG Data model to configure authentication, authorization and 
-accounting on SR OS based routers.
-
 Copyright 2016 Nokia. All rights reserved. Reproduction of this document is
 authorized on the condition that the foregoing copyright notice is included.
 
