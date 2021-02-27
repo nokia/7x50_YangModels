@@ -42,6 +42,7 @@ submodule nokia-conf-svc-vprn {
     include nokia-conf-redundancy;
     include nokia-conf-router;
     include nokia-conf-router-mpls;
+    include nokia-conf-router-segment-routing;
     include nokia-conf-routing-options;
     include nokia-conf-service;
     include nokia-conf-submgt-gtp;
@@ -67,7 +68,7 @@ submodule nokia-conf-svc-vprn {
     include nokia-conf-test-oam;
     include nokia-conf-vrrp;
 
-    sros-ext:sros-major-release "rel20";
+    sros-ext:sros-major-release "rel21";
 
     organization "Nokia";
 
@@ -94,7 +95,7 @@ submodule nokia-conf-svc-vprn {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2021-01-15";
+    revision "2021-01-21";
 
     grouping conf-svc-vprn {
         list vprn {
@@ -103,7 +104,7 @@ submodule nokia-conf-svc-vprn {
 
             leaf service-name {
                 type types-services:service-name;
-                description "Service name";
+                description "Administrative service name";
             }
 
             leaf service-id {
@@ -188,11 +189,6 @@ submodule nokia-conf-svc-vprn {
                 description "Allow weighted load-balancing";
             }
 
-            leaf route-distinguisher {
-                type types-services:vpn-route-distinguisher-or-auto-rd;
-                description "Route distinguisher";
-            }
-
             leaf label-mode {
                 type enumeration {
                     enum "vrf"                          { value 1; }
@@ -275,6 +271,12 @@ submodule nokia-conf-svc-vprn {
                 description "Exclude a configuration group at this level";
             }
 
+            leaf route-distinguisher {
+                status obsolete;
+                type types-services:vpn-route-distinguisher-or-auto-rd;
+                description "Route distinguisher";
+            }
+
             container nat {
                 presence "Enter the 'nat' context";
                 description "Enable the nat context";
@@ -338,7 +340,7 @@ submodule nokia-conf-svc-vprn {
 
                             list destination-prefix {
                                 key "ip-prefix-length";
-                                max-elements 1024;
+                                max-elements 6144;
                                 description "Enter the destination-prefix list instance";
 
                                 leaf ip-prefix-length {
@@ -1467,6 +1469,38 @@ submodule nokia-conf-svc-vprn {
 
                 } // container s11
 
+                container upf-data-endpoint {
+                    presence "Enter the 'upf-data-endpoint' context";
+                    description "Enable the upf-data-endpoint context";
+
+                    leaf interface {
+                        type leafref {
+                            path "../../../../vprn[service-name=current()/../../../service-name]/interface/interface-name";
+                        }
+                        mandatory true;
+                        description "The interface on which the data endpoint gtp packets are enabled.";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // container upf-data-endpoint
+
                 container uplink {
                     presence "Enter the 'uplink' context";
                     description "Enable the uplink context";
@@ -1721,19 +1755,19 @@ submodule nokia-conf-svc-vprn {
                     leaf cdn-invalid-dst {
                         type boolean;
                         default "false";
-                        description "Enable/disable replacing result code 'Invalid destination' by result code 'General error' and general error code 'Insufficient resources to handle this operation now'.";
+                        description "Replace result code with general error code";
                     }
 
                     leaf cdn-permanent-no-facilities {
                         type boolean;
                         default "false";
-                        description "Enable/disable replacing result code 'Call failed due to lack of appropriate facilities being available (permanent condition)''Invalid destination' by result code 'General error' and general error code 'Insufficient resources to handle this operation now'.";
+                        description "Replace result code with general error";
                     }
 
                     leaf cdn-temporary-no-facilities {
                         type boolean;
                         default "false";
-                        description "Enable/disable replacing result code 'Call failed due to lack of appropriate facilities being available (temporary condition)' by result code 'General error' and general error code 'Insufficient resources to handle this operation now'.";
+                        description "Replace result code with general error";
                     }
 
                 } // container replace-result-code
@@ -1779,7 +1813,7 @@ submodule nokia-conf-svc-vprn {
                         }
                         units "minutes";
                         default "5";
-                        description "Maximum time that a tunnel or peer can remain in the tunnel selection blacklist";
+                        description "Max time that a tunnel or peer can remain in denylist";
                     }
 
                     leaf max-list-length {
@@ -1792,7 +1826,7 @@ submodule nokia-conf-svc-vprn {
                             }
                         }
                         default "infinite";
-                        description "Tunnels or peers in the blacklist";
+                        description "Tunnels or peers in the denylist";
                     }
 
                     leaf timeout-action {
@@ -1801,7 +1835,7 @@ submodule nokia-conf-svc-vprn {
                             enum "try-one-session"              { value 1; }
                         }
                         default "remove-from-blacklist";
-                        description "Action when a tunnel or peer remained in the blacklist for maximum time";
+                        description "Action when a tunnel or peer exceeds time in denylist";
                     }
 
                     container add-tunnel-on {
@@ -1810,49 +1844,49 @@ submodule nokia-conf-svc-vprn {
                         leaf address-change-timeout {
                             type boolean;
                             default "false";
-                            description "Add to the blacklist in case of an address change timeout.";
+                            description "Enable a timed-out tunnel to be forced to the denylist";
                         }
 
                         leaf cdn-err-code {
                             type boolean;
                             default "false";
-                            description "Add to blacklist if a CDN is received with code: General error";
+                            description "Add to deny if CDN is received with code: General error";
                         }
 
                         leaf cdn-invalid-dst {
                             type boolean;
                             default "false";
-                            description "Add to the blacklist in case a CDN is received with result code 'Invalid destination'.";
+                            description "Force tunnel to the denylist in case of Result Codes 6";
                         }
 
                         leaf cdn-permanent-no-facilities {
                             type boolean;
                             default "false";
-                            description "Add to the blacklist in case a CDN is received with result code 'Call failed due to lack of appropriate facilities being available (permanent condition)'.";
+                            description "Force tunnel to the denylist in case of Result Codes 5";
                         }
 
                         leaf cdn-temporary-no-facilities {
                             type boolean;
                             default "false";
-                            description "Add to the blacklist in case a CDN is received with result code 'Call failed due to lack of appropriate facilities being available (temporary condition)'.";
+                            description "Force tunnel to the denylist in case of Result Codes 4";
                         }
 
                         leaf stop-ccn-err-code {
                             type boolean;
                             default "false";
-                            description "Add to blacklist if a StopCNN is received with code: General error";
+                            description "Add to denylist if received with general error code";
                         }
 
                         leaf stop-ccn-other {
                             type boolean;
                             default "false";
-                            description "Add to blacklist if a StopCNN is received with code: other than general error";
+                            description "Add to denylist if StopCCN received with general error";
                         }
 
                         leaf tx-cdn-not-established-in-time {
                             type boolean;
                             default "false";
-                            description "Add to blacklist if CDN transmitted with code: Call not established within time allotted by LAC";
+                            description "Add to denylist if CDN transmitted with result code";
                         }
 
                     } // container add-tunnel-on
@@ -2301,7 +2335,7 @@ submodule nokia-conf-svc-vprn {
 
                                 leaf service-name {
                                     type types-services:service-name;
-                                    description "Service name";
+                                    description "Administrative service name";
                                 }
 
                             } // container default-group-interface
@@ -2682,7 +2716,7 @@ submodule nokia-conf-svc-vprn {
 
                                     leaf service-name {
                                         type types-services:service-name;
-                                        description "Service name";
+                                        description "Administrative service name";
                                     }
 
                                 } // container default-group-interface
@@ -5671,25 +5705,32 @@ submodule nokia-conf-svc-vprn {
             } // container pim
 
             container vrf-target {
+                status obsolete;
                 description "Enter the vrf-target context";
 
                 choice vrf-target {
+                    status obsolete;
                     case vrf-both-target {
+                        status obsolete;
 
                         leaf community {
+                            status obsolete;
                             type types-services:route-target;
                             description "Extended BGP community";
                         }
 
                     }
                     case vrf-ovr-target {
+                        status obsolete;
 
                         leaf import-community {
+                            status obsolete;
                             type types-services:route-target;
                             description "Communities accepted from remote PE neighbors";
                         }
 
                         leaf export-community {
+                            status obsolete;
                             type types-services:route-target;
                             description "Communities to be sent to remote PE neighbors";
                         }
@@ -5719,16 +5760,13 @@ submodule nokia-conf-svc-vprn {
             } // container bgp-shared-queue
 
             container vrf-import {
+                status obsolete;
                 presence "Enter the 'vrf-import' context";
                 description "Enable the vrf-import context";
 
                 leaf-list policy {
-                    type string {
-                        length "1..255";
-                        pattern "(.{1,64})|(.*[\\[].*)" {
-                            error-message "Policy name too long or expression not valid";
-                        }
-                    }
+                    status obsolete;
+                    type types-sros:vrf-policy;
                     min-elements 1;
                     max-elements 15;
                     ordered-by user;
@@ -5736,6 +5774,7 @@ submodule nokia-conf-svc-vprn {
                 }
 
                 leaf-list apply-groups {
+                    status obsolete;
                     type leafref {
                         path "../../../../groups/group/name";
                     }
@@ -5745,6 +5784,7 @@ submodule nokia-conf-svc-vprn {
                 }
 
                 leaf-list apply-groups-exclude {
+                    status obsolete;
                     type leafref {
                         path "../../../../groups/group/name";
                     }
@@ -5756,10 +5796,12 @@ submodule nokia-conf-svc-vprn {
             } // container vrf-import
 
             container vrf-export {
+                status obsolete;
                 presence "Enter the 'vrf-export' context";
                 description "Enable the vrf-export context";
 
                 leaf-list policy {
+                    status obsolete;
                     type types-sros:vrf-policy;
                     min-elements 1;
                     max-elements 15;
@@ -5768,6 +5810,7 @@ submodule nokia-conf-svc-vprn {
                 }
 
                 leaf-list apply-groups {
+                    status obsolete;
                     type leafref {
                         path "../../../../groups/group/name";
                     }
@@ -5777,6 +5820,7 @@ submodule nokia-conf-svc-vprn {
                 }
 
                 leaf-list apply-groups-exclude {
+                    status obsolete;
                     type leafref {
                         path "../../../../groups/group/name";
                     }
@@ -6139,11 +6183,9 @@ submodule nokia-conf-svc-vprn {
                         case policy {
 
                             leaf-list policy {
-                                type string {
-                                    length "1..255";
-                                    pattern "(.{1,64})|(.*[\\[].*)" {
-                                        error-message "Policy name too long or expression not valid.";
-                                    }
+                                type union {
+                                    type types-sros:policy-expr-string;
+                                    type string;
                                 }
                                 min-elements 1;
                                 max-elements 15;
@@ -6171,11 +6213,9 @@ submodule nokia-conf-svc-vprn {
                         case policy {
 
                             leaf-list policy {
-                                type string {
-                                    length "1..255";
-                                    pattern "(.{1,64})|(.*[\\[].*)" {
-                                        error-message "Policy name too long or expression not valid.";
-                                    }
+                                type union {
+                                    type types-sros:policy-expr-string;
+                                    type string;
                                 }
                                 min-elements 1;
                                 max-elements 15;
@@ -6899,13 +6939,13 @@ submodule nokia-conf-svc-vprn {
                         leaf mpls {
                             type boolean;
                             default "true";
-                            description "Enable MPLS encapsulation for the service";
+                            description "Enable MPLS encapsulation";
                         }
 
                         leaf mpls-over-udp {
                             type boolean;
                             default "false";
-                            description "Enable MPLS over UDP encapsulation for the service";
+                            description "Enable MPLS over UDP encapsulation";
                         }
 
                     } // container send-tunnel-encap
@@ -6915,7 +6955,10 @@ submodule nokia-conf-svc-vprn {
                         description "Enable the vrf-export context";
 
                         leaf-list policy {
-                            type types-sros:vrf-policy;
+                            type union {
+                                type types-sros:policy-expr-string;
+                                type string;
+                            }
                             min-elements 1;
                             max-elements 15;
                             ordered-by user;
@@ -6947,7 +6990,10 @@ submodule nokia-conf-svc-vprn {
                         description "Enable the vrf-import context";
 
                         leaf-list policy {
-                            type types-sros:vrf-policy;
+                            type union {
+                                type types-sros:policy-expr-string;
+                                type string;
+                            }
                             min-elements 1;
                             max-elements 15;
                             ordered-by user;
@@ -6995,7 +7041,7 @@ submodule nokia-conf-svc-vprn {
 
                                 leaf export-community {
                                     type types-services:route-target;
-                                    description "Communities to be sent to remote PE neighbors";
+                                    description "Communities sent to remote PE neighbors";
                                 }
 
                             }
@@ -7105,6 +7151,255 @@ submodule nokia-conf-svc-vprn {
                 } // list mpls
 
             } // container bgp-evpn
+
+            container bgp-ipvpn {
+                description "Enter the bgp-ipvpn context";
+
+                container mpls {
+                    description "Enter the mpls context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of BGP-IPVPN MPLS";
+                    }
+
+                    leaf route-distinguisher {
+                        type types-services:vprn-bgp-evpn-mpls-rd;
+                        description "Route distinguisher";
+                    }
+
+                    container vrf-target {
+                        description "Enter the vrf-target context";
+
+                        choice vrf-target {
+                            case vrf-both-target {
+
+                                leaf community {
+                                    type types-services:route-target;
+                                    description "Extended BGP community";
+                                }
+
+                            }
+                            case vrf-ovr-target {
+
+                                leaf import-community {
+                                    type types-services:route-target;
+                                    description "Communities accepted from remote PE neighbors";
+                                }
+
+                                leaf export-community {
+                                    type types-services:route-target;
+                                    description "Communities sent to remote PE neighbors";
+                                }
+
+                            }
+                        }
+                    } // container vrf-target
+
+                    container vrf-import {
+                        presence "Enter the 'vrf-import' context";
+                        description "Enable the vrf-import context";
+
+                        leaf-list policy {
+                            type union {
+                                type types-sros:policy-expr-string;
+                                type string;
+                            }
+                            min-elements 1;
+                            max-elements 15;
+                            ordered-by user;
+                            description "Policy name";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // container vrf-import
+
+                    container vrf-export {
+                        presence "Enter the 'vrf-export' context";
+                        description "Enable the vrf-export context";
+
+                        leaf-list policy {
+                            type union {
+                                type types-sros:policy-expr-string;
+                                type string;
+                            }
+                            min-elements 1;
+                            max-elements 15;
+                            ordered-by user;
+                            description "Policy name";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // container vrf-export
+
+                    container auto-bind-tunnel {
+                        description "Enter the auto-bind-tunnel context";
+
+                        leaf ecmp {
+                            type types-router:mpls-ecmp;
+                            default "1";
+                            description "Maximum ECMP routes allowed";
+                        }
+
+                        leaf weighted-ecmp {
+                            type boolean;
+                            default "false";
+                            description "Allow weighted load-balancing";
+                        }
+
+                        leaf resolution {
+                            type types-services:resolve-status;
+                            default "none";
+                            description "Resolution method for tunnel selection";
+                        }
+
+                        leaf enforce-strict-tunnel-tagging {
+                            type boolean;
+                            default "false";
+                            description "Allow enforcement of strict tunnel tagging";
+                        }
+
+                        leaf allow-flex-algo-fallback {
+                            type boolean;
+                            default "false";
+                            description "Enable flexible algorithm fallback";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container resolution-filter {
+                            description "Enter the resolution-filter context";
+
+                            leaf bgp {
+                                type boolean;
+                                default "true";
+                                description "Use BGP tunneling for next-hop resolution";
+                            }
+
+                            leaf gre {
+                                type boolean;
+                                default "false";
+                                description "Use GRE tunneling for next-hop resolution";
+                            }
+
+                            leaf ldp {
+                                type boolean;
+                                default "false";
+                                description "Use LDP tunneling for next-hop resolution";
+                            }
+
+                            leaf rsvp {
+                                type boolean;
+                                default "false";
+                                description "Use RSVP tunneling for next-hop resolution";
+                            }
+
+                            leaf sr-isis {
+                                type boolean;
+                                default "false";
+                                description "Use IS-IS SR tunneling for next-hop resolution";
+                            }
+
+                            leaf sr-ospf {
+                                type boolean;
+                                default "false";
+                                description "Use OSPF SR tunneling for next-hop resolution";
+                            }
+
+                            leaf sr-te {
+                                type boolean;
+                                default "false";
+                                description "Use SR-TE tunneling for next-hop resolution";
+                            }
+
+                            leaf udp {
+                                type boolean;
+                                default "false";
+                                description "Use MPLS over UDP tunneling for next-hop resolution";
+                            }
+
+                            leaf rib-api {
+                                type boolean;
+                                default "false";
+                                description "Use RIB API gRPC service for next-hop resolution";
+                            }
+
+                            leaf mpls-fwd-policy {
+                                type boolean;
+                                default "false";
+                                description "Use MPLS forwarding policy for next-hop resolution";
+                            }
+
+                            leaf sr-policy {
+                                type boolean;
+                                default "false";
+                                description "Use SR policies for next-hop resolution";
+                            }
+
+                            leaf sr-ospf3 {
+                                type boolean;
+                                default "false";
+                                description "Use OSPFv3 SR tunneling for next-hop resolution";
+                            }
+
+                        } // container resolution-filter
+
+                    } // container auto-bind-tunnel
+
+                } // container mpls
+
+            } // container bgp-ipvpn
 
             container aaa {
                 description "Enter the aaa context";
@@ -7699,39 +7994,46 @@ submodule nokia-conf-svc-vprn {
             } // container wlan-gw
 
             container auto-bind-tunnel {
+                status obsolete;
                 description "Enter the auto-bind-tunnel context";
 
                 leaf ecmp {
+                    status obsolete;
                     type types-router:mpls-ecmp;
                     default "1";
-                    description "Maximum number of tunnels that can be used as ECMP next-hops for the VPRN";
+                    description "Maximum ECMP routes allowed";
                 }
 
                 leaf weighted-ecmp {
+                    status obsolete;
                     type boolean;
                     default "false";
                     description "Allow weighted load-balancing";
                 }
 
                 leaf resolution {
+                    status obsolete;
                     type types-services:resolve-status;
                     default "none";
                     description "Resolution method for tunnel selection";
                 }
 
                 leaf enforce-strict-tunnel-tagging {
+                    status obsolete;
                     type boolean;
                     default "false";
-                    description "Consider only LSPs marked with an admin-tag for next-hop resolution";
+                    description "Allow enforcement of strict tunnel tagging";
                 }
 
                 leaf allow-flex-algo-fallback {
+                    status obsolete;
                     type boolean;
                     default "false";
                     description "Enable flexible algorithm fallback";
                 }
 
                 leaf-list apply-groups {
+                    status obsolete;
                     type leafref {
                         path "../../../../groups/group/name";
                     }
@@ -7741,6 +8043,7 @@ submodule nokia-conf-svc-vprn {
                 }
 
                 leaf-list apply-groups-exclude {
+                    status obsolete;
                     type leafref {
                         path "../../../../groups/group/name";
                     }
@@ -7750,78 +8053,91 @@ submodule nokia-conf-svc-vprn {
                 }
 
                 container resolution-filter {
+                    status obsolete;
                     description "Enter the resolution-filter context";
 
                     leaf bgp {
+                        status obsolete;
                         type boolean;
                         default "true";
-                        description "Set BGP type for auto bind tunnel";
+                        description "Use BGP tunneling for next-hop resolution";
                     }
 
                     leaf gre {
+                        status obsolete;
                         type boolean;
                         default "false";
-                        description "Enable/disable setting GRE type for auto-bind-tunnel";
+                        description "Use GRE tunneling for next-hop resolution";
                     }
 
                     leaf ldp {
+                        status obsolete;
                         type boolean;
                         default "false";
-                        description "Enable/disable setting LDP type for auto-bind-tunnel";
+                        description "Use LDP tunneling for next-hop resolution";
                     }
 
                     leaf rsvp {
+                        status obsolete;
                         type boolean;
                         default "false";
-                        description "Enable/disable setting RSVP-TE type for auto-bind-tunnel";
+                        description "Use RSVP tunneling for next-hop resolution";
                     }
 
                     leaf sr-isis {
+                        status obsolete;
                         type boolean;
                         default "false";
-                        description "Enable/disable setting SR-ISIS type for auto-bind-tunnel";
+                        description "Use IS-IS SR tunneling for next-hop resolution";
                     }
 
                     leaf sr-ospf {
+                        status obsolete;
                         type boolean;
                         default "false";
-                        description "Enable/disable setting SR-OSPF type for auto-bind-tunnel";
+                        description "Use OSPF SR tunneling for next-hop resolution";
                     }
 
                     leaf sr-te {
+                        status obsolete;
                         type boolean;
                         default "false";
-                        description "Enable/disable setting SR-TE type for auto-bind-tunnel";
+                        description "Use SR-TE tunneling for next-hop resolution";
                     }
 
                     leaf udp {
+                        status obsolete;
                         type boolean;
                         default "false";
-                        description "Set UDP type for auto-bind-tunnel";
+                        description "Use MPLS over UDP tunneling for next-hop resolution";
                     }
 
                     leaf rib-api {
+                        status obsolete;
                         type boolean;
                         default "false";
-                        description "Enable/disable setting RIB API type for auto-bind-tunnel";
+                        description "Use RIB API gRPC service for next-hop resolution";
                     }
 
                     leaf mpls-fwd-policy {
+                        status obsolete;
                         type boolean;
                         default "false";
-                        description "Enable/disable setting MPLS Forwarding Policy type for auto-bind-tunnel";
+                        description "Use MPLS forwarding policy for next-hop resolution";
                     }
 
                     leaf sr-policy {
+                        status obsolete;
                         type boolean;
                         default "false";
-                        description "Enable/disable setting SR Policy type for auto-bind-tunnel";
+                        description "Use SR policies for next-hop resolution";
                     }
 
                     leaf sr-ospf3 {
+                        status obsolete;
                         type boolean;
                         default "false";
-                        description "Use segment routing ospf3 for next hop resolution.";
+                        description "Use OSPFv3 SR tunneling for next-hop resolution";
                     }
 
                 } // container resolution-filter
@@ -7951,6 +8267,13 @@ submodule nokia-conf-svc-vprn {
                     description "Threshold for the global ASN in a received AS path";
                 }
 
+                leaf tcp-mss {
+                    type uint32 {
+                        range "384..9746";
+                    }
+                    description "TCP maximum segment size override";
+                }
+
                 leaf min-route-advertisement {
                     type int16 {
                         range "1..255";
@@ -8006,7 +8329,7 @@ submodule nokia-conf-svc-vprn {
                 leaf asn-4-byte {
                     type boolean;
                     default "true";
-                    description "Advertise the use of 4-byte ASNs";
+                    description "Advertise support for 4-byte ASNs";
                 }
 
                 leaf eibgp-loadbalance {
@@ -8059,7 +8382,7 @@ submodule nokia-conf-svc-vprn {
                 leaf advertise-inactive {
                     type boolean;
                     default "false";
-                    description "Advertise an inactive BGP route to peers";
+                    description "Advertise inactive BGP routes to peers";
                 }
 
                 leaf authentication-keychain {
@@ -8097,7 +8420,7 @@ submodule nokia-conf-svc-vprn {
                     type uint32 {
                         range "1..8192";
                     }
-                    description "Maximum dynamic BGP sessions to accept from remote peer";
+                    description "Max dynamic BGP sessions to accept from remote peers";
                 }
 
                 leaf label-preference {
@@ -8109,7 +8432,9 @@ submodule nokia-conf-svc-vprn {
                 }
 
                 leaf peer-tracking-policy {
-                    type types-sros:named-item-64;
+                    type leafref {
+                        path "../../../../policy-options/policy-statement/name";
+                    }
                     description "Policy for BGP peer tracking on router instance";
                 }
 
@@ -8158,43 +8483,43 @@ submodule nokia-conf-svc-vprn {
                     leaf ipv4 {
                         type boolean;
                         default "true";
-                        description "Add support for the IPv4 address family";
+                        description "Advertise MP-BGP support for the IPv4 address family";
                     }
 
                     leaf ipv6 {
                         type boolean;
                         default "false";
-                        description "Add support for the IPv6 address family";
+                        description "Advertise MP-BGP support for the IPv6 address family";
                     }
 
                     leaf mcast-ipv4 {
                         type boolean;
                         default "false";
-                        description "Add support for the MCAST-IPv4 address family";
+                        description "Advertise support for the MCAST-IPv4 address family";
                     }
 
                     leaf flow-ipv4 {
                         type boolean;
                         default "false";
-                        description "Add support for the flowspec-IPv4 address family";
+                        description "Advertise support for the flowspec-IPv4 address family";
                     }
 
                     leaf flow-ipv6 {
                         type boolean;
                         default "false";
-                        description "Add support for the flowspec-IPv6 address family";
+                        description "Advertise support for the flowspec-IPv6 address family";
                     }
 
                     leaf mcast-ipv6 {
                         type boolean;
                         default "false";
-                        description "Add support for the MCAST-IPv6 address family";
+                        description "Advertise support for the MCAST-IPv6 address family";
                     }
 
                     leaf label-ipv4 {
                         type boolean;
                         default "false";
-                        description "Add support for the label-IPv4 address family";
+                        description "Advertise support for the label-IPv4 address family";
                     }
 
                 } // container family
@@ -8215,7 +8540,9 @@ submodule nokia-conf-svc-vprn {
                     }
 
                     leaf export-policy {
-                        type types-sros:named-item-64;
+                        type leafref {
+                            path "../../../../../policy-options/policy-statement/name";
+                        }
                         description "Export policy name";
                     }
 
@@ -8377,7 +8704,7 @@ submodule nokia-conf-svc-vprn {
                         leaf strict-as {
                             type boolean;
                             default "true";
-                            description "Compare MED attribute from same-neighbor AS routes only";
+                            description "Compare MED only for routes from same neighbor AS";
                         }
 
                     } // container always-compare-med
@@ -8611,11 +8938,9 @@ submodule nokia-conf-svc-vprn {
                     description "Enable the import context";
 
                     leaf-list policy {
-                        type string {
-                            length "1..255";
-                            pattern "(.{1,64})|(.*[\\[].*)" {
-                                error-message "Policy name too long or expression not valid";
-                            }
+                        type union {
+                            type types-sros:policy-expr-string;
+                            type string;
                         }
                         min-elements 1;
                         max-elements 15;
@@ -8648,11 +8973,9 @@ submodule nokia-conf-svc-vprn {
                     description "Enable the export context";
 
                     leaf-list policy {
-                        type string {
-                            length "1..255";
-                            pattern "(.{1,64})|(.*[\\[].*)" {
-                                error-message "Policy name too long or expression not valid";
-                            }
+                        type union {
+                            type types-sros:policy-expr-string;
+                            type string;
                         }
                         min-elements 1;
                         max-elements 15;
@@ -8830,11 +9153,13 @@ submodule nokia-conf-svc-vprn {
                     leaf use-bgp-routes {
                         type boolean;
                         default "false";
-                        description "Enable/Disable using BGP routes to resolve BGP nexthop.";
+                        description "Use BGP routes to resolve BGP next hops";
                     }
 
                     leaf policy {
-                        type types-sros:named-item-64;
+                        type leafref {
+                            path "../../../../../policy-options/policy-statement/name";
+                        }
                         description "Policy that filters routes for BGP next-hop resolution";
                     }
 
@@ -9010,7 +9335,9 @@ submodule nokia-conf-svc-vprn {
                             description "Enter the route-table-import context";
 
                             leaf policy-name {
-                                type types-sros:named-item-64;
+                                type leafref {
+                                    path "../../../../../../../policy-options/policy-statement/name";
+                                }
                                 description "Name of policy that controls route importation into RIB";
                             }
 
@@ -9038,11 +9365,9 @@ submodule nokia-conf-svc-vprn {
                             description "Enter the leak-import context";
 
                             leaf-list policy {
-                                type string {
-                                    length "1..255";
-                                    pattern "(.{1,64})|(.*[\\[].*)" {
-                                        error-message "Policy name too long or expression not valid";
-                                    }
+                                type union {
+                                    type types-sros:policy-expr-string;
+                                    type string;
                                 }
                                 max-elements 15;
                                 ordered-by user;
@@ -9078,7 +9403,9 @@ submodule nokia-conf-svc-vprn {
                             description "Enter the route-table-import context";
 
                             leaf policy-name {
-                                type types-sros:named-item-64;
+                                type leafref {
+                                    path "../../../../../../../policy-options/policy-statement/name";
+                                }
                                 description "Name of policy that controls route importation into RIB";
                             }
 
@@ -9106,11 +9433,9 @@ submodule nokia-conf-svc-vprn {
                             description "Enter the leak-import context";
 
                             leaf-list policy {
-                                type string {
-                                    length "1..255";
-                                    pattern "(.{1,64})|(.*[\\[].*)" {
-                                        error-message "Policy name too long or expression not valid";
-                                    }
+                                type union {
+                                    type types-sros:policy-expr-string;
+                                    type string;
                                 }
                                 max-elements 15;
                                 ordered-by user;
@@ -9146,7 +9471,9 @@ submodule nokia-conf-svc-vprn {
                             description "Enter the route-table-import context";
 
                             leaf policy-name {
-                                type types-sros:named-item-64;
+                                type leafref {
+                                    path "../../../../../../../policy-options/policy-statement/name";
+                                }
                                 description "Name of policy that controls route importation into RIB";
                             }
 
@@ -9174,11 +9501,9 @@ submodule nokia-conf-svc-vprn {
                             description "Enter the leak-import context";
 
                             leaf-list policy {
-                                type string {
-                                    length "1..255";
-                                    pattern "(.{1,64})|(.*[\\[].*)" {
-                                        error-message "Policy name too long or expression not valid";
-                                    }
+                                type union {
+                                    type types-sros:policy-expr-string;
+                                    type string;
                                 }
                                 max-elements 15;
                                 ordered-by user;
@@ -9271,6 +9596,18 @@ submodule nokia-conf-svc-vprn {
                             range "0..15";
                         }
                         description "Threshold for the global ASN in a received AS path";
+                    }
+
+                    leaf tcp-mss {
+                        type union {
+                            type uint32 {
+                                range "384..9746";
+                            }
+                            type enumeration {
+                                enum "ip-stack"                     { value 0; }
+                            }
+                        }
+                        description "TCP maximum segment size override";
                     }
 
                     leaf min-route-advertisement {
@@ -9498,37 +9835,37 @@ submodule nokia-conf-svc-vprn {
                         leaf ipv6 {
                             type boolean;
                             default "false";
-                            description "Add support for the IPv6 address family";
+                            description "Advertise MP-BGP support for the IPv6 address family";
                         }
 
                         leaf mcast-ipv4 {
                             type boolean;
                             default "false";
-                            description "Add support for the MCAST-IPv4 address family";
+                            description "Advertise support for the MCAST-IPv4 address family";
                         }
 
                         leaf flow-ipv4 {
                             type boolean;
                             default "false";
-                            description "Add support for the flowspec-IPv4 address family";
+                            description "Advertise support for the flowspec-IPv4 address family";
                         }
 
                         leaf flow-ipv6 {
                             type boolean;
                             default "false";
-                            description "Add support for the flowspec-IPv6 address family";
+                            description "Advertise support for the flowspec-IPv6 address family";
                         }
 
                         leaf mcast-ipv6 {
                             type boolean;
                             default "false";
-                            description "Add support for the MCAST-IPv6 address family";
+                            description "Advertise support for the MCAST-IPv6 address family";
                         }
 
                         leaf label-ipv4 {
                             type boolean;
                             default "false";
-                            description "Add support for the label-IPv4 address family";
+                            description "Advertise support for the label-IPv4 address family";
                         }
 
                     } // container family
@@ -9550,7 +9887,9 @@ submodule nokia-conf-svc-vprn {
                         }
 
                         leaf export-policy {
-                            type types-sros:named-item-64;
+                            type leafref {
+                                path "../../../../../../policy-options/policy-statement/name";
+                            }
                             description "Export policy name";
                         }
 
@@ -9868,11 +10207,9 @@ submodule nokia-conf-svc-vprn {
                         description "Enable the import context";
 
                         leaf-list policy {
-                            type string {
-                                length "1..255";
-                                pattern "(.{1,64})|(.*[\\[].*)" {
-                                    error-message "Policy name too long or expression not valid";
-                                }
+                            type union {
+                                type types-sros:policy-expr-string;
+                                type string;
                             }
                             min-elements 1;
                             max-elements 15;
@@ -9905,11 +10242,9 @@ submodule nokia-conf-svc-vprn {
                         description "Enable the export context";
 
                         leaf-list policy {
-                            type string {
-                                length "1..255";
-                                pattern "(.{1,64})|(.*[\\[].*)" {
-                                    error-message "Policy name too long or expression not valid";
-                                }
+                            type union {
+                                type types-sros:policy-expr-string;
+                                type string;
                             }
                             min-elements 1;
                             max-elements 15;
@@ -10402,6 +10737,18 @@ submodule nokia-conf-svc-vprn {
                         description "Threshold for the global ASN in a received AS path";
                     }
 
+                    leaf tcp-mss {
+                        type union {
+                            type uint32 {
+                                range "384..9746";
+                            }
+                            type enumeration {
+                                enum "ip-stack"                     { value 0; }
+                            }
+                        }
+                        description "TCP maximum segment size override";
+                    }
+
                     leaf min-route-advertisement {
                         type int16 {
                             range "1..255";
@@ -10756,37 +11103,37 @@ submodule nokia-conf-svc-vprn {
                         leaf ipv6 {
                             type boolean;
                             default "false";
-                            description "Add support for the IPv6 address family";
+                            description "Advertise MP-BGP support for the IPv6 address family";
                         }
 
                         leaf mcast-ipv4 {
                             type boolean;
                             default "false";
-                            description "Add support for the MCAST-IPv4 address family";
+                            description "Advertise support for the MCAST-IPv4 address family";
                         }
 
                         leaf flow-ipv4 {
                             type boolean;
                             default "false";
-                            description "Add support for the flowspec-IPv4 address family";
+                            description "Advertise support for the flowspec-IPv4 address family";
                         }
 
                         leaf flow-ipv6 {
                             type boolean;
                             default "false";
-                            description "Add support for the flowspec-IPv6 address family";
+                            description "Advertise support for the flowspec-IPv6 address family";
                         }
 
                         leaf mcast-ipv6 {
                             type boolean;
                             default "false";
-                            description "Add support for the MCAST-IPv6 address family";
+                            description "Advertise support for the MCAST-IPv6 address family";
                         }
 
                         leaf label-ipv4 {
                             type boolean;
                             default "false";
-                            description "Add support for the label-IPv4 address family";
+                            description "Advertise support for the label-IPv4 address family";
                         }
 
                     } // container family
@@ -10808,7 +11155,9 @@ submodule nokia-conf-svc-vprn {
                         }
 
                         leaf export-policy {
-                            type types-sros:named-item-64;
+                            type leafref {
+                                path "../../../../../../policy-options/policy-statement/name";
+                            }
                             description "Export policy name";
                         }
 
@@ -10933,11 +11282,9 @@ submodule nokia-conf-svc-vprn {
                         description "Enable the import context";
 
                         leaf-list policy {
-                            type string {
-                                length "1..255";
-                                pattern "(.{1,64})|(.*[\\[].*)" {
-                                    error-message "Policy name too long or expression not valid";
-                                }
+                            type union {
+                                type types-sros:policy-expr-string;
+                                type string;
                             }
                             min-elements 1;
                             max-elements 15;
@@ -10970,11 +11317,9 @@ submodule nokia-conf-svc-vprn {
                         description "Enable the export context";
 
                         leaf-list policy {
-                            type string {
-                                length "1..255";
-                                pattern "(.{1,64})|(.*[\\[].*)" {
-                                    error-message "Policy name too long or expression not valid";
-                                }
+                            type union {
+                                type types-sros:policy-expr-string;
+                                type string;
                             }
                             min-elements 1;
                             max-elements 15;
@@ -12926,7 +13271,7 @@ submodule nokia-conf-svc-vprn {
                             leaf service-name {
                                 type types-services:service-name;
                                 sros-ext:immutable;
-                                description "Service name of interface running BFD";
+                                description "Administrative service name";
                             }
 
                             leaf interface-name {
@@ -13000,13 +13345,6 @@ submodule nokia-conf-svc-vprn {
                         description "Use the control word as preferred";
                     }
 
-                    leaf bfd-template {
-                        type leafref {
-                            path "../../../../../bfd/bfd-template/name";
-                        }
-                        description "BFD template associated with SDP binding";
-                    }
-
                     leaf vc-type {
                         type types-services:ies-sdp-bind-vc-type;
                         sros-ext:immutable;
@@ -13030,6 +13368,14 @@ submodule nokia-conf-svc-vprn {
                         max-elements 8;
                         ordered-by user;
                         description "Exclude a configuration group at this level";
+                    }
+
+                    leaf bfd-template {
+                        status obsolete;
+                        type leafref {
+                            path "../../../../../bfd/bfd-template/name";
+                        }
+                        description "BFD template associated with SDP binding";
                     }
 
                     choice label {
@@ -13234,16 +13580,56 @@ submodule nokia-conf-svc-vprn {
                     } // container cpu-protection
 
                     container bfd-liveness {
+                        status obsolete;
                         presence "Enter the 'bfd-liveness' context";
                         description "Enable the bfd-liveness context";
 
                         leaf encap {
+                            status obsolete;
                             type types-services:bfd-encap;
                             default "ipv4";
-                            description "BFD encapsulation used on this SDP binding";
+                            description "BFD encapsulation used on the SDP binding";
                         }
 
                     } // container bfd-liveness
+
+                    container bfd {
+                        description "Enter the bfd context";
+
+                        leaf bfd-template {
+                            type leafref {
+                                path "../../../../../../bfd/bfd-template/name";
+                            }
+                            description "BFD template associated with the SDP binding";
+                        }
+
+                        leaf failure-action {
+                            type types-services:sbind-bfd-fail-action;
+                            default "none";
+                            description "VCCV BFD action taken on the SDP binding";
+                        }
+
+                        leaf wait-for-up-timer {
+                            type uint32 {
+                                range "1..60";
+                            }
+                            units "seconds";
+                            description "Time to wait for BFD up status";
+                        }
+
+                        container bfd-liveness {
+                            presence "Enter the 'bfd-liveness' context";
+                            description "Enable the bfd-liveness context";
+
+                            leaf encap {
+                                type types-services:bfd-encap;
+                                default "ipv4";
+                                description "BFD encapsulation used on the SDP binding";
+                            }
+
+                        } // container bfd-liveness
+
+                    } // container bfd
 
                     container eth-cfm {
                         description "Enter the eth-cfm context";
@@ -13259,7 +13645,7 @@ submodule nokia-conf-svc-vprn {
                                 range "0..7";
                             }
                             max-elements 8;
-                            description "ETH-CFM PDUs to be silently discarded";
+                            description "Levels for which ETH-CFM packets are silently discarded";
                         }
 
                         leaf-list apply-groups {
@@ -13653,7 +14039,7 @@ submodule nokia-conf-svc-vprn {
 
                                 leaf queuing-type {
                                     type types-services:services-sap-queuing-type;
-                                    description "Ingress queuing type";
+                                    description "Queuing type";
                                 }
 
                                 container fp-redirect-group {
@@ -13683,7 +14069,7 @@ submodule nokia-conf-svc-vprn {
                                             type int32 {
                                                 range "1..255";
                                             }
-                                            description "Tag ID";
+                                            description "Tag ID activated for IPv4 criteria";
                                         }
 
                                     } // container ip-criteria
@@ -13695,7 +14081,7 @@ submodule nokia-conf-svc-vprn {
                                             type int32 {
                                                 range "1..255";
                                             }
-                                            description "Tag ID";
+                                            description "Tag ID activated for IPv6 criteria";
                                         }
 
                                     } // container ipv6-criteria
@@ -14286,23 +14672,23 @@ submodule nokia-conf-svc-vprn {
                                     }
 
                                     container hsmda-queues {
-                                        status deprecated;
+                                        status obsolete;
                                         description "Enter the hsmda-queues context";
 
                                         leaf secondary-shaper {
-                                            status deprecated;
+                                            status obsolete;
                                             type types-sros:named-item;
                                             description "Secondary shaper for the HSMDA queue";
                                         }
 
                                         leaf packet-byte-offset {
-                                            status deprecated;
+                                            status obsolete;
                                             type types-services:egress-hsmda-queue-packet-byte-offset;
                                             description "Packet byte offset for HSMDA queue";
                                         }
 
                                         leaf wrr-policy {
-                                            status deprecated;
+                                            status obsolete;
                                             type leafref {
                                                 path "../../../../../../../../../../qos/hsmda-wrr-policy/hsmda-wrr-policy-name";
                                             }
@@ -14310,12 +14696,12 @@ submodule nokia-conf-svc-vprn {
                                         }
 
                                         list queue {
-                                            status deprecated;
+                                            status obsolete;
                                             key "queue-id";
                                             description "Enter the queue list instance";
 
                                             leaf queue-id {
-                                                status deprecated;
+                                                status obsolete;
                                                 type leafref {
                                                     path "../../../../../../../../../../../qos/sap-egress[sap-egress-policy-name=current()/../../../../policy-name]/hsmda-queues/queue/queue-id";
                                                 }
@@ -14323,20 +14709,20 @@ submodule nokia-conf-svc-vprn {
                                             }
 
                                             leaf mbs {
-                                                status deprecated;
+                                                status obsolete;
                                                 type types-qos:hsmda-queue-burst-size-override;
                                                 units "bytes";
                                                 description "Buffer space allowed for the queue";
                                             }
 
                                             leaf rate {
-                                                status deprecated;
+                                                status obsolete;
                                                 type types-qos:hsmda-queue-pir-rate-override;
                                                 description "Administrative PIR rate.";
                                             }
 
                                             leaf slope-policy {
-                                                status deprecated;
+                                                status obsolete;
                                                 type leafref {
                                                     path "../../../../../../../../../../../qos/hsmda-slope-policy/hsmda-slope-policy-name";
                                                 }
@@ -14344,13 +14730,13 @@ submodule nokia-conf-svc-vprn {
                                             }
 
                                             leaf wrr-weight {
-                                                status deprecated;
+                                                status obsolete;
                                                 type types-qos:hsmda-wrr-weight-override;
                                                 description "Weight value for the HSMDA queue";
                                             }
 
                                             leaf-list apply-groups {
-                                                status deprecated;
+                                                status obsolete;
                                                 type leafref {
                                                     path "../../../../../../../../../../../groups/group/name";
                                                 }
@@ -14360,7 +14746,7 @@ submodule nokia-conf-svc-vprn {
                                             }
 
                                             leaf-list apply-groups-exclude {
-                                                status deprecated;
+                                                status obsolete;
                                                 type leafref {
                                                     path "../../../../../../../../../../../groups/group/name";
                                                 }
@@ -14430,13 +14816,6 @@ submodule nokia-conf-svc-vprn {
                                             description "MBS";
                                         }
 
-                                        leaf monitor-depth {
-                                            status deprecated;
-                                            type boolean;
-                                            default "false";
-                                            description "Monitor queue depth";
-                                        }
-
                                         leaf hs-wrr-weight {
                                             type types-qos:hs-wrr-weight-override;
                                             default "1";
@@ -14464,6 +14843,13 @@ submodule nokia-conf-svc-vprn {
                                             max-elements 8;
                                             ordered-by user;
                                             description "Exclude a configuration group at this level";
+                                        }
+
+                                        leaf monitor-depth {
+                                            status obsolete;
+                                            type boolean;
+                                            default "false";
+                                            description "Monitor queue depth";
                                         }
 
                                         choice queue-override-rate {
@@ -14564,7 +14950,7 @@ submodule nokia-conf-svc-vprn {
                                             leaf fast-polling {
                                                 type boolean;
                                                 default "false";
-                                                description "Enable faster polling of the queue depth";
+                                                description "Enable fast polling of the queue depth";
                                             }
 
                                             leaf violation-threshold {
@@ -15168,7 +15554,7 @@ submodule nokia-conf-svc-vprn {
                                 range "0..7";
                             }
                             max-elements 8;
-                            description "ETH-CFM PDUs to be silently discarded";
+                            description "Levels for which ETH-CFM packets are silently discarded";
                         }
 
                         leaf-list apply-groups {
@@ -15910,7 +16296,7 @@ submodule nokia-conf-svc-vprn {
                             leaf service-name {
                                 type types-services:service-name;
                                 sros-ext:auto-restart-to-modify;
-                                description "Name of the default security service used by this IPsec gateway";
+                                description "Administrative service name";
                             }
 
                             leaf interface {
@@ -16235,7 +16621,7 @@ submodule nokia-conf-svc-vprn {
                                     type types-services:service-name;
                                     sros-ext:auto-restart-to-modify;
                                     mandatory true;
-                                    description "Service name of the interface running BFD.";
+                                    description "Administrative service name";
                                 }
 
                             } // container bfd-liveness
@@ -16720,7 +17106,7 @@ submodule nokia-conf-svc-vprn {
                             leaf learn-dynamic {
                                 type boolean;
                                 default "true";
-                                description "Allow processing of ARP/ND messages on EVPN tunnels";
+                                description "Process ARP or ND messages on EVPN tunnels";
                             }
 
                             leaf flood-garp-and-unknown-req {
@@ -16777,7 +17163,7 @@ submodule nokia-conf-svc-vprn {
                             leaf learn-dynamic {
                                 type boolean;
                                 default "true";
-                                description "Allow processing of ARP/ND messages on EVPN tunnels";
+                                description "Process ARP or ND messages on EVPN tunnels";
                             }
 
                             list advertise {
@@ -16840,7 +17226,7 @@ submodule nokia-conf-svc-vprn {
                         leaf supplementary-broadcast-domain {
                             type boolean;
                             default "false";
-                            description "Use EVPN tunnel as a Supplementary Broadcast Domain";
+                            description "Use the EVPN tunnel as a Supplementary Broadcast Domain";
                         }
 
                     } // container evpn-tunnel
@@ -17889,7 +18275,7 @@ submodule nokia-conf-svc-vprn {
                             leaf service-name {
                                 type types-services:service-name;
                                 sros-ext:immutable;
-                                description "Service name of interface running BFD";
+                                description "Administrative service name";
                             }
 
                             leaf interface-name {
@@ -19528,6 +19914,13 @@ submodule nokia-conf-svc-vprn {
                         description "Static route tag";
                     }
 
+                    leaf backup-tag {
+                        type uint32 {
+                            range "1..max";
+                        }
+                        description "Configure static route backup tag.";
+                    }
+
                     leaf-list apply-groups {
                         type leafref {
                             path "../../../../../groups/group/name";
@@ -20268,6 +20661,16 @@ submodule nokia-conf-svc-vprn {
 
                         } // container prefix-list
 
+                        container backup-next-hop {
+                            description "Enter the backup-next-hop context";
+
+                            leaf address {
+                                type types-sros:ip-address;
+                                description "This is the backup next-hop ip address.";
+                            }
+
+                        } // container backup-next-hop
+
                         list cpe-check {
                             key "address";
                             max-elements 1;
@@ -20406,14 +20809,13 @@ submodule nokia-conf-svc-vprn {
                 }
 
                 list filter {
-                    key "filter-id";
+                    key "filter-name";
+                    max-elements 1500;
                     description "Enter the filter list instance";
 
-                    leaf filter-id {
-                        type uint32 {
-                            range "1..1500";
-                        }
-                        description "Identification number for an event log filter";
+                    leaf filter-name {
+                        type types-log:log-filter-name;
+                        description "The value of name uniquely identifies an event log filter";
                     }
 
                     leaf description {
@@ -20446,12 +20848,12 @@ submodule nokia-conf-svc-vprn {
                     }
 
                     list entry {
-                        status deprecated;
+                        status obsolete;
                         key "entry-id";
                         description "Enter the entry list instance";
 
                         leaf entry-id {
-                            status deprecated;
+                            status obsolete;
                             type uint32 {
                                 range "1..999";
                             }
@@ -20459,19 +20861,19 @@ submodule nokia-conf-svc-vprn {
                         }
 
                         leaf description {
-                            status deprecated;
+                            status obsolete;
                             type types-sros:description;
                             description "Text description";
                         }
 
                         leaf action {
-                            status deprecated;
+                            status obsolete;
                             type types-log:filter-action;
                             description "Action for this event filter entry";
                         }
 
                         leaf-list apply-groups {
-                            status deprecated;
+                            status obsolete;
                             type leafref {
                                 path "../../../../../../groups/group/name";
                             }
@@ -20481,7 +20883,7 @@ submodule nokia-conf-svc-vprn {
                         }
 
                         leaf-list apply-groups-exclude {
-                            status deprecated;
+                            status obsolete;
                             type leafref {
                                 path "../../../../../../groups/group/name";
                             }
@@ -20491,31 +20893,31 @@ submodule nokia-conf-svc-vprn {
                         }
 
                         container match {
-                            status deprecated;
+                            status obsolete;
                             description "Enter the match context";
 
                             container application {
-                                status deprecated;
+                                status obsolete;
                                 description "Enter the application context";
 
                                 choice application-match {
-                                    status deprecated;
+                                    status obsolete;
                                     case eq {
-                                        status deprecated;
+                                        status obsolete;
 
                                         leaf eq {
-                                            status deprecated;
-                                            type types-log:application;
+                                            status obsolete;
+                                            type types-log:application-obsolete;
                                             description "Application to match";
                                         }
 
                                     }
                                     case neq {
-                                        status deprecated;
+                                        status obsolete;
 
                                         leaf neq {
-                                            status deprecated;
-                                            type types-log:application;
+                                            status obsolete;
+                                            type types-log:application-obsolete;
                                             description "Application to be filtered out";
                                         }
 
@@ -20524,23 +20926,23 @@ submodule nokia-conf-svc-vprn {
                             } // container application
 
                             container message {
-                                status deprecated;
+                                status obsolete;
                                 description "Enter the message context";
 
                                 leaf regexp {
-                                    status deprecated;
+                                    status obsolete;
                                     type boolean;
                                     default "false";
                                     description "String comparison to determine if the log event matches the value of pattern";
                                 }
 
                                 choice message-match {
-                                    status deprecated;
+                                    status obsolete;
                                     case eq {
-                                        status deprecated;
+                                        status obsolete;
 
                                         leaf eq {
-                                            status deprecated;
+                                            status obsolete;
                                             type string {
                                                 length "1..400";
                                             }
@@ -20549,10 +20951,10 @@ submodule nokia-conf-svc-vprn {
 
                                     }
                                     case neq {
-                                        status deprecated;
+                                        status obsolete;
 
                                         leaf neq {
-                                            status deprecated;
+                                            status obsolete;
                                             type string {
                                                 length "1..400";
                                             }
@@ -20564,16 +20966,16 @@ submodule nokia-conf-svc-vprn {
                             } // container message
 
                             container event {
-                                status deprecated;
+                                status obsolete;
                                 description "Enter the event context";
 
                                 choice event-match {
-                                    status deprecated;
+                                    status obsolete;
                                     case eq {
-                                        status deprecated;
+                                        status obsolete;
 
                                         leaf eq {
-                                            status deprecated;
+                                            status obsolete;
                                             type uint32 {
                                                 range "1..max";
                                             }
@@ -20582,10 +20984,10 @@ submodule nokia-conf-svc-vprn {
 
                                     }
                                     case neq {
-                                        status deprecated;
+                                        status obsolete;
 
                                         leaf neq {
-                                            status deprecated;
+                                            status obsolete;
                                             type uint32 {
                                                 range "1..max";
                                             }
@@ -20594,10 +20996,10 @@ submodule nokia-conf-svc-vprn {
 
                                     }
                                     case lt {
-                                        status deprecated;
+                                        status obsolete;
 
                                         leaf lt {
-                                            status deprecated;
+                                            status obsolete;
                                             type uint32 {
                                                 range "1..max";
                                             }
@@ -20606,10 +21008,10 @@ submodule nokia-conf-svc-vprn {
 
                                     }
                                     case lte {
-                                        status deprecated;
+                                        status obsolete;
 
                                         leaf lte {
-                                            status deprecated;
+                                            status obsolete;
                                             type uint32 {
                                                 range "1..max";
                                             }
@@ -20618,10 +21020,10 @@ submodule nokia-conf-svc-vprn {
 
                                     }
                                     case gt {
-                                        status deprecated;
+                                        status obsolete;
 
                                         leaf gt {
-                                            status deprecated;
+                                            status obsolete;
                                             type uint32 {
                                                 range "1..max";
                                             }
@@ -20630,10 +21032,10 @@ submodule nokia-conf-svc-vprn {
 
                                     }
                                     case gte {
-                                        status deprecated;
+                                        status obsolete;
 
                                         leaf gte {
-                                            status deprecated;
+                                            status obsolete;
                                             type uint32 {
                                                 range "1..max";
                                             }
@@ -20645,66 +21047,66 @@ submodule nokia-conf-svc-vprn {
                             } // container event
 
                             container severity {
-                                status deprecated;
+                                status obsolete;
                                 description "Enter the severity context";
 
                                 choice severity-match {
-                                    status deprecated;
+                                    status obsolete;
                                     case eq {
-                                        status deprecated;
+                                        status obsolete;
 
                                         leaf eq {
-                                            status deprecated;
+                                            status obsolete;
                                             type types-log:severity-level;
                                             description "Log event severity level to match";
                                         }
 
                                     }
                                     case neq {
-                                        status deprecated;
+                                        status obsolete;
 
                                         leaf neq {
-                                            status deprecated;
+                                            status obsolete;
                                             type types-log:severity-level;
                                             description "Log event severity level to filter out";
                                         }
 
                                     }
                                     case lt {
-                                        status deprecated;
+                                        status obsolete;
 
                                         leaf lt {
-                                            status deprecated;
+                                            status obsolete;
                                             type types-log:severity-level;
                                             description "Log event severity level";
                                         }
 
                                     }
                                     case lte {
-                                        status deprecated;
+                                        status obsolete;
 
                                         leaf lte {
-                                            status deprecated;
+                                            status obsolete;
                                             type types-log:severity-level;
                                             description "Log event severity level";
                                         }
 
                                     }
                                     case gt {
-                                        status deprecated;
+                                        status obsolete;
 
                                         leaf gt {
-                                            status deprecated;
+                                            status obsolete;
                                             type types-log:severity-level;
                                             description "Log event severity level";
                                         }
 
                                     }
                                     case gte {
-                                        status deprecated;
+                                        status obsolete;
 
                                         leaf gte {
-                                            status deprecated;
+                                            status obsolete;
                                             type types-log:severity-level;
                                             description "Log event severity level";
                                         }
@@ -20714,33 +21116,33 @@ submodule nokia-conf-svc-vprn {
                             } // container severity
 
                             container subject {
-                                status deprecated;
+                                status obsolete;
                                 description "Enter the subject context";
 
                                 leaf regexp {
-                                    status deprecated;
+                                    status obsolete;
                                     type boolean;
                                     default "false";
                                     description "String comparison to determine if the log event matches the value of subject";
                                 }
 
                                 choice subject-match {
-                                    status deprecated;
+                                    status obsolete;
                                     case eq {
-                                        status deprecated;
+                                        status obsolete;
 
                                         leaf eq {
-                                            status deprecated;
+                                            status obsolete;
                                             type types-sros:named-item;
                                             description "Log event subject string to match";
                                         }
 
                                     }
                                     case neq {
-                                        status deprecated;
+                                        status obsolete;
 
                                         leaf neq {
-                                            status deprecated;
+                                            status obsolete;
                                             type types-sros:named-item;
                                             description "Log event subject string to filter out";
                                         }
@@ -20753,18 +21155,269 @@ submodule nokia-conf-svc-vprn {
 
                     } // list entry
 
+                    list named-entry {
+                        key "entry-name";
+                        max-elements 999;
+                        ordered-by user;
+                        description "Enter the named-entry list instance";
+
+                        leaf entry-name {
+                            type types-log:log-filter-entry-name;
+                            description "The value of name uniquely identifies an event log filter entry";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf action {
+                            type types-log:filter-action;
+                            description "Action for this event filter entry";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container match {
+                            description "Enter the match context";
+
+                            container application {
+                                description "Enter the application context";
+
+                                choice application-match {
+                                    case eq {
+
+                                        leaf eq {
+                                            type types-log:application;
+                                            description "Application to match";
+                                        }
+
+                                    }
+                                    case neq {
+
+                                        leaf neq {
+                                            type types-log:application;
+                                            description "Application to be filtered out";
+                                        }
+
+                                    }
+                                }
+                            } // container application
+
+                            container message {
+                                description "Enter the message context";
+
+                                leaf regexp {
+                                    type boolean;
+                                    default "false";
+                                    description "String comparison to determine if the log event matches the value of pattern";
+                                }
+
+                                choice message-match {
+                                    case eq {
+
+                                        leaf eq {
+                                            type string {
+                                                length "1..400";
+                                            }
+                                            description "Log event message to match";
+                                        }
+
+                                    }
+                                    case neq {
+
+                                        leaf neq {
+                                            type string {
+                                                length "1..400";
+                                            }
+                                            description "Log event message to be filtered out";
+                                        }
+
+                                    }
+                                }
+                            } // container message
+
+                            container event {
+                                description "Enter the event context";
+
+                                choice event-match {
+                                    case eq {
+
+                                        leaf eq {
+                                            type uint32 {
+                                                range "1..max";
+                                            }
+                                            description "Log event message to match";
+                                        }
+
+                                    }
+                                    case neq {
+
+                                        leaf neq {
+                                            type uint32 {
+                                                range "1..max";
+                                            }
+                                            description "Log event message to filter out";
+                                        }
+
+                                    }
+                                    case lt {
+
+                                        leaf lt {
+                                            type uint32 {
+                                                range "1..max";
+                                            }
+                                            description "Number of the log event to match";
+                                        }
+
+                                    }
+                                    case lte {
+
+                                        leaf lte {
+                                            type uint32 {
+                                                range "1..max";
+                                            }
+                                            description "Number of the log event to match";
+                                        }
+
+                                    }
+                                    case gt {
+
+                                        leaf gt {
+                                            type uint32 {
+                                                range "1..max";
+                                            }
+                                            description "Number of the log event to match";
+                                        }
+
+                                    }
+                                    case gte {
+
+                                        leaf gte {
+                                            type uint32 {
+                                                range "1..max";
+                                            }
+                                            description "Number of the log event to match";
+                                        }
+
+                                    }
+                                }
+                            } // container event
+
+                            container severity {
+                                description "Enter the severity context";
+
+                                choice severity-match {
+                                    case eq {
+
+                                        leaf eq {
+                                            type types-log:severity-level;
+                                            description "Log event severity level to match";
+                                        }
+
+                                    }
+                                    case neq {
+
+                                        leaf neq {
+                                            type types-log:severity-level;
+                                            description "Log event severity level to filter out";
+                                        }
+
+                                    }
+                                    case lt {
+
+                                        leaf lt {
+                                            type types-log:severity-level;
+                                            description "Log event severity level";
+                                        }
+
+                                    }
+                                    case lte {
+
+                                        leaf lte {
+                                            type types-log:severity-level;
+                                            description "Log event severity level";
+                                        }
+
+                                    }
+                                    case gt {
+
+                                        leaf gt {
+                                            type types-log:severity-level;
+                                            description "Log event severity level";
+                                        }
+
+                                    }
+                                    case gte {
+
+                                        leaf gte {
+                                            type types-log:severity-level;
+                                            description "Log event severity level";
+                                        }
+
+                                    }
+                                }
+                            } // container severity
+
+                            container subject {
+                                description "Enter the subject context";
+
+                                leaf regexp {
+                                    type boolean;
+                                    default "false";
+                                    description "String comparison to determine if the log event matches the value of subject";
+                                }
+
+                                choice subject-match {
+                                    case eq {
+
+                                        leaf eq {
+                                            type types-sros:named-item;
+                                            description "Log event subject string to match";
+                                        }
+
+                                    }
+                                    case neq {
+
+                                        leaf neq {
+                                            type types-sros:named-item;
+                                            description "Log event subject string to filter out";
+                                        }
+
+                                    }
+                                }
+                            } // container subject
+
+                        } // container match
+
+                    } // list named-entry
+
                 } // list filter
 
                 list log-id {
-                    key "id";
+                    key "name";
                     max-elements 30;
                     description "Enter the log-id list instance";
 
-                    leaf id {
-                        type int32 {
-                            range "1..100";
-                        }
-                        description "The value of id uniquely identifies an event stream log.";
+                    leaf name {
+                        type types-log:li-log-name;
+                        description "The value of name uniquely identifies an event stream log.";
                     }
 
                     leaf admin-state {
@@ -20794,7 +21447,7 @@ submodule nokia-conf-svc-vprn {
 
                     leaf filter {
                         type leafref {
-                            path "../../filter/filter-id";
+                            path "../../filter/filter-name";
                         }
                         description "Filter for this log's source event stream to limit the event output in this log destination";
                     }
@@ -20861,7 +21514,7 @@ submodule nokia-conf-svc-vprn {
 
                                 leaf syslog {
                                     type leafref {
-                                        path "../../../syslog/syslog-id";
+                                        path "../../../syslog/syslog-name";
                                     }
                                     sros-ext:immutable;
                                     description "Index with the information to format event messages sent to a specific SYSLOG collector";
@@ -20910,19 +21563,25 @@ submodule nokia-conf-svc-vprn {
                 } // list log-id
 
                 list snmp-trap-group {
-                    key "log-id";
+                    key "log-name";
                     description "Enter the snmp-trap-group list instance";
 
-                    leaf log-id {
-                        type int32 {
-                            range "1..100";
-                        }
-                        description "SNMP notification group associated with the event log";
+                    leaf log-name {
+                        type types-log:svc-vprn-snmp-trap-group-name;
+                        description "SNMP notification group to be associated with the event log for vprn.";
                     }
 
                     leaf description {
                         type types-sros:description;
                         description "Text description";
+                    }
+
+                    leaf log-id {
+                        type int32 {
+                            range "1..100";
+                        }
+                        sros-ext:immutable;
+                        description "SNMP notification group associated with the event log";
                     }
 
                     leaf-list apply-groups {
@@ -21029,14 +21688,13 @@ submodule nokia-conf-svc-vprn {
                 } // list snmp-trap-group
 
                 list syslog {
-                    key "syslog-id";
+                    key "syslog-name";
+                    max-elements 30;
                     description "Enter the syslog list instance";
 
-                    leaf syslog-id {
-                        type int32 {
-                            range "1..30";
-                        }
-                        description "Unique arbitrary identifier for this SYSLOG collector target";
+                    leaf syslog-name {
+                        type types-log:log-vprn-syslog-name;
+                        description "Unique arbitrary identifier for this syslog collector target.";
                     }
 
                     leaf description {
@@ -21324,11 +21982,9 @@ submodule nokia-conf-svc-vprn {
                     description "Enter the export-grt context";
 
                     leaf-list policy-name {
-                        type string {
-                            length "1..255";
-                            pattern "(.{1,64})|(.*[\\[].*)" {
-                                error-message "Policy name too long or expression not valid.";
-                            }
+                        type union {
+                            type types-sros:policy-expr-string;
+                            type string;
                         }
                         max-elements 5;
                         ordered-by user;
@@ -21341,11 +21997,9 @@ submodule nokia-conf-svc-vprn {
                     description "Enter the import-grt context";
 
                     leaf-list policy-name {
-                        type string {
-                            length "1..255";
-                            pattern "(.{1,64})|(.*[\\[].*)" {
-                                error-message "Policy name too long or expression not valid.";
-                            }
+                        type union {
+                            type types-sros:policy-expr-string;
+                            type string;
                         }
                         max-elements 5;
                         ordered-by user;

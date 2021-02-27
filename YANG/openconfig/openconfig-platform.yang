@@ -8,9 +8,9 @@ module openconfig-platform {
   prefix "oc-platform";
 
   import openconfig-platform-types { prefix oc-platform-types; }
-  import openconfig-types { prefix oc-types; }
   import openconfig-extensions { prefix oc-ext; }
   import openconfig-alarm-types { prefix oc-alarm-types; }
+  import openconfig-yang-types { prefix oc-yang; }
 
 
   // meta
@@ -63,7 +63,47 @@ module openconfig-platform {
     (presence or absence of a component) and state (physical
     attributes or status).";
 
-  oc-ext:openconfig-version "0.8.0";
+  oc-ext:openconfig-version "0.12.2";
+
+  revision "2019-04-16" {
+    description
+      "Fix bug in parent path reference";
+    reference "0.12.2";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "0.12.1";
+  }
+
+  revision "2018-06-29" {
+    description
+      "Added location description for components";
+    reference "0.12.0";
+  }
+
+  revision "2018-06-03" {
+    description
+      "Added parent reference, empty flag and preconfiguration
+      for components";
+    reference "0.11.0";
+  }
+
+  revision "2018-04-20" {
+    description
+      "Added new per-component state data: mfg-date and removable";
+    reference "0.10.0";
+  }
+
+  revision "2018-01-30" {
+    description
+      "Amended approach for modelling CPU - rather than having
+      a local CPU utilisation state variable, a component with
+      a CPU should create a subcomponent of type CPU to report
+      statistics.";
+    reference "0.9.0";
+  }
 
   revision "2018-01-16" {
     description
@@ -90,6 +130,11 @@ module openconfig-platform {
       "Added temperature state variable to component";
     reference "0.5.0";
   }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
 
   // grouping statements
 
@@ -243,8 +288,10 @@ module openconfig-platform {
     leaf name {
       type string;
       description
-        "Device name for the component -- this will not be a
-        configurable parameter on many implementations";
+        "Device name for the component -- this may not be a
+        configurable parameter on many implementations.  Where
+        component preconfiguration is supported, for example,
+        the component name may be configurable.";
     }
   }
 
@@ -272,6 +319,16 @@ module openconfig-platform {
         component";
     }
 
+    leaf location {
+      type string;
+      description
+        "System-supplied description of the location of the
+        component within the system. This could be a bay position,
+        slot number, socket location, etc. For component types that
+        have an explicit slot-id attribute, such as linecards, the
+        system should populate the more specific slot-id.";
+    }
+
     leaf description {
       type string;
       description
@@ -285,6 +342,13 @@ module openconfig-platform {
         component.  This data is particularly useful when a
         component manufacturer is different than the overall
         device vendor.";
+    }
+
+    leaf mfg-date {
+      type oc-yang:date;
+      description
+        "System-supplied representation of the component's
+        manufacturing date.";
     }
 
     leaf hardware-version {
@@ -320,7 +384,14 @@ module openconfig-platform {
       description
         "System-assigned part number for the component.  This should
         be present in particular if the component is also an FRU
-        (field replacable unit)";
+        (field replaceable unit)";
+    }
+
+    leaf removable {
+      type boolean;
+      description
+        "If true, this component is removable or is a field
+        replaceable unit";
     }
 
     leaf oper-status {
@@ -330,6 +401,28 @@ module openconfig-platform {
       description
         "If applicable, this reports the current operational status
         of the component.";
+    }
+
+    leaf empty {
+      type boolean;
+      default false;
+      description
+        "The empty leaf may be used by the device to indicate that a
+        component position exists but is not populated.  Using this
+        flag, it is possible for the management system to learn how
+        many positions are available (e.g., occupied vs. empty
+        linecard slots in a chassis).";
+    }
+
+    leaf parent {
+      type leafref {
+        path "../../../component/config/name";
+      }
+      description
+        "Reference to the name of the parent component.  Note that
+        this reference must be kept synchronized with the
+        corresponding subcomponent reference from the parent
+        component.";
     }
   }
 
@@ -425,25 +518,6 @@ module openconfig-platform {
           "The memory currently in use by processes running on
           the component, not considering reserved memory that is
           not available for use.";
-      }
-    }
-  }
-
-  grouping platform-component-cpu-state {
-    description
-      "Per-component cpu statistics";
-
-    container cpu {
-      description
-        "For components that have an associated CPU, these values
-        report utilization information.";
-
-      container utilization {
-        description
-          "Statistics representing CPU utilization of the
-          component.";
-
-        uses oc-types:avg-min-max-instant-stats-pct;
       }
     }
   }
@@ -682,7 +756,6 @@ module openconfig-platform {
           uses platform-component-config;
           uses platform-component-state;
           uses platform-component-temp-state;
-          uses platform-component-cpu-state;
           uses platform-component-memory-state;
           uses platform-component-power-state;
         }

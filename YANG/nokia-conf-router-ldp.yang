@@ -17,7 +17,7 @@ submodule nokia-conf-router-ldp {
     include nokia-conf-system;
     include nokia-conf-system-security;
 
-    sros-ext:sros-major-release "rel20";
+    sros-ext:sros-major-release "rel21";
 
     organization "Nokia";
 
@@ -44,7 +44,7 @@ submodule nokia-conf-router-ldp {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2020-09-16";
+    revision "2021-01-19";
 
     grouping conf-router-ldp {
         container ldp {
@@ -138,6 +138,12 @@ submodule nokia-conf-router-ldp {
                 type boolean;
                 default "true";
                 description "Preference tunnel-in-tunnel over a simple LDP tunnel";
+            }
+
+            leaf prefer-mcast-tunnel-in-tunnel {
+                type boolean;
+                default "true";
+                description "Use T-LDP session to the peer for FEC resolution";
             }
 
             leaf mcast-upstream-asbr-frr {
@@ -457,7 +463,9 @@ submodule nokia-conf-router-ldp {
                 description "Enter the lsp-bfd list instance";
 
                 leaf prefix-list {
-                    type types-sros:named-item;
+                    type leafref {
+                        path "../../../../policy-options/prefix-list/name";
+                    }
                     description "Name of a router policy options prefix list";
                 }
 
@@ -677,6 +685,20 @@ submodule nokia-conf-router-ldp {
             container tcp-session-parameters {
                 description "Enter the tcp-session-parameters context";
 
+                leaf authentication-keychain {
+                    type leafref {
+                        path "../../../../system/security/keychains/keychain/keychain-name";
+                    }
+                    description "TCP authentication keychain to use for the session";
+                }
+
+                leaf authentication-key {
+                    type types-sros:encrypted-leaf {
+                        length "1..370";
+                    }
+                    description "Authentication key for the peer";
+                }
+
                 list peer-transport {
                     key "ip-address";
                     description "Enter the peer-transport list instance";
@@ -695,7 +717,7 @@ submodule nokia-conf-router-ldp {
 
                     leaf authentication-key {
                         type types-sros:encrypted-leaf {
-                            length "1..51";
+                            length "1..370";
                         }
                         description "Authentication key for the peer";
                     }
@@ -1455,6 +1477,24 @@ submodule nokia-conf-router-ldp {
 
                     } // container tunneling
 
+                    container mcast-tunneling {
+                        presence "Enter the 'mcast-tunneling' context";
+                        description "Enable the mcast-tunneling context";
+
+                        list lsp {
+                            key "lsp-name";
+                            max-elements 4;
+                            description "Add a list entry for lsp";
+
+                            leaf lsp-name {
+                                type types-sros:named-item-64;
+                                description "LSP name";
+                            }
+
+                        } // list lsp
+
+                    } // container mcast-tunneling
+
                 } // list peer
 
                 list peer-template {
@@ -1494,6 +1534,12 @@ submodule nokia-conf-router-ldp {
                         type boolean;
                         default "false";
                         description "Allow LDP over tunnels for sessions created by peer template";
+                    }
+
+                    leaf mcast-tunneling {
+                        type boolean;
+                        default "false";
+                        description "Enable MLDP over RSVP-TE tunnels for the template";
                     }
 
                     leaf-list apply-groups {
@@ -1637,13 +1683,13 @@ submodule nokia-conf-router-ldp {
                         leaf admin-state {
                             type types-sros:admin-state;
                             default "disable";
-                            description "Administrative state of auto-tx capabilities for peers";
+                            description "Administrative state of IPv4 capabilities for peers";
                         }
 
                         leaf tunneling {
                             type boolean;
                             default "false";
-                            description "Enable auto-tx tunneling for targeted peers";
+                            description "Enable tunneling for targeted peers";
                         }
 
                     } // container ipv4
@@ -1659,13 +1705,13 @@ submodule nokia-conf-router-ldp {
                         leaf admin-state {
                             type types-sros:admin-state;
                             default "disable";
-                            description "Administrative state of auto-rx capabilities for peers";
+                            description "Administrative state of IPv4 capabilities for peers";
                         }
 
                         leaf tunneling {
                             type boolean;
                             default "false";
-                            description "Enable auto-rx tunneling for targeted peers";
+                            description "Enable tunneling for targeted peers";
                         }
 
                     } // container ipv4

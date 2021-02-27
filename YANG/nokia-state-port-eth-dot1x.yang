@@ -9,7 +9,7 @@ submodule nokia-state-port-eth-dot1x {
     import nokia-types-port               { prefix "types-port"; }
 
 
-    sros-ext:sros-major-release "rel20";
+    sros-ext:sros-major-release "rel21";
 
     organization "Nokia";
 
@@ -36,7 +36,7 @@ submodule nokia-state-port-eth-dot1x {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2020-10-14";
+    revision "2020-10-29";
 
     grouping state-port-eth-dot1x {
         container dot1x {
@@ -80,6 +80,293 @@ submodule nokia-state-port-eth-dot1x {
                     "Indicates the current value of the controlled Port
                      status parameter for the Port.";
             }
+
+            list host {
+                key "mac";
+                description "Enter the host list instance";
+
+                leaf mac {
+                    type yang:mac-address;
+                    description "Source MAC address of a host present on this port";
+                }
+
+                leaf allowed-by-configuration {
+                    type boolean;
+                    description "The host is allowed access by configuration";
+                }
+
+                leaf authenticator-pae-state {
+                    type enumeration {
+                        enum "initialize"                   { value 1; }
+                        enum "disconnected"                 { value 2; }
+                        enum "connecting"                   { value 3; }
+                        enum "authenticating"               { value 4; }
+                        enum "authenticated"                { value 5; }
+                        enum "aborting"                     { value 6; }
+                        enum "held"                         { value 7; }
+                        enum "force-authorized"             { value 8; }
+                        enum "force-unauthorized"           { value 9; }
+                    }
+                    description "The current value of the Authenticator PAE state machine";
+                }
+
+                leaf backend-authentication-state {
+                    type enumeration {
+                        enum "request"                      { value 1; }
+                        enum "response"                     { value 2; }
+                        enum "success"                      { value 3; }
+                        enum "fail"                         { value 4; }
+                        enum "timeout"                      { value 5; }
+                        enum "idle"                         { value 6; }
+                        enum "initialize"                   { value 7; }
+                    }
+                    description "The current state of the Backend Authentication state machine";
+                }
+
+                container statistics {
+                    description "Enter the statistics context";
+
+                    leaf octets-rx {
+                        type yang:counter64;
+                        description
+                            "The number of octets received in user data frames on
+                             this Port during the session";
+                    }
+
+                    leaf octets-tx {
+                        type yang:counter64;
+                        description
+                            "The number of octets transmitted in user data frames on
+                             this Port during the session";
+                    }
+
+                    leaf frames-rx {
+                        type yang:counter32;
+                        description
+                            "The number of user data frames received on this Port
+                             during the session";
+                    }
+
+                    leaf frames-tx {
+                        type yang:counter32;
+                        description
+                            "The number of user data frames transmitted on this Port
+                             during the session";
+                    }
+
+                    leaf session-identifier {
+                        type string;
+                        description
+                            "A unique identifier for the session, in the form of a
+                             printable ASCII string of at least three characters";
+                    }
+
+                    leaf authentication-method {
+                        type enumeration {
+                            enum "remote-authentication-server" { value 1; }
+                            enum "local-authentication-server"  { value 2; }
+                        }
+                        description "The authentication method used to establish the session";
+                    }
+
+                    leaf session-time {
+                        type yang:timeticks;
+                        description "The duration of the session in seconds";
+                    }
+
+                    leaf termination-cause {
+                        type enumeration {
+                            enum "supplicant-logoff"            { value 1; }
+                            enum "port-failure"                 { value 2; }
+                            enum "supplicant-restart"           { value 3; }
+                            enum "reauth-failed"                { value 4; }
+                            enum "auth-control-force-unauth"    { value 5; }
+                            enum "port-re-init"                 { value 6; }
+                            enum "port-admin-disabled"          { value 7; }
+                            enum "not-terminated-yet"           { value 999; }
+                        }
+                        description "The reason for the session termination";
+                    }
+
+                    leaf username {
+                        type string;
+                        description
+                            "The User-Name representing the identity of the
+                             Supplicant PAE";
+                    }
+
+                } // container statistics
+
+                container diagnostics {
+                    description "Enter the diagnostics context";
+
+                    leaf enters-connecting {
+                        type yang:counter32;
+                        description
+                            "Number of times that the state machine transitions to
+                             the CONNECTING state from any other state";
+                    }
+
+                    leaf eap-logoffs-while-connecting {
+                        type yang:counter32;
+                        description
+                            "Number of times that the state machine transitions from
+                             CONNECTING to DISCONNECTED as a result of receiving an
+                             EAPOL-Logoff message";
+                    }
+
+                    leaf enters-authenticating {
+                        type yang:counter32;
+                        description
+                            "Number of times that the state machine transitions from
+                             CONNECTING to AUTHENTICATING, as a result of an
+                             EAP-Response/Identity message being received from the
+                             Supplicant";
+                    }
+
+                    leaf success-while-authenticating {
+                        type yang:counter32;
+                        description
+                            "Number of times that the state machine transitions from
+                             AUTHENTICATING to AUTHENTICATED, as a result of the
+                             Backend Authentication state machine indicating
+                             successful authentication of the Supplicant
+                             ('authSuccess' = true)";
+                    }
+
+                    leaf timeouts-while-authenticating {
+                        type yang:counter32;
+                        description
+                            "Number of times that the state machine transitions from
+                             AUTHENTICATING to ABORTING, as a result of the Backend
+                             Authentication state machine indicating authentication
+                             timeout ('authTimeout' = true)";
+                    }
+
+                    leaf fail-while-authenticating {
+                        type yang:counter32;
+                        description
+                            "Number of times that the state machine transitions from
+                             AUTHENTICATING to HELD, as a result of the Backend
+                             Authentication state machine indicating authentication
+                             failure ('authFail' = true)";
+                    }
+
+                    leaf reauthentication-while-authenticating {
+                        type yang:counter32;
+                        description
+                            "Number of times that the state machine transitions from
+                             AUTHENTICATING to ABORTING, as a result of a
+                             reauthentication request ('reAuthenticate' = true)";
+                    }
+
+                    leaf eap-start-while-authenticating {
+                        type yang:counter32;
+                        description
+                            "Number of times that the state machine transitions from
+                             AUTHENTICATING to ABORTING, as a result of an
+                             EAPOL-Start message being received from the Supplicant";
+                    }
+
+                    leaf eap-logoff-while-authenticating {
+                        type yang:counter32;
+                        description
+                            "Number of times that the state machine transitions from
+                             AUTHENTICATING to ABORTING, as a result of an
+                             EAPOL-Logoff message being received from the Supplicant";
+                    }
+
+                    leaf reauthenticaton-while-authenticated {
+                        type yang:counter32;
+                        description
+                            "Number of times that the state machine transitions from
+                             AUTHENTICATED to CONNECTING, as a result of a
+                             reauthentication request ('reAuthenticate' = true)";
+                    }
+
+                    leaf eap-start-while-authenticated {
+                        type yang:counter32;
+                        description
+                            "Number of times that the state machine transitions from
+                             AUTHENTICATED to CONNECTING, as a result of an
+                             EAPOL-Start message being received from the Supplicant";
+                    }
+
+                    leaf eap-logoff-while-authenticated {
+                        type yang:counter32;
+                        description
+                            "Number of times that the state machine transitions from
+                             AUTHENTICATED to DISCONNECTED, as a result of an
+                             EAPOL-Logoff message being received from the Supplicant";
+                    }
+
+                    leaf responses {
+                        type yang:counter32;
+                        description
+                            "Number of times that the state machine sends an initial
+                             Access-Request packet to the Authentication server
+                             (i.e., executes 'sendRespToServer' on entry to the
+                             RESPONSE state). Indicates that the Authenticator
+                             attempted communication with the Authentication Server";
+                    }
+
+                    leaf access-challenges {
+                        type yang:counter32;
+                        description
+                            "Number of times that the state machine receives an
+                             initial Access-Challenge packet from the Authentication
+                             server (i.e., 'aReq' becomes TRUE, causing exit from
+                             the RESPONSE state). Indicates that the Authentication
+                             Server has communication with the Authenticator.";
+                    }
+
+                    leaf other-requests-to-supplicant {
+                        type yang:counter32;
+                        description
+                            "Number of times that the state machine sends an
+                             EAP-Request packet (other than an Identity,
+                             Notification, Failure or Success message) to the
+                             Supplicant (i.e., executes 'txReq' on entry to the
+                             REQUEST state). Indicates that the Authenticator chose
+                             an EAP-method.";
+                    }
+
+                    leaf non-nak-responses-from-supplicant {
+                        type yang:counter32;
+                        description
+                            "Number of times that the state machine receives a
+                             response from the Supplicant to an initial EAP-Request,
+                             and the response is something other than EAP-NAK (i.e.,
+                             'rxResp' becomes TRUE, causing the state machine to
+                             transition from REQUEST to RESPONSE, and the response
+                             is not an EAP-NAK). Indicates that the Supplicant can
+                             respond to the Authenticator's chosen EAP-method.";
+                    }
+
+                    leaf authentication-successes {
+                        type yang:counter32;
+                        description
+                            "Number of times that the state machine receives an
+                             EAP-Success message from the Authentication Server
+                             (i.e., 'aSuccess' becomes TRUE, causing a transition
+                             from RESPONSE to SUCCESS). Indicates that the
+                             Supplicant has successfully authenticated to the
+                             Authentication Server.";
+                    }
+
+                    leaf authentication-fails {
+                        type yang:counter32;
+                        description
+                            "Number of times that the state machine receives an
+                             EAP-Failure message from the Authentication Server
+                             (i.e., 'aFail' becomes TRUE, causing a transition from
+                             RESPONSE to FAIL). Indicates that the Supplicant has not
+                             authenticated to the Authentication Server.";
+                    }
+
+                } // container diagnostics
+
+            } // list host
 
             container macsec {
                 description "Enter the macsec context";
