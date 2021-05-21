@@ -14,6 +14,7 @@ submodule nokia-state-lag {
     include nokia-state-eth-cfm;
     include nokia-state-port;
 
+
     sros-ext:sros-major-release "rel21";
 
     organization "Nokia";
@@ -41,7 +42,7 @@ submodule nokia-state-lag {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2021-02-03";
+    revision "2021-04-07";
 
     grouping state-lag {
         list lag {
@@ -446,6 +447,318 @@ submodule nokia-state-lag {
                         type types-eth-cfm:mep-id-type;
                         description "MEP identifier";
                     }
+
+                    leaf if-index {
+                        type uint32;
+                        description "Port ID of the MEP.";
+                    }
+
+                    leaf oper-mac-address {
+                        type yang:mac-address;
+                        description "Operational MAC address of the MEP.";
+                    }
+
+                    container ais {
+                        description "Enter the ais context";
+
+                        container received {
+                            description "Enter the received context";
+
+                            leaf ais-packet {
+                                type boolean;
+                                description "Indicates if the MEP is receiving AIS test frames from one or more of its sub-layer MEPs.";
+                            }
+
+                            leaf interval {
+                                type uint32 {
+                                    range "1|60";
+                                }
+                                units "seconds";
+                                description "Indicates the AIS Interval received in the last AIS Frame.";
+                            }
+
+                        } // container received
+
+                        container transmitted {
+                            description "Enter the transmitted context";
+
+                            leaf ais-packet {
+                                type enumeration {
+                                    enum "no-transmit"                  { value 0; }
+                                    enum "transmit"                     { value 1; }
+                                    enum "pending"                      { value 2; }
+                                }
+                                description "Indicates if the MEP is transmitting AIS test frames from one or more of its sub-layer MEPs.";
+                            }
+
+                        } // container transmitted
+
+                    } // container ais
+
+                    container csf {
+                        description "Enter the csf context";
+
+                        container received {
+                            description "Enter the received context";
+
+                            leaf state {
+                                type enumeration {
+                                    enum "los"                          { value 0; }
+                                    enum "ais"                          { value 1; }
+                                    enum "rdi"                          { value 2; }
+                                    enum "dci"                          { value 3; }
+                                }
+                                description
+                                    "Indicates the state of the received CSF frames for the MEP.
+                                        los (0) - Client Loss of Signal
+                                        ais (1) - Client Forward Defect Indication
+                                        rdi (2) - Client Reverse Defect Indication
+                                        dci (3) - Client Defect Clear Indication.";
+                            }
+
+                            leaf interval {
+                                type uint32 {
+                                    range "1|60";
+                                }
+                                units "seconds";
+                                description "Indicates the CSF Interval received in the most recent CSF frame.";
+                            }
+
+                        } // container received
+
+                    } // container csf
+
+                    container grace {
+                        description "Enter the grace context";
+
+                        container transmitted {
+                            description "Enter the transmitted context";
+
+                            leaf grace-notification {
+                                type enumeration {
+                                    enum "no-transmit"                  { value 0; }
+                                    enum "grace"                        { value 1; }
+                                    enum "eth-ed"                       { value 2; }
+                                }
+                                description "Indicates the state of the MEP grace period PDU transmission.";
+                            }
+
+                        } // container transmitted
+
+                        container received {
+                            description "Enter the received context";
+
+                            leaf process-grace-notification {
+                                type boolean;
+                                description
+                                    "Indicates whether the local MEP is receiving and processing grace notifications
+                                     from one or more peer MEPs. A value of 'true ' indicates the local MEP is
+                                     receiving and processing grace from at least one peer MEP. A value
+                                     of 'false' indicates that no peer grace notifications are being
+                                     received and processed.";
+                            }
+
+                        } // container received
+
+                    } // container grace
+
+                    container ccm-states {
+                        description "Enter the ccm-states context";
+
+                        leaf transmit-status {
+                            type enumeration {
+                                enum "no-transmit"                  { value 0; }
+                                enum "transmit"                     { value 1; }
+                                enum "suppressed"                   { value 2; }
+                            }
+                            description
+                                "Indicates the state of the MEP CCM PDU transmission.
+
+                                 Values:
+                                    noTransmit (0) - no CCM PDUs are being transmitted by the MEP
+                                    transmit   (1) - MEP is currently transmitting CCM PDUs
+                                    suppressed (2) - MEP should be transmitting CCM PDUs but is suppressing
+                                                    them due to an internal condition";
+                        }
+
+                        leaf sequence-error {
+                            type yang:counter32;
+                            description "The total number of out-of-sequence CCMs received from all remote MEPs.";
+                        }
+
+                        leaf fng-state {
+                            type types-eth-cfm:fng-state-type;
+                            description "Current state of the MEP Fault Notification Generator State Machine.";
+                        }
+
+                        container transmitted {
+                            description "Enter the transmitted context";
+
+                            leaf count {
+                                type yang:counter32;
+                                description "Total number of CCMs transmitted.";
+                            }
+
+                            leaf interface-status {
+                                type types-eth-cfm:interface-status;
+                                description
+                                    "Indicates the interface status TLV information included in the most
+                                     recent Connectivity Check Message (CCM) transmission from the local MEP.
+                                     If the local MEP CCM transmissions are not enabled, or if no interface
+                                     status TLV was included in the most recent transmission, then
+                                     ccm-tx-if-status will return a value of is-no-interface-status-tlv (0).";
+                            }
+
+                            leaf port-status {
+                                type types-eth-cfm:port-status;
+                                description
+                                    "Indicates the port status TLV information included in the most recent
+                                     Connectivity Check Message (CCM) transmission from the local MEP.
+
+                                     If the local MEP CCM transmissions are not enabled, or if no port
+                                     status TLV was included in the most recent transmission, then
+                                     ccm-tx-port-status will return a value of ps-no-port-state-tlv (0).";
+                            }
+
+                            leaf remote-defect-indicator {
+                                type boolean;
+                                description
+                                    "Indicates whether or not the Remote Defect Indication (RDI) bit was set
+                                     on the most recent Connectivity Check Message (CCM) transmission from the
+                                     local MEP.
+
+                                     If the local MEP CCM transmissions are not eanbled, or if the RDI bit
+                                     was not set in the most recent transmission, then ccm-tx-rdi will return
+                                     a value of 'false (2)'.";
+                            }
+
+                        } // container transmitted
+
+                        container received {
+                            description "Enter the received context";
+
+                            leaf highest-priority-defect {
+                                type types-eth-cfm:highest-priority-defect-type;
+                                description
+                                    "The highest priority defect that has been present since the
+                                     MEPs Fault Notification Generator State Machine was last in
+                                     the reset state.";
+                            }
+
+                            leaf defect-flags {
+                                type types-eth-cfm:mep-defect-flags;
+                                description "A vector of boolean error conditions, any of which may be true.";
+                            }
+
+                            list remote-mep-peer {
+                                key "remote-mep-id";
+                                description "Enter the remote-mep-peer list instance";
+
+                                leaf remote-mep-id {
+                                    type types-eth-cfm:mep-id-type;
+                                    description "The Remote MEP ID within the same Maintenance Association.";
+                                }
+
+                                leaf auto-discovered {
+                                    type boolean;
+                                    description
+                                        "Specifies whether or not the remote peer was automatically discovered
+                                         ('true') or not. Auto-discovered remote peers are created by the system
+                                         only, and are of a 'volatile' storage type. Specifying the value of
+                                         'false' will mark an auto-discovered remote peer as permanently configured.";
+                                }
+
+                                leaf receiving-ccm {
+                                    type types-eth-cfm:remote-mep-state-type;
+                                    description "The operational CCM receiving state of the remote MEP.";
+                                }
+
+                                leaf ccm-status-since {
+                                    type yang:date-and-time;
+                                    description
+                                        "The time at which the Remote MEP
+                                         last entered either the mep-failed or mep-ok state. ";
+                                }
+
+                                leaf peer-mac-address {
+                                    type yang:mac-address;
+                                    description "The MAC address of the remote MEP.";
+                                }
+
+                                leaf receiving-remote-defect-indicator {
+                                    type boolean;
+                                    description
+                                        "State of the RDI bit in the last received CCM (true for rdi=1), or false
+                                         if none has been received.";
+                                }
+
+                                leaf port-status-tlv {
+                                    type types-eth-cfm:port-status;
+                                    description
+                                        "An enumerated value of the Port status TLV received in the
+                                         last CCM from the remote MEP or the default value
+                                         ps-no-port-state-tlv indicating either no CCM has been received,
+                                         or that no port status TLV was received in the last CCM. ";
+                                }
+
+                                leaf interface-status-tlv {
+                                    type types-eth-cfm:interface-status;
+                                    description
+                                        "An enumerated value of the Interface status TLV received
+                                         in the last CCM from the remote MEP or the default value
+                                         is-no-interface-status-tlv indicating either no CCM has been
+                                         received, or that no interface status TLV was received in
+                                         the last CCM.";
+                                }
+
+                            } // list remote-mep-peer
+
+                        } // container received
+
+                    } // container ccm-states
+
+                    container mc-lag {
+                        description "Enter the mc-lag context";
+
+                        leaf inactive-state {
+                            type enumeration {
+                                enum "not-applicable"               { value 0; }
+                                enum "standby"                      { value 1; }
+                                enum "active"                       { value 2; }
+                            }
+                            description
+                                "Indicates the MC-LAG inactive state of the mep.  The value of
+                                 system/eth-cfm/redundancy/mc-lag/standby-mep must be 'true (1)' 
+                                 on the node for this leaf to have meaning.";
+                        }
+
+                    } // container mc-lag
+
+                    container statistics {
+                        description "Enter the statistics context";
+
+                        list opcode {
+                            key "opcode-name";
+                            description "Enter the opcode list instance";
+
+                            leaf opcode-name {
+                                type types-eth-cfm:statistics-opcode-name;
+                                description "Integer that defines which CFM PDU Opcode the statictics refer to.";
+                            }
+
+                            leaf transmitted {
+                                type yang:counter32;
+                                description "The total number of PDUs transmitted from the node with the specified Opcode.";
+                            }
+
+                            leaf received {
+                                type yang:counter32;
+                                description "The total number of PDUs received on the node with the specified Opcode.";
+                            }
+
+                        } // list opcode
+
+                    } // container statistics
 
                 } // list mep
 
@@ -996,6 +1309,74 @@ submodule nokia-state-lag {
                 }
 
             } // container statistics
+
+            container port-scheduler-policy {
+                description "Enter the port-scheduler-policy context";
+
+                container statistics {
+                    description "Enter the statistics context";
+
+                    leaf policy-name {
+                        type types-sros:named-item-or-empty;
+                        description "Specifies an port scheduler policy.";
+                    }
+
+                    leaf total-forwarded-octets {
+                        type yang:counter64;
+                        description "Indicates the total number of octets forwarded.";
+                    }
+
+                    leaf total-forwarded-packets {
+                        type yang:counter64;
+                        description "Indicates the total number of packets forwarded.";
+                    }
+
+                    leaf total-dropped-octets {
+                        type yang:counter64;
+                        description "Indicates the total number of octets dropped.";
+                    }
+
+                    leaf total-dropped-packets {
+                        type yang:counter64;
+                        description "Indicates the total number of packets dropped.";
+                    }
+
+                    list level {
+                        key "priority-level";
+                        description "Enter the level list instance";
+
+                        leaf priority-level {
+                            type uint32 {
+                                range "1..8";
+                            }
+                            description "Specifies the priority level of the port scheduler policy.";
+                        }
+
+                        leaf forwarded-octets {
+                            type yang:counter64;
+                            description "Indicates the number of octets forwarded for this level.";
+                        }
+
+                        leaf forwarded-packets {
+                            type yang:counter64;
+                            description "Indicates the number of packets forwarded for this level.";
+                        }
+
+                        leaf dropped-octets {
+                            type yang:counter64;
+                            description "Indicates the number of octets dropped for this level.";
+                        }
+
+                        leaf dropped-packets {
+                            type yang:counter64;
+                            description "Indicates the number of packets dropped for this level.";
+                        }
+
+                    } // list level
+
+                } // container statistics
+
+            } // container port-scheduler-policy
 
         } // list lag
 

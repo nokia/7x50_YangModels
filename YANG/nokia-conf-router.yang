@@ -24,6 +24,7 @@ submodule nokia-conf-router {
     include nokia-conf-log;
     include nokia-conf-mcast-mgmt;
     include nokia-conf-policy-options;
+    include nokia-conf-pxc;
     include nokia-conf-python;
     include nokia-conf-qos;
     include nokia-conf-router-bgp;
@@ -42,6 +43,7 @@ submodule nokia-conf-router {
     include nokia-conf-router-origin-validation;
     include nokia-conf-router-ospf;
     include nokia-conf-router-ospf3;
+    include nokia-conf-router-p2mp-sr-tree;
     include nokia-conf-router-pcep;
     include nokia-conf-router-pim;
     include nokia-conf-router-radius;
@@ -61,7 +63,9 @@ submodule nokia-conf-router {
     include nokia-conf-svc-vprn;
     include nokia-conf-system;
     include nokia-conf-system-security;
+    include nokia-conf-test-oam;
     include nokia-conf-vrrp;
+
 
     sros-ext:sros-major-release "rel21";
 
@@ -90,12 +94,12 @@ submodule nokia-conf-router {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2021-01-20";
+    revision "2021-04-06";
 
     grouping conf-router {
         list router {
             key "router-name";
-            max-elements 3;
+            max-elements 4;
             description "Enter the router list instance";
 
             leaf router-name {
@@ -209,7 +213,7 @@ submodule nokia-conf-router {
                     enum "strict"                       { value 2; }
                 }
                 default "false";
-                description "Allow weighted load-balancing";
+                description "Weighted load-balancing capability for ECMP routes";
             }
 
             leaf-list apply-groups {
@@ -344,7 +348,7 @@ submodule nokia-conf-router {
                 } // container s11
 
                 container upf-data-endpoint {
-                    presence "Enter the 'upf-data-endpoint' context";
+                    presence "Enable the upf-data-endpoint context";
                     description "Enable the upf-data-endpoint context";
 
                     leaf interface {
@@ -353,6 +357,14 @@ submodule nokia-conf-router {
                         }
                         mandatory true;
                         description "The interface on which the data endpoint gtp packets are enabled.";
+                    }
+
+                    leaf fpe {
+                        type leafref {
+                            path "../../../../fwd-path-ext/fpe/fpe-id";
+                        }
+                        mandatory true;
+                        description "The fpe on which the gtp data endpoint is constructed.";
                     }
 
                     leaf-list apply-groups {
@@ -376,7 +388,7 @@ submodule nokia-conf-router {
                 } // container upf-data-endpoint
 
                 container uplink {
-                    presence "Enter the 'uplink' context";
+                    presence "Enable the uplink context";
                     description "Enable the uplink context";
 
                     leaf apn {
@@ -663,7 +675,7 @@ submodule nokia-conf-router {
                         case blackhole {
 
                             container blackhole {
-                                presence "Enter the 'blackhole' context";
+                                presence "Enable the blackhole context";
                                 description "Enable the blackhole context";
 
                                 leaf generate-icmp {
@@ -750,7 +762,7 @@ submodule nokia-conf-router {
                 description "Enter the vrgw context";
 
                 container lanext {
-                    presence "Enter the 'lanext' context";
+                    presence "Enable the lanext context";
                     description "Enable the lanext context";
 
                     leaf admin-state {
@@ -813,7 +825,7 @@ submodule nokia-conf-router {
             } // container vrgw
 
             container wlan-gw {
-                presence "Enter the 'wlan-gw' context";
+                presence "Enable the wlan-gw context";
                 description "Enable the wlan-gw context";
 
                 leaf-list apply-groups {
@@ -935,7 +947,7 @@ submodule nokia-conf-router {
             } // container wlan-gw
 
             container mss-adjust {
-                presence "Enter the 'mss-adjust' context";
+                presence "Enable the mss-adjust context";
                 description "Enable the mss-adjust context";
 
                 leaf nat-group {
@@ -974,7 +986,7 @@ submodule nokia-conf-router {
             } // container mss-adjust
 
             container reassembly {
-                presence "Enter the 'reassembly' context";
+                presence "Enable the reassembly context";
                 description "Enable the reassembly context";
 
                 leaf nat-group {
@@ -1010,7 +1022,7 @@ submodule nokia-conf-router {
             } // container reassembly
 
             container sfm-overload {
-                presence "Enter the 'sfm-overload' context";
+                presence "Enable the sfm-overload context";
                 description "Enable the sfm-overload context";
 
                 leaf holdoff-time {
@@ -1289,7 +1301,7 @@ submodule nokia-conf-router {
                                 leaf pir {
                                     type union {
                                         type int32 {
-                                            range "1..100000000";
+                                            range "1..400000000";
                                         }
                                         type enumeration {
                                             enum "max"                          { value -1; }
@@ -1303,7 +1315,7 @@ submodule nokia-conf-router {
                                 leaf cir {
                                     type union {
                                         type int32 {
-                                            range "0..100000000";
+                                            range "0..400000000";
                                         }
                                         type enumeration {
                                             enum "max"                          { value -1; }
@@ -1441,6 +1453,12 @@ submodule nokia-conf-router {
                         description "Include TEID in hashing algorithm for GTP-U/C encapsulated traffic";
                     }
 
+                    leaf flow-label-load-balancing {
+                        type boolean;
+                        default "false";
+                        description "Enable flow label load balancing";
+                    }
+
                 } // container load-balancing
 
                 container lag {
@@ -1471,6 +1489,154 @@ submodule nokia-conf-router {
                     } // container per-link-hash
 
                 } // container lag
+
+                container autoconfigure {
+                    description "Enter the autoconfigure context";
+
+                    container ipv4 {
+                        when "not(../../../router-name = 'management')";
+                        description "Enter the ipv4 context";
+
+                        container dhcp-client {
+                            when "../../../../router-name = 'Base' and not(../../../interface-name = 'system') and not(../../../flavor = 'pdn')";
+                            presence "Enable the dhcp-client context";
+                            description "Enable the dhcp-client context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "disable";
+                                description "Administrative state of the DHCP client";
+                            }
+
+                            leaf lease-time {
+                                type union {
+                                    type types-sros:time-duration {
+                                        range "10..315446399";
+                                    }
+                                    type enumeration {
+                                        enum "infinite"                     { value -1; }
+                                    }
+                                }
+                                default "86400";
+                                description "Lease time the DHCP client requests";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                            container class-id {
+                                description "Enter the class-id context";
+
+                                choice format {
+                                    case ascii-string {
+
+                                        leaf ascii-string {
+                                            type string {
+                                                length "1..127";
+                                            }
+                                            description "Vendor class identifier as an ASCII string";
+                                        }
+
+                                    }
+                                    case hex-string {
+
+                                        leaf hex-string {
+                                            type types-sros:hex-string {
+                                                length "1..256";
+                                            }
+                                            description "Vendor class identifier as a hexadecimal string";
+                                        }
+
+                                    }
+                                }
+                            } // container class-id
+
+                            container client-id {
+                                description "Enter the client-id context";
+
+                                choice format {
+                                    case mac {
+
+                                        leaf mac {
+                                            type empty;
+                                            description "MAC as client identifier";
+                                        }
+
+                                    }
+                                    case interface {
+
+                                        leaf interface {
+                                            type empty;
+                                            description "Interface name as client identifier";
+                                        }
+
+                                    }
+                                    case ascii-string {
+
+                                        leaf ascii-string {
+                                            type string {
+                                                length "1..127";
+                                            }
+                                            description "Client identifier as an ASCII string";
+                                        }
+
+                                    }
+                                    case hex-string {
+
+                                        leaf hex-string {
+                                            type types-sros:hex-string {
+                                                length "1..256";
+                                            }
+                                            description "Client identifier as a hexadecimal string";
+                                        }
+
+                                    }
+                                }
+                            } // container client-id
+
+                            container request-options {
+                                description "Enter the request-options context";
+
+                                leaf dns-server {
+                                    type boolean;
+                                    default "false";
+                                    description "DNS server option";
+                                }
+
+                                leaf router {
+                                    type boolean;
+                                    default "false";
+                                    description "Router option";
+                                }
+
+                                leaf static-route {
+                                    type boolean;
+                                    default "false";
+                                    description "Static route option";
+                                }
+
+                            } // container request-options
+
+                        } // container dhcp-client
+
+                    } // container ipv4
+
+                } // container autoconfigure
 
                 container cflowd-parameters {
                     when "../../router-name = 'Base'";
@@ -1752,7 +1918,7 @@ submodule nokia-conf-router {
                         } // container alarm-notification
 
                         container eth-test {
-                            presence "Enter the 'eth-test' context";
+                            presence "Enable the eth-test context";
                             description "Enable the eth-test context";
 
                             leaf bit-error-threshold {
@@ -2056,7 +2222,7 @@ submodule nokia-conf-router {
 
                     container urpf-check {
                         when "../../../router-name = 'Base' and not(../../flavor = 'control-tunnel') and not(../../flavor = 'pdn') and not(../../interface-name = 'system')";
-                        presence "Enter the 'urpf-check' context";
+                        presence "Enable the urpf-check context";
                         description "Enable the urpf-check context";
 
                         leaf ignore-default {
@@ -2079,7 +2245,6 @@ submodule nokia-conf-router {
 
                         leaf admin-state {
                             type types-sros:admin-state;
-                            default "disable";
                             description "Administrative state of DHCP";
                         }
 
@@ -2353,7 +2518,7 @@ submodule nokia-conf-router {
 
                     container primary {
                         when "not(../../../router-name = 'management') and not(../../flavor = 'pdn') and not(../../flavor = 'unnumbered-mpls-tp')";
-                        presence "Enter the 'primary' context";
+                        presence "Enable the primary context";
                         description "Enable the primary context";
 
                         leaf address {
@@ -2512,7 +2677,6 @@ submodule nokia-conf-router {
                         leaf local-proxy-arp {
                             when "../../../../router-name = 'Base'";
                             type boolean;
-                            default "false";
                             description "Enable local proxy ARP on interface";
                         }
 
@@ -2561,7 +2725,7 @@ submodule nokia-conf-router {
 
                         container static-neighbor-unnumbered {
                             when "../../../../router-name = 'Base'";
-                            presence "Enter the 'static-neighbor-unnumbered' context";
+                            presence "Enable the static-neighbor-unnumbered context";
                             description "Enable the static-neighbor-unnumbered context";
 
                             leaf mac-address {
@@ -2687,7 +2851,6 @@ submodule nokia-conf-router {
 
                         leaf master-int-inherit {
                             type boolean;
-                            default "false";
                             description "Allow the master instance to dictate the master down timer";
                         }
 
@@ -2766,7 +2929,7 @@ submodule nokia-conf-router {
                         }
 
                         container bfd-liveness {
-                            presence "Enter the 'bfd-liveness' context";
+                            presence "Enable the bfd-liveness context";
                             description "Enable the bfd-liveness context";
 
                             leaf dest-ip {
@@ -2815,7 +2978,7 @@ submodule nokia-conf-router {
 
                 container ipv6 {
                     when "../../router-name = 'Base' and not(../flavor = 'control-tunnel') and not(../flavor = 'gmpls-loopback')";
-                    presence "Enter the 'ipv6' context";
+                    presence "Enable the ipv6 context";
                     description "Enable the ipv6 context";
 
                     leaf qos-route-lookup {
@@ -3010,7 +3173,7 @@ submodule nokia-conf-router {
 
                     container urpf-check {
                         when "../../../router-name = 'Base' and not(../../flavor = 'control-tunnel') and not(../../flavor = 'pdn') and not(../../interface-name = 'system')";
-                        presence "Enter the 'urpf-check' context";
+                        presence "Enable the urpf-check context";
                         description "Enable the urpf-check context";
 
                         leaf ignore-default {
@@ -3093,7 +3256,7 @@ submodule nokia-conf-router {
 
                         leaf prefix-length {
                             type uint32 {
-                                range "0..128";
+                                range "4..128";
                             }
                             mandatory true;
                             description "IPv6 address prefix length";
@@ -3124,7 +3287,7 @@ submodule nokia-conf-router {
                             type uint32 {
                                 range "1..4294967295";
                             }
-                            description "Track the state of the SRRP instance on this IP address";
+                            description "SRRP ID whose state is tracked on this IP address";
                         }
 
                         leaf-list apply-groups {
@@ -3351,7 +3514,6 @@ submodule nokia-conf-router {
 
                         leaf master-int-inherit {
                             type boolean;
-                            default "true";
                             description "Allow the master instance to dictate the master down timer";
                         }
 
@@ -3424,7 +3586,7 @@ submodule nokia-conf-router {
                         }
 
                         container bfd-liveness {
-                            presence "Enter the 'bfd-liveness' context";
+                            presence "Enable the bfd-liveness context";
                             description "Enable the bfd-liveness context";
 
                             leaf dest-ip {
@@ -3578,7 +3740,7 @@ submodule nokia-conf-router {
 
                 container untrusted {
                     when "../../router-name = 'Base' and ../flavor = 'regular' and not(../interface-name = 'system')";
-                    presence "Enter the 'untrusted' context";
+                    presence "Enable the untrusted context";
                     description "Enable the untrusted context";
 
                     leaf default-forwarding {
@@ -3655,7 +3817,7 @@ submodule nokia-conf-router {
                     }
 
                     container dns-options {
-                        presence "Enter the 'dns-options' context";
+                        presence "Enable the dns-options context";
                         description "Enable the dns-options context";
 
                         leaf rdnss-lifetime {
@@ -3811,7 +3973,7 @@ submodule nokia-conf-router {
                         }
 
                         container dns-options {
-                            presence "Enter the 'dns-options' context";
+                            presence "Enable the dns-options context";
                             description "Enable the dns-options context";
 
                             leaf include-rdnss {
@@ -3937,7 +4099,7 @@ submodule nokia-conf-router {
             } // container ipv6
 
             container isa-service-chaining {
-                presence "Enter the 'isa-service-chaining' context";
+                presence "Enable the isa-service-chaining context";
                 description "Enable the isa-service-chaining context";
 
                 leaf-list apply-groups {
@@ -3970,7 +4132,7 @@ submodule nokia-conf-router {
                 } // list nat-group
 
                 container vxlan-vtep-range {
-                    presence "Enter the 'vxlan-vtep-range' context";
+                    presence "Enable the vxlan-vtep-range context";
                     description "Enable the vxlan-vtep-range context";
 
                     leaf start {
@@ -4694,6 +4856,7 @@ submodule nokia-conf-router {
             uses conf-router-origin-validation;
             uses conf-router-ospf;
             uses conf-router-ospf3;
+            uses conf-router-p2mp-sr-tree;
             uses conf-router-pcep;
             uses conf-router-pim;
             uses conf-router-radius;

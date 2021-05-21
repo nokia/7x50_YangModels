@@ -38,7 +38,7 @@ submodule nokia-state-esa {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2020-11-27";
+    revision "2021-03-21";
 
     grouping state-esa {
         list esa {
@@ -50,6 +50,110 @@ submodule nokia-state-esa {
                 description "ESA ID";
             }
 
+            leaf oper-state {
+                type enumeration {
+                    enum "unknown"                      { value 1; }
+                    enum "in-service"                   { value 2; }
+                    enum "out-of-service"               { value 3; }
+                    enum "booting"                      { value 4; }
+                    enum "failed"                       { value 5; }
+                    enum "provisioned"                  { value 6; }
+                    enum "unprovisioned"                { value 7; }
+                    enum "upgrade"                      { value 8; }
+                    enum "fw-upgrade"                   { value 9; }
+                }
+                description "Indicates the operational state of the ESA.";
+            }
+
+            leaf oper-flags {
+                type bits {
+                    bit admin-down                     { position 0; }
+                    bit no-host-port                   { position 1; }
+                    bit esa-mismatch                   { position 2; }
+                    bit connect-failed                 { position 3; }
+                    bit fw-update-failed               { position 4; }
+                    bit boot-failed                    { position 5; }
+                }
+                description
+                    "Indicates the operational flags that determine the status
+                     of the ESA.";
+            }
+
+            leaf cores-available {
+                type yang:gauge32;
+                description "Indicates the total number of available cores on the ESA.";
+            }
+
+            leaf cores-allocated {
+                type yang:gauge32;
+                description "Indicates the total number of allocated cores on the ESA.";
+            }
+
+            leaf memory-available {
+                type yang:gauge32;
+                units "gigabytes";
+                description
+                    "Indicates the total amount of available memory (in GigaBytes)
+                     on the ESA.";
+            }
+
+            leaf memory-allocated {
+                type yang:gauge32;
+                units "gigabytes";
+                description
+                    "Indicates the total amount of allocated memory (in GigaBytes)
+                     on the ESA.";
+            }
+
+            leaf software-version {
+                type string {
+                    length "0..255";
+                }
+                description "Indicates the software version currently running on the ESA.";
+            }
+
+            leaf time-of-boot {
+                type yang:date-and-time;
+                description
+                    "Indicates date and time the software running on this
+                     ESA was last rebooted.";
+            }
+
+            leaf system-manufacturer {
+                type string {
+                    length "0..255";
+                }
+                description "Indicates the system manufacturer of the ESA.";
+            }
+
+            leaf system-product-name {
+                type string {
+                    length "0..255";
+                }
+                description "Indicates the system product name of the ESA.";
+            }
+
+            leaf system-serial-number {
+                type string {
+                    length "0..255";
+                }
+                description "Indicates the system serial number of the ESA.";
+            }
+
+            leaf performance-mode {
+                type boolean;
+                description
+                    "Indicates whether the ESA is in performance (true)
+                     or functional (false) mode.";
+            }
+
+            leaf export-restricted {
+                type boolean;
+                description
+                    "Indicates whether the ESA is in export restricted mode or not.
+                     In this mode, some restrictions apply to certain vm types.";
+            }
+
             list vm {
                 key "vm-id";
                 description "Enter the vm list instance";
@@ -57,6 +161,63 @@ submodule nokia-state-esa {
                 leaf vm-id {
                     type types-esa:vm-id;
                     description "VM ID";
+                }
+
+                leaf oper-state {
+                    type enumeration {
+                        enum "unknown"                      { value 1; }
+                        enum "in-service"                   { value 2; }
+                        enum "out-of-service"               { value 3; }
+                        enum "booting"                      { value 4; }
+                        enum "failed"                       { value 5; }
+                        enum "provisioned"                  { value 6; }
+                        enum "unprovisioned"                { value 7; }
+                        enum "upgrade"                      { value 8; }
+                    }
+                    description "Indicates the operational state of the ESA VM.";
+                }
+
+                leaf oper-flags {
+                    type bits {
+                        bit admin-down                     { position 0; }
+                        bit boot-failure                   { position 1; }
+                        bit out-of-esa-rsrcs               { position 2; }
+                        bit connect-failed                 { position 3; }
+                        bit provision-fail                 { position 4; }
+                        bit core-failure                   { position 5; }
+                        bit forced-failure                 { position 6; }
+                        bit icc-failure                    { position 7; }
+                        bit export-restricted              { position 8; }
+                        bit sw-ver-mismatch                { position 9; }
+                        bit insufficient-core-allocation   { position 10; }
+                        bit insufficient-memory-allocation { position 11; }
+                        bit host-port-conn-fail            { position 12; }
+                        bit vm-cores-exceed-os-limit       { position 13; }
+                    }
+                    description
+                        "Indicates the operational flags that determine the status of
+                         the ESA VM.";
+                }
+
+                leaf time-of-boot {
+                    type yang:date-and-time;
+                    description
+                        "Indicates date and time the software running on this ESA VM was
+                         last rebooted.";
+                }
+
+                leaf software-version {
+                    type string {
+                        length "0..255";
+                    }
+                    description "Indicates the software version currently running on the ESA VM.";
+                }
+
+                leaf core-util-last-coll {
+                    type yang:date-and-time;
+                    description
+                        "Indicates the time since system startup, when the core utilization
+                         statistics were last collected.";
                 }
 
                 container tunnel {
@@ -2191,6 +2352,48 @@ submodule nokia-state-esa {
                     } // container statistics
 
                 } // container tunnel
+
+                list core-utilization {
+                    key "vm-core-id";
+                    description "Enter the core-utilization list instance";
+
+                    leaf vm-core-id {
+                        type uint32 {
+                            range "1..62";
+                        }
+                        description "The ID of the VM Core.";
+                    }
+
+                    leaf virt-core-role-name {
+                        type types-sros:named-item;
+                        description "Indicates the esa-vm virtual core role.";
+                    }
+
+                    leaf virt-core-curr-util {
+                        type uint32;
+                        units "centipercent";
+                        description
+                            "Indicates the current 10-second utilization of this virtual
+                             core on the esa-vm.";
+                    }
+
+                    leaf virt-core-avg-util {
+                        type uint32;
+                        units "centipercent";
+                        description
+                            "Indicates the average 15-minute utilization of this virtual
+                             core on the esa-vm.";
+                    }
+
+                    leaf virt-core-peak-util {
+                        type uint32;
+                        units "centipercent";
+                        description
+                            "Indicates the all-time peak 10-second utilization of
+                             this virtual core on the esa-vm.";
+                    }
+
+                } // list core-utilization
 
             } // list vm
 

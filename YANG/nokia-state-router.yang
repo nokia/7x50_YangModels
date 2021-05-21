@@ -7,6 +7,7 @@ submodule nokia-state-router {
     import ietf-yang-types                { prefix "yang"; }
     import nokia-sros-yang-extensions     { prefix "sros-ext"; }
     import nokia-types-card               { prefix "types-card"; }
+    import nokia-types-eth-cfm            { prefix "types-eth-cfm"; }
     import nokia-types-ipsec              { prefix "types-ipsec"; }
     import nokia-types-isa                { prefix "types-isa"; }
     import nokia-types-nat                { prefix "types-nat"; }
@@ -18,6 +19,7 @@ submodule nokia-state-router {
     import nokia-types-wlan               { prefix "types-wlan"; }
     import nokia-types-wlangw             { prefix "types-wlangw"; }
 
+    include nokia-state-eth-cfm;
     include nokia-state-router-bgp;
     include nokia-state-router-bier;
     include nokia-state-router-dhcp-server;
@@ -33,6 +35,7 @@ submodule nokia-state-router {
     include nokia-state-router-origin-validation;
     include nokia-state-router-ospf;
     include nokia-state-router-ospf3;
+    include nokia-state-router-p2mp-sr-tree;
     include nokia-state-router-pcep;
     include nokia-state-router-pim;
     include nokia-state-router-radius;
@@ -44,6 +47,7 @@ submodule nokia-state-router {
     include nokia-state-router-static-route;
     include nokia-state-router-twamp-light;
     include nokia-state-router-wpp;
+
 
     sros-ext:sros-major-release "rel21";
 
@@ -72,7 +76,7 @@ submodule nokia-state-router {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2021-01-20";
+    revision "2021-04-06";
 
     grouping state-router-mvpn-extranet {
         list mvpn-extranet {
@@ -1194,6 +1198,39 @@ submodule nokia-state-router {
                     description "The interface system index.";
                 }
 
+                leaf if-oper-status {
+                    status deprecated;
+                    type enumeration {
+                        enum "up"                           { value 1; }
+                        enum "down"                         { value 2; }
+                        enum "testing"                      { value 3; }
+                        enum "unknown"                      { value 4; }
+                        enum "dormant"                      { value 5; }
+                        enum "not-present"                  { value 6; }
+                        enum "lower-layer-down"             { value 7; }
+                    }
+                    description
+                        "The current operational state of the interface.
+                         This leaf has the same semantics as ifOperStatus. 
+                         in RFC 2863: The Interfaces Group MIB";
+                }
+
+                leaf oper-state {
+                    type enumeration {
+                        enum "up"                           { value 1; }
+                        enum "down"                         { value 2; }
+                        enum "testing"                      { value 3; }
+                        enum "unknown"                      { value 4; }
+                        enum "dormant"                      { value 5; }
+                        enum "not-present"                  { value 6; }
+                        enum "lower-layer-down"             { value 7; }
+                    }
+                    description
+                        "The current operational state of the interface.
+                         This leaf has the same semantics as ifOperStatus. 
+                         in RFC 2863: The Interfaces Group MIB";
+                }
+
                 leaf protocol {
                     type bits {
                         bit ospfv2                         { position 0; }
@@ -1238,39 +1275,6 @@ submodule nokia-state-router {
                     description "Indicates the mechanism used to create this entry.";
                 }
 
-                leaf if-oper-status {
-                    status deprecated;
-                    type enumeration {
-                        enum "up"                           { value 1; }
-                        enum "down"                         { value 2; }
-                        enum "testing"                      { value 3; }
-                        enum "unknown"                      { value 4; }
-                        enum "dormant"                      { value 5; }
-                        enum "not-present"                  { value 6; }
-                        enum "lower-layer-down"             { value 7; }
-                    }
-                    description
-                        "The current operational state of the interface.
-                         This leaf has the same semantics as ifOperStatus. 
-                         in RFC 2863: The Interfaces Group MIB";
-                }
-
-                leaf oper-state {
-                    type enumeration {
-                        enum "up"                           { value 1; }
-                        enum "down"                         { value 2; }
-                        enum "testing"                      { value 3; }
-                        enum "unknown"                      { value 4; }
-                        enum "dormant"                      { value 5; }
-                        enum "not-present"                  { value 6; }
-                        enum "lower-layer-down"             { value 7; }
-                    }
-                    description
-                        "The current operational state of the interface.
-                         This leaf has the same semantics as ifOperStatus. 
-                         in RFC 2863: The Interfaces Group MIB";
-                }
-
                 leaf last-oper-change {
                     type yang:date-and-time;
                     description "The sysUpTime when the operational state of this interface last changed.";
@@ -1282,6 +1286,142 @@ submodule nokia-state-router {
                         "LAG active port associated with this interface when lag-per-link-hash is enabled
                          on the lag or when a lag-link-map-profile is configured on this interface.";
                 }
+
+                container ingress {
+                    description "Enter the ingress context";
+
+                    container statistics {
+                        description "Enter the statistics context";
+
+                        container policy-accounting {
+                            description "Enter the policy-accounting context";
+
+                            list source-class {
+                                key "index";
+                                description "Enter the source-class list instance";
+
+                                leaf index {
+                                    type types-sros:class-index;
+                                    description "Source-class index";
+                                }
+
+                                leaf forwarded-packets {
+                                    type yang:counter64;
+                                    units "packets";
+                                    description
+                                        "Indicates the total number of packets received
+                                         for this class that were forwarded.";
+                                }
+
+                                leaf forwarded-bytes {
+                                    type yang:counter64;
+                                    units "bytes";
+                                    description
+                                        "Indicates the total number of bytes received
+                                         for this class that were forwarded.";
+                                }
+
+                                leaf incomplete-counts {
+                                    type boolean;
+                                    description "Indicates if the counts are incomplete.";
+                                }
+
+                            } // list source-class
+
+                            list destination-class {
+                                key "index";
+                                description "Enter the destination-class list instance";
+
+                                leaf index {
+                                    type types-sros:class-index;
+                                    description "Destination-class index";
+                                }
+
+                                leaf policer {
+                                    type uint32 {
+                                        range "1..63";
+                                    }
+                                    description "Indicates the policer associated with this destination class.";
+                                }
+
+                                leaf forwarded-packets {
+                                    type yang:counter64;
+                                    units "packets";
+                                    description
+                                        "Indicates the total number of packets received
+                                         for this class that were forwarded.";
+                                }
+
+                                leaf forwarded-bytes {
+                                    type yang:counter64;
+                                    units "bytes";
+                                    description
+                                        "Indicates the total number of bytes received
+                                         for this class that were forwarded.";
+                                }
+
+                                leaf incomplete-counts {
+                                    type boolean;
+                                    description "Indicates if the counts are incomplete.";
+                                }
+
+                            } // list destination-class
+
+                            list policer {
+                                key "index";
+                                description "Enter the policer list instance";
+
+                                leaf index {
+                                    type uint32 {
+                                        range "1..63";
+                                    }
+                                    description "Policer index";
+                                }
+
+                                leaf dropped-packets {
+                                    type yang:counter64;
+                                    units "packets";
+                                    description
+                                        "Indicates the total number of packets
+                                         that were dropped by this policer.";
+                                }
+
+                                leaf dropped-bytes {
+                                    type yang:counter64;
+                                    units "bytes";
+                                    description
+                                        "Indicates the total number of bytes
+                                         that were dropped by this policer.";
+                                }
+
+                                leaf forwarded-packets {
+                                    type yang:counter64;
+                                    units "packets";
+                                    description
+                                        "Indicates the total number of packets
+                                         that were forwarded by this policer.";
+                                }
+
+                                leaf forwarded-bytes {
+                                    type yang:counter64;
+                                    units "bytes";
+                                    description
+                                        "Indicates the total number of bytes
+                                         that were forwarded by this policer.";
+                                }
+
+                                leaf incomplete-counts {
+                                    type boolean;
+                                    description "Indicates if the counts are incomplete.";
+                                }
+
+                            } // list policer
+
+                        } // container policy-accounting
+
+                    } // container statistics
+
+                } // container ingress
 
                 container distributed-cpu-protection {
                     description "Enter the distributed-cpu-protection context";
@@ -1585,6 +1725,278 @@ submodule nokia-state-router {
                     } // container ipv6
 
                 } // container hold-time
+
+                container eth-cfm {
+                    description "Enter the eth-cfm context";
+
+                    list mep {
+                        key "md-admin-name ma-admin-name mep-id";
+                        description "Enter the mep list instance";
+
+                        leaf md-admin-name {
+                            type leafref {
+                                path "../../../../../eth-cfm/domain/md-admin-name";
+                            }
+                            description "Admin-assigned maintenance domain index value";
+                        }
+
+                        leaf ma-admin-name {
+                            type leafref {
+                                path "../../../../../eth-cfm/domain[md-admin-name=current()/../md-admin-name]/association/ma-admin-name";
+                            }
+                            description "Admin-assigned maintenance association index value";
+                        }
+
+                        leaf mep-id {
+                            type types-eth-cfm:mep-id-type;
+                            description "MEP identifier";
+                        }
+
+                        leaf if-index {
+                            type uint32;
+                            description "Port ID of the MEP.";
+                        }
+
+                        leaf oper-mac-address {
+                            type yang:mac-address;
+                            description "Operational MAC address of the MEP.";
+                        }
+
+                        container grace {
+                            description "Enter the grace context";
+
+                            container transmitted {
+                                description "Enter the transmitted context";
+
+                                leaf grace-notification {
+                                    type enumeration {
+                                        enum "no-transmit"                  { value 0; }
+                                        enum "grace"                        { value 1; }
+                                        enum "eth-ed"                       { value 2; }
+                                    }
+                                    description "Indicates the state of the MEP grace period PDU transmission.";
+                                }
+
+                            } // container transmitted
+
+                            container received {
+                                description "Enter the received context";
+
+                                leaf process-grace-notification {
+                                    type boolean;
+                                    description
+                                        "Indicates whether the local MEP is receiving and processing grace notifications
+                                         from one or more peer MEPs. A value of 'true ' indicates the local MEP is
+                                         receiving and processing grace from at least one peer MEP. A value
+                                         of 'false' indicates that no peer grace notifications are being
+                                         received and processed.";
+                                }
+
+                            } // container received
+
+                        } // container grace
+
+                        container ccm-states {
+                            description "Enter the ccm-states context";
+
+                            leaf transmit-status {
+                                type enumeration {
+                                    enum "no-transmit"                  { value 0; }
+                                    enum "transmit"                     { value 1; }
+                                    enum "suppressed"                   { value 2; }
+                                }
+                                description
+                                    "Indicates the state of the MEP CCM PDU transmission.
+
+                                     Values:
+                                        noTransmit (0) - no CCM PDUs are being transmitted by the MEP
+                                        transmit   (1) - MEP is currently transmitting CCM PDUs
+                                        suppressed (2) - MEP should be transmitting CCM PDUs but is suppressing
+                                                        them due to an internal condition";
+                            }
+
+                            leaf sequence-error {
+                                type yang:counter32;
+                                description "The total number of out-of-sequence CCMs received from all remote MEPs.";
+                            }
+
+                            leaf fng-state {
+                                type types-eth-cfm:fng-state-type;
+                                description "Current state of the MEP Fault Notification Generator State Machine.";
+                            }
+
+                            container transmitted {
+                                description "Enter the transmitted context";
+
+                                leaf count {
+                                    type yang:counter32;
+                                    description "Total number of CCMs transmitted.";
+                                }
+
+                                leaf interface-status {
+                                    type types-eth-cfm:interface-status;
+                                    description
+                                        "Indicates the interface status TLV information included in the most
+                                         recent Connectivity Check Message (CCM) transmission from the local MEP.
+                                         If the local MEP CCM transmissions are not enabled, or if no interface
+                                         status TLV was included in the most recent transmission, then
+                                         ccm-tx-if-status will return a value of is-no-interface-status-tlv (0).";
+                                }
+
+                                leaf port-status {
+                                    type types-eth-cfm:port-status;
+                                    description
+                                        "Indicates the port status TLV information included in the most recent
+                                         Connectivity Check Message (CCM) transmission from the local MEP.
+
+                                         If the local MEP CCM transmissions are not enabled, or if no port
+                                         status TLV was included in the most recent transmission, then
+                                         ccm-tx-port-status will return a value of ps-no-port-state-tlv (0).";
+                                }
+
+                                leaf remote-defect-indicator {
+                                    type boolean;
+                                    description
+                                        "Indicates whether or not the Remote Defect Indication (RDI) bit was set
+                                         on the most recent Connectivity Check Message (CCM) transmission from the
+                                         local MEP.
+
+                                         If the local MEP CCM transmissions are not eanbled, or if the RDI bit
+                                         was not set in the most recent transmission, then ccm-tx-rdi will return
+                                         a value of 'false (2)'.";
+                                }
+
+                            } // container transmitted
+
+                            container received {
+                                description "Enter the received context";
+
+                                leaf highest-priority-defect {
+                                    type types-eth-cfm:highest-priority-defect-type;
+                                    description
+                                        "The highest priority defect that has been present since the
+                                         MEPs Fault Notification Generator State Machine was last in
+                                         the reset state.";
+                                }
+
+                                leaf defect-flags {
+                                    type types-eth-cfm:mep-defect-flags;
+                                    description "A vector of boolean error conditions, any of which may be true.";
+                                }
+
+                                list remote-mep-peer {
+                                    key "remote-mep-id";
+                                    description "Enter the remote-mep-peer list instance";
+
+                                    leaf remote-mep-id {
+                                        type types-eth-cfm:mep-id-type;
+                                        description "The Remote MEP ID within the same Maintenance Association.";
+                                    }
+
+                                    leaf auto-discovered {
+                                        type boolean;
+                                        description
+                                            "Specifies whether or not the remote peer was automatically discovered
+                                             ('true') or not. Auto-discovered remote peers are created by the system
+                                             only, and are of a 'volatile' storage type. Specifying the value of
+                                             'false' will mark an auto-discovered remote peer as permanently configured.";
+                                    }
+
+                                    leaf receiving-ccm {
+                                        type types-eth-cfm:remote-mep-state-type;
+                                        description "The operational CCM receiving state of the remote MEP.";
+                                    }
+
+                                    leaf ccm-status-since {
+                                        type yang:date-and-time;
+                                        description
+                                            "The time at which the Remote MEP
+                                             last entered either the mep-failed or mep-ok state. ";
+                                    }
+
+                                    leaf peer-mac-address {
+                                        type yang:mac-address;
+                                        description "The MAC address of the remote MEP.";
+                                    }
+
+                                    leaf receiving-remote-defect-indicator {
+                                        type boolean;
+                                        description
+                                            "State of the RDI bit in the last received CCM (true for rdi=1), or false
+                                             if none has been received.";
+                                    }
+
+                                    leaf port-status-tlv {
+                                        type types-eth-cfm:port-status;
+                                        description
+                                            "An enumerated value of the Port status TLV received in the
+                                             last CCM from the remote MEP or the default value
+                                             ps-no-port-state-tlv indicating either no CCM has been received,
+                                             or that no port status TLV was received in the last CCM. ";
+                                    }
+
+                                    leaf interface-status-tlv {
+                                        type types-eth-cfm:interface-status;
+                                        description
+                                            "An enumerated value of the Interface status TLV received
+                                             in the last CCM from the remote MEP or the default value
+                                             is-no-interface-status-tlv indicating either no CCM has been
+                                             received, or that no interface status TLV was received in
+                                             the last CCM.";
+                                    }
+
+                                } // list remote-mep-peer
+
+                            } // container received
+
+                        } // container ccm-states
+
+                        container mc-lag {
+                            description "Enter the mc-lag context";
+
+                            leaf inactive-state {
+                                type enumeration {
+                                    enum "not-applicable"               { value 0; }
+                                    enum "standby"                      { value 1; }
+                                    enum "active"                       { value 2; }
+                                }
+                                description
+                                    "Indicates the MC-LAG inactive state of the mep.  The value of
+                                     system/eth-cfm/redundancy/mc-lag/standby-mep must be 'true (1)' 
+                                     on the node for this leaf to have meaning.";
+                            }
+
+                        } // container mc-lag
+
+                        container statistics {
+                            description "Enter the statistics context";
+
+                            list opcode {
+                                key "opcode-name";
+                                description "Enter the opcode list instance";
+
+                                leaf opcode-name {
+                                    type types-eth-cfm:statistics-opcode-name;
+                                    description "Integer that defines which CFM PDU Opcode the statictics refer to.";
+                                }
+
+                                leaf transmitted {
+                                    type yang:counter32;
+                                    description "The total number of PDUs transmitted from the node with the specified Opcode.";
+                                }
+
+                                leaf received {
+                                    type yang:counter32;
+                                    description "The total number of PDUs received on the node with the specified Opcode.";
+                                }
+
+                            } // list opcode
+
+                        } // container statistics
+
+                    } // list mep
+
+                } // container eth-cfm
 
                 container ipv4 {
                     description "Enter the ipv4 context";
@@ -4488,6 +4900,16 @@ submodule nokia-state-router {
 
                         } // container sr-te
 
+                        container srv6-isis {
+                            description "Enter the srv6-isis context";
+
+                            leaf tunnel-count {
+                                type yang:counter32;
+                                description "Indicates the current number of SRv6 ISIS tunnels.";
+                            }
+
+                        } // container srv6-isis
+
                     } // container statistics
 
                     list tunnel {
@@ -4774,6 +5196,23 @@ submodule nokia-state-router {
                                 }
 
                             } // container bgp-label
+
+                            container dhcp-client {
+                                description "Enter the dhcp-client context";
+
+                                leaf active-routes {
+                                    type uint32;
+                                    description "Count of routes of a routing protocol active in the FIB.";
+                                }
+
+                                leaf available-routes {
+                                    type uint32;
+                                    description
+                                        "Count of routes of a routing protocol, both active in the FIB
+                                         and inactive in the RIB.";
+                                }
+
+                            } // container dhcp-client
 
                             container direct {
                                 description "Enter the direct context";
@@ -5469,6 +5908,23 @@ submodule nokia-state-router {
 
                             } // container bgp-label
 
+                            container dhcp-client {
+                                description "Enter the dhcp-client context";
+
+                                leaf active-routes {
+                                    type uint32;
+                                    description "Count of routes of a routing protocol active in the FIB.";
+                                }
+
+                                leaf available-routes {
+                                    type uint32;
+                                    description
+                                        "Count of routes of a routing protocol, both active in the FIB
+                                         and inactive in the RIB.";
+                                }
+
+                            } // container dhcp-client
+
                             container dhcpv6-bh {
                                 description "Enter the dhcpv6-bh context";
 
@@ -5757,6 +6213,23 @@ submodule nokia-state-router {
                                 }
 
                             } // container static
+
+                            container srv6 {
+                                description "Enter the srv6 context";
+
+                                leaf active-routes {
+                                    type uint32;
+                                    description "Count of routes of a routing protocol active in the FIB.";
+                                }
+
+                                leaf available-routes {
+                                    type uint32;
+                                    description
+                                        "Count of routes of a routing protocol, both active in the FIB
+                                         and inactive in the RIB.";
+                                }
+
+                            } // container srv6
 
                             container sub-mgmt {
                                 description "Enter the sub-mgmt context";
@@ -7698,6 +8171,7 @@ submodule nokia-state-router {
             uses state-router-origin-validation;
             uses state-router-ospf;
             uses state-router-ospf3;
+            uses state-router-p2mp-sr-tree;
             uses state-router-pcep;
             uses state-router-pim;
             uses state-router-radius;

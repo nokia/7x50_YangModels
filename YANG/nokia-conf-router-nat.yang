@@ -15,6 +15,7 @@ submodule nokia-conf-router-nat {
     include nokia-conf-service;
     include nokia-conf-svc-nat;
 
+
     sros-ext:sros-major-release "rel21";
 
     organization "Nokia";
@@ -47,7 +48,7 @@ submodule nokia-conf-router-nat {
     grouping conf-router-nat {
         container nat {
             when "../router-name = 'Base'";
-            presence "Enter the 'nat' context";
+            presence "Enable the nat context";
             description "Enable the nat context";
 
             leaf-list apply-groups {
@@ -105,6 +106,15 @@ submodule nokia-conf-router-nat {
                             type types-nat:lsn-max-subscriber-limit;
                             sros-ext:isa-auto-clear-on-modify;
                             description "Largest value for all subscriber limits in each deterministic pool";
+                        }
+
+                        leaf-list nat-import {
+                            type leafref {
+                                path "../../../../../../policy-options/policy-statement/name";
+                            }
+                            max-elements 5;
+                            ordered-by user;
+                            description "Import BGP-VPN routes in NAT inside routing context";
                         }
 
                         list destination-prefix {
@@ -209,7 +219,7 @@ submodule nokia-conf-router-nat {
                                         type types-sros:ipv4-address;
                                         sros-ext:immutable;
                                         mandatory true;
-                                        description "IPv6 address range that is mapped to outside IPv4 address";
+                                        description "Outside IP address mapped to inside IP address range";
                                     }
 
                                     leaf-list apply-groups {
@@ -233,6 +243,89 @@ submodule nokia-conf-router-nat {
                                 } // list map
 
                             } // list policy-map
+
+                            list prefix-map {
+                                key "source-prefix nat-policy";
+                                description "Enter the prefix-map list instance";
+
+                                leaf source-prefix {
+                                    type types-sros:ipv4-unicast-prefix;
+                                    description "Traffic sent from sources within this prefix will be NATed";
+                                }
+
+                                leaf nat-policy {
+                                    type leafref {
+                                        path "../../../../../../../../service/nat/nat-policy/name";
+                                    }
+                                    description "The NAT policy.";
+                                }
+
+                                leaf admin-state {
+                                    type types-sros:admin-state;
+                                    default "disable";
+                                    description "Administrative state of this prefix";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                leaf-list apply-groups-exclude {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Exclude a configuration group at this level";
+                                }
+
+                                list map {
+                                    key "from to";
+                                    description "Enter the map list instance";
+
+                                    leaf from {
+                                        type types-sros:ipv4-address;
+                                        description "Beginning of the range for IPv4 addresses on the inside that will be mapped to specific outside IPv4 addresses.";
+                                    }
+
+                                    leaf to {
+                                        type types-sros:ipv4-address;
+                                        description "Ending of the range for IPv4 addresses on the inside that will be mapped to specific outside IPv4 addresses.";
+                                    }
+
+                                    leaf first-outside-address {
+                                        type types-sros:ipv4-address;
+                                        sros-ext:immutable;
+                                        mandatory true;
+                                        description "Outside IP address mapped to inside IP address range";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                    leaf-list apply-groups-exclude {
+                                        type leafref {
+                                            path "../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Exclude a configuration group at this level";
+                                    }
+
+                                } // list map
+
+                            } // list prefix-map
 
                         } // container deterministic
 
@@ -373,7 +466,7 @@ submodule nokia-conf-router-nat {
                                         type types-sros:ipv4-address;
                                         sros-ext:immutable;
                                         mandatory true;
-                                        description "IPv6 address range that is mapped to outside IPv4 address";
+                                        description "Outside IP address mapped to inside IP address range";
                                     }
 
                                     leaf-list apply-groups {
@@ -398,12 +491,95 @@ submodule nokia-conf-router-nat {
 
                             } // list policy-map
 
+                            list prefix-map {
+                                key "source-prefix nat-policy";
+                                description "Enter the prefix-map list instance";
+
+                                leaf source-prefix {
+                                    type types-sros:ipv6-unicast-prefix;
+                                    description "Traffic sent from sources within this prefix will be NATed";
+                                }
+
+                                leaf nat-policy {
+                                    type leafref {
+                                        path "../../../../../../../../service/nat/nat-policy/name";
+                                    }
+                                    description "The NAT policy.";
+                                }
+
+                                leaf admin-state {
+                                    type types-sros:admin-state;
+                                    default "disable";
+                                    description "Administrative state of this prefix";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                leaf-list apply-groups-exclude {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Exclude a configuration group at this level";
+                                }
+
+                                list map {
+                                    key "from to";
+                                    description "Enter the map list instance";
+
+                                    leaf from {
+                                        type types-sros:ipv6-prefix;
+                                        description "Beginning of the range for IPv6 addresses on the inside that will be mapped to specific outside IPv4 addresses.";
+                                    }
+
+                                    leaf to {
+                                        type types-sros:ipv6-prefix;
+                                        description "Ending of the range for IPv6 addresses on the inside that will be mapped to specific outside IPv4 addresses.";
+                                    }
+
+                                    leaf first-outside-address {
+                                        type types-sros:ipv4-address;
+                                        sros-ext:immutable;
+                                        mandatory true;
+                                        description "Outside IP address mapped to inside IP address range";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                    leaf-list apply-groups-exclude {
+                                        type leafref {
+                                            path "../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Exclude a configuration group at this level";
+                                    }
+
+                                } // list map
+
+                            } // list prefix-map
+
                         } // container deterministic
 
                     } // container dual-stack-lite
 
                     container nat64 {
-                        presence "Enter the 'nat64' context";
+                        presence "Enable the nat64 context";
                         description "Enable the nat64 context";
 
                         leaf admin-state {
@@ -560,7 +736,7 @@ submodule nokia-conf-router-nat {
                         } // container attribute
 
                         container radius-proxy-server {
-                            presence "Enter the 'radius-proxy-server' context";
+                            presence "Enable the radius-proxy-server context";
                             description "Enable the radius-proxy-server context";
 
                             leaf router-instance {
@@ -827,19 +1003,19 @@ submodule nokia-conf-router-nat {
                     } // container port-reservation
 
                     container watermarks {
-                        presence "Enter the 'watermarks' context";
+                        presence "Enable the watermarks context";
                         description "Enable the watermarks context";
 
                         leaf high {
                             type types-sros:percent;
                             mandatory true;
-                            description "Percentage for high watermark";
+                            description "High watermark percentage";
                         }
 
                         leaf low {
                             type types-sros:percent;
                             mandatory true;
-                            description "Percentage for low watermark";
+                            description "Low watermark percentage";
                         }
 
                     } // container watermarks
