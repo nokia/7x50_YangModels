@@ -8,11 +8,13 @@ submodule nokia-conf-lag {
     import nokia-sros-yang-extensions     { prefix "sros-ext"; }
     import nokia-types-eth-cfm            { prefix "types-eth-cfm"; }
     import nokia-types-port               { prefix "types-port"; }
+    import nokia-types-services           { prefix "types-services"; }
     import nokia-types-sros               { prefix "types-sros"; }
 
     include nokia-conf-eth-cfm;
     include nokia-conf-groups;
     include nokia-conf-port;
+    include nokia-conf-qos;
     include nokia-conf-service;
 
 
@@ -43,7 +45,7 @@ submodule nokia-conf-lag {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2021-04-07";
+    revision "2021-06-21";
 
     grouping conf-lag {
         list lag {
@@ -1104,6 +1106,92 @@ submodule nokia-conf-lag {
                 } // list link
 
             } // list link-map-profile
+
+            container scheduler {
+                description "Enter the scheduler context";
+
+                leaf mode {
+                    type enumeration {
+                        enum "vlan-qos"                     { value 1; }
+                    }
+                    description "Mode of the scheduler";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                list vlan-qos-policy {
+                    when "../mode = 'vlan-qos'";
+                    key "policy-name";
+                    description "Enter the vlan-qos-policy list instance";
+
+                    leaf policy-name {
+                        type leafref {
+                            path "../../../../qos/vlan-qos-policy/vlan-qos-policy-name";
+                        }
+                        description "VLAN QoS policy name";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container agg-rate {
+                        description "Enter the agg-rate context";
+
+                        leaf rate {
+                            type types-services:agg-rate-rate;
+                            description "Maximum total rate of all egress queues";
+                        }
+
+                        leaf cir {
+                            type union {
+                                type int32 {
+                                    range "0..100000000";
+                                }
+                                type enumeration {
+                                    enum "max"                          { value -1; }
+                                }
+                            }
+                            units "kilobps";
+                            default "0";
+                            description "Specifies the administrative CIR.";
+                        }
+
+                    } // container agg-rate
+
+                } // list vlan-qos-policy
+
+            } // container scheduler
 
         } // list lag
 

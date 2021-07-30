@@ -41,7 +41,7 @@ submodule nokia-conf-qos {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2021-05-21";
+    revision "2021-07-09";
 
     grouping conf-qos {
         container qos {
@@ -8487,7 +8487,7 @@ submodule nokia-conf-qos {
 
                 leaf ingress-classification-policy-name {
                     type types-qos:qos-policy-name;
-                    description "The name of this ingress classification QoS policy.";
+                    description "Name of this ingress classification QoS policy";
                 }
 
                 leaf allow-attachment {
@@ -8519,21 +8519,21 @@ submodule nokia-conf-qos {
                     type leafref {
                         path "../../dot1p-fc-map/dot1p-fc-map-name";
                     }
-                    description "Attach dot1p fc map to ingress classification policy.";
+                    description "Attach dot1p FC map to ingress classification policy";
                 }
 
                 leaf dscp-fc-map {
                     type leafref {
                         path "../../dscp-fc-map/dscp-fc-map-name";
                     }
-                    description "Attach dscp fc map to ingress classification policy.";
+                    description "Attach DSCP FC map to ingress classification policy";
                 }
 
                 leaf lsp-exp-fc-map {
                     type leafref {
                         path "../../lsp-exp-fc-map/lsp-exp-fc-map-name";
                     }
-                    description "Attach lsp-exp fc map to ingress classification policy.";
+                    description "Attach LSP-EXP FC map to ingress classification policy";
                 }
 
                 leaf-list apply-groups {
@@ -9382,6 +9382,14 @@ submodule nokia-conf-qos {
                         description "Name of the advanced configuration policy";
                     }
 
+                    leaf agg-shaper-weight {
+                        type types-qos:weight {
+                            range "1..100";
+                        }
+                        default "1";
+                        description "Aggregate shaper weight of the sap-egress queue";
+                    }
+
                     leaf avg-frame-overhead {
                         type decimal64 {
                             range "0.00..100.00";
@@ -9438,6 +9446,32 @@ submodule nokia-conf-qos {
                         }
                         default "0";
                         description "Packet byte offset for addition of policing information";
+                    }
+
+                    leaf sched-class {
+                        type union {
+                            type uint32 {
+                                range "1..6";
+                            }
+                            type enumeration {
+                                enum "auto"                         { value 0; }
+                            }
+                        }
+                        default "auto";
+                        description "Scheduler class for the sap-egress queue";
+                    }
+
+                    leaf fir-burst-limit {
+                        type union {
+                            type types-qos:bytes {
+                                range "1..102400";
+                            }
+                            type enumeration {
+                                enum "auto"                         { value -1; }
+                            }
+                        }
+                        default "auto";
+                        description "Burst limit for FIR";
                     }
 
                     leaf hs-alt-port-class-pool {
@@ -10936,6 +10970,50 @@ submodule nokia-conf-qos {
 
                 } // container ipv6-criteria
 
+                container sched-class-elevation {
+                    description "Enter the sched-class-elevation context";
+
+                    list sched-class {
+                        key "class-id";
+                        description "Enter the sched-class list instance";
+
+                        leaf class-id {
+                            type uint32 {
+                                range "1..6";
+                            }
+                            description "Specifies scheduling class associated with this sap-egress.";
+                        }
+
+                        leaf weight {
+                            type uint32 {
+                                range "1..8";
+                            }
+                            default "1";
+                            description "Weight of the schedule class";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // list sched-class
+
+                } // container sched-class-elevation
+
             } // list sap-egress
 
             list scheduler-policy {
@@ -12398,7 +12476,7 @@ submodule nokia-conf-qos {
 
                 leaf egress-remark-policy-name {
                     type types-qos:qos-policy-name;
-                    description "The name of this egress-remark-policy QoS policy.";
+                    description "Name of the egress-remark-policy QoS policy";
                 }
 
                 leaf description {
@@ -12416,21 +12494,21 @@ submodule nokia-conf-qos {
                     type leafref {
                         path "../../fc-dot1p-map/fc-dot1p-map-name";
                     }
-                    description "Attach dot1p fc map to ingress classification policy.";
+                    description "Attach dot1p FC map to ingress classification policy";
                 }
 
                 leaf fc-dscp-map {
                     type leafref {
                         path "../../fc-dscp-map/fc-dscp-map-name";
                     }
-                    description "Attach dscp fc map to ingress classification policy.";
+                    description "Attach DSCP FC map to ingress classification policy";
                 }
 
                 leaf fc-lsp-exp-map {
                     type leafref {
                         path "../../fc-lsp-exp-map/fc-lsp-exp-map-name";
                     }
-                    description "Attach lsp-exp fc map to ingress classification policy.";
+                    description "Attach LSP-EXP FC map to ingress classification policy";
                 }
 
                 leaf-list apply-groups {
@@ -12741,7 +12819,7 @@ submodule nokia-conf-qos {
                 description "Enter the fp-resource-policy list instance";
 
                 leaf fp-resource-policy-name {
-                    type types-qos:qos-policy-name;
+                    type types-qos:fp-resource-policy-name;
                     description "FP resource policy name";
                 }
 
@@ -12782,6 +12860,42 @@ submodule nokia-conf-qos {
 
                 } // container queues
 
+                container aggregate-shapers {
+                    description "Enter the aggregate-shapers context";
+
+                    leaf auto-creation {
+                        type boolean;
+                        default "false";
+                        description "Enables auto-creation of hardware aggregate shapers";
+                    }
+
+                    container hw-agg-shapers {
+                        description "Enter the hw-agg-shapers context";
+
+                        leaf subscribers {
+                            type boolean;
+                            default "false";
+                            description "Enables hardware aggregate shapers for subscribers";
+                        }
+
+                    } // container hw-agg-shapers
+
+                } // container aggregate-shapers
+
+                container ports {
+                    description "Enter the ports context";
+
+                    leaf hqos-mode {
+                        type enumeration {
+                            enum "port-scheduler"               { value 1; }
+                            enum "hw-agg-shaping"               { value 2; }
+                        }
+                        default "port-scheduler";
+                        description "Default HQOS mode of the port";
+                    }
+
+                } // container ports
+
             } // list fp-resource-policy
 
             container packet-byte-offset {
@@ -12813,6 +12927,139 @@ submodule nokia-conf-qos {
 
             } // container packet-byte-offset
 
+            list hw-agg-shaper-scheduler-policy {
+                key "name";
+                max-elements 127;
+                description "Enter the hw-agg-shaper-scheduler-policy list instance";
+
+                leaf name {
+                    type types-sros:named-item-64;
+                    description "Name of the hardware aggregate shaper scheduler policy";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Description of the hardware aggregate shaper scheduler policy";
+                }
+
+                leaf congestion-threshold {
+                    type uint32 {
+                        range "0..100";
+                    }
+                    default "90";
+                    description "Congestion threshold of the scheduler";
+                }
+
+                leaf monitor-threshold {
+                    type uint32 {
+                        range "0..100";
+                    }
+                    default "0";
+                    description "Monitor threshold for the scheduler";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                choice max-rate-or-percent-rate {
+                    default "max-rate";
+                    case max-rate {
+
+                        leaf max-rate {
+                            type types-qos:shaper-max-rate;
+                            units "kilobps";
+                            default "max";
+                            description "Maximum frame-based bandwidth limit";
+                        }
+
+                    }
+                    case max-percent-rate {
+
+                        leaf max-percent-rate {
+                            type decimal64 {
+                                range "0.01..100.00";
+                                fraction-digits 2;
+                            }
+                            description "Maximum frame-based bandwidth percentage";
+                        }
+
+                    }
+                }
+                list group {
+                    key "group-name";
+                    max-elements 6;
+                    description "Add a list entry for group";
+
+                    leaf group-name {
+                        type types-sros:named-item;
+                        description "Name of the HW aggregate shaper scheduler policy group";
+                    }
+
+                } // list group
+
+                list sched-class {
+                    key "class-id";
+                    description "Enter the sched-class list instance";
+
+                    leaf class-id {
+                        type int32 {
+                            range "1..6";
+                        }
+                        description "Scheduling class ID for the scheduler policy";
+                    }
+
+                    leaf group {
+                        type leafref {
+                            path "../../group/group-name";
+                        }
+                        description "Group associated with the scheduling class";
+                    }
+
+                    leaf weight {
+                        type types-qos:weight {
+                            range "1..8";
+                        }
+                        default "1";
+                        description "Weight associated with the group";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // list sched-class
+
+            } // list hw-agg-shaper-scheduler-policy
+
             list dot1p-fc-map {
                 key "dot1p-fc-map-name";
                 max-elements 511;
@@ -12820,7 +13067,7 @@ submodule nokia-conf-qos {
 
                 leaf dot1p-fc-map-name {
                     type types-qos:qos-policy-name;
-                    description "The name of this dot1p-fc-map.";
+                    description "Dot1p-fc-map name";
                 }
 
                 leaf-list apply-groups {
@@ -12847,7 +13094,7 @@ submodule nokia-conf-qos {
                     leaf fc {
                         type types-sros:fc-name;
                         default "be";
-                        description "Default forwarding class name for the policer";
+                        description "Default FC name for the policer";
                     }
 
                     leaf profile {
@@ -12874,7 +13121,7 @@ submodule nokia-conf-qos {
 
                     leaf profile {
                         type types-qos:profile-de;
-                        description "Specifies the default profile to be used for the ingressing traffic.";
+                        description "Default profile for ingress traffic";
                     }
 
                     leaf-list apply-groups {
@@ -12906,7 +13153,7 @@ submodule nokia-conf-qos {
 
                 leaf dscp-fc-map-name {
                     type types-qos:qos-policy-name;
-                    description "The name of this dscp-fc-map.";
+                    description "DSCP name to associate with the FC";
                 }
 
                 leaf-list apply-groups {
@@ -12933,7 +13180,7 @@ submodule nokia-conf-qos {
                     leaf fc {
                         type types-sros:fc-name;
                         default "be";
-                        description "Default forwarding class to classify ingress traffic";
+                        description "Default FC to classify ingress traffic";
                     }
 
                     leaf profile {
@@ -12950,18 +13197,18 @@ submodule nokia-conf-qos {
 
                     leaf dscp-name {
                         type types-qos:dscp-name;
-                        description "DSCP";
+                        description "Name of the DSCP to associate with the FC";
                     }
 
                     leaf fc {
                         type types-sros:fc-name;
-                        description "Specifies the forwarding class.";
+                        description "FC to associate with the DSCP";
                     }
 
                     leaf profile {
                         type types-qos:profile;
                         default "in";
-                        description "Specifies the default profile to be used for the ingressing traffic.";
+                        description "Default profile to use for ingress traffic";
                     }
 
                     leaf-list apply-groups {
@@ -12993,7 +13240,7 @@ submodule nokia-conf-qos {
 
                 leaf lsp-exp-fc-map-name {
                     type types-qos:qos-policy-name;
-                    description "The name of this lsp-exp-fc-map.";
+                    description "Name of the lsp-exp-fc-map";
                 }
 
                 leaf-list apply-groups {
@@ -13037,18 +13284,18 @@ submodule nokia-conf-qos {
 
                     leaf lsp-exp-value {
                         type types-qos:lsp-exp-value;
-                        description "The lsp-exp bit value for which mapping is done.";
+                        description "LSP-EXP bit value for which mapping is performed";
                     }
 
                     leaf fc {
                         type types-sros:fc-name;
-                        description "Specifies the forwarding class.";
+                        description "FC to associate with the DSCP";
                     }
 
                     leaf profile {
                         type types-qos:profile;
                         default "in";
-                        description "Specifies the default profile to be used for the ingressing traffic.";
+                        description "Default profile to use for ingress traffic";
                     }
 
                     leaf-list apply-groups {
@@ -13079,7 +13326,7 @@ submodule nokia-conf-qos {
 
                 leaf fc-dot1p-map-name {
                     type types-qos:qos-policy-name;
-                    description "The name of this fc-dot1p-map.";
+                    description "Name of the fc-dot1p-map";
                 }
 
                 leaf-list apply-groups {
@@ -13106,7 +13353,7 @@ submodule nokia-conf-qos {
 
                     leaf fc-name {
                         type types-sros:fc-name;
-                        description "Specifies the forwarding class.";
+                        description "Forwarding class name";
                     }
 
                     leaf-list apply-groups {
@@ -13133,7 +13380,7 @@ submodule nokia-conf-qos {
 
                         leaf force {
                             type types-qos:de-value;
-                            description "Specifies the DE value to set.";
+                            description "DE value";
                         }
 
                     } // container de-mark
@@ -13143,15 +13390,67 @@ submodule nokia-conf-qos {
 
                         leaf in-profile {
                             type types-qos:dot1p-priority;
-                            description "Specifies Dot1p value for in-profile frames.";
+                            description "Dot1p value for in-profile frames";
                         }
 
                         leaf out-profile {
                             type types-qos:dot1p-priority;
-                            description "Specifies Dot1p value for out-of-profile frames.";
+                            description "Dot1p value for out-of-profile frames";
                         }
 
                     } // container dot1p
+
+                    container dot1p-inner {
+                        description "Enter the dot1p-inner context";
+
+                        leaf in-profile {
+                            type types-qos:dot1p-priority;
+                            description "Specifies Inner Dot1p value for in-profile frames.";
+                        }
+
+                        leaf out-profile {
+                            type types-qos:dot1p-priority;
+                            description "Specifies Inner Dot1p value for out-of-profile frames.";
+                        }
+
+                    } // container dot1p-inner
+
+                    container dot1p-outer {
+                        description "Enter the dot1p-outer context";
+
+                        leaf in-profile {
+                            type types-qos:dot1p-priority;
+                            description "Specifies Outer Dot1p value for in-profile frames.";
+                        }
+
+                        leaf out-profile {
+                            type types-qos:dot1p-priority;
+                            description "Specifies Outer Dot1p value for out-of-profile frames.";
+                        }
+
+                    } // container dot1p-outer
+
+                    container de-mark-inner {
+                        presence "Enable the de-mark-inner context";
+                        description "Enable the de-mark-inner context";
+
+                        leaf force {
+                            type types-qos:de-value;
+                            description "Inner DE marking value";
+                        }
+
+                    } // container de-mark-inner
+
+                    container de-mark-outer {
+                        presence "Enable the de-mark-outer context";
+                        description "Enable the de-mark-outer context";
+
+                        leaf force {
+                            type types-qos:de-value;
+                            description "Outer DE marking value";
+                        }
+
+                    } // container de-mark-outer
 
                 } // list fc
 
@@ -13163,7 +13462,7 @@ submodule nokia-conf-qos {
 
                 leaf fc-dscp-map-name {
                     type types-qos:qos-policy-name;
-                    description "The name of this fc-dscp-map.";
+                    description "Name of the fc-dscp-map";
                 }
 
                 leaf-list apply-groups {
@@ -13190,7 +13489,7 @@ submodule nokia-conf-qos {
 
                     leaf fc-name {
                         type types-sros:fc-name;
-                        description "Specifies the forwarding class.";
+                        description "Forwarding class name";
                     }
 
                     leaf-list apply-groups {
@@ -13216,12 +13515,12 @@ submodule nokia-conf-qos {
 
                         leaf in-profile {
                             type types-qos:dscp-name;
-                            description "Specifies DSCP name for in-profile frames.";
+                            description "DSCP value for in-profile frames";
                         }
 
                         leaf out-profile {
                             type types-qos:dscp-name;
-                            description "Specifies DSCP value for out-of-profile frames.";
+                            description "DSCP value for out-of-profile frames";
                         }
 
                     } // container dscp
@@ -13236,7 +13535,7 @@ submodule nokia-conf-qos {
 
                 leaf fc-lsp-exp-map-name {
                     type types-qos:qos-policy-name;
-                    description "The name of this fc-lsp-exp-map.";
+                    description "Name of the fc-lsp-exp-map";
                 }
 
                 leaf-list apply-groups {
@@ -13263,7 +13562,7 @@ submodule nokia-conf-qos {
 
                     leaf fc-name {
                         type types-sros:fc-name;
-                        description "Specifies the forwarding class.";
+                        description "Forwarding class name";
                     }
 
                     leaf-list apply-groups {
@@ -13289,12 +13588,12 @@ submodule nokia-conf-qos {
 
                         leaf in-profile {
                             type types-qos:lsp-exp-value;
-                            description "Specifies LSP-EXP marking for in-profile frames.";
+                            description "LSP-EXP marking for in-profile frames";
                         }
 
                         leaf out-profile {
                             type types-qos:lsp-exp-value;
-                            description "Specifies LSP-EXP value for out-of-profile frames.";
+                            description "LSP-EXP value for out-of-profile frames";
                         }
 
                     } // container lsp-exp

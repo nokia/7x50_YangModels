@@ -10,6 +10,7 @@ submodule nokia-conf-test-oam {
     import nokia-types-sros               { prefix "types-sros"; }
 
     include nokia-conf-groups;
+    include nokia-conf-testoam-service-activation-testhead;
 
 
     sros-ext:sros-major-release "rel21";
@@ -39,7 +40,7 @@ submodule nokia-conf-test-oam {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2021-04-01";
+    revision "2021-07-16";
 
     grouping conf-test-oam {
         container test-oam {
@@ -62,6 +63,230 @@ submodule nokia-conf-test-oam {
                 ordered-by user;
                 description "Exclude a configuration group at this level";
             }
+
+            container link-measurement {
+                description "Enter the link-measurement context";
+
+                list measurement-template {
+                    key "template-name";
+                    description "Enter the measurement-template list instance";
+
+                    leaf template-name {
+                        type types-sros:named-item-64;
+                        description "Measurement template name";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of the measurement template";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Configure a text description for the template";
+                    }
+
+                    leaf unidirectional-measurement {
+                        type enumeration {
+                            enum "derived"                      { value 1; }
+                            enum "actual"                       { value 2; }
+                        }
+                        default "derived";
+                        description "Method used to compute the unidirectional delay value";
+                    }
+
+                    leaf delay {
+                        type enumeration {
+                            enum "min"                          { value 1; }
+                            enum "max"                          { value 2; }
+                            enum "avg"                          { value 3; }
+                        }
+                        default "min";
+                        description "Delay measurement statistic type";
+                    }
+
+                    leaf interval {
+                        type uint32 {
+                            range "1..10";
+                        }
+                        units "seconds";
+                        default "1";
+                        description "Interval between test packet transmissions";
+                    }
+
+                    leaf last-reported-delay-hold {
+                        type uint32 {
+                            range "0|1..86400";
+                        }
+                        units "seconds";
+                        default "86400";
+                        description "Time to wait to flush the last reported delay";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container twamp-light {
+                        description "Enter the twamp-light context";
+
+                        leaf allow-egress-remark-dscp {
+                            type boolean;
+                            default "false";
+                            description "Allow overwrite of DSCP value by the egress QoS policy";
+                        }
+
+                        leaf allow-ipv6-udp-checksum-zero {
+                            type boolean;
+                            default "false";
+                            description "Process IPv6 packets with UDP check sum zero";
+                        }
+
+                        leaf dscp {
+                            type types-qos:dscp-name;
+                            default "nc1";
+                            description "DSCP copied to TWAMP light echo request packet header";
+                        }
+
+                        leaf dest-udp-port {
+                            type types-sros:tcp-udp-port-non-zero;
+                            default "862";
+                            description "Destination UDP port used by link measurement tests";
+                        }
+
+                        leaf fc {
+                            type types-sros:fc-name;
+                            default "h1";
+                            description "Forwarding class name for the TWAMP light packet";
+                        }
+
+                        leaf profile {
+                            type types-qos:profile-in-out;
+                            default "in";
+                            description "QoS profile for packet treatment in local node";
+                        }
+
+                        leaf timestamp-format {
+                            type enumeration {
+                                enum "ntp"                          { value 1; }
+                                enum "ptp"                          { value 2; }
+                            }
+                            default "ntp";
+                            description "Format of the timestamp used in TWAMP light PDU packet";
+                        }
+
+                        leaf ttl {
+                            type uint32 {
+                                range "1..255";
+                            }
+                            default "1";
+                            description "Time to live value used in the TWAMP light test packet";
+                        }
+
+                    } // container twamp-light
+
+                    container aggregate-sample-window {
+                        description "Enter the aggregate-sample-window context";
+
+                        leaf multiplier {
+                            type uint32 {
+                                range "1..12";
+                            }
+                            default "12";
+                            description "Number of sample windows in the aggregate sample window";
+                        }
+
+                        leaf window-integrity {
+                            type uint32 {
+                                range "1..100";
+                            }
+                            units "percent";
+                            description "Sample percentage required for window integrity report";
+                        }
+
+                        container threshold {
+                            description "Enter the threshold context";
+
+                            leaf relative {
+                                type uint32 {
+                                    range "1..100";
+                                }
+                                units "percent";
+                                description "Relative time delta for delay measurement reporting";
+                            }
+
+                            leaf absolute {
+                                type uint32 {
+                                    range "1..100000";
+                                }
+                                units "microseconds";
+                                description "Absolute time delta for delay measurement reporting";
+                            }
+
+                        } // container threshold
+
+                    } // container aggregate-sample-window
+
+                    container sample-window {
+                        description "Enter the sample-window context";
+
+                        leaf multiplier {
+                            type uint32 {
+                                range "1..900";
+                            }
+                            default "10";
+                            description "Multiplier used for sample-window probes";
+                        }
+
+                        leaf window-integrity {
+                            type uint32 {
+                                range "1..100";
+                            }
+                            units "percent";
+                            description "Sample percentage required for window integrity report";
+                        }
+
+                        container threshold {
+                            description "Enter the threshold context";
+
+                            leaf relative {
+                                type uint32 {
+                                    range "1..500";
+                                }
+                                units "percent";
+                                description "Configure the relative (percentage) amount of time by which a new measurement must exceed the last reported measurement to be deemed worthy of reporting";
+                            }
+
+                            leaf absolute {
+                                type uint32 {
+                                    range "1..100000";
+                                }
+                                units "microseconds";
+                                description "Absolute time delta for delay measurement reporting";
+                            }
+
+                        } // container threshold
+
+                    } // container sample-window
+
+                } // list measurement-template
+
+            } // container link-measurement
 
             container mpls-dm {
                 description "Enter the mpls-dm context";
@@ -385,6 +610,7 @@ submodule nokia-conf-test-oam {
 
             } // container icmp
 
+            uses conf-testoam-service-activation-testhead;
         } // container test-oam
 
     } // grouping conf-test-oam

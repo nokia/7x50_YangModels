@@ -4,7 +4,6 @@ submodule nokia-conf-svc-epipe {
 
     belongs-to nokia-conf { prefix "conf"; }
 
-    import nokia-features                 { prefix "nokia-features"; }
     import nokia-sros-yang-extensions     { prefix "sros-ext"; }
     import nokia-types-eth-cfm            { prefix "types-eth-cfm"; }
     import nokia-types-qos                { prefix "types-qos"; }
@@ -54,7 +53,7 @@ submodule nokia-conf-svc-epipe {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2021-04-08";
+    revision "2021-06-15";
 
     grouping conf-svc-epipe {
         list epipe {
@@ -143,6 +142,85 @@ submodule nokia-conf-svc-epipe {
                 ordered-by user;
                 description "Exclude a configuration group at this level";
             }
+
+            list segment-routing-v6 {
+                key "instance";
+                description "Enter the segment-routing-v6 list instance";
+
+                leaf instance {
+                    type types-services:epipe-srv6-instance;
+                    description "Segment routing v6 instance";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                list locator {
+                    key "locator-name";
+                    max-elements 1;
+                    description "Enter the locator list instance";
+
+                    leaf locator-name {
+                        type leafref {
+                            path "../../../../../router/segment-routing/segment-routing-v6/locator/locator-name";
+                        }
+                        description "SRv6 locator name";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container function {
+                        description "Enter the function context";
+
+                        container end-dx2 {
+                            presence "Enable the end-dx2 context";
+                            description "Enable the end-dx2 context";
+
+                            leaf value {
+                                type uint32 {
+                                    range "1..1048575";
+                                }
+                                description "SRv6 function value";
+                            }
+
+                        } // container end-dx2
+
+                    } // container function
+
+                } // list locator
+
+            } // list segment-routing-v6
 
             list bgp {
                 key "bgp-instance";
@@ -486,6 +564,15 @@ submodule nokia-conf-svc-epipe {
                     description "Add an IEEE 802.1q tag after CMAC addresses PBB header";
                 }
 
+                leaf local-switch-service-state {
+                    type enumeration {
+                        enum "sap"                          { value 0; }
+                        enum "pbb-tunnel"                   { value 1; }
+                    }
+                    default "sap";
+                    description "Service state to be used as pbb-tunnel";
+                }
+
                 container tunnel {
                     presence "Enable the tunnel context";
                     description "Enable the tunnel context";
@@ -555,7 +642,7 @@ submodule nokia-conf-svc-epipe {
 
                 leaf sdp-bind-id {
                     type types-services:sdp-bind-id;
-                    description "SDP Binding identifier as <sdp-id>:<vc-id>. sdp-id - [1..32767] vc-id - [1..4294967295].";
+                    description "SDP binding ID";
                 }
 
                 leaf description {
@@ -654,7 +741,7 @@ submodule nokia-conf-svc-epipe {
 
                         leaf entropy-label {
                             type empty;
-                            description "Whether the use of entropy-label is enabled or not.";
+                            description "Enable the use of entropy labels for spoke SDPs";
                         }
 
                     }
@@ -666,7 +753,7 @@ submodule nokia-conf-svc-epipe {
 
                             leaf signal-capability {
                                 type empty;
-                                description "To signal the hash label capability to the remote PE.";
+                                description "Enable the signaling of the hash label between PE nodes";
                             }
 
                         } // container hash-label
@@ -846,7 +933,7 @@ submodule nokia-conf-svc-epipe {
 
                                 leaf instance {
                                     type types-services:qos-qgrp-instance-id;
-                                    description "Instance of the port egress Queue Group for this SDP binding.";
+                                    description "Queue-group instance ID";
                                 }
 
                             } // container port-redirect-group
@@ -1225,12 +1312,12 @@ submodule nokia-conf-svc-epipe {
 
                         leaf primary-vlan {
                             type types-eth-cfm:vlan-id-or-none;
-                            description "The VLAN ID to which the MIP is attached or none.";
+                            description "VLAN ID to which the MIP is attached";
                         }
 
                         leaf mac-address {
                             type types-sros:mac-unicast-address-no-zero;
-                            description "The source MAC Address used by the MIP. By default, the MAC address is the chassis MAC address.";
+                            description "MAC address of the MIP";
                         }
 
                         leaf-list apply-groups {
@@ -1559,6 +1646,7 @@ submodule nokia-conf-svc-epipe {
                     type leafref {
                         path "../../endpoint/name";
                     }
+                    sros-ext:auto-restart-to-modify;
                     description "Name of the endpoint";
                 }
 
@@ -1713,6 +1801,7 @@ submodule nokia-conf-svc-epipe {
                                     }
 
                                     leaf monitor-depth {
+                                        status deprecated;
                                         type boolean;
                                         default "false";
                                         description "Monitor queue depth";
@@ -1826,6 +1915,18 @@ submodule nokia-conf-svc-epipe {
                                         }
 
                                     } // container parent
+
+                                    container monitor-queue-depth {
+                                        presence "Enable the monitor-queue-depth context";
+                                        description "Enable the monitor-queue-depth context";
+
+                                        leaf fast-polling {
+                                            type boolean;
+                                            default "false";
+                                            description "Enable fast polling of the queue depth";
+                                        }
+
+                                    } // container monitor-queue-depth
 
                                 } // list queue
 
@@ -2185,7 +2286,6 @@ submodule nokia-conf-svc-epipe {
                     } // container filter
 
                     container qtag-manipulation {
-                        if-feature nokia-features:sros-qtag-manipulation;
                         description "Enter the qtag-manipulation context";
 
                         choice tags {
@@ -2218,7 +2318,6 @@ submodule nokia-conf-svc-epipe {
                     } // container qtag-manipulation
 
                     container vlan-manipulation {
-                        if-feature nokia-features:sros-vlan-manipulation;
                         description "Enter the vlan-manipulation context";
 
                         leaf action {
@@ -2432,7 +2531,7 @@ submodule nokia-conf-svc-epipe {
                                                 enum "auto"                         { value -1; }
                                             }
                                         }
-                                        description "Explicit shaping burst size of a queue.";
+                                        description "Explicit shaping burst size for the queue";
                                     }
 
                                     leaf cbs {
@@ -2469,7 +2568,7 @@ submodule nokia-conf-svc-epipe {
 
                                     leaf hs-class-weight {
                                         type types-qos:hs-class-weight-override;
-                                        description "Scheduling class weight.";
+                                        description "Class weight override for the queue";
                                     }
 
                                     leaf-list apply-groups {
@@ -2615,7 +2714,7 @@ submodule nokia-conf-svc-epipe {
                                             type leafref {
                                                 path "../../../../../../../../../../qos/slope-policy/slope-policy-name";
                                             }
-                                            description "Name of slope-policy.";
+                                            description "Slope policy name applied to the HSQ queue group queue";
                                         }
 
                                     } // container hs-wred-queue
@@ -2761,7 +2860,7 @@ submodule nokia-conf-svc-epipe {
 
                                     leaf hs-class-weight {
                                         type types-qos:hs-class-weight-override;
-                                        description "Weight of scheduling class.";
+                                        description "Class weight override of the WRR group";
                                     }
 
                                     leaf-list apply-groups {
@@ -3024,6 +3123,12 @@ submodule nokia-conf-svc-epipe {
                                 description "Egress vlan-qos-policy name";
                             }
 
+                            leaf port-redirect {
+                                type boolean;
+                                default "false";
+                                description "Egress vlan-qos-policy port-redirect";
+                            }
+
                         } // container vlan-qos-policy
 
                         container egress-remark-policy {
@@ -3077,7 +3182,7 @@ submodule nokia-conf-svc-epipe {
 
                         leaf rate {
                             type types-services:agg-rate-rate;
-                            description "Maximum total rate of all egress queues in kbps.";
+                            description "Enforced aggregate rate";
                         }
 
                         leaf queue-frame-based-accounting {
@@ -3103,7 +3208,6 @@ submodule nokia-conf-svc-epipe {
                     } // container agg-rate
 
                     container vlan-manipulation {
-                        if-feature nokia-features:sros-vlan-manipulation;
                         description "Enter the vlan-manipulation context";
 
                         leaf action {
@@ -3167,7 +3271,7 @@ submodule nokia-conf-svc-epipe {
 
                     leaf link-map-profile {
                         type types-services:link-map-profile-id;
-                        description "Configure LAG link map profile.";
+                        description "LAG link map profile";
                     }
 
                     container per-link-hash {
@@ -3202,7 +3306,7 @@ submodule nokia-conf-svc-epipe {
                     leaf vc-id {
                         type types-services:vc-id;
                         sros-ext:auto-restart-to-modify;
-                        description "VC identifier.";
+                        description "VC ID for the L2TPv3 session";
                     }
 
                     leaf-list apply-groups {
@@ -3235,7 +3339,7 @@ submodule nokia-conf-svc-epipe {
                                 leaf ethernet {
                                     type empty;
                                     sros-ext:auto-restart-to-modify;
-                                    description "Ethernet type.";
+                                    description "Enable the Ethernet PW-type for the L2TPv3 session";
                                 }
 
                             }
@@ -3246,7 +3350,7 @@ submodule nokia-conf-svc-epipe {
                                         range "0..4095";
                                     }
                                     sros-ext:auto-restart-to-modify;
-                                    description "Ethernet VLAN identifier.";
+                                    description "Ethernet-VLAN PW-type ID for the L2TPv3 session";
                                 }
 
                             }
@@ -3260,13 +3364,13 @@ submodule nokia-conf-svc-epipe {
                         leaf group {
                             type types-sros:named-item;
                             sros-ext:auto-restart-to-modify;
-                            description "Tunnel group name.";
+                            description "Tunnel group name";
                         }
 
                         leaf router-instance {
                             type types-sros:router-instance-base-vprn-loose;
                             sros-ext:auto-restart-to-modify;
-                            description "Router instance hosting the l2tpv3 session.";
+                            description "Router name used to identify the router instance";
                         }
 
                     } // container router
@@ -3301,7 +3405,7 @@ submodule nokia-conf-svc-epipe {
                     leaf ais {
                         type boolean;
                         default "false";
-                        description "Generate AIS frames for the SAP based on a facility fault.";
+                        description "Enable the generation and the reception of AIS messages";
                     }
 
                     leaf-list apply-groups {
@@ -3637,12 +3741,12 @@ submodule nokia-conf-svc-epipe {
 
                         leaf primary-vlan {
                             type types-eth-cfm:vlan-id-or-none;
-                            description "The VLAN ID to which the MIP is attached or none.";
+                            description "VLAN ID to which the MIP is attached";
                         }
 
                         leaf mac-address {
                             type types-sros:mac-unicast-address-no-zero;
-                            description "The source MAC Address used by the MIP. By default, the MAC address is the MAC address of the SAP.";
+                            description "MAC address of the MIP";
                         }
 
                         leaf-list apply-groups {
@@ -4016,7 +4120,7 @@ submodule nokia-conf-svc-epipe {
                         type boolean;
                         sros-ext:auto-restart-to-modify;
                         default "false";
-                        description "Enable/disable setting the CW bit in the label message.";
+                        description "Enable the CW bit in the label message";
                     }
 
                     leaf ecmp {
@@ -4028,7 +4132,7 @@ submodule nokia-conf-svc-epipe {
                     leaf entropy-label {
                         type boolean;
                         default "false";
-                        description "Enable/disable use of entropy-label.";
+                        description "Enable use of entropy-labels";
                     }
 
                     leaf default-route-tag {
@@ -4200,7 +4304,7 @@ submodule nokia-conf-svc-epipe {
                                 leaf system-ipv4 {
                                     type empty;
                                     sros-ext:auto-restart-to-modify;
-                                    description "Use the system IPv4 address";
+                                    description "System IPv4 address for service EVPN route next hop";
                                 }
 
                             }
@@ -4209,7 +4313,7 @@ submodule nokia-conf-svc-epipe {
                                 leaf system-ipv6 {
                                     type empty;
                                     sros-ext:auto-restart-to-modify;
-                                    description "Use the system IPv6 address";
+                                    description "System IPv6 address for service EVPN route next hop";
                                 }
 
                             }
@@ -4218,7 +4322,7 @@ submodule nokia-conf-svc-epipe {
                                 leaf ip-address {
                                     type types-sros:ip-address;
                                     sros-ext:auto-restart-to-modify;
-                                    description "Use specific unicast IPv4/IPv6 address";
+                                    description "IP address of the next-hop for the service EVPN route";
                                 }
 
                             }
@@ -4241,6 +4345,131 @@ submodule nokia-conf-svc-epipe {
                     } // container endpoint
 
                 } // list mpls
+
+                list segment-routing-v6 {
+                    key "bgp-instance";
+                    description "Enter the segment-routing-v6 list instance";
+
+                    leaf bgp-instance {
+                        type int32 {
+                            range "1";
+                        }
+                        description "BGP instance";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of segment routing over IPv6";
+                    }
+
+                    leaf default-route-tag {
+                        type types-services:one-byte-value;
+                        sros-ext:auto-restart-to-modify;
+                        description "Default route tag";
+                    }
+
+                    leaf source-address {
+                        type types-sros:ipv6-unicast-address;
+                        sros-ext:auto-restart-to-modify;
+                        description "Source IPv6 address";
+                    }
+
+                    leaf oper-group {
+                        type leafref {
+                            path "../../../../oper-group/name";
+                        }
+                        description "Operational group";
+                    }
+
+                    leaf ecmp {
+                        type types-services:ecmp-value;
+                        default "1";
+                        description "Maximum ECMP value configured on the service";
+                    }
+
+                    leaf force-vc-forwarding {
+                        type enumeration {
+                            enum "vlan"                         { value 1; }
+                        }
+                        description "Datapath forwarding to force vlan-vc-type";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container srv6 {
+                        description "Enter the srv6 context";
+
+                        leaf instance {
+                            type leafref {
+                                path "../../../../segment-routing-v6/instance";
+                            }
+                            sros-ext:immutable;
+                            description "Segment Routing SRv6 instance";
+                        }
+
+                        leaf default-locator {
+                            type leafref {
+                                path "../../../../segment-routing-v6[instance=current()/../instance]/locator/locator-name";
+                            }
+                            sros-ext:immutable;
+                            description "Default route locator";
+                        }
+
+                    } // container srv6
+
+                    container route-next-hop {
+                        description "Enter the route-next-hop context";
+
+                        choice tag {
+                            default "ipv4";
+                            case ipv4 {
+
+                                leaf system-ipv4 {
+                                    type empty;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "System IPv4 address for service EVPN route next hop";
+                                }
+
+                            }
+                            case ipv6 {
+
+                                leaf system-ipv6 {
+                                    type empty;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "System IPv6 address for service EVPN route next hop";
+                                }
+
+                            }
+                            case explicit {
+
+                                leaf ip-address {
+                                    type types-sros:ip-address;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "IP address of the next-hop for the service EVPN route";
+                                }
+
+                            }
+                        }
+                    } // container route-next-hop
+
+                } // list segment-routing-v6
 
             } // container bgp-evpn
 

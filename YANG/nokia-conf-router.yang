@@ -94,7 +94,7 @@ submodule nokia-conf-router {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2021-06-07";
+    revision "2021-07-14";
 
     grouping conf-router {
         list router {
@@ -1278,6 +1278,12 @@ submodule nokia-conf-router {
                                 description "Vlan qos policy name";
                             }
 
+                            leaf port-redirect {
+                                type boolean;
+                                default "false";
+                                description "Egress vlan-qos-policy port-redirect";
+                            }
+
                         } // container vlan-qos-policy
 
                         container egress-remark-policy {
@@ -1438,7 +1444,7 @@ submodule nokia-conf-router {
                     leaf ip-load-balancing {
                         type types-router:ip-load-balancing;
                         default "both";
-                        description "Configure IP load balancing algorithm.";
+                        description "IP load balancing algorithm";
                     }
 
                     leaf spi-load-balancing {
@@ -1489,6 +1495,36 @@ submodule nokia-conf-router {
                     } // container per-link-hash
 
                 } // container lag
+
+                container ptp-hw-assist {
+                    when "../../router-name = 'Base'";
+                    description "Enter the ptp-hw-assist context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of the port-based timestamping assist function for the interface";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // container ptp-hw-assist
 
                 container autoconfigure {
                     description "Enter the autoconfigure context";
@@ -2276,6 +2312,12 @@ submodule nokia-conf-router {
                         leaf gi-address {
                             type types-sros:ipv4-unicast-address;
                             description "Gateway interface address for the DHCP relay";
+                        }
+
+                        leaf release-include-gi-address {
+                            type boolean;
+                            default "false";
+                            description "The system includes the Gateway IP Address in DHCPRELEASE messages";
                         }
 
                         leaf src-ip-addr {
@@ -3273,7 +3315,7 @@ submodule nokia-conf-router {
                             type boolean;
                             sros-ext:immutable;
                             default "true";
-                            description "Enable/disable Duplicate Address Detection.";
+                            description "Enable Duplicate Address Detection.";
                         }
 
                         leaf primary-preference {
@@ -3726,6 +3768,18 @@ submodule nokia-conf-router {
                     container delay {
                         description "Enter the delay context";
 
+                        leaf delay-selection {
+                            when "not(../../../interface-name = 'system')";
+                            type enumeration {
+                                enum "static"                       { value 1; }
+                                enum "dynamic"                      { value 2; }
+                                enum "static-preferred"             { value 3; }
+                                enum "dynamic-preferred"            { value 4; }
+                            }
+                            default "static-preferred";
+                            description "Delay source advertised by IGP for the interface";
+                        }
+
                         leaf static {
                             type int32 {
                                 range "1..16777214";
@@ -3733,6 +3787,66 @@ submodule nokia-conf-router {
                             units "microseconds";
                             description "Unidirectional link delay";
                         }
+
+                        container dynamic {
+                            when "not(../../../interface-name = 'system')";
+                            description "Enter the dynamic context";
+
+                            leaf measurement-template {
+                                type leafref {
+                                    path "../../../../../../test-oam/link-measurement/measurement-template/template-name";
+                                }
+                                description "Link delay measurement template for this interface";
+                            }
+
+                            container twamp-light {
+                                description "Enter the twamp-light context";
+
+                                container ipv4 {
+                                    description "Enter the ipv4 context";
+
+                                    leaf admin-state {
+                                        type types-sros:admin-state;
+                                        default "disable";
+                                        description "Administrative state of IPv4 TWAMP light packets";
+                                    }
+
+                                    leaf destination {
+                                        type types-sros:ipv4-unicast-address;
+                                        description "Destination Twamp Light IPv4 address";
+                                    }
+
+                                    leaf source {
+                                        type types-sros:ipv4-unicast-address;
+                                        description "Source address for IPv4 TWAMP Light measurement packets";
+                                    }
+
+                                } // container ipv4
+
+                                container ipv6 {
+                                    description "Enter the ipv6 context";
+
+                                    leaf admin-state {
+                                        type types-sros:admin-state;
+                                        default "disable";
+                                        description "Administrative state of the interface";
+                                    }
+
+                                    leaf destination {
+                                        type types-sros:ipv6-unicast-or-linklocal-address;
+                                        description "Destination Twamp Light IPv6 address";
+                                    }
+
+                                    leaf source {
+                                        type types-sros:ipv6-unicast-or-linklocal-address;
+                                        description "Source address for IPv6 TWAMP Light measurement packets";
+                                    }
+
+                                } // container ipv6
+
+                            } // container twamp-light
+
+                        } // container dynamic
 
                     } // container delay
 

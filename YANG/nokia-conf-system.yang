@@ -14,12 +14,14 @@ submodule nokia-conf-system {
     import nokia-types-system             { prefix "types-system"; }
 
     include nokia-conf-groups;
+    include nokia-conf-python;
     include nokia-conf-system-bluetooth;
     include nokia-conf-system-central-frequency-clock;
     include nokia-conf-system-cron;
     include nokia-conf-system-login-control;
     include nokia-conf-system-ned;
     include nokia-conf-system-persistence;
+    include nokia-conf-system-ptp;
     include nokia-conf-system-script-control;
     include nokia-conf-system-security;
     include nokia-conf-system-security-tls;
@@ -54,7 +56,7 @@ submodule nokia-conf-system {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2021-04-21";
+    revision "2021-06-21";
 
     grouping conf-system {
         container system {
@@ -845,6 +847,33 @@ submodule nokia-conf-system {
 
                     } // container ethernet
 
+                    container lpm-allocation {
+                        description "Enter the lpm-allocation context";
+
+                        container scale-option-1 {
+                            description "Enter the scale-option-1 context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "enable";
+                                description "Administrative state of scale-option-1";
+                            }
+
+                        } // container scale-option-1
+
+                        container scale-option-2 {
+                            description "Enter the scale-option-2 context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "disable";
+                                description "Administrate state of scale-option-2";
+                            }
+
+                        } // container scale-option-2
+
+                    } // container lpm-allocation
+
                 } // container options
 
                 container cam-allocation {
@@ -905,6 +934,50 @@ submodule nokia-conf-system {
                         ordered-by user;
                         description "Exclude a configuration group at this level";
                     }
+
+                    list pool {
+                        key "pool-id";
+                        description "Enter the pool list instance";
+
+                        leaf pool-id {
+                            type uint32 {
+                                range "1..2";
+                            }
+                            description "Specifies the pool identifier.";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container lag-bundle {
+                            description "Enter the lag-bundle context";
+
+                            leaf reserved-member-count {
+                                type uint32 {
+                                    range "8|16|32|64";
+                                }
+                                default "64";
+                                description "Configure the member count reserved for the lag-bundle.";
+                            }
+
+                        } // container lag-bundle
+
+                    } // list pool
 
                 } // container resource-allocation
 
@@ -1348,6 +1421,97 @@ submodule nokia-conf-system {
                                 default "rfc-3339";
                                 description "Time format to display date and time";
                             }
+
+                            container command-alias {
+                                description "Enter the command-alias context";
+
+                                list alias {
+                                    key "alias-name";
+                                    description "Enter the alias list instance";
+
+                                    leaf alias-name {
+                                        type string {
+                                            length "1..64";
+                                            pattern "[_a-zA-Z0-9][-_a-zA-Z0-9]*" {
+                                                error-message "must only contain alpha-numeric characters, underscore or hyphen (not as the first character)";
+                                            }
+                                        }
+                                        description "Alias name";
+                                    }
+
+                                    leaf description {
+                                        type types-sros:string-not-all-spaces {
+                                            length "1..110";
+                                        }
+                                        description "Text description";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                    leaf-list apply-groups-exclude {
+                                        type leafref {
+                                            path "../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Exclude a configuration group at this level";
+                                    }
+
+                                    choice alias-expansion {
+                                        mandatory true;
+                                        case python {
+
+                                            leaf python-script {
+                                                type leafref {
+                                                    path "../../../../../../../../python/python-script/name";
+                                                }
+                                                description "Python script to run when executing this alias.";
+                                            }
+
+                                        }
+                                        case cli {
+
+                                            leaf cli-command {
+                                                type string {
+                                                    length "1..255";
+                                                }
+                                                description "CLI command to run when executing the alias";
+                                            }
+
+                                        }
+                                    }
+                                    list mount-point {
+                                        key "path";
+                                        min-elements 1;
+                                        description "Add a list entry for mount-point";
+
+                                        leaf path {
+                                            type union {
+                                                type enumeration {
+                                                    enum "global"                       { value 0; }
+                                                }
+                                                type string {
+                                                    length "1..255";
+                                                    pattern "/.*" {
+                                                        error-message "must start with forward slash";
+                                                    }
+                                                }
+                                            }
+                                            description "Mount point where alias is available";
+                                        }
+
+                                    } // list mount-point
+
+                                } // list alias
+
+                            } // container command-alias
 
                             container command-completion {
                                 description "Enter the command-completion context";
@@ -1857,6 +2021,17 @@ submodule nokia-conf-system {
                         type boolean;
                         description "Support Nokia YANG models";
                     }
+
+                    container nmda {
+                        description "Enter the nmda context";
+
+                        leaf nmda-support {
+                            type boolean;
+                            default "false";
+                            description "Advertise NMDA support over NETCONF";
+                        }
+
+                    } // container nmda
 
                 } // container yang-modules
 
@@ -2874,6 +3049,7 @@ submodule nokia-conf-system {
             uses conf-system-login-control;
             uses conf-system-ned-network-element-discovery;
             uses conf-system-persistence;
+            uses conf-system-ptp;
             uses conf-system-script-control;
             uses conf-system-security;
             uses conf-system-telemetry;

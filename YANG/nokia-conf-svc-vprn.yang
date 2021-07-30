@@ -66,6 +66,7 @@ submodule nokia-conf-svc-vprn {
     include nokia-conf-system-security;
     include nokia-conf-system-security-aaa;
     include nokia-conf-system-security-snmp;
+    include nokia-conf-system-security-tls;
     include nokia-conf-test-oam;
     include nokia-conf-vrrp;
 
@@ -97,7 +98,7 @@ submodule nokia-conf-svc-vprn {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2021-04-26";
+    revision "2021-06-21";
 
     grouping conf-svc-vprn {
         list vprn {
@@ -602,7 +603,7 @@ submodule nokia-conf-svc-vprn {
 
                                 leaf tunnel-mtu {
                                     type uint32 {
-                                        range "512..9212";
+                                        range "464..9212";
                                     }
                                     default "1500";
                                     description "Maximum size of IPv4 packet inside of DS-Lite tunnel";
@@ -1349,6 +1350,26 @@ submodule nokia-conf-svc-vprn {
                                 default "false";
                                 description "External IP address for Layer-2-aware";
                             }
+
+                            container port-block-extension {
+                                presence "Enable the port-block-extension context";
+                                description "Enable the port-block-extension context";
+
+                                leaf ports {
+                                    type uint32 {
+                                        range "10..5000";
+                                    }
+                                    description "Number of ports per dynamic port-block";
+                                }
+
+                                leaf subscriber-limit {
+                                    type uint32 {
+                                        range "2..2000";
+                                    }
+                                    description "Number of L2-Aware NAT subscribers per outside address";
+                                }
+
+                            } // container port-block-extension
 
                         } // container l2-aware
 
@@ -6147,7 +6168,7 @@ submodule nokia-conf-svc-vprn {
                         enum "pim"                          { value 1; }
                     }
                     default "pim";
-                    description "Specifies the protocol to use for PE-to-PE signaling of CE multicast states.";
+                    description "Protocol for PE-to-PE signaling of CE multicast states";
                 }
 
                 leaf mdt-type {
@@ -6157,7 +6178,7 @@ submodule nokia-conf-svc-vprn {
                         enum "sender-receiver"              { value 2; }
                     }
                     default "sender-receiver";
-                    description "Specifies the type of the PE node (for P2MP only).";
+                    description "MVPN instance type per PE node";
                 }
 
                 leaf umh-selection {
@@ -6168,7 +6189,7 @@ submodule nokia-conf-svc-vprn {
                         enum "unicast-rt-pref"              { value 3; }
                     }
                     default "highest-ip";
-                    description "Specifies the algorithm for selecting the UMH from the UMH route candidate set.";
+                    description "UMH selection mechanism";
                 }
 
                 leaf-list apply-groups {
@@ -6581,7 +6602,7 @@ submodule nokia-conf-svc-vprn {
                                             range "0..255";
                                         }
                                         default "30";
-                                        description "The frequency at which PIM hello messages are sent over this interface.";
+                                        description "Frequency at which PIM Hello messages are transmitted";
                                     }
 
                                     leaf hello-multiplier {
@@ -6589,7 +6610,7 @@ submodule nokia-conf-svc-vprn {
                                             range "20..100";
                                         }
                                         default "35";
-                                        description "Hello-multiplier in multiples of 0.1 (deci-units).";
+                                        description "Multiplier to determine the holdtime for a PIM neighbor";
                                     }
 
                                     leaf improved-assert {
@@ -6705,7 +6726,7 @@ submodule nokia-conf-svc-vprn {
                                 range "3..180";
                             }
                             default "3";
-                            description "The data delay interval.";
+                            description "Interval a PE switches from inclusive to selective";
                         }
 
                         leaf join-tlv-packing {
@@ -6745,7 +6766,7 @@ submodule nokia-conf-svc-vprn {
                                             range "1..4000";
                                         }
                                         default "10";
-                                        description "Specify the maximum number of p2mp s-pmsi tunnels for the mvpn.";
+                                        description "Maximum number of RSVP P2MP or LDP P2MP S-PMSI tunnels";
                                     }
 
                                 } // container rsvp
@@ -6768,7 +6789,7 @@ submodule nokia-conf-svc-vprn {
                                             range "1..4000";
                                         }
                                         default "10";
-                                        description "Specify the maximum number of p2mp s-pmsi tunnels for the mvpn.";
+                                        description "Maximum number of RSVP P2MP or LDP P2MP S-PMSI tunnels";
                                     }
 
                                 } // container mldp
@@ -6875,7 +6896,7 @@ submodule nokia-conf-svc-vprn {
                                         range "1..65535";
                                     }
                                     default "65535";
-                                    description "The threshold.";
+                                    description "PE add threshold";
                                 }
 
                                 leaf pe-threshold-delete {
@@ -6883,7 +6904,7 @@ submodule nokia-conf-svc-vprn {
                                         range "2..65535";
                                     }
                                     default "65535";
-                                    description "The threshold.";
+                                    description "PE delete threshold";
                                 }
 
                                 leaf-list apply-groups {
@@ -8248,7 +8269,7 @@ submodule nokia-conf-svc-vprn {
                                 range "1..65535";
                             }
                             default "1812";
-                            description "TCP port number on which to contact RADIUS server";
+                            description "UDP port number on which to contact RADIUS server";
                         }
 
                         leaf use-default-template {
@@ -12517,16 +12538,6 @@ submodule nokia-conf-svc-vprn {
                     description "Enable/disable tunnel interface";
                 }
 
-                leaf static-tunnel-redundant-nexthop {
-                    type types-sros:ipv4-unicast-address;
-                    description "Address for the static ISA tunnel redundant next-hop";
-                }
-
-                leaf dynamic-tunnel-redundant-nexthop {
-                    type types-sros:ipv4-unicast-address;
-                    description "Redundant next-hop address for the dynamic IPsec tunnel";
-                }
-
                 leaf loopback {
                     type boolean;
                     default "false";
@@ -12608,6 +12619,51 @@ submodule nokia-conf-svc-vprn {
                     description "Exclude a configuration group at this level";
                 }
 
+                choice shunting {
+                    description "shunting options";
+                    case nexthop {
+
+                        leaf static-tunnel-redundant-nexthop {
+                            type types-sros:ipv4-unicast-address;
+                            description "Address for the static ISA tunnel redundant next-hop";
+                        }
+
+                        leaf dynamic-tunnel-redundant-nexthop {
+                            type types-sros:ipv4-unicast-address;
+                            description "Redundant next-hop address for the dynamic IPsec tunnel";
+                        }
+
+                    }
+                }
+                container ptp-hw-assist {
+                    description "Enter the ptp-hw-assist context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of the port-based timestamping assist function for the interface";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // container ptp-hw-assist
+
                 container ingress {
                     description "Enter the ingress context";
 
@@ -12615,7 +12671,7 @@ submodule nokia-conf-svc-vprn {
                         type leafref {
                             path "../../../../../routing-options/policy-accounting/policy-acct-template/name";
                         }
-                        description "Configure ingress policy accounting.";
+                        description "Ingress policy accounting template name";
                     }
 
                     leaf destination-class-lookup {
@@ -12632,7 +12688,7 @@ submodule nokia-conf-svc-vprn {
                     leaf ip-load-balancing {
                         type types-router:ip-load-balancing;
                         default "both";
-                        description "Configure IP load balancing algorithm.";
+                        description "IP load balancing algorithm";
                     }
 
                     leaf spi-load-balancing {
@@ -13470,6 +13526,12 @@ submodule nokia-conf-svc-vprn {
                             description "Gateway interface address for the DHCP relay";
                         }
 
+                        leaf release-include-gi-address {
+                            type boolean;
+                            default "false";
+                            description "The system includes the Gateway IP Address in DHCPRELEASE messages";
+                        }
+
                         leaf src-ip-addr {
                             type enumeration {
                                 enum "auto"                         { value 0; }
@@ -13483,14 +13545,14 @@ submodule nokia-conf-svc-vprn {
                             when "../../../tunnel = 'false'";
                             type boolean;
                             default "false";
-                            description "Enable/disable relaying of plain BOOTP packets.";
+                            description "Enable relaying of plain BOOTP packets";
                         }
 
                         leaf use-arp {
                             when "../../../tunnel = 'false'";
                             type boolean;
                             default "false";
-                            description "Enable/disable the use of ARP to determine the destination Hw address.";
+                            description "Use ARP to determine the destination hardware address";
                         }
 
                         leaf-list apply-groups {
@@ -13522,7 +13584,7 @@ submodule nokia-conf-svc-vprn {
 
                             leaf emulated-server {
                                 type types-sros:ipv4-unicast-address;
-                                description "The address used as source and siaddr when emulating a DHCP server.";
+                                description "IP address used as the DHCP server address for the SAP";
                             }
 
                             container lease-time {
@@ -13568,7 +13630,7 @@ submodule nokia-conf-svc-vprn {
 
                                         leaf none {
                                             type empty;
-                                            description "Do not include the circuit-id.";
+                                            description "Do not include the circuit ID";
                                         }
 
                                     }
@@ -13592,7 +13654,7 @@ submodule nokia-conf-svc-vprn {
 
                                         leaf sap-id {
                                             type empty;
-                                            description "Use SAP ID in the option.";
+                                            description "Use the SAP ID";
                                         }
 
                                     }
@@ -13671,7 +13733,7 @@ submodule nokia-conf-svc-vprn {
                                 leaf sap-id {
                                     type boolean;
                                     default "false";
-                                    description "Send the SAP ID in the Nokia vendor specific suboption.";
+                                    description "Send SAP ID in the sub-option of the DHCP relay packet";
                                 }
 
                                 leaf string {
@@ -13692,7 +13754,7 @@ submodule nokia-conf-svc-vprn {
                                 type uint32 {
                                     range "0..511999";
                                 }
-                                description "The maximum number of DHCPv4 leases.";
+                                description "Maximum number of DHCPv4 leases allowed";
                             }
 
                         } // container lease-populate
@@ -13704,12 +13766,12 @@ submodule nokia-conf-svc-vprn {
                             leaf release-update-src-ip {
                                 type boolean;
                                 default "false";
-                                description "Specify whether or not to relay release messages.";
+                                description "Update the source IP address of a DHCP RELEASE message";
                             }
 
                             leaf siaddr-override {
                                 type types-sros:ipv4-unicast-address;
-                                description "Specify the IP address to use.";
+                                description "DHCP server IP address for address hiding function";
                             }
 
                         } // container relay-proxy
@@ -13923,7 +13985,7 @@ submodule nokia-conf-svc-vprn {
 
                     leaf sdp-bind-id {
                         type types-services:sdp-bind-id;
-                        description "SDP Binding identifier as <sdp-id>:<vc-id>. sdp-id - [1..32767] vc-id - [1..4294967295].";
+                        description "SDP binding ID";
                     }
 
                     leaf description {
@@ -13994,7 +14056,7 @@ submodule nokia-conf-svc-vprn {
 
                             leaf entropy-label {
                                 type empty;
-                                description "Whether the use of entropy-label is enabled or not.";
+                                description "Enable the use of entropy labels for spoke SDPs";
                             }
 
                         }
@@ -14006,7 +14068,7 @@ submodule nokia-conf-svc-vprn {
 
                                 leaf signal-capability {
                                     type empty;
-                                    description "To signal the hash label capability to the remote PE.";
+                                    description "Enable the signaling of the hash label between PE nodes";
                                 }
 
                             } // container hash-label
@@ -14130,7 +14192,7 @@ submodule nokia-conf-svc-vprn {
 
                                     leaf instance {
                                         type types-services:qos-qgrp-instance-id;
-                                        description "Instance of the port egress Queue Group for this SDP binding.";
+                                        description "Queue-group instance ID";
                                     }
 
                                 } // container port-redirect-group
@@ -14735,6 +14797,7 @@ submodule nokia-conf-svc-vprn {
                                         }
 
                                         leaf monitor-depth {
+                                            status deprecated;
                                             type boolean;
                                             default "false";
                                             description "Monitor queue depth";
@@ -14848,6 +14911,18 @@ submodule nokia-conf-svc-vprn {
                                             }
 
                                         } // container parent
+
+                                        container monitor-queue-depth {
+                                            presence "Enable the monitor-queue-depth context";
+                                            description "Enable the monitor-queue-depth context";
+
+                                            leaf fast-polling {
+                                                type boolean;
+                                                default "false";
+                                                description "Enable fast polling of the queue depth";
+                                            }
+
+                                        } // container monitor-queue-depth
 
                                     } // list queue
 
@@ -15398,7 +15473,7 @@ submodule nokia-conf-svc-vprn {
                                                     enum "auto"                         { value -1; }
                                                 }
                                             }
-                                            description "Explicit shaping burst size of a queue.";
+                                            description "Explicit shaping burst size for the queue";
                                         }
 
                                         leaf cbs {
@@ -15435,7 +15510,7 @@ submodule nokia-conf-svc-vprn {
 
                                         leaf hs-class-weight {
                                             type types-qos:hs-class-weight-override;
-                                            description "Scheduling class weight.";
+                                            description "Class weight override for the queue";
                                         }
 
                                         leaf-list apply-groups {
@@ -15581,7 +15656,7 @@ submodule nokia-conf-svc-vprn {
                                                 type leafref {
                                                     path "../../../../../../../../../../../qos/slope-policy/slope-policy-name";
                                                 }
-                                                description "Name of slope-policy.";
+                                                description "Slope policy name applied to the HSQ queue group queue";
                                             }
 
                                         } // container hs-wred-queue
@@ -15727,7 +15802,7 @@ submodule nokia-conf-svc-vprn {
 
                                         leaf hs-class-weight {
                                             type types-qos:hs-class-weight-override;
-                                            description "Weight of scheduling class.";
+                                            description "Class weight override of the WRR group";
                                         }
 
                                         leaf-list apply-groups {
@@ -15990,6 +16065,12 @@ submodule nokia-conf-svc-vprn {
                                     description "Egress vlan-qos-policy name";
                                 }
 
+                                leaf port-redirect {
+                                    type boolean;
+                                    default "false";
+                                    description "Egress vlan-qos-policy port-redirect";
+                                }
+
                             } // container vlan-qos-policy
 
                             container egress-remark-policy {
@@ -16036,7 +16117,7 @@ submodule nokia-conf-svc-vprn {
 
                             leaf rate {
                                 type types-services:agg-rate-rate;
-                                description "Maximum total rate of all egress queues in kbps.";
+                                description "Enforced aggregate rate";
                             }
 
                             leaf queue-frame-based-accounting {
@@ -16692,7 +16773,7 @@ submodule nokia-conf-svc-vprn {
                                     units "seconds";
                                     sros-ext:auto-restart-to-modify;
                                     default "10";
-                                    description "The maximum interval that the ICMP messages can be sent.";
+                                    description "Maximum interval that the ICMP messages can be sent";
                                 }
 
                             } // container frag-required
@@ -16720,7 +16801,7 @@ submodule nokia-conf-svc-vprn {
 
                         leaf name {
                             type types-sros:named-item;
-                            description "IPsec gateway name.";
+                            description "IPsec gateway name";
                         }
 
                         leaf admin-state {
@@ -16733,14 +16814,14 @@ submodule nokia-conf-svc-vprn {
                             type leafref {
                                 path "../../../../../../ipsec/tunnel-template/id";
                             }
-                            description "The IPsec tunnel template ID.";
+                            description "Default tunnel policy template for the gateway";
                         }
 
                         leaf ike-policy {
                             type leafref {
                                 path "../../../../../../ipsec/ike-policy/id";
                             }
-                            description "IKE policy ID.";
+                            description "IKE policy ID";
                         }
 
                         leaf pre-shared-key {
@@ -16790,7 +16871,7 @@ submodule nokia-conf-svc-vprn {
 
                                 leaf gi-address {
                                     type types-sros:ipv4-unicast-address;
-                                    description "The giaddr of relayed DHCPv4 header.";
+                                    description "Gateway IP address of DHCPv4 packets sent by the system";
                                 }
 
                                 leaf send-release {
@@ -16828,7 +16909,7 @@ submodule nokia-conf-svc-vprn {
 
                                     leaf router-instance {
                                         type types-sros:router-instance-base-vprn-loose;
-                                        description "Router instance to reach the DHCPv4 server.";
+                                        description "Router instance used to reach the DHCPv4 server";
                                     }
 
                                 } // container server
@@ -16847,13 +16928,13 @@ submodule nokia-conf-svc-vprn {
 
                                 leaf link-address {
                                     type types-sros:ipv6-unicast-address;
-                                    description "The link-address in DHCPv6 relay packet.";
+                                    description "Link address of the relayed DHCPv6 packets";
                                 }
 
                                 leaf send-release {
                                     type boolean;
                                     default "true";
-                                    description "Send DHCPv6 release messages when a tunnel is down.";
+                                    description "Send DHCPv6 release message when IPsec tunnel removed";
                                 }
 
                                 leaf-list apply-groups {
@@ -16885,7 +16966,7 @@ submodule nokia-conf-svc-vprn {
 
                                     leaf router-instance {
                                         type types-sros:router-instance-base-vprn-loose;
-                                        description "Router instance to reach the DHCPv6 server.";
+                                        description "Router instance to reach the DHCPv6 server";
                                     }
 
                                 } // container server
@@ -16901,14 +16982,14 @@ submodule nokia-conf-svc-vprn {
                                 type leafref {
                                     path "../../../../../../../ipsec/cert-profile/name";
                                 }
-                                description "Certificate profile name.";
+                                description "Certificate profile name";
                             }
 
                             leaf trust-anchor-profile {
                                 type leafref {
                                     path "../../../../../../../ipsec/trust-anchor-profile/name";
                                 }
-                                description "Trust anchor profile.";
+                                description "Trust anchor profile name";
                             }
 
                             container status-verify {
@@ -16920,19 +17001,19 @@ submodule nokia-conf-svc-vprn {
                                         enum "good"                         { value 1; }
                                     }
                                     default "revoked";
-                                    description "The default result of Certificate Status Verification (CSV).";
+                                    description "Default result of Certificate Status Verification (CSV)";
                                 }
 
                                 leaf primary {
                                     type types-ipsec:cert-revocation-status;
                                     default "crl";
-                                    description "The primary method used to verify the peer certificate's revocation status.";
+                                    description "Primary method of CSV to verify the revocation status";
                                 }
 
                                 leaf secondary {
                                     type types-ipsec:cert-revocation-status-with-none;
                                     default "none";
-                                    description "The secondary method used to verify the peer certificate's revocation status.";
+                                    description "Secondary method of CSV to verify the revocation status";
                                 }
 
                             } // container status-verify
@@ -16948,7 +17029,7 @@ submodule nokia-conf-svc-vprn {
                                     path "../../../../../../../ipsec/client-db/name";
                                 }
                                 mandatory true;
-                                description "IPsec client database name.";
+                                description "Client database name";
                             }
 
                             leaf fallback {
@@ -16983,8 +17064,52 @@ submodule nokia-conf-svc-vprn {
                             leaf gateway-address {
                                 type types-sros:ip-address;
                                 sros-ext:auto-restart-to-modify;
-                                description "The IPsec gateway address.";
+                                description "Local gateway address of the IPsec gateway";
                             }
+
+                            container id {
+                                description "Enter the id context";
+
+                                choice id {
+                                    default "auto";
+                                    case auto {
+
+                                        leaf auto {
+                                            type empty;
+                                            sros-ext:auto-restart-to-modify;
+                                            description "Select ID based on authentication method in IKE policy";
+                                        }
+
+                                    }
+                                    case ipv4 {
+
+                                        leaf ipv4 {
+                                            type types-sros:ipv4-unicast-address;
+                                            sros-ext:auto-restart-to-modify;
+                                            description "IPv4 address as the local ID type";
+                                        }
+
+                                    }
+                                    case ipv6 {
+
+                                        leaf ipv6 {
+                                            type types-sros:ip-address;
+                                            sros-ext:auto-restart-to-modify;
+                                            description "IPv6 address as the local ID type";
+                                        }
+
+                                    }
+                                    case fqdn {
+
+                                        leaf fqdn {
+                                            type types-sros:fully-qualified-domain-name;
+                                            sros-ext:auto-restart-to-modify;
+                                            description "FQDN as the local ID type";
+                                        }
+
+                                    }
+                                }
+                            } // container id
 
                             container address-assignment {
                                 presence "Enable the address-assignment context";
@@ -17021,7 +17146,7 @@ submodule nokia-conf-svc-vprn {
                                     leaf router-instance {
                                         type types-sros:router-instance-base-vprn-loose;
                                         mandatory true;
-                                        description "Router instance hosting the DHCPv4 connection.";
+                                        description "Router instance ID for the local DHCPv4 server";
                                     }
 
                                     leaf dhcp-server {
@@ -17069,50 +17194,6 @@ submodule nokia-conf-svc-vprn {
 
                             } // container address-assignment
 
-                            container id {
-                                description "Enter the id context";
-
-                                choice id {
-                                    default "auto";
-                                    case auto {
-
-                                        leaf auto {
-                                            type empty;
-                                            sros-ext:auto-restart-to-modify;
-                                            description "Select ID based on authentication method in IKE policy";
-                                        }
-
-                                    }
-                                    case ipv4 {
-
-                                        leaf ipv4 {
-                                            type types-sros:ipv4-unicast-address;
-                                            sros-ext:auto-restart-to-modify;
-                                            description "The IPv4 Local ID.";
-                                        }
-
-                                    }
-                                    case ipv6 {
-
-                                        leaf ipv6 {
-                                            type types-sros:ip-address;
-                                            sros-ext:auto-restart-to-modify;
-                                            description "The IPv6 Local ID.";
-                                        }
-
-                                    }
-                                    case fqdn {
-
-                                        leaf fqdn {
-                                            type types-sros:fully-qualified-domain-name;
-                                            sros-ext:auto-restart-to-modify;
-                                            description "The Fully Qualified Domain Name (FQDN) Local ID.";
-                                        }
-
-                                    }
-                                }
-                            } // container id
-
                         } // container local
 
                         container radius {
@@ -17122,14 +17203,14 @@ submodule nokia-conf-svc-vprn {
                                 type leafref {
                                     path "../../../../../../../ipsec/radius/accounting-policy/name";
                                 }
-                                description "RADIUS accounting policy.";
+                                description "RADIUS accounting policy";
                             }
 
                             leaf authentication-policy {
                                 type leafref {
                                     path "../../../../../../../ipsec/radius/authentication-policy/name";
                                 }
-                                description "RADIUS authentication policy.";
+                                description "RADIUS authentication policy";
                             }
 
                         } // container radius
@@ -17141,14 +17222,14 @@ submodule nokia-conf-svc-vprn {
                                 type uint32 {
                                     range "1..3";
                                 }
-                                description "The maximum number of historical IKE keys which can be recorded by the system.";
+                                description "Maximum number of historical IKE keys recorded";
                             }
 
                             leaf esp {
                                 type uint32 {
                                     range "1..48";
                                 }
-                                description "The maximum number of historical ESP keys which can be recorded by the system.";
+                                description "Maximum number of recent records";
                             }
 
                         } // container max-history-key-records
@@ -18318,7 +18399,7 @@ submodule nokia-conf-svc-vprn {
                             type boolean;
                             sros-ext:immutable;
                             default "true";
-                            description "Enable/disable Duplicate Address Detection.";
+                            description "Enable Duplicate Address Detection.";
                         }
 
                         leaf primary-preference {
@@ -19213,7 +19294,7 @@ submodule nokia-conf-svc-vprn {
                     leaf ip-load-balancing {
                         type types-router:ip-load-balancing;
                         default "both";
-                        description "Configure IP load balancing algorithm.";
+                        description "IP load balancing algorithm";
                     }
 
                     leaf spi-load-balancing {
@@ -19873,7 +19954,7 @@ submodule nokia-conf-svc-vprn {
 
                     leaf sdp-bind-id {
                         type types-services:sdp-bind-id;
-                        description "SDP Binding identifier as <sdp-id>:<vc-id>. sdp-id - [1..32767] vc-id - [1..4294967295].";
+                        description "SDP binding ID";
                     }
 
                     leaf description {
@@ -19977,7 +20058,7 @@ submodule nokia-conf-svc-vprn {
                                 range "0..32";
                             }
                             mandatory true;
-                            description "The prefix length 0..32 for IPv4 Address.";
+                            description "IPv4 address prefix length";
                         }
 
                         leaf remote-ip {
@@ -20054,7 +20135,7 @@ submodule nokia-conf-svc-vprn {
 
                     leaf sdp-bind-id {
                         type types-services:sdp-bind-id;
-                        description "SDP Binding identifier as <sdp-id>:<vc-id>. sdp-id - [1..32767] vc-id - [1..4294967295].";
+                        description "SDP binding ID";
                     }
 
                     leaf description {
@@ -20444,7 +20525,7 @@ submodule nokia-conf-svc-vprn {
 
                 leaf sdp-bind-id {
                     type types-services:sdp-bind-id;
-                    description "SDP Binding identifier as <sdp-id>:<vc-id>. sdp-id - [1..32767] vc-id - [1..4294967295].";
+                    description "SDP binding ID";
                 }
 
                 leaf description {
@@ -22517,7 +22598,7 @@ submodule nokia-conf-svc-vprn {
                     leaf port {
                         type types-qos:tcp-udp-match-port;
                         default "514";
-                        description "UDP port to generate syslog messages";
+                        description "Destination port when sending syslog over UDP";
                     }
 
                     leaf-list apply-groups {
@@ -22682,7 +22763,7 @@ submodule nokia-conf-svc-vprn {
                         range "0..1000";
                     }
                     default "5";
-                    description "Maximum number of routes that can be exported.";
+                    description "Maximum number of routes exported from VRF to GRT";
                 }
 
                 leaf export-v6-limit {
@@ -22690,7 +22771,7 @@ submodule nokia-conf-svc-vprn {
                         range "0..1000";
                     }
                     default "5";
-                    description "Maximum number of IPv6 routes that can be exported.";
+                    description "Maximum number of IPv6 routes exported from VPRN to GRT";
                 }
 
                 leaf grt-lookup {
@@ -22994,13 +23075,13 @@ submodule nokia-conf-svc-vprn {
                 leaf local {
                     type types-router:vprn-ttl-propagate;
                     default "use-base";
-                    description "Manage TTL propagation from IP header into label stack for local packets.";
+                    description "TTL propagation overridden for locally created packets";
                 }
 
                 leaf transit {
                     type types-router:vprn-ttl-propagate;
                     default "use-base";
-                    description "Manage TTL propagation from IP header into label stack for transit packets.";
+                    description "TTL propagation overridden for in transit packets";
                 }
 
             } // container ttl-propagate
