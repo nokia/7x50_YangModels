@@ -1,0 +1,809 @@
+submodule nokia-conf-card-fp {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-qos                { prefix "types-qos"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-groups;
+    include nokia-conf-log;
+    include nokia-conf-mcast-mgmt;
+    include nokia-conf-qos;
+
+
+    sros-ext:sros-major-release "rel21";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure card forwarding plane on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-card-fp YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2021-05-19";
+
+    grouping conf-card-fp {
+        list fp {
+            key "fp-number";
+            description "Enter the fp list instance";
+
+            leaf fp-number {
+                type uint32 {
+                    range "1..8";
+                }
+                description "Forwarding plane within the card";
+            }
+
+            leaf ingress-buffer-allocation {
+                type decimal64 {
+                    range "20.00..80.00";
+                    fraction-digits 2;
+                }
+                units "percent";
+                default "50.00";
+                description "Ingress buffer pool allocation for the forwarding plane";
+            }
+
+            leaf init-extract-prio-mode {
+                type enumeration {
+                    enum "uniform"                      { value 1; }
+                    enum "l3-classify"                  { value 2; }
+                }
+                default "uniform";
+                description "Initial drop priority mode of extracted traffic";
+            }
+
+            leaf stable-pool-sizing {
+                type boolean;
+                default "false";
+                description "Enable stable pool sizing for the forwarding plane";
+            }
+
+            leaf fp-resource-policy {
+                type leafref {
+                    path "../../../qos/fp-resource-policy/fp-resource-policy-name";
+                }
+                sros-ext:card-auto-reset-on-modify;
+                description "FP resource policy to manage resources on the FP4";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            leaf-list apply-groups-exclude {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Exclude a configuration group at this level";
+            }
+
+            leaf policy-accounting {
+                status obsolete;
+                type uint32 {
+                    range "1000..128000";
+                }
+                description "Number of stats resources for policy accounting for the forwarding plane";
+            }
+
+            container dist-cpu-protection {
+                status obsolete;
+                description "Enter the dist-cpu-protection context";
+
+                leaf dynamic-enforcement-policer-pool {
+                    status obsolete;
+                    type uint32 {
+                        range "1000..32000";
+                    }
+                    description "Number of policers reserved as enforcement policers use";
+                }
+
+            } // container dist-cpu-protection
+
+            container egress {
+                description "Enter the egress context";
+
+                leaf hs-fixed-high-thresh-delta {
+                    type int32 {
+                        range "0..65536";
+                    }
+                    description "High threshold delta on the forwarding plane";
+                }
+
+                leaf hs-pool-policy {
+                    type leafref {
+                        path "../../../../qos/hs-pool-policy/name";
+                    }
+                    description "HS pool policy";
+                }
+
+                container wred-queue-control {
+                    description "Enter the wred-queue-control context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of the WRED queue control function";
+                    }
+
+                    leaf buffer-allocation {
+                        type decimal64 {
+                            range "0.01..99.99";
+                            fraction-digits 2;
+                        }
+                        units "percent";
+                        default "25.00";
+                        description "Buffer allocation for WRED queue buffer pools";
+                    }
+
+                    leaf reserved-cbs {
+                        type decimal64 {
+                            range "0.01..99.99";
+                            fraction-digits 2;
+                        }
+                        units "percent";
+                        default "25.00";
+                        description "Buffers for queues operating within CBS thresholds";
+                    }
+
+                    leaf slope-policy {
+                        type leafref {
+                            path "../../../../../qos/slope-policy/slope-policy-name";
+                        }
+                        description "Slope policy for the forwarding plane";
+                    }
+
+                } // container wred-queue-control
+
+            } // container egress
+
+            container hi-bw-mcast-src {
+                presence "Enable the hi-bw-mcast-src context";
+                description "Enable the hi-bw-mcast-src context";
+
+                leaf alarm {
+                    type boolean;
+                    default "false";
+                    description "Raise an alarm when multiple traffic taps share a plane";
+                }
+
+                leaf group {
+                    type uint32 {
+                        range "0..32";
+                    }
+                    default "0";
+                    description "Logical MSFP group of the MDA";
+                }
+
+                leaf default-paths-only {
+                    type boolean;
+                    default "false";
+                    description "Allocate the default paths to dedicated MSFPs";
+                }
+
+            } // container hi-bw-mcast-src
+
+            container ingress {
+                description "Enter the ingress context";
+
+                container access {
+                    description "Enter the access context";
+
+                    list queue-group {
+                        key "queue-group-name instance-id";
+                        description "Enter the queue-group list instance";
+
+                        leaf queue-group-name {
+                            type leafref {
+                                path "../../../../../../qos/queue-group-templates/ingress/queue-group/ingress-queue-group-name";
+                            }
+                            description "Queue group name";
+                        }
+
+                        leaf instance-id {
+                            type uint16 {
+                                range "1..65535";
+                            }
+                            description "Instance ID";
+                        }
+
+                        leaf accounting-policy {
+                            type leafref {
+                                path "../../../../../../log/accounting-policy/policy-id";
+                            }
+                            description "Accounting policy for the FP ingress queue group";
+                        }
+
+                        leaf collect-stats {
+                            type boolean;
+                            default "false";
+                            description "Collect statistics on FP ingress queue group";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container policer-control-policy {
+                            description "Enter the policer-control-policy context";
+
+                            leaf policy-name {
+                                type leafref {
+                                    path "../../../../../../../qos/policer-control-policy/policer-control-policy-name";
+                                }
+                                description "Policer control policy name";
+                            }
+
+                            container overrides {
+                                presence "Enable the overrides context";
+                                description "Enable the overrides context";
+
+                                leaf max-rate {
+                                    type types-qos:queue-pir-rate-override;
+                                    units "kilobps";
+                                    description "Maximum rate override";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                leaf-list apply-groups-exclude {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Exclude a configuration group at this level";
+                                }
+
+                                container priority-mbs-thresholds {
+                                    description "Enter the priority-mbs-thresholds context";
+
+                                    leaf min-threshold-separation {
+                                        type types-qos:policer-burst-size-override;
+                                        units "bytes";
+                                        description "Minimum separation between any two active thresholds";
+                                    }
+
+                                    list priority {
+                                        key "level";
+                                        description "Enter the priority list instance";
+
+                                        leaf level {
+                                            type types-qos:hierarchy-level;
+                                            description "Priority level, higher level is stricter";
+                                        }
+
+                                        leaf mbs-contribution {
+                                            type types-qos:policer-burst-size-override;
+                                            units "bytes";
+                                            description "MBS contribution size override";
+                                        }
+
+                                        leaf-list apply-groups {
+                                            type leafref {
+                                                path "../../../../../../../../../../groups/group/name";
+                                            }
+                                            max-elements 8;
+                                            ordered-by user;
+                                            description "Apply a configuration group at this level";
+                                        }
+
+                                        leaf-list apply-groups-exclude {
+                                            type leafref {
+                                                path "../../../../../../../../../../groups/group/name";
+                                            }
+                                            max-elements 8;
+                                            ordered-by user;
+                                            description "Exclude a configuration group at this level";
+                                        }
+
+                                    } // list priority
+
+                                } // container priority-mbs-thresholds
+
+                            } // container overrides
+
+                        } // container policer-control-policy
+
+                        container policer-overrides {
+                            description "Enter the policer-overrides context";
+
+                            list policer {
+                                key "policer-id";
+                                description "Enter the policer list instance";
+
+                                leaf policer-id {
+                                    type leafref {
+                                        path "../../../../../../../../qos/queue-group-templates/ingress/queue-group[ingress-queue-group-name=current()/../../../queue-group-name]/policer/policer-id";
+                                    }
+                                    description "Policer ID";
+                                }
+
+                                leaf cbs {
+                                    type types-qos:policer-burst-size-override;
+                                    units "bytes";
+                                    description "CBS tolerance allowed by the policer";
+                                }
+
+                                leaf mbs {
+                                    type types-qos:policer-burst-size-override;
+                                    units "bytes";
+                                    description "Maximum burst tolerance allowed by the policer";
+                                }
+
+                                leaf packet-byte-offset {
+                                    type types-qos:ingress-per-packet-offset-override;
+                                    description "Packet size adjustment";
+                                }
+
+                                leaf stat-mode {
+                                    type types-qos:ingress-policer-stat-mode;
+                                    description "Stat mode for the policer";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                leaf-list apply-groups-exclude {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Exclude a configuration group at this level";
+                                }
+
+                                container rate {
+                                    description "Enter the rate context";
+
+                                    leaf cir {
+                                        type types-qos:queue-cir-rate-override;
+                                        description "CIR for the policer";
+                                    }
+
+                                    leaf pir {
+                                        type types-qos:queue-pir-rate-override;
+                                        description "PIR for the policer";
+                                    }
+
+                                } // container rate
+
+                            } // list policer
+
+                        } // container policer-overrides
+
+                    } // list queue-group
+
+                } // container access
+
+                container mcast-path-management {
+                    description "Enter the mcast-path-management context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of multicast path management";
+                    }
+
+                    leaf bandwidth-policy {
+                        type leafref {
+                            path "../../../../../multicast-management/bandwidth-policy/policy-name";
+                        }
+                        description "Bandwidth policy for ingress multicast path management";
+                    }
+
+                } // container mcast-path-management
+
+                container network {
+                    description "Enter the network context";
+
+                    leaf queue-policy {
+                        type leafref {
+                            path "../../../../../qos/network-queue/network-queue-policy";
+                        }
+                        description "Network queue policy";
+                    }
+
+                    list queue-group {
+                        key "queue-group-name instance-id";
+                        description "Enter the queue-group list instance";
+
+                        leaf queue-group-name {
+                            type leafref {
+                                path "../../../../../../qos/queue-group-templates/ingress/queue-group/ingress-queue-group-name";
+                            }
+                            description "Queue group name";
+                        }
+
+                        leaf instance-id {
+                            type uint16 {
+                                range "1..65535";
+                            }
+                            description "Instance ID";
+                        }
+
+                        leaf accounting-policy {
+                            type leafref {
+                                path "../../../../../../log/accounting-policy/policy-id";
+                            }
+                            description "Accounting policy for the FP ingress queue group";
+                        }
+
+                        leaf collect-stats {
+                            type boolean;
+                            default "false";
+                            description "Collect statistics on FP ingress queue group";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container policer-control-policy {
+                            description "Enter the policer-control-policy context";
+
+                            leaf policy-name {
+                                type leafref {
+                                    path "../../../../../../../qos/policer-control-policy/policer-control-policy-name";
+                                }
+                                description "Policer control policy name";
+                            }
+
+                            container overrides {
+                                presence "Enable the overrides context";
+                                description "Enable the overrides context";
+
+                                leaf max-rate {
+                                    type types-qos:queue-pir-rate-override;
+                                    units "kilobps";
+                                    description "Maximum rate override";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                leaf-list apply-groups-exclude {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Exclude a configuration group at this level";
+                                }
+
+                                container priority-mbs-thresholds {
+                                    description "Enter the priority-mbs-thresholds context";
+
+                                    leaf min-threshold-separation {
+                                        type types-qos:policer-burst-size-override;
+                                        units "bytes";
+                                        description "Minimum separation between any two active thresholds";
+                                    }
+
+                                    list priority {
+                                        key "level";
+                                        description "Enter the priority list instance";
+
+                                        leaf level {
+                                            type types-qos:hierarchy-level;
+                                            description "Priority level, higher level is stricter";
+                                        }
+
+                                        leaf mbs-contribution {
+                                            type types-qos:policer-burst-size-override;
+                                            units "bytes";
+                                            description "MBS contribution size override";
+                                        }
+
+                                        leaf-list apply-groups {
+                                            type leafref {
+                                                path "../../../../../../../../../../groups/group/name";
+                                            }
+                                            max-elements 8;
+                                            ordered-by user;
+                                            description "Apply a configuration group at this level";
+                                        }
+
+                                        leaf-list apply-groups-exclude {
+                                            type leafref {
+                                                path "../../../../../../../../../../groups/group/name";
+                                            }
+                                            max-elements 8;
+                                            ordered-by user;
+                                            description "Exclude a configuration group at this level";
+                                        }
+
+                                    } // list priority
+
+                                } // container priority-mbs-thresholds
+
+                            } // container overrides
+
+                        } // container policer-control-policy
+
+                        container policer-overrides {
+                            description "Enter the policer-overrides context";
+
+                            list policer {
+                                key "policer-id";
+                                description "Enter the policer list instance";
+
+                                leaf policer-id {
+                                    type leafref {
+                                        path "../../../../../../../../qos/queue-group-templates/ingress/queue-group[ingress-queue-group-name=current()/../../../queue-group-name]/policer/policer-id";
+                                    }
+                                    description "Policer ID";
+                                }
+
+                                leaf cbs {
+                                    type types-qos:policer-burst-size-override;
+                                    units "bytes";
+                                    description "CBS tolerance allowed by the policer";
+                                }
+
+                                leaf mbs {
+                                    type types-qos:policer-burst-size-override;
+                                    units "bytes";
+                                    description "Maximum burst tolerance allowed by the policer";
+                                }
+
+                                leaf packet-byte-offset {
+                                    type types-qos:ingress-per-packet-offset-override;
+                                    description "Packet size adjustment";
+                                }
+
+                                leaf stat-mode {
+                                    type types-qos:ingress-policer-stat-mode;
+                                    description "Stat mode for the policer";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                leaf-list apply-groups-exclude {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Exclude a configuration group at this level";
+                                }
+
+                                container rate {
+                                    description "Enter the rate context";
+
+                                    leaf cir {
+                                        type types-qos:queue-cir-rate-override;
+                                        description "CIR for the policer";
+                                    }
+
+                                    leaf pir {
+                                        type types-qos:queue-pir-rate-override;
+                                        description "PIR for the policer";
+                                    }
+
+                                } // container rate
+
+                            } // list policer
+
+                        } // container policer-overrides
+
+                    } // list queue-group
+
+                    list pool {
+                        key "name";
+                        description "Enter the pool list instance";
+
+                        leaf name {
+                            type types-sros:named-item;
+                            description "Network ingress pool name for the FP";
+                        }
+
+                        leaf amber-alarm-threshold {
+                            type uint32 {
+                                range "1..1000";
+                            }
+                            units "percent";
+                            description "Amber alarm threshold allowed on oversubscription";
+                        }
+
+                        leaf red-alarm-threshold {
+                            type uint32 {
+                                range "1..1000";
+                            }
+                            units "percent";
+                            description "Red alarm threshold allowed on oversubscription";
+                        }
+
+                        leaf slope-policy {
+                            type leafref {
+                                path "../../../../../../qos/slope-policy/slope-policy-name";
+                            }
+                            description "Slope policy";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container resv-cbs {
+                            description "Enter the resv-cbs context";
+
+                            leaf cbs {
+                                type int32 {
+                                    range "0..100";
+                                }
+                                units "percent";
+                                description "Pool size reserved for CBS";
+                            }
+
+                            container amber-alarm-action {
+                                description "Enter the amber-alarm-action context";
+
+                                leaf step {
+                                    type uint32 {
+                                        range "1..100";
+                                    }
+                                    units "percent";
+                                    description "Step-size percentage for reserved CBS size of the pool";
+                                }
+
+                                leaf max {
+                                    type uint32 {
+                                        range "1..100";
+                                    }
+                                    units "percent";
+                                    description "Maximum reserved CBS size of the pool";
+                                }
+
+                            } // container amber-alarm-action
+
+                        } // container resv-cbs
+
+                    } // list pool
+
+                } // container network
+
+                container policy-accounting {
+                    description "Enter the policy-accounting context";
+
+                    leaf policers {
+                        type uint32 {
+                            range "1..64000";
+                        }
+                        description "Number of policer resources for policy accounting";
+                    }
+
+                    leaf classes {
+                        type uint32 {
+                            range "1000..128000";
+                        }
+                        description "Number of accounting classes for the forwarding plane";
+                    }
+
+                } // container policy-accounting
+
+                container dist-cpu-protection {
+                    description "Enter the dist-cpu-protection context";
+
+                    leaf dynamic-enforcement-policer-pool {
+                        type uint32 {
+                            range "1000..32000";
+                        }
+                        description "Number of policers reserved as enforcement policers use";
+                    }
+
+                } // container dist-cpu-protection
+
+            } // container ingress
+
+        } // list fp
+
+    } // grouping conf-card-fp
+
+}
