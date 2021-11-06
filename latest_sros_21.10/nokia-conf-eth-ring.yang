@@ -1,0 +1,474 @@
+submodule nokia-conf-eth-ring {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-eth-cfm            { prefix "types-eth-cfm"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-eth-cfm;
+    include nokia-conf-groups;
+
+
+    sros-ext:sros-major-release "rel21";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure Ethernet rings on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-eth-ring YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2021-07-07";
+
+    grouping conf-eth-ring {
+        list eth-ring {
+            key "ring-index";
+            description "Enter the eth-ring list instance";
+
+            leaf ring-index {
+                type uint32 {
+                    range "1..128";
+                }
+                description "Ring ID";
+            }
+
+            leaf admin-state {
+                type types-sros:admin-state;
+                default "disable";
+                description "Administrative state of the Ethernet ring";
+            }
+
+            leaf description {
+                type types-sros:description-or-empty;
+                description "Text description";
+            }
+
+            leaf compatible-version {
+                type uint32 {
+                    range "1..2";
+                }
+                default "2";
+                description "Compatibility version for the Ethernet ring";
+            }
+
+            leaf guard-time {
+                type uint32 {
+                    range "1..20";
+                }
+                units "deciseconds";
+                default "5";
+                description "Ethernet ring guard time";
+            }
+
+            leaf node-id {
+                type yang:mac-address;
+                description "MAC address of the RPL link";
+            }
+
+            leaf revert-time {
+                type uint32 {
+                    range "0|60..720";
+                }
+                units "seconds";
+                default "300";
+                description "Revert time for the Ethernet ring";
+            }
+
+            leaf rpl-node {
+                type enumeration {
+                    enum "owner"                        { value 1; }
+                    enum "neighbor"                     { value 2; }
+                }
+                description "Ring Protection Link (RPL) type for the Ethernet ring";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            leaf-list apply-groups-exclude {
+                type leafref {
+                    path "../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Exclude a configuration group at this level";
+            }
+
+            container ccm-hold-time {
+                description "Enter the ccm-hold-time context";
+
+                leaf down {
+                    type uint32 {
+                        range "1..5000";
+                    }
+                    units "centiseconds";
+                    description "Hold timer for down event dampening";
+                }
+
+                leaf up {
+                    type uint32 {
+                        range "0..5000";
+                    }
+                    units "deciseconds";
+                    default "20";
+                    description "Hold timer for recovery reporting";
+                }
+
+            } // container ccm-hold-time
+
+            container sub-ring {
+                description "Enter the sub-ring context";
+
+                leaf type {
+                    type enumeration {
+                        enum "virtual-link"                 { value 1; }
+                        enum "non-virtual-link"             { value 2; }
+                    }
+                    description "Sub-ring type";
+                }
+
+                container interconnect {
+                    description "Enter the interconnect context";
+
+                    leaf propagate-topology-change {
+                        type boolean;
+                        default "false";
+                        description "Propagate topology changes";
+                    }
+
+                    choice interconnect-choice {
+                        case vpls {
+
+                            leaf vpls {
+                                type empty;
+                                description "Connect sub-ring to VPLS ID that contains sub-ring SAP";
+                            }
+
+                        }
+                        case ring {
+
+                            leaf ring-id {
+                                type leafref {
+                                    path "../../../../eth-ring/ring-index";
+                                }
+                                description "Ring instance of the connection ring for the sub-ring";
+                            }
+
+                        }
+                    }
+                } // container interconnect
+
+            } // container sub-ring
+
+            list path {
+                key "path-index";
+                description "Enter the path list instance";
+
+                leaf path-index {
+                    type string {
+                        length "1";
+                        pattern "[a|b]" {
+                            error-message "only characters a and b are allowed";
+                        }
+                    }
+                    description "Path ID";
+                }
+
+                leaf port-and-raps-tag {
+                    type types-sros:port-and-encap;
+                    sros-ext:immutable;
+                    mandatory true;
+                    description "Port ID and Ring APS tag ID";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of the Ethernet ring path";
+                }
+
+                leaf description {
+                    type types-sros:description-or-empty;
+                    description "Text description";
+                }
+
+                leaf rpl-end {
+                    type boolean;
+                    sros-ext:auto-restart-to-modify;
+                    default "false";
+                    description "Enable path as a Ring Protection Link (RPL) end";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                container eth-cfm {
+                    description "Enter the eth-cfm context";
+
+                    list mep {
+                        key "md-admin-name ma-admin-name mep-id";
+                        description "Enter the mep list instance";
+
+                        leaf md-admin-name {
+                            type leafref {
+                                path "../../../../../eth-cfm/domain/md-admin-name";
+                            }
+                            description "Admin-assigned maintenance domain index value";
+                        }
+
+                        leaf ma-admin-name {
+                            type leafref {
+                                path "../../../../../eth-cfm/domain[md-admin-name=current()/../md-admin-name]/association/ma-admin-name";
+                            }
+                            description "Maintenance association name";
+                        }
+
+                        leaf mep-id {
+                            type types-eth-cfm:mep-id-type;
+                            description "Maintenance endpoint ID";
+                        }
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of the MEP";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf mac-address {
+                            type types-sros:mac-unicast-address-no-zero;
+                            description "MAC address of the MEP";
+                        }
+
+                        leaf install-mep {
+                            type boolean;
+                            default "false";
+                            description "Install MEP in the forwarding plane";
+                        }
+
+                        leaf ccm {
+                            type boolean;
+                            default "false";
+                            description "Generate CCM messages";
+                        }
+
+                        leaf ccm-ltm-priority {
+                            type types-eth-cfm:frame-priority;
+                            default "7";
+                            description "Priority of CCM and LTM messages transmitted by the MEP";
+                        }
+
+                        leaf ccm-padding-size {
+                            type uint32 {
+                                range "3..1500";
+                            }
+                            description "Number of octets of padding to insert in CCM packets";
+                        }
+
+                        leaf one-way-delay-threshold {
+                            type uint32 {
+                                range "0..600";
+                            }
+                            units "seconds";
+                            default "3";
+                            description "Threshold time limit for one-way delay test";
+                        }
+
+                        leaf low-priority-defect {
+                            type types-eth-cfm:lowest-alarm-priority;
+                            default "all-def";
+                            description "Lowest priority defect allowed to generate fault alarm";
+                        }
+
+                        leaf control-mep {
+                            type boolean;
+                            default "false";
+                            description "Enable Ethernet ring control on the MEP";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container alarm-notification {
+                            description "Enter the alarm-notification context";
+
+                            leaf fng-alarm-time {
+                                type int32 {
+                                    range "250|500|1000";
+                                }
+                                units "centiseconds";
+                                description "Time that must expire before an FNG alarm is raised";
+                            }
+
+                            leaf fng-reset-time {
+                                type int32 {
+                                    range "250|500|1000";
+                                }
+                                units "centiseconds";
+                                description "Time that must expire before an FNG alarm is reset";
+                            }
+
+                        } // container alarm-notification
+
+                        container eth-test {
+                            presence "Enable the eth-test context";
+                            description "Enable the eth-test context";
+
+                            leaf bit-error-threshold {
+                                type uint32 {
+                                    range "0..11840";
+                                }
+                                units "bit errors";
+                                default "1";
+                                description "Lowest priority defect allowed to generate fault alarm";
+                            }
+
+                            container test-pattern {
+                                description "Enter the test-pattern context";
+
+                                leaf pattern {
+                                    type enumeration {
+                                        enum "all-zeros"                    { value 0; }
+                                        enum "all-ones"                     { value 1; }
+                                    }
+                                    default "all-zeros";
+                                    description "Test pattern for ETH-test frames";
+                                }
+
+                                leaf crc-tlv {
+                                    type boolean;
+                                    default "false";
+                                    description "Generate a CRC checksum";
+                                }
+
+                            } // container test-pattern
+
+                        } // container eth-test
+
+                        container grace {
+                            description "Enter the grace context";
+
+                            container eth-ed {
+                                description "Enter the eth-ed context";
+
+                                leaf max-rx-defect-window {
+                                    type uint32 {
+                                        range "1..86400";
+                                    }
+                                    units "seconds";
+                                    description "Maximum received ETH-ED expected defect window duration";
+                                }
+
+                                leaf priority {
+                                    type int32 {
+                                        range "0..7";
+                                    }
+                                    description "Transmission priority for ETH-ED PDUs";
+                                }
+
+                                leaf rx-eth-ed {
+                                    type boolean;
+                                    default "true";
+                                    description "Receive and process ETH-ED ITU-T Y.1731 PDUs on the MEP";
+                                }
+
+                                leaf tx-eth-ed {
+                                    type boolean;
+                                    default "false";
+                                    description "Transmit ETH-ED PDUs from the MEP";
+                                }
+
+                            } // container eth-ed
+
+                            container eth-vsm-grace {
+                                description "Enter the eth-vsm-grace context";
+
+                                leaf rx-eth-vsm-grace {
+                                    type boolean;
+                                    default "true";
+                                    description "Receive and process Nokia ETH-CFM Grace PDU on the MEP";
+                                }
+
+                                leaf tx-eth-vsm-grace {
+                                    type boolean;
+                                    default "true";
+                                    description "Transmit ETH-ED PDUs from the MEP";
+                                }
+
+                            } // container eth-vsm-grace
+
+                        } // container grace
+
+                    } // list mep
+
+                } // container eth-cfm
+
+            } // list path
+
+        } // list eth-ring
+
+    } // grouping conf-eth-ring
+
+}

@@ -1,0 +1,1969 @@
+submodule nokia-conf-router-dhcp-server {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-dhcp               { prefix "types-dhcp"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-groups;
+    include nokia-conf-redundancy;
+    include nokia-conf-submgt-local-user-db;
+    include nokia-conf-subscriber-mgmt;
+
+
+    sros-ext:sros-major-release "rel21";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure DHCP server on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-router-dhcp-server YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2021-03-15";
+
+    grouping conf-router-dhcp-server {
+        container dhcp-server {
+            when "../router-name = 'Base'";
+            description "Enter the dhcp-server context";
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            leaf-list apply-groups-exclude {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Exclude a configuration group at this level";
+            }
+
+            list dhcpv4 {
+                key "name";
+                description "Enter the dhcpv4 list instance";
+
+                leaf name {
+                    type types-sros:named-item;
+                    description "DHCP server name";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of the DHCP server";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf user-db {
+                    type leafref {
+                        path "../../../../subscriber-mgmt/local-user-db/name";
+                    }
+                    description "Local user database for authentication";
+                }
+
+                leaf user-identification {
+                    type enumeration {
+                        enum "mac-circuit-id"               { value 1; }
+                        enum "duid"                         { value 2; }
+                        enum "interface-id"                 { value 3; }
+                        enum "interface-id-link-local"      { value 4; }
+                        enum "client-id"                    { value 5; }
+                        enum "mac"                          { value 6; }
+                        enum "circuit-id"                   { value 7; }
+                        enum "remote-id"                    { value 8; }
+                    }
+                    sros-ext:auto-restart-to-modify;
+                    description "User identification method for the DHCP server";
+                }
+
+                leaf force-renews {
+                    type boolean;
+                    default "false";
+                    description "Send FORCERENEW messages to force renewals of leases";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                container pool-selection {
+                    description "Enter the pool-selection context";
+
+                    container use-gi-address {
+                        presence "Enable the use-gi-address context";
+                        description "Enable the use-gi-address context";
+
+                        leaf scope {
+                            type enumeration {
+                                enum "subnet"                       { value 0; }
+                                enum "pool"                         { value 1; }
+                            }
+                            default "subnet";
+                            description "GI address-matching scope";
+                        }
+
+                    } // container use-gi-address
+
+                    container use-pool-from-client {
+                        presence "Enable the use-pool-from-client context";
+                        description "Enable the use-pool-from-client context";
+
+                        leaf delimiter {
+                            type types-sros:string-not-all-spaces {
+                                length "1";
+                            }
+                            description "Delimiter to combine primary and secondary pool names";
+                        }
+
+                    } // container use-pool-from-client
+
+                } // container pool-selection
+
+                container lease-hold {
+                    description "Enter the lease-hold context";
+
+                    leaf time {
+                        type types-sros:time-duration {
+                            range "1..631152000";
+                        }
+                        units "seconds";
+                        description "Lease hold time";
+                    }
+
+                    container additional-scenarios {
+                        description "Enter the additional-scenarios context";
+
+                        leaf internal-lease-ipsec {
+                            type boolean;
+                            default "false";
+                            description "Apply the lease hold timer to local IPsec clients";
+                        }
+
+                        leaf solicited-release {
+                            type boolean;
+                            default "false";
+                            description "Apply lease hold timer for solicited releases";
+                        }
+
+                    } // container additional-scenarios
+
+                } // container lease-hold
+
+                container failover {
+                    description "Enter the failover context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of the failover mechanism";
+                    }
+
+                    leaf ignore-mclt-on-takeover {
+                        type boolean;
+                        default "false";
+                        description "Ignore maximum client lead during takeover from partner";
+                    }
+
+                    leaf maximum-client-lead-time {
+                        type types-sros:time-duration {
+                            range "600..86399";
+                        }
+                        units "seconds";
+                        sros-ext:auto-restart-to-modify;
+                        default "600";
+                        description "Maximum time that DHCP server can extend client's lease";
+                    }
+
+                    leaf partner-down-delay {
+                        type types-sros:time-duration {
+                            range "0..86399";
+                        }
+                        units "seconds";
+                        sros-ext:auto-restart-to-modify;
+                        default "86399";
+                        description "Delay to prevent lease duplication during link failure";
+                    }
+
+                    leaf startup-wait-time {
+                        type types-sros:time-duration {
+                            range "60..3600";
+                        }
+                        units "seconds";
+                        sros-ext:auto-restart-to-modify;
+                        default "120";
+                        description "Time between initialization and assuming active role";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    list peer {
+                        key "address";
+                        max-elements 1;
+                        description "Enter the peer list instance";
+
+                        leaf address {
+                            type leafref {
+                                path "../../../../../../redundancy/multi-chassis/peer/ip-address";
+                            }
+                            description "IP address of the failover peer";
+                        }
+
+                        leaf sync-tag {
+                            type types-sros:named-item;
+                            sros-ext:immutable;
+                            mandatory true;
+                            description "Tag that identifies synchronizing server or pool pairs";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // list peer
+
+                } // container failover
+
+                list pool {
+                    key "pool-name";
+                    description "Enter the pool list instance";
+
+                    leaf pool-name {
+                        type types-sros:named-item;
+                        description "DHCP server pool name";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf min-lease-time {
+                        type types-sros:time-duration {
+                            range "10..315446399";
+                        }
+                        units "seconds";
+                        default "600";
+                        description "Minimum lease time";
+                    }
+
+                    leaf max-lease-time {
+                        type types-sros:time-duration {
+                            range "10..315446399";
+                        }
+                        units "seconds";
+                        default "864000";
+                        description "Maximum lease time";
+                    }
+
+                    leaf offer-time {
+                        type types-sros:time-duration {
+                            range "10..600";
+                        }
+                        units "seconds";
+                        default "60";
+                        description "Time interval during which a DHCP offer remains valid";
+                    }
+
+                    leaf nak-non-matching-subnet {
+                        type boolean;
+                        default "false";
+                        description "Send NAK if no match for request address pool range";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container minimum-free {
+                        description "Enter the minimum-free context";
+
+                        leaf event-when-depleted {
+                            type boolean;
+                            default "false";
+                            description "Generate a notification when addresses are depleted";
+                        }
+
+                        choice value {
+                            default "absolute";
+                            case absolute {
+
+                                leaf absolute {
+                                    type uint32 {
+                                        range "0..255";
+                                    }
+                                    default "1";
+                                    description "Minimum number of free addresses in this pool or subnet";
+                                }
+
+                            }
+                            case percent {
+
+                                leaf percent {
+                                    type uint32 {
+                                        range "0..100";
+                                    }
+                                    default "1";
+                                    description "Minimum free addresses as a percentage";
+                                }
+
+                            }
+                        }
+                    } // container minimum-free
+
+                    container options {
+                        description "Enter the options context";
+
+                        list option {
+                            key "number";
+                            description "Enter the option list instance";
+
+                            leaf number {
+                                type union {
+                                    type uint32 {
+                                        range "1..254";
+                                    }
+                                    type enumeration {
+                                        enum "subnet-mask"                  { value 1; }
+                                        enum "default-router"               { value 3; }
+                                        enum "dns-server"                   { value 6; }
+                                        enum "domain-name"                  { value 15; }
+                                        enum "netbios-name-server"          { value 44; }
+                                        enum "netbios-node-type"            { value 46; }
+                                        enum "lease-time"                   { value 51; }
+                                        enum "lease-renew-time"             { value 58; }
+                                        enum "lease-rebind-time"            { value 59; }
+                                    }
+                                }
+                                description "DHCP option to send identification strings to client";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                            choice value {
+                                mandatory true;
+                                description "The value of the DHCP option.";
+                                case ascii-string {
+
+                                    leaf ascii-string {
+                                        when "(not(../number = 46) and not(../number = 'netbios-node-type')) and (not(../number = 51) and not(../number = 'lease-time')) and (not(../number = 58) and not(../number = 'lease-renew-time')) and (not(../number = 59) and not(../number = 'lease-rebind-time'))";
+                                        type types-sros:string-not-all-spaces {
+                                            length "1..127";
+                                        }
+                                        description "DHCP option specified as an ASCII string";
+                                    }
+
+                                }
+                                case hex-string {
+
+                                    leaf hex-string {
+                                        when "(not(../number = 46) and not(../number = 'netbios-node-type')) and (not(../number = 51) and not(../number = 'lease-time')) and (not(../number = 58) and not(../number = 'lease-renew-time')) and (not(../number = 59) and not(../number = 'lease-rebind-time'))";
+                                        type types-sros:hex-string {
+                                            length "1..256";
+                                        }
+                                        description "DHCP option specified as hexadecimal string";
+                                    }
+
+                                }
+                                case netbios-node-type {
+
+                                    leaf netbios-node-type {
+                                        when "../number = 46 or ../number = 'netbios-node-type'";
+                                        type enumeration {
+                                            enum "b-node"                       { value 1; }
+                                            enum "p-node"                       { value 2; }
+                                            enum "m-node"                       { value 4; }
+                                            enum "h-node"                       { value 8; }
+                                        }
+                                        description "DHCP option specified as a NetBIOS node type";
+                                    }
+
+                                }
+                                case duration {
+
+                                    leaf duration {
+                                        when "../number = 51 or ../number = 'lease-time' or ../number = 58 or ../number = 'lease-renew-time' or ../number = 59 or ../number = 'lease-rebind-time'";
+                                        type types-sros:time-duration {
+                                            range "10..315446399";
+                                        }
+                                        units "seconds";
+                                        description "DHCP option specified as time duration";
+                                    }
+
+                                }
+                                case ipv4-address {
+
+                                    leaf-list ipv4-address {
+                                        when "(not(../number = 46) and not(../number = 'netbios-node-type')) and (not(../number = 51) and not(../number = 'lease-time')) and (not(../number = 58) and not(../number = 'lease-renew-time')) and (not(../number = 59) and not(../number = 'lease-rebind-time'))";
+                                        type types-sros:ipv4-address;
+                                        max-elements 4;
+                                        ordered-by user;
+                                        description "DHCP option specified as a list of IPv4 addresses";
+                                    }
+
+                                }
+                                case empty {
+
+                                    leaf empty {
+                                        when "(not(../number = 46) and not(../number = 'netbios-node-type')) and (not(../number = 51) and not(../number = 'lease-time')) and (not(../number = 58) and not(../number = 'lease-renew-time')) and (not(../number = 59) and not(../number = 'lease-rebind-time'))";
+                                        type empty;
+                                        description "Remove DHCP option from configuration";
+                                    }
+
+                                }
+                            }
+                        } // list option
+
+                    } // container options
+
+                    container failover {
+                        description "Enter the failover context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of the failover mechanism";
+                        }
+
+                        leaf ignore-mclt-on-takeover {
+                            type boolean;
+                            default "false";
+                            description "Ignore maximum client lead during takeover from partner";
+                        }
+
+                        leaf maximum-client-lead-time {
+                            type types-sros:time-duration {
+                                range "600..86399";
+                            }
+                            units "seconds";
+                            sros-ext:auto-restart-to-modify;
+                            default "600";
+                            description "Maximum time that DHCP server can extend client's lease";
+                        }
+
+                        leaf partner-down-delay {
+                            type types-sros:time-duration {
+                                range "0..86399";
+                            }
+                            units "seconds";
+                            sros-ext:auto-restart-to-modify;
+                            default "86399";
+                            description "Delay to prevent lease duplication during link failure";
+                        }
+
+                        leaf startup-wait-time {
+                            type types-sros:time-duration {
+                                range "60..3600";
+                            }
+                            units "seconds";
+                            sros-ext:auto-restart-to-modify;
+                            default "120";
+                            description "Time between initialization and assuming active role";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        list peer {
+                            key "address";
+                            max-elements 1;
+                            description "Enter the peer list instance";
+
+                            leaf address {
+                                type leafref {
+                                    path "../../../../../../../redundancy/multi-chassis/peer/ip-address";
+                                }
+                                description "IP address of the failover peer";
+                            }
+
+                            leaf sync-tag {
+                                type types-sros:named-item;
+                                sros-ext:immutable;
+                                mandatory true;
+                                description "Tag that identifies synchronizing server or pool pairs";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                        } // list peer
+
+                    } // container failover
+
+                    list subnet {
+                        key "ipv4-prefix";
+                        description "Enter the subnet list instance";
+
+                        leaf ipv4-prefix {
+                            type types-sros:ipv4-unicast-prefix;
+                            description "IPv4 prefix for the subnet";
+                        }
+
+                        leaf drain {
+                            type boolean;
+                            default "false";
+                            description "Prevent new lease assignment from this subnet";
+                        }
+
+                        leaf maximum-declined {
+                            type uint32;
+                            default "64";
+                            description "Maximum number of declined addresses allowed";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container minimum-free {
+                            description "Enter the minimum-free context";
+
+                            leaf event-when-depleted {
+                                type boolean;
+                                default "false";
+                                description "Generate a notification when addresses are depleted";
+                            }
+
+                            choice value {
+                                default "absolute";
+                                case absolute {
+
+                                    leaf absolute {
+                                        type uint32 {
+                                            range "0..255";
+                                        }
+                                        default "1";
+                                        description "Minimum number of free addresses in this pool or subnet";
+                                    }
+
+                                }
+                                case percent {
+
+                                    leaf percent {
+                                        type uint32 {
+                                            range "0..100";
+                                        }
+                                        default "1";
+                                        description "Minimum free addresses as a percentage";
+                                    }
+
+                                }
+                            }
+                        } // container minimum-free
+
+                        container options {
+                            description "Enter the options context";
+
+                            list option {
+                                key "number";
+                                description "Enter the option list instance";
+
+                                leaf number {
+                                    type union {
+                                        type uint32 {
+                                            range "1..254";
+                                        }
+                                        type enumeration {
+                                            enum "subnet-mask"                  { value 1; }
+                                            enum "default-router"               { value 3; }
+                                            enum "dns-server"                   { value 6; }
+                                            enum "domain-name"                  { value 15; }
+                                            enum "netbios-name-server"          { value 44; }
+                                            enum "netbios-node-type"            { value 46; }
+                                            enum "lease-time"                   { value 51; }
+                                            enum "lease-renew-time"             { value 58; }
+                                            enum "lease-rebind-time"            { value 59; }
+                                        }
+                                    }
+                                    description "DHCP option to send identification strings to client";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                leaf-list apply-groups-exclude {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Exclude a configuration group at this level";
+                                }
+
+                                choice value {
+                                    mandatory true;
+                                    description "The value of the DHCP option.";
+                                    case ascii-string {
+
+                                        leaf ascii-string {
+                                            when "(not(../number = 46) and not(../number = 'netbios-node-type')) and (not(../number = 51) and not(../number = 'lease-time')) and (not(../number = 58) and not(../number = 'lease-renew-time')) and (not(../number = 59) and not(../number = 'lease-rebind-time'))";
+                                            type types-sros:string-not-all-spaces {
+                                                length "1..127";
+                                            }
+                                            description "DHCP option specified as an ASCII string";
+                                        }
+
+                                    }
+                                    case hex-string {
+
+                                        leaf hex-string {
+                                            when "(not(../number = 46) and not(../number = 'netbios-node-type')) and (not(../number = 51) and not(../number = 'lease-time')) and (not(../number = 58) and not(../number = 'lease-renew-time')) and (not(../number = 59) and not(../number = 'lease-rebind-time'))";
+                                            type types-sros:hex-string {
+                                                length "1..256";
+                                            }
+                                            description "DHCP option specified as hexadecimal string";
+                                        }
+
+                                    }
+                                    case netbios-node-type {
+
+                                        leaf netbios-node-type {
+                                            when "../number = 46 or ../number = 'netbios-node-type'";
+                                            type enumeration {
+                                                enum "b-node"                       { value 1; }
+                                                enum "p-node"                       { value 2; }
+                                                enum "m-node"                       { value 4; }
+                                                enum "h-node"                       { value 8; }
+                                            }
+                                            description "DHCP option specified as a NetBIOS node type";
+                                        }
+
+                                    }
+                                    case duration {
+
+                                        leaf duration {
+                                            when "../number = 51 or ../number = 'lease-time' or ../number = 58 or ../number = 'lease-renew-time' or ../number = 59 or ../number = 'lease-rebind-time'";
+                                            type types-sros:time-duration {
+                                                range "10..315446399";
+                                            }
+                                            units "seconds";
+                                            description "DHCP option specified as time";
+                                        }
+
+                                    }
+                                    case ipv4-address {
+
+                                        leaf-list ipv4-address {
+                                            when "(not(../number = 46) and not(../number = 'netbios-node-type')) and (not(../number = 51) and not(../number = 'lease-time')) and (not(../number = 58) and not(../number = 'lease-renew-time')) and (not(../number = 59) and not(../number = 'lease-rebind-time'))";
+                                            type types-sros:ipv4-address;
+                                            max-elements 4;
+                                            ordered-by user;
+                                            description "DHCP option specified as a list of IPv4 addresses";
+                                        }
+
+                                    }
+                                    case empty {
+
+                                        leaf empty {
+                                            when "(not(../number = 46) and not(../number = 'netbios-node-type')) and (not(../number = 51) and not(../number = 'lease-time')) and (not(../number = 58) and not(../number = 'lease-renew-time')) and (not(../number = 59) and not(../number = 'lease-rebind-time'))";
+                                            type empty;
+                                            description "Empty DHCP option";
+                                        }
+
+                                    }
+                                }
+                            } // list option
+
+                        } // container options
+
+                        list address-range {
+                            key "start end";
+                            description "Enter the address-range list instance";
+
+                            leaf start {
+                                type types-sros:ipv4-unicast-address;
+                                description "Start address of this range";
+                            }
+
+                            leaf end {
+                                type types-sros:ipv4-unicast-address;
+                                description "End address of this range";
+                            }
+
+                            leaf failover-control-type {
+                                type types-dhcp:failover-control-type;
+                                sros-ext:immutable;
+                                default "local";
+                                description "Failover control type for this range";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                        } // list address-range
+
+                        list exclude-addresses {
+                            key "start end";
+                            description "Add a list entry for exclude-addresses";
+
+                            leaf start {
+                                type types-sros:ipv4-unicast-address;
+                                description "Start address of this range";
+                            }
+
+                            leaf end {
+                                type types-sros:ipv4-unicast-address;
+                                description "End address of this range";
+                            }
+
+                        } // list exclude-addresses
+
+                    } // list subnet
+
+                } // list pool
+
+            } // list dhcpv4
+
+            list dhcpv6 {
+                key "name";
+                description "Enter the dhcpv6 list instance";
+
+                leaf name {
+                    type types-sros:named-item;
+                    description "DHCP server name";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of the DHCP server";
+                }
+
+                leaf auto-provisioned {
+                    type boolean;
+                    sros-ext:immutable;
+                    default "false";
+                    description "Auto-provision the pools of this server";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf user-identification {
+                    when "../auto-provisioned = 'false'";
+                    type enumeration {
+                        enum "mac-circuit-id"               { value 1; }
+                        enum "duid"                         { value 2; }
+                        enum "interface-id"                 { value 3; }
+                        enum "interface-id-link-local"      { value 4; }
+                        enum "client-id"                    { value 5; }
+                        enum "mac"                          { value 6; }
+                        enum "circuit-id"                   { value 7; }
+                        enum "remote-id"                    { value 8; }
+                    }
+                    sros-ext:auto-restart-to-modify;
+                    description "User identification method for the DHCP server";
+                }
+
+                leaf ignore-rapid-commit {
+                    type boolean;
+                    default "false";
+                    description "Ignore Rapid Commit option";
+                }
+
+                leaf interface-id-mapping {
+                    type boolean;
+                    sros-ext:auto-restart-to-modify;
+                    default "false";
+                    description "Map hosts within interface-to-prefix combinations";
+                }
+
+                leaf lease-query {
+                    when "../auto-provisioned = 'false'";
+                    type boolean;
+                    default "false";
+                    description "Handle and reply to lease query messages";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                container pool-selection {
+                    when "../auto-provisioned = 'false'";
+                    description "Enter the pool-selection context";
+
+                    container use-link-address {
+                        presence "Enable the use-link-address context";
+                        description "Enable the use-link-address context";
+
+                        leaf scope {
+                            type enumeration {
+                                enum "subnet"                       { value 0; }
+                                enum "pool"                         { value 1; }
+                            }
+                            default "subnet";
+                            description "Scope of the IP address selection";
+                        }
+
+                    } // container use-link-address
+
+                    container use-pool-from-client {
+                        presence "Enable the use-pool-from-client context";
+                        description "Enable the use-pool-from-client context";
+
+                        leaf delimiter {
+                            type types-sros:string-not-all-spaces {
+                                length "1";
+                            }
+                            description "Delimiter to combine primary and secondary pool names";
+                        }
+
+                    } // container use-pool-from-client
+
+                } // container pool-selection
+
+                container lease-hold {
+                    when "../auto-provisioned = 'false'";
+                    description "Enter the lease-hold context";
+
+                    leaf time {
+                        type types-sros:time-duration {
+                            range "1..631152000";
+                        }
+                        units "seconds";
+                        description "Lease hold time";
+                    }
+
+                    container additional-scenarios {
+                        description "Enter the additional-scenarios context";
+
+                        leaf internal-lease-ipsec {
+                            type boolean;
+                            default "false";
+                            description "Apply the lease hold timer to local IPsec clients";
+                        }
+
+                        leaf solicited-release {
+                            type boolean;
+                            default "false";
+                            description "Apply lease hold timer for solicited releases";
+                        }
+
+                    } // container additional-scenarios
+
+                } // container lease-hold
+
+                container server-id {
+                    when "../auto-provisioned = 'false'";
+                    description "Enter the server-id context";
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    choice value {
+                        default "duid-link-local";
+                        case duid-link-local {
+
+                            leaf duid-link-local {
+                                type empty;
+                                description "Derive DUID server ID from a system link-layer address";
+                            }
+
+                        }
+                        case duid-enterprise {
+
+                            container duid-enterprise {
+                                description "Enter the duid-enterprise context";
+
+                                choice duid-enterprise-value {
+                                    case ascii-string {
+
+                                        leaf ascii-string {
+                                            type types-sros:string-not-all-spaces {
+                                                length "1..58";
+                                            }
+                                            description "DUID enterprise server ID specified as an ASCII string";
+                                        }
+
+                                    }
+                                    case hex-string {
+
+                                        leaf hex-string {
+                                            type types-sros:hex-string {
+                                                length "1..118";
+                                            }
+                                            description "DUID enterprise server ID specified as a hex string";
+                                        }
+
+                                    }
+                                }
+                            } // container duid-enterprise
+
+                        }
+                    }
+                } // container server-id
+
+                container failover {
+                    when "../auto-provisioned = 'false'";
+                    description "Enter the failover context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of the failover mechanism";
+                    }
+
+                    leaf ignore-mclt-on-takeover {
+                        type boolean;
+                        default "false";
+                        description "Ignore maximum client lead during takeover from partner";
+                    }
+
+                    leaf maximum-client-lead-time {
+                        type types-sros:time-duration {
+                            range "600..86399";
+                        }
+                        units "seconds";
+                        sros-ext:auto-restart-to-modify;
+                        default "600";
+                        description "Maximum time that DHCP server can extend client's lease";
+                    }
+
+                    leaf partner-down-delay {
+                        type types-sros:time-duration {
+                            range "0..86399";
+                        }
+                        units "seconds";
+                        sros-ext:auto-restart-to-modify;
+                        default "86399";
+                        description "Delay to prevent lease duplication during link failure";
+                    }
+
+                    leaf startup-wait-time {
+                        type types-sros:time-duration {
+                            range "60..3600";
+                        }
+                        units "seconds";
+                        sros-ext:auto-restart-to-modify;
+                        default "120";
+                        description "Time between initialization and assuming active role";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    list peer {
+                        key "address";
+                        max-elements 1;
+                        description "Enter the peer list instance";
+
+                        leaf address {
+                            type leafref {
+                                path "../../../../../../redundancy/multi-chassis/peer/ip-address";
+                            }
+                            description "IP address of the failover peer";
+                        }
+
+                        leaf sync-tag {
+                            type types-sros:named-item;
+                            sros-ext:immutable;
+                            mandatory true;
+                            description "Tag that identifies synchronizing server or pool pairs";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // list peer
+
+                } // container failover
+
+                container defaults {
+                    when "../auto-provisioned = 'true'";
+                    description "Enter the defaults context";
+
+                    leaf preferred-lifetime {
+                        type types-sros:time-duration {
+                            range "300..315446399";
+                        }
+                        units "seconds";
+                        default "3600";
+                        description "Time this lease remains preferred";
+                    }
+
+                    leaf valid-lifetime {
+                        type types-sros:time-duration {
+                            range "300..315446399";
+                        }
+                        units "seconds";
+                        default "86400";
+                        description "Time for the lease to remain valid";
+                    }
+
+                    leaf renew-time {
+                        type types-sros:time-duration {
+                            range "0..604800";
+                        }
+                        units "seconds";
+                        default "1800";
+                        description "Renew time for the lease";
+                    }
+
+                    leaf rebind-time {
+                        type types-sros:time-duration {
+                            range "0..1209600";
+                        }
+                        units "seconds";
+                        default "2880";
+                        description "Rebind time for the lease";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container options {
+                        description "Enter the options context";
+
+                        list option {
+                            key "number";
+                            description "Enter the option list instance";
+
+                            leaf number {
+                                type union {
+                                    type uint32 {
+                                        range "1..65535";
+                                    }
+                                    type enumeration {
+                                        enum "dns-server"                   { value 23; }
+                                        enum "domain-name"                  { value 24; }
+                                    }
+                                }
+                                description "DHCP option number";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                            choice value {
+                                mandatory true;
+                                description "The value of the DHCP option.";
+                                case ascii-string {
+
+                                    leaf ascii-string {
+                                        type types-sros:string-not-all-spaces {
+                                            length "1..127";
+                                        }
+                                        description "DHCP option specified as an ASCII string";
+                                    }
+
+                                }
+                                case hex-string {
+
+                                    leaf hex-string {
+                                        type types-sros:hex-string {
+                                            length "1..256";
+                                        }
+                                        description "DHCP option specified as hexadecimal string";
+                                    }
+
+                                }
+                                case domain-string {
+
+                                    leaf domain-string {
+                                        type string {
+                                            length "1..127";
+                                            pattern "[a-z0-9\\-]+(\\.[a-z0-9\\-]+)*";
+                                        }
+                                        description "DHCP option specified as a domain name";
+                                    }
+
+                                }
+                                case duration {
+
+                                    leaf duration {
+                                        type types-sros:time-duration {
+                                            range "10..315446399";
+                                        }
+                                        units "seconds";
+                                        description "DHCP option specified as time";
+                                    }
+
+                                }
+                                case ipv6-address {
+
+                                    leaf-list ipv6-address {
+                                        type types-sros:ipv6-address;
+                                        max-elements 4;
+                                        ordered-by user;
+                                        description "DHCP option specified as a list of IPv6 addresses";
+                                    }
+
+                                }
+                                case empty {
+
+                                    leaf empty {
+                                        type empty;
+                                        description "Empty DHCP option";
+                                    }
+
+                                }
+                            }
+                        } // list option
+
+                    } // container options
+
+                } // container defaults
+
+                list pool {
+                    when "../auto-provisioned = 'false'";
+                    key "pool-name";
+                    description "Enter the pool list instance";
+
+                    leaf pool-name {
+                        type types-sros:named-item;
+                        description "DHCP server pool name";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container delegated-prefix {
+                        description "Enter the delegated-prefix context";
+
+                        leaf length {
+                            type uint32 {
+                                range "48..127";
+                            }
+                            default "64";
+                            description "Prefix length for pool if unspecified by client";
+                        }
+
+                        leaf minimum {
+                            type uint32 {
+                                range "48..127";
+                            }
+                            default "48";
+                            description "Minimum delegated prefix length for this pool";
+                        }
+
+                        leaf maximum {
+                            type uint32 {
+                                range "48..127";
+                            }
+                            default "64";
+                            description "Maximum delegated prefix length for this pool";
+                        }
+
+                    } // container delegated-prefix
+
+                    container failover {
+                        description "Enter the failover context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of the failover mechanism";
+                        }
+
+                        leaf ignore-mclt-on-takeover {
+                            type boolean;
+                            default "false";
+                            description "Ignore maximum client lead during takeover from partner";
+                        }
+
+                        leaf maximum-client-lead-time {
+                            type types-sros:time-duration {
+                                range "600..86399";
+                            }
+                            units "seconds";
+                            sros-ext:auto-restart-to-modify;
+                            default "600";
+                            description "Maximum time that DHCP server can extend client's lease";
+                        }
+
+                        leaf partner-down-delay {
+                            type types-sros:time-duration {
+                                range "0..86399";
+                            }
+                            units "seconds";
+                            sros-ext:auto-restart-to-modify;
+                            default "86399";
+                            description "Delay to prevent lease duplication during link failure";
+                        }
+
+                        leaf startup-wait-time {
+                            type types-sros:time-duration {
+                                range "60..3600";
+                            }
+                            units "seconds";
+                            sros-ext:auto-restart-to-modify;
+                            default "120";
+                            description "Time between initialization and assuming active role";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        list peer {
+                            key "address";
+                            max-elements 1;
+                            description "Enter the peer list instance";
+
+                            leaf address {
+                                type leafref {
+                                    path "../../../../../../../redundancy/multi-chassis/peer/ip-address";
+                                }
+                                description "IP address of the failover peer";
+                            }
+
+                            leaf sync-tag {
+                                type types-sros:named-item;
+                                sros-ext:immutable;
+                                mandatory true;
+                                description "Tag that identifies synchronizing server or pool pairs";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                        } // list peer
+
+                    } // container failover
+
+                    list prefix-length-threshold {
+                        key "prefix-length";
+                        max-elements 8;
+                        description "Enter the prefix-length-threshold list instance";
+
+                        leaf prefix-length {
+                            type uint32 {
+                                range "1..128";
+                            }
+                            description "Delegated prefix length for pool thresholds";
+                        }
+
+                        leaf minimum-free-percent {
+                            type uint32 {
+                                range "0..100";
+                            }
+                            default "0";
+                            description "Percentage of free prefixes for this prefix length";
+                        }
+
+                        leaf event-when-depleted {
+                            type boolean;
+                            default "false";
+                            description "Generate a notification when this pool is depleted";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // list prefix-length-threshold
+
+                    container options {
+                        description "Enter the options context";
+
+                        list option {
+                            key "number";
+                            description "Enter the option list instance";
+
+                            leaf number {
+                                type union {
+                                    type uint32 {
+                                        range "1..65535";
+                                    }
+                                    type enumeration {
+                                        enum "dns-server"                   { value 23; }
+                                        enum "domain-name"                  { value 24; }
+                                    }
+                                }
+                                description "DHCP option number";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                            choice value {
+                                mandatory true;
+                                description "The value of the DHCP option.";
+                                case ascii-string {
+
+                                    leaf ascii-string {
+                                        type types-sros:string-not-all-spaces {
+                                            length "1..127";
+                                        }
+                                        description "DHCP option specified as an ASCII string";
+                                    }
+
+                                }
+                                case hex-string {
+
+                                    leaf hex-string {
+                                        type types-sros:hex-string {
+                                            length "1..256";
+                                        }
+                                        description "DHCP option specified as hexadecimal string";
+                                    }
+
+                                }
+                                case domain-string {
+
+                                    leaf domain-string {
+                                        type string {
+                                            length "1..127";
+                                            pattern "[a-z0-9\\-]+(\\.[a-z0-9\\-]+)*";
+                                        }
+                                        description "DHCP option specified as a domain name";
+                                    }
+
+                                }
+                                case duration {
+
+                                    leaf duration {
+                                        type types-sros:time-duration {
+                                            range "10..315446399";
+                                        }
+                                        units "seconds";
+                                        description "DHCP option specified as time";
+                                    }
+
+                                }
+                                case ipv6-address {
+
+                                    leaf-list ipv6-address {
+                                        type types-sros:ipv6-address;
+                                        max-elements 4;
+                                        ordered-by user;
+                                        description "DHCP option specified as a list of IPv6 addresses";
+                                    }
+
+                                }
+                                case empty {
+
+                                    leaf empty {
+                                        type empty;
+                                        description "Empty DHCP option";
+                                    }
+
+                                }
+                            }
+                        } // list option
+
+                    } // container options
+
+                    list prefix {
+                        key "ipv6-prefix";
+                        description "Enter the prefix list instance";
+
+                        leaf ipv6-prefix {
+                            type types-sros:ipv6-prefix;
+                            description "IPv6 prefix to be excluded from available pool prefixes";
+                        }
+
+                        leaf failover-control-type {
+                            type types-dhcp:failover-control-type;
+                            sros-ext:immutable;
+                            default "local";
+                            description "Failover control type for this range";
+                        }
+
+                        leaf preferred-lifetime {
+                            type types-sros:time-duration {
+                                range "300..315446399";
+                            }
+                            units "seconds";
+                            default "3600";
+                            description "Time this lease remains preferred";
+                        }
+
+                        leaf valid-lifetime {
+                            type types-sros:time-duration {
+                                range "300..315446399";
+                            }
+                            units "seconds";
+                            default "86400";
+                            description "Time for the lease to remain valid";
+                        }
+
+                        leaf renew-time {
+                            type types-sros:time-duration {
+                                range "0..604800";
+                            }
+                            units "seconds";
+                            default "1800";
+                            description "Renew time for the lease";
+                        }
+
+                        leaf rebind-time {
+                            type types-sros:time-duration {
+                                range "0..1209600";
+                            }
+                            units "seconds";
+                            default "2880";
+                            description "Rebind time for the lease";
+                        }
+
+                        leaf drain {
+                            type boolean;
+                            default "false";
+                            description "No new leases can be assigned";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container prefix-type {
+                            description "Enter the prefix-type context";
+
+                            leaf pd {
+                                type boolean;
+                                sros-ext:immutable;
+                                default "true";
+                                description "Allocate IA-PD prefixes from this prefix pool";
+                            }
+
+                            leaf wan-host {
+                                type boolean;
+                                sros-ext:immutable;
+                                default "true";
+                                description "Allocate IA-NA or SLAAC prefixes from this prefix pool";
+                            }
+
+                        } // container prefix-type
+
+                        container options {
+                            description "Enter the options context";
+
+                            list option {
+                                key "number";
+                                description "Enter the option list instance";
+
+                                leaf number {
+                                    type union {
+                                        type uint32 {
+                                            range "1..65535";
+                                        }
+                                        type enumeration {
+                                            enum "dns-server"                   { value 23; }
+                                            enum "domain-name"                  { value 24; }
+                                        }
+                                    }
+                                    description "DHCP option number";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                leaf-list apply-groups-exclude {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Exclude a configuration group at this level";
+                                }
+
+                                choice value {
+                                    mandatory true;
+                                    description "The value of the DHCP option.";
+                                    case ascii-string {
+
+                                        leaf ascii-string {
+                                            type types-sros:string-not-all-spaces {
+                                                length "1..127";
+                                            }
+                                            description "DHCP option specified as an ASCII string";
+                                        }
+
+                                    }
+                                    case hex-string {
+
+                                        leaf hex-string {
+                                            type types-sros:hex-string {
+                                                length "1..256";
+                                            }
+                                            description "DHCP option specified as hexadecimal string";
+                                        }
+
+                                    }
+                                    case domain-string {
+
+                                        leaf domain-string {
+                                            type string {
+                                                length "1..127";
+                                                pattern "[a-z0-9\\-]+(\\.[a-z0-9\\-]+)*";
+                                            }
+                                            description "DHCP option specified as a domain name";
+                                        }
+
+                                    }
+                                    case duration {
+
+                                        leaf duration {
+                                            type types-sros:time-duration {
+                                                range "10..315446399";
+                                            }
+                                            units "seconds";
+                                            description "DHCP option specified as time";
+                                        }
+
+                                    }
+                                    case ipv6-address {
+
+                                        leaf-list ipv6-address {
+                                            type types-sros:ipv6-address;
+                                            max-elements 4;
+                                            ordered-by user;
+                                            description "DHCP option specified as a list of IPv6 addresses";
+                                        }
+
+                                    }
+                                    case empty {
+
+                                        leaf empty {
+                                            type empty;
+                                            description "Empty DHCP option";
+                                        }
+
+                                    }
+                                }
+                            } // list option
+
+                        } // container options
+
+                        list prefix-length-threshold {
+                            key "prefix-length";
+                            max-elements 8;
+                            description "Enter the prefix-length-threshold list instance";
+
+                            leaf prefix-length {
+                                type uint32 {
+                                    range "1..128";
+                                }
+                                description "Delegated prefix length for pool thresholds";
+                            }
+
+                            leaf event-when-depleted {
+                                type boolean;
+                                default "false";
+                                description "Generate a notification when this pool is depleted";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                            choice value {
+                                case absolute {
+
+                                    leaf absolute {
+                                        type uint32 {
+                                            range "1..4294967295";
+                                        }
+                                        description "Minimum number of free prefixes for this prefix length";
+                                    }
+
+                                }
+                                case percent {
+
+                                    leaf percent {
+                                        type uint32 {
+                                            range "1..100";
+                                        }
+                                        description "Minimum percentage of free prefixes for prefix length";
+                                    }
+
+                                }
+                            }
+                        } // list prefix-length-threshold
+
+                    } // list prefix
+
+                    list exclude-prefix {
+                        key "ipv6-prefix";
+                        description "Add a list entry for exclude-prefix";
+
+                        leaf ipv6-prefix {
+                            type types-sros:ipv6-prefix;
+                            description "IPv6 prefix to be excluded from available pool prefixes";
+                        }
+
+                    } // list exclude-prefix
+
+                } // list pool
+
+            } // list dhcpv6
+
+        } // container dhcp-server
+
+    } // grouping conf-router-dhcp-server
+
+}

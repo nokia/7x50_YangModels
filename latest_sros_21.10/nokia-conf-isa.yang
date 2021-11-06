@@ -1,0 +1,1033 @@
+submodule nokia-conf-isa {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-isa                { prefix "types-isa"; }
+    import nokia-types-l2tp               { prefix "types-l2tp"; }
+    import nokia-types-redundancy         { prefix "types-redundancy"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-aaa;
+    include nokia-conf-card;
+    include nokia-conf-esa;
+    include nokia-conf-groups;
+    include nokia-conf-isa-application-assurance-group;
+    include nokia-conf-isa-video-group;
+    include nokia-conf-port-policy;
+    include nokia-conf-service;
+
+
+    sros-ext:sros-major-release "rel21";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure ISA configuration on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-isa YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2021-08-31";
+
+    grouping conf-isa {
+        container isa {
+            description "Enter the isa context";
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            leaf-list apply-groups-exclude {
+                type leafref {
+                    path "../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Exclude a configuration group at this level";
+            }
+
+            list tunnel-group {
+                key "id";
+                description "Enter the tunnel-group list instance";
+
+                leaf id {
+                    type types-redundancy:tunnel-group-id;
+                    description "Tunnel group ID";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of the ISA tunnel group";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf isa-scale-mode {
+                    type enumeration {
+                        enum "tunnel-limit-2k"              { value 1; }
+                        enum "tunnel-limit-32k"             { value 2; }
+                        enum "tunnel-limit-64k"             { value 3; }
+                        enum "tunnel-limit-8"               { value 4; }
+                        enum "tunnel-limit-32"              { value 5; }
+                    }
+                    sros-ext:immutable;
+                    mandatory true;
+                    description "Tunnel limit on each ISA for the tunnel group";
+                }
+
+                leaf ipsec-responder-only {
+                    type boolean;
+                    sros-ext:auto-restart-to-modify;
+                    default "false";
+                    description "Act as an IKE responder except upon MC-IPsec switchover";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                choice redundancy {
+                    default "primary-backup";
+                    description "Redundancy mode for ISAs in this tunnel group";
+                    case primary-backup {
+
+                        leaf primary {
+                            type types-isa:slot-mda;
+                            description "IPsec module configured in the slot for the IPsec group";
+                        }
+
+                        leaf backup {
+                            type types-isa:slot-mda;
+                            description "IPsec module configured in the slot to the IPsec group";
+                        }
+
+                    }
+                    case multi-active {
+
+                        container multi-active {
+                            presence "Enable the multi-active context";
+                            description "Enter the multi-active context";
+
+                            leaf active-isa-number {
+                                type uint32 {
+                                    range "1..16";
+                                }
+                                sros-ext:auto-restart-to-modify;
+                                default "1";
+                                description "Number of active MS-ISAs in the tunnel group";
+                            }
+
+                            choice group-members {
+                                default "isa";
+                                description "MDA or ESA-VM members of this tunnel group";
+                                case isa {
+
+                                    list isa {
+                                        key "isa-id";
+                                        description "Add a list entry for isa";
+
+                                        leaf isa-id {
+                                            type types-isa:slot-mda;
+                                            description "The ISA associated with this tunnel group.";
+                                        }
+
+                                    } // list isa
+
+                                }
+                                case esa {
+
+                                    list esa {
+                                        key "esa-id vm";
+                                        description "Add a list entry for esa";
+
+                                        leaf esa-id {
+                                            type leafref {
+                                                path "../../../../../esa/esa-id";
+                                            }
+                                            description "ESA ID";
+                                        }
+
+                                        leaf vm {
+                                            type leafref {
+                                                path "../../../../../esa[esa-id=current()/../esa-id]/vm/vm-id";
+                                            }
+                                            description "VM ID";
+                                        }
+
+                                    } // list esa
+
+                                }
+                            }
+                        } // container multi-active
+
+                    }
+                }
+                container reassembly {
+                    description "Enter the reassembly context";
+
+                    leaf max-wait-time {
+                        type int32 {
+                            range "1..5000";
+                        }
+                        units "milliseconds";
+                        description "Maximum number of milliseconds the ISA tunnel waits";
+                    }
+
+                } // container reassembly
+
+                container stats-collection {
+                    description "Enter the stats-collection context";
+
+                    leaf isa-dp-cpu-usage {
+                        type boolean;
+                        default "false";
+                        description "Collect statistics used to derive ISA DP CPU usage";
+                    }
+
+                } // container stats-collection
+
+            } // list tunnel-group
+
+            list nat-group {
+                key "id";
+                max-elements 4;
+                description "Enter the nat-group list instance";
+
+                leaf id {
+                    type uint32 {
+                        range "1..4";
+                    }
+                    description "NAT group ID";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of the NAT group";
+                }
+
+                leaf radius-accounting-policy {
+                    type leafref {
+                        path "../../../aaa/radius/isa-policy/name";
+                    }
+                    description "RADIUS accounting policy for ISA group";
+                }
+
+                leaf scaling-profile {
+                    type types-sros:isa-scaling-profile;
+                    sros-ext:auto-restart-to-modify;
+                    sros-ext:isa-auto-clear-on-modify;
+                    default "profile1";
+                    description "Scaling profile for the NAT group";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                container redundancy {
+                    description "Enter the redundancy context";
+
+                    leaf active-mda-limit {
+                        type uint32 {
+                            range "1..14";
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        sros-ext:isa-auto-clear-on-modify;
+                        description "Number of active MS-ISAs in the NAT group";
+                    }
+
+                    choice redundancy-mode {
+                        default "intra-chassis";
+                        case intra-chassis {
+
+                            container intra-chassis {
+                                description "Enter the intra-chassis context";
+
+                                choice mode {
+                                    default "active-standby";
+                                    case active-standby {
+
+                                        leaf active-standby {
+                                            type empty;
+                                            sros-ext:auto-restart-to-modify;
+                                            sros-ext:isa-auto-clear-on-modify;
+                                            description "Active-standby intra-chassis NAT redundancy model";
+                                        }
+
+                                    }
+                                    case active-active {
+
+                                        container active-active {
+                                            description "Enter the active-active context";
+
+                                            leaf failed-mda-limit {
+                                                type uint32 {
+                                                    range "1..2";
+                                                }
+                                                sros-ext:auto-restart-to-modify;
+                                                sros-ext:isa-auto-clear-on-modify;
+                                                description "Maximum allowable number of failed MS-ISAs in the nat-group";
+                                            }
+
+                                        } // container active-active
+
+                                    }
+                                    case l2aware-bypass {
+
+                                        leaf l2aware-bypass {
+                                            type empty;
+                                            sros-ext:auto-restart-to-modify;
+                                            sros-ext:isa-auto-clear-on-modify;
+                                            description "L2-aware-bypass NAT redundancy model";
+                                        }
+
+                                    }
+                                }
+                            } // container intra-chassis
+
+                        }
+                        case inter-chassis {
+
+                            container inter-chassis {
+                                presence "Enable the inter-chassis context";
+                                description "Enter the inter-chassis context";
+
+                                leaf replication-threshold {
+                                    type uint32 {
+                                        range "0..300";
+                                    }
+                                    units "seconds";
+                                    default "20";
+                                    description "Minimum time to wait before a NAT flow is synchronized";
+                                }
+
+                                leaf flow-timeout-on-switchover {
+                                    type types-sros:percent {
+                                        range "1..50";
+                                    }
+                                    default "50";
+                                    description "Flow timeout immediately following a switchover";
+                                }
+
+                                leaf router-instance {
+                                    type string;
+                                    sros-ext:auto-restart-to-modify;
+                                    sros-ext:isa-auto-clear-on-modify;
+                                    description "Router instance for the ISA-to-ISA communication";
+                                }
+
+                                leaf local-ip-range-start {
+                                    type types-sros:ipv4-unicast-address;
+                                    sros-ext:auto-restart-to-modify;
+                                    sros-ext:isa-auto-clear-on-modify;
+                                    description "Starting IP address for ISAs in the NAT group";
+                                }
+
+                                leaf remote-ip-range-start {
+                                    type types-sros:ipv4-unicast-address;
+                                    sros-ext:auto-restart-to-modify;
+                                    sros-ext:isa-auto-clear-on-modify;
+                                    description "Starting IP address for ISAs on the remote node";
+                                }
+
+                                leaf ip-mtu {
+                                    type uint32 {
+                                        range "512..9000";
+                                    }
+                                    default "1500";
+                                    description "IP MTU for ISA-to-ISA communication";
+                                }
+
+                                leaf preferred {
+                                    type boolean;
+                                    default "false";
+                                    description "Set the preferred activity status for the node";
+                                }
+
+                                container keepalive {
+                                    description "Enter the keepalive context";
+
+                                    leaf interval {
+                                        type types-sros:time-duration {
+                                            range "2..250";
+                                        }
+                                        units "deciseconds";
+                                        default "30";
+                                        description "Interval between two consecutive keepalive messages";
+                                    }
+
+                                    leaf dropcount {
+                                        type uint32 {
+                                            range "2..20";
+                                        }
+                                        default "2";
+                                        description "Threshold for lost consecutive keepalive messages";
+                                    }
+
+                                } // container keepalive
+
+                                list monitor-port {
+                                    key "port-id";
+                                    max-elements 16;
+                                    description "Enter the monitor-port list instance";
+
+                                    leaf port-id {
+                                        type types-sros:port-named;
+                                        description "Port ID";
+                                    }
+
+                                    leaf health-drop {
+                                        type uint32 {
+                                            range "1..255";
+                                        }
+                                        default "1";
+                                        description "Overall health drop of the NAT group on a state change";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                    leaf-list apply-groups-exclude {
+                                        type leafref {
+                                            path "../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Exclude a configuration group at this level";
+                                    }
+
+                                } // list monitor-port
+
+                                list monitor-oper-group {
+                                    key "oper-group";
+                                    max-elements 4;
+                                    description "Enter the monitor-oper-group list instance";
+
+                                    leaf oper-group {
+                                        type leafref {
+                                            path "../../../../../../service/oper-group/name";
+                                        }
+                                        description "Operational group name";
+                                    }
+
+                                    leaf health-drop {
+                                        type uint32 {
+                                            range "1..255";
+                                        }
+                                        default "1";
+                                        description "Overall health drop of the NAT group on a state change";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                    leaf-list apply-groups-exclude {
+                                        type leafref {
+                                            path "../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Exclude a configuration group at this level";
+                                    }
+
+                                } // list monitor-oper-group
+
+                            } // container inter-chassis
+
+                        }
+                    }
+                } // container redundancy
+
+                container log {
+                    description "Enter the log context";
+
+                    leaf suppress-lsn-sub-blocks-free {
+                        type boolean;
+                        default "false";
+                        description "Suppress the LSN Free blocks and NAT pool block allocation notifications";
+                    }
+
+                    leaf suppress-lsn-events {
+                        type boolean;
+                        default "true";
+                        description "Suppress the generation of Large Scale NAT (LSN) events when RADIUS accounting is enabled";
+                    }
+
+                } // container log
+
+                container session-limits {
+                    description "Enter the session-limits context";
+
+                    leaf reserved {
+                        type uint32 {
+                            range "1..6291456";
+                        }
+                        description "Number of sessions reserved for prioritized sessions";
+                    }
+
+                    leaf upnp-mappings {
+                        type uint32 {
+                            range "1..524288";
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        sros-ext:isa-auto-clear-on-modify;
+                        default "524288";
+                        description "Maximum number of Universal Plug and Play mappings per member";
+                    }
+
+                    container watermarks {
+                        presence "Enable the watermarks context";
+                        description "Enable the watermarks context";
+
+                        leaf low {
+                            type types-sros:percent;
+                            mandatory true;
+                            description "Low watermark of the number of sessions for each MDA in this NAT ISA group";
+                        }
+
+                        leaf high {
+                            type types-sros:percent;
+                            mandatory true;
+                            description "High watermark of the number of sessions for each MDA in this NAT ISA group";
+                        }
+
+                    } // container watermarks
+
+                } // container session-limits
+
+                list mda {
+                    key "mda-id";
+                    description "Add a list entry for mda";
+
+                    leaf mda-id {
+                        type types-isa:slot-mda;
+                        description "MDA ID for ISA NAT group";
+                    }
+
+                } // list mda
+
+                list esa {
+                    key "esa-id vm";
+                    description "Add a list entry for esa";
+
+                    leaf esa-id {
+                        type leafref {
+                            path "../../../../esa/esa-id";
+                        }
+                        description "Provisioned ESA ID";
+                    }
+
+                    leaf vm {
+                        type leafref {
+                            path "../../../../esa[esa-id=current()/../esa-id]/vm/vm-id";
+                        }
+                        description "VM ID for the provisioned BB ISA";
+                    }
+
+                } // list esa
+
+            } // list nat-group
+
+            list wlan-gw-group {
+                key "id";
+                max-elements 1;
+                description "Enter the wlan-gw-group list instance";
+
+                leaf id {
+                    type types-isa:wlan-gw-group-id;
+                    description "WLAN-GW ISA group ID";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of the WLAN Gateway group";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf redundancy {
+                    type enumeration {
+                        enum "iom"                          { value 1; }
+                        enum "mda"                          { value 2; }
+                    }
+                    sros-ext:immutable;
+                    sros-ext:isa-auto-clear-on-modify;
+                    default "iom";
+                    description "Hardware unit subject to redundancy";
+                }
+
+                leaf active-iom-limit {
+                    when "../redundancy = 'iom'";
+                    type uint32 {
+                        range "1..7";
+                    }
+                    sros-ext:auto-restart-to-modify;
+                    sros-ext:isa-auto-clear-on-modify;
+                    description "Number of WLAN-GW IOMs used as active IOMs";
+                }
+
+                leaf active-mda-limit {
+                    when "../redundancy = 'mda'";
+                    type uint32 {
+                        range "1..14";
+                    }
+                    sros-ext:auto-restart-to-modify;
+                    sros-ext:isa-auto-clear-on-modify;
+                    description "ISAs that can be active to use by the WLAN-GW group at the same time";
+                }
+
+                leaf port-policy {
+                    type leafref {
+                        path "../../../port-policy/name";
+                    }
+                    sros-ext:auto-restart-to-modify;
+                    description "Base port configuration for WLAN-GW group ports that take part in per-UE QoS processing";
+                }
+
+                leaf tunnel-port-policy {
+                    type leafref {
+                        path "../../../port-policy/name";
+                    }
+                    sros-ext:auto-restart-to-modify;
+                    description "Base port configuration for WLAN-GW group ports that take part in per-tunnel QoS processing";
+                }
+
+                leaf scaling-profile {
+                    type types-sros:isa-scaling-profile;
+                    sros-ext:auto-restart-to-modify;
+                    sros-ext:isa-auto-clear-on-modify;
+                    default "profile1";
+                    description "The ISA scaling profile identifier.";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                list iom {
+                    when "../redundancy = 'iom'";
+                    key "slot-number";
+                    description "Add a list entry for iom";
+
+                    leaf slot-number {
+                        type leafref {
+                            path "../../../../card/slot-number";
+                        }
+                        description "IOM slot to use in the WLAN-GW group";
+                    }
+
+                } // list iom
+
+                list mda {
+                    when "../redundancy = 'mda'";
+                    key "mda-id";
+                    description "Add a list entry for mda";
+
+                    leaf mda-id {
+                        type types-isa:slot-mda;
+                        description "MDA slot value";
+                    }
+
+                } // list mda
+
+                list esa {
+                    when "../redundancy = 'mda'";
+                    key "esa-id vm";
+                    description "Add a list entry for esa";
+
+                    leaf esa-id {
+                        type leafref {
+                            path "../../../../esa/esa-id";
+                        }
+                        description "ESA ID";
+                    }
+
+                    leaf vm {
+                        type leafref {
+                            path "../../../../esa[esa-id=current()/../esa-id]/vm/vm-id";
+                        }
+                        description "VM ID";
+                    }
+
+                } // list esa
+
+                container nat {
+                    description "Enter the nat context";
+
+                    leaf lsn {
+                        type boolean;
+                        sros-ext:auto-restart-to-modify;
+                        default "true";
+                        description "Use Large Scale NAT";
+                    }
+
+                    leaf radius-accounting-policy {
+                        type leafref {
+                            path "../../../../aaa/radius/isa-policy/name";
+                        }
+                        description "RADIUS accounting policy for ISA group";
+                    }
+
+                    container log {
+                        description "Enter the log context";
+
+                        leaf suppress-lsn-sub-blocks-free {
+                            type boolean;
+                            default "false";
+                            description "Suppress the LSN Free blocks and NAT pool block allocation notifications";
+                        }
+
+                        leaf suppress-lsn-events {
+                            type boolean;
+                            default "true";
+                            description "Suppress the generation of Large Scale NAT (LSN) events when RADIUS accounting is enabled";
+                        }
+
+                    } // container log
+
+                    container session-limits {
+                        description "Enter the session-limits context";
+
+                        leaf reserved {
+                            type uint32 {
+                                range "1..6291456";
+                            }
+                            description "Number of sessions reserved for prioritized sessions";
+                        }
+
+                        leaf upnp-mappings {
+                            type uint32 {
+                                range "1..524288";
+                            }
+                            sros-ext:auto-restart-to-modify;
+                            sros-ext:isa-auto-clear-on-modify;
+                            default "524288";
+                            description "Maximum number of Universal Plug and Play mappings per member";
+                        }
+
+                        container watermarks {
+                            presence "Enable the watermarks context";
+                            description "Enable the watermarks context";
+
+                            leaf low {
+                                type types-sros:percent;
+                                mandatory true;
+                                description "Low watermark of the number of sessions for each MDA in this NAT ISA group";
+                            }
+
+                            leaf high {
+                                type types-sros:percent;
+                                mandatory true;
+                                description "High watermark of the number of sessions for each MDA in this NAT ISA group";
+                            }
+
+                        } // container watermarks
+
+                    } // container session-limits
+
+                } // container nat
+
+                container distributed-sub-mgmt {
+                    description "Enter the distributed-sub-mgmt context";
+
+                    leaf isa-aa-group {
+                        type leafref {
+                            path "../../../application-assurance-group/aa-group-id";
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        description "ISA AA group for WLAN-GW DSM subscribers";
+                    }
+
+                    leaf isa-aa-oversubscription-factor {
+                        type uint32 {
+                            range "1..10";
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        default "1";
+                        description "Number of WLAN GW ISAs that a single ISA can serve";
+                    }
+
+                } // container distributed-sub-mgmt
+
+                container watermarks {
+                    description "Enter the watermarks context";
+
+                    list mark {
+                        key "entity";
+                        description "Enter the mark list instance";
+
+                        leaf entity {
+                            type types-isa:wlan-gw-watermark-entity;
+                            description "Entity to be monitored";
+                        }
+
+                        leaf high {
+                            type types-sros:percent {
+                                range "1..100";
+                            }
+                            mandatory true;
+                            description "High watermark for the WLAN-GW group";
+                        }
+
+                        leaf low {
+                            type types-sros:percent {
+                                range "0..99";
+                            }
+                            mandatory true;
+                            description "Low watermark for the WLAN-GW group";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // list mark
+
+                } // container watermarks
+
+            } // list wlan-gw-group
+
+            list lns-group {
+                key "id";
+                description "Enter the lns-group list instance";
+
+                leaf id {
+                    type types-l2tp:lns-group-id;
+                    description "LNS group ID";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of the ISA LNS group";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf port-policy {
+                    type leafref {
+                        path "../../../port-policy/name";
+                    }
+                    sros-ext:auto-restart-to-modify;
+                    description "Port policy for the ISA LNS group";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                list mda {
+                    key "mda-id";
+                    max-elements 6;
+                    description "Enter the mda list instance";
+
+                    leaf mda-id {
+                        type types-isa:slot-mda;
+                        description "MDA ID for the ISA LNS group";
+                    }
+
+                    leaf drain {
+                        type boolean;
+                        default "false";
+                        description "Prevent new L2TP sessions from associating with ISA";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // list mda
+
+                list esa {
+                    key "esa-id vm";
+                    max-elements 6;
+                    description "Enter the esa list instance";
+
+                    leaf esa-id {
+                        type leafref {
+                            path "../../../../esa/esa-id";
+                        }
+                        description "ESA ID";
+                    }
+
+                    leaf vm {
+                        type leafref {
+                            path "../../../../esa[esa-id=current()/../esa-id]/vm/vm-id";
+                        }
+                        description "VM ID";
+                    }
+
+                    leaf drain {
+                        type boolean;
+                        default "false";
+                        description "Redirect subscribers to other ESA VMs";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // list esa
+
+            } // list lns-group
+
+            uses conf-isa-application-assurance-group;
+            uses conf-isa-video-group;
+        } // container isa
+
+    } // grouping conf-isa
+
+}
