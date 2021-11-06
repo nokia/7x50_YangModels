@@ -11,6 +11,8 @@ submodule nokia-conf-svc-epipe {
     import nokia-types-services           { prefix "types-services"; }
     import nokia-types-sros               { prefix "types-sros"; }
 
+    include nokia-conf-aa-group;
+    include nokia-conf-application-assurance;
     include nokia-conf-bfd;
     include nokia-conf-eth-cfm;
     include nokia-conf-filter;
@@ -53,7 +55,7 @@ submodule nokia-conf-svc-epipe {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2021-08-27";
+    revision "2021-09-08";
 
     grouping conf-svc-epipe {
         list epipe {
@@ -352,7 +354,7 @@ submodule nokia-conf-svc-epipe {
 
             container bgp-vpws {
                 presence "Enable the bgp-vpws context";
-                description "Enable the bgp-vpws context";
+                description "Enter the bgp-vpws context";
 
                 leaf admin-state {
                     type types-sros:admin-state;
@@ -703,6 +705,21 @@ submodule nokia-conf-svc-epipe {
                     description "Bandwidth that is reserved for this SDP binding";
                 }
 
+                leaf app-profile {
+                    type leafref {
+                        path "../../../../application-assurance/group/partition/policy/app-profile/app-profile-name";
+                    }
+                    description "Application profile name for this SDP";
+                }
+
+                leaf bfd-template {
+                    status obsolete;
+                    type leafref {
+                        path "../../../../bfd/bfd-template/name";
+                    }
+                    description "BFD template associated with SDP binding";
+                }
+
                 leaf vc-type {
                     type types-services:epipe-sdp-bind-vc-type;
                     sros-ext:auto-restart-to-modify;
@@ -726,14 +743,6 @@ submodule nokia-conf-svc-epipe {
                     max-elements 8;
                     ordered-by user;
                     description "Exclude a configuration group at this level";
-                }
-
-                leaf bfd-template {
-                    status obsolete;
-                    type leafref {
-                        path "../../../../bfd/bfd-template/name";
-                    }
-                    description "BFD template associated with SDP binding";
                 }
 
                 choice label {
@@ -1072,6 +1081,11 @@ submodule nokia-conf-svc-epipe {
                             description "Install MEP in the forwarding plane";
                         }
 
+                        leaf cfm-vlan-tag {
+                            type types-sros:one-or-two-vlan-tags;
+                            description "VLAN tags to apply to CFM PDUs for egress processing";
+                        }
+
                         leaf low-priority-defect {
                             type types-eth-cfm:lowest-alarm-priority;
                             default "mac-rem-err-xcon";
@@ -1104,7 +1118,6 @@ submodule nokia-conf-svc-epipe {
 
                         leaf lbm-svc-act-responder {
                             type boolean;
-                            default "false";
                             description "Process service activation streams in ETH-CFM LBM";
                         }
 
@@ -1320,6 +1333,11 @@ submodule nokia-conf-svc-epipe {
                             description "MAC address of the MIP";
                         }
 
+                        leaf cfm-vlan-tag {
+                            type types-sros:one-or-two-vlan-tags;
+                            description "VLAN tags to apply to CFM PDUs for egress processing";
+                        }
+
                         leaf-list apply-groups {
                             type leafref {
                                 path "../../../../../../groups/group/name";
@@ -1440,6 +1458,24 @@ submodule nokia-conf-svc-epipe {
                     }
                 } // container pw-status
 
+                container aarp {
+                    presence "Enable the aarp context";
+                    description "Enter the aarp context";
+
+                    leaf id {
+                        type leafref {
+                            path "../../../../../application-assurance/aarp/aarp-id";
+                        }
+                        description "AARP instance ID";
+                    }
+
+                    leaf type {
+                        type types-services:dual-homing-bsx-aarp-service-ref-type;
+                        description "Role referenced by the AARP";
+                    }
+
+                } // container aarp
+
                 container source-bmac {
                     description "Enter the source-bmac context";
 
@@ -1502,6 +1538,37 @@ submodule nokia-conf-svc-epipe {
                     } // container bfd-liveness
 
                 } // container bfd
+
+                container transit-policy {
+                    presence "Enable the transit-policy context";
+                    description "Enter the transit-policy context";
+
+                    choice transit-policy {
+                        mandatory true;
+                        case prefix {
+
+                            leaf prefix {
+                                type leafref {
+                                    path "../../../../../application-assurance/group/partition/transit-prefix-policy/prefix-policy-id";
+                                }
+                                sros-ext:immutable;
+                                description "IP prefix policy ID";
+                            }
+
+                        }
+                        case ip {
+
+                            leaf ip {
+                                type leafref {
+                                    path "../../../../../application-assurance/group/partition/transit-ip-policy/ip-policy-id";
+                                }
+                                sros-ext:immutable;
+                                description "IP transit policy ID";
+                            }
+
+                        }
+                    }
+                } // container transit-policy
 
             } // list spoke-sdp
 
@@ -1606,6 +1673,13 @@ submodule nokia-conf-svc-epipe {
                     description "Accounting policy";
                 }
 
+                leaf app-profile {
+                    type leafref {
+                        path "../../../../application-assurance/group/partition/policy/app-profile/app-profile-name";
+                    }
+                    description "Application profile name";
+                }
+
                 leaf bandwidth {
                     type types-services:sap-bandwidth;
                     units "kilobps";
@@ -1638,7 +1712,9 @@ submodule nokia-conf-svc-epipe {
                 }
 
                 leaf multi-service-site {
-                    type types-sros:named-item;
+                    type leafref {
+                        path "../../../customer/multi-service-site/multi-service-site-name";
+                    }
                     description "Multi service site name";
                 }
 
@@ -2345,7 +2421,7 @@ submodule nokia-conf-svc-epipe {
                         leaf rate {
                             type types-qos:aggr-policer-rate;
                             default "max";
-                            description "Aggregate policer rate to be used in kbps";
+                            description "Aggregate policer rate";
                         }
 
                         leaf burst {
@@ -2356,12 +2432,12 @@ submodule nokia-conf-svc-epipe {
 
                         leaf cir {
                             type types-qos:aggr-policer-cir;
-                            description "Aggregate policer cir to be used in kbps";
+                            description "Aggregate policer CIR";
                         }
 
                         leaf cbs {
                             type types-qos:aggr-policer-cbs;
-                            description "Aggregate policer cbs";
+                            description "Aggregate policer CBS";
                         }
 
                     } // container aggregate-policer
@@ -2560,6 +2636,13 @@ submodule nokia-conf-svc-epipe {
                                         description "MBS";
                                     }
 
+                                    leaf monitor-depth {
+                                        status obsolete;
+                                        type boolean;
+                                        default "false";
+                                        description "Monitor queue depth";
+                                    }
+
                                     leaf hs-wrr-weight {
                                         type types-qos:hs-wrr-weight-override;
                                         default "1";
@@ -2587,13 +2670,6 @@ submodule nokia-conf-svc-epipe {
                                         max-elements 8;
                                         ordered-by user;
                                         description "Exclude a configuration group at this level";
-                                    }
-
-                                    leaf monitor-depth {
-                                        status obsolete;
-                                        type boolean;
-                                        default "false";
-                                        description "Monitor queue depth";
                                     }
 
                                     choice queue-override-rate {
@@ -3202,7 +3278,7 @@ submodule nokia-conf-svc-epipe {
                             }
                             units "kilobps";
                             default "0";
-                            description "Specifies the administrative CIR.";
+                            description "Administrative CIR";
                         }
 
                     } // container agg-rate
@@ -3293,9 +3369,58 @@ submodule nokia-conf-svc-epipe {
 
                 } // container lag
 
+                container aarp {
+                    presence "Enable the aarp context";
+                    description "Enter the aarp context";
+
+                    leaf id {
+                        type leafref {
+                            path "../../../../../application-assurance/aarp/aarp-id";
+                        }
+                        description "AARP instance ID";
+                    }
+
+                    leaf type {
+                        type types-services:dual-homing-bsx-aarp-service-ref-type;
+                        description "Role referenced by the AARP";
+                    }
+
+                } // container aarp
+
+                container transit-policy {
+                    presence "Enable the transit-policy context";
+                    description "Enter the transit-policy context";
+
+                    choice transit-policy {
+                        mandatory true;
+                        case prefix {
+
+                            leaf prefix {
+                                type leafref {
+                                    path "../../../../../application-assurance/group/partition/transit-prefix-policy/prefix-policy-id";
+                                }
+                                sros-ext:immutable;
+                                description "IP prefix policy ID";
+                            }
+
+                        }
+                        case ip {
+
+                            leaf ip {
+                                type leafref {
+                                    path "../../../../../application-assurance/group/partition/transit-ip-policy/ip-policy-id";
+                                }
+                                sros-ext:immutable;
+                                description "IP transit policy ID";
+                            }
+
+                        }
+                    }
+                } // container transit-policy
+
                 container l2tpv3-session {
                     presence "Enable the l2tpv3-session context";
-                    description "Enable the l2tpv3-session context";
+                    description "Enter the l2tpv3-session context";
 
                     leaf admin-state {
                         type types-sros:admin-state;
@@ -3501,6 +3626,11 @@ submodule nokia-conf-svc-epipe {
                             description "Install MEP in the forwarding plane";
                         }
 
+                        leaf cfm-vlan-tag {
+                            type types-sros:one-or-two-vlan-tags;
+                            description "VLAN tags to apply to CFM PDUs for egress processing";
+                        }
+
                         leaf low-priority-defect {
                             type types-eth-cfm:lowest-alarm-priority;
                             default "mac-rem-err-xcon";
@@ -3533,7 +3663,6 @@ submodule nokia-conf-svc-epipe {
 
                         leaf lbm-svc-act-responder {
                             type boolean;
-                            default "false";
                             description "Process service activation streams in ETH-CFM LBM";
                         }
 
@@ -3749,6 +3878,11 @@ submodule nokia-conf-svc-epipe {
                             description "MAC address of the MIP";
                         }
 
+                        leaf cfm-vlan-tag {
+                            type types-sros:one-or-two-vlan-tags;
+                            description "VLAN tags to apply to CFM PDUs for egress processing";
+                        }
+
                         leaf-list apply-groups {
                             type leafref {
                                 path "../../../../../../groups/group/name";
@@ -3887,7 +4021,7 @@ submodule nokia-conf-svc-epipe {
 
             container bgp-evpn {
                 presence "Enable the bgp-evpn context";
-                description "Enable the bgp-evpn context";
+                description "Enter the bgp-evpn context";
 
                 leaf evi {
                     type types-services:evi;
@@ -4073,6 +4207,13 @@ submodule nokia-conf-svc-epipe {
                         description "Maximum ECMP routes information";
                     }
 
+                    leaf evi-three-byte-auto-rt {
+                        type boolean;
+                        sros-ext:auto-restart-to-modify;
+                        default "false";
+                        description "Auto derive the BGP EVPN route target";
+                    }
+
                     leaf default-route-tag {
                         type types-services:one-byte-value;
                         sros-ext:auto-restart-to-modify;
@@ -4133,6 +4274,13 @@ submodule nokia-conf-svc-epipe {
                         type boolean;
                         default "false";
                         description "Enable use of entropy-labels";
+                    }
+
+                    leaf evi-three-byte-auto-rt {
+                        type boolean;
+                        sros-ext:auto-restart-to-modify;
+                        default "false";
+                        description "Auto derive the BGP EVPN route target";
                     }
 
                     leaf default-route-tag {
@@ -4393,6 +4541,13 @@ submodule nokia-conf-svc-epipe {
                             enum "vlan"                         { value 1; }
                         }
                         description "Datapath forwarding to force vlan-vc-type";
+                    }
+
+                    leaf evi-three-byte-auto-rt {
+                        type boolean;
+                        sros-ext:auto-restart-to-modify;
+                        default "false";
+                        description "Auto derive the BGP EVPN route target";
                     }
 
                     leaf-list apply-groups {

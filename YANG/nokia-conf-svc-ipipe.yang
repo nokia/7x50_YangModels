@@ -11,6 +11,8 @@ submodule nokia-conf-svc-ipipe {
     import nokia-types-services           { prefix "types-services"; }
     import nokia-types-sros               { prefix "types-sros"; }
 
+    include nokia-conf-aa-group;
+    include nokia-conf-application-assurance;
     include nokia-conf-bfd;
     include nokia-conf-eth-cfm;
     include nokia-conf-filter;
@@ -49,7 +51,7 @@ submodule nokia-conf-svc-ipipe {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2021-05-25";
+    revision "2021-08-02";
 
     grouping conf-svc-ipipe {
         list ipipe {
@@ -211,6 +213,13 @@ submodule nokia-conf-svc-ipipe {
                     description "Accounting policy";
                 }
 
+                leaf app-profile {
+                    type leafref {
+                        path "../../../../application-assurance/group/partition/policy/app-profile/app-profile-name";
+                    }
+                    description "Application profile name";
+                }
+
                 leaf bandwidth {
                     type types-services:sap-bandwidth;
                     units "kilobps";
@@ -231,7 +240,9 @@ submodule nokia-conf-svc-ipipe {
                 }
 
                 leaf multi-service-site {
-                    type types-sros:named-item;
+                    type leafref {
+                        path "../../../customer/multi-service-site/multi-service-site-name";
+                    }
                     description "Multi service site name";
                 }
 
@@ -1043,6 +1054,13 @@ submodule nokia-conf-svc-ipipe {
                                         description "MBS";
                                     }
 
+                                    leaf monitor-depth {
+                                        status obsolete;
+                                        type boolean;
+                                        default "false";
+                                        description "Monitor queue depth";
+                                    }
+
                                     leaf hs-wrr-weight {
                                         type types-qos:hs-wrr-weight-override;
                                         default "1";
@@ -1070,13 +1088,6 @@ submodule nokia-conf-svc-ipipe {
                                         max-elements 8;
                                         ordered-by user;
                                         description "Exclude a configuration group at this level";
-                                    }
-
-                                    leaf monitor-depth {
-                                        status obsolete;
-                                        type boolean;
-                                        default "false";
-                                        description "Monitor queue depth";
                                     }
 
                                     choice queue-override-rate {
@@ -1684,6 +1695,26 @@ submodule nokia-conf-svc-ipipe {
 
                 } // container lag
 
+                container transit-policy {
+                    presence "Enable the transit-policy context";
+                    description "Enter the transit-policy context";
+
+                    choice transit-policy {
+                        mandatory true;
+                        case prefix {
+
+                            leaf prefix {
+                                type leafref {
+                                    path "../../../../../application-assurance/group/partition/transit-prefix-policy/prefix-policy-id";
+                                }
+                                sros-ext:immutable;
+                                description "IP prefix policy ID";
+                            }
+
+                        }
+                    }
+                } // container transit-policy
+
             } // list sap
 
             list spoke-sdp {
@@ -1719,6 +1750,21 @@ submodule nokia-conf-svc-ipipe {
                     description "Bandwidth that is reserved for this SDP binding";
                 }
 
+                leaf app-profile {
+                    type leafref {
+                        path "../../../../application-assurance/group/partition/policy/app-profile/app-profile-name";
+                    }
+                    description "Application profile name for this SDP";
+                }
+
+                leaf bfd-template {
+                    status obsolete;
+                    type leafref {
+                        path "../../../../bfd/bfd-template/name";
+                    }
+                    description "BFD template associated with SDP binding";
+                }
+
                 leaf ce-address {
                     type types-sros:ip-address;
                     description "IP address of the CE device";
@@ -1740,14 +1786,6 @@ submodule nokia-conf-svc-ipipe {
                     max-elements 8;
                     ordered-by user;
                     description "Exclude a configuration group at this level";
-                }
-
-                leaf bfd-template {
-                    status obsolete;
-                    type leafref {
-                        path "../../../../bfd/bfd-template/name";
-                    }
-                    description "BFD template associated with SDP binding";
                 }
 
                 choice label {
@@ -1921,6 +1959,28 @@ submodule nokia-conf-svc-ipipe {
 
                 } // container endpoint
 
+                container aarp {
+                    presence "Enable the aarp context";
+                    description "Enter the aarp context";
+
+                    leaf id {
+                        type leafref {
+                            path "../../../../../application-assurance/aarp/aarp-id";
+                        }
+                        sros-ext:immutable;
+                        mandatory true;
+                        description "AARP instance ID";
+                    }
+
+                    leaf type {
+                        type types-services:l3-bsx-aarp-service-ref-type;
+                        sros-ext:immutable;
+                        mandatory true;
+                        description "Role of the spoke SDP referenced by the AARP";
+                    }
+
+                } // container aarp
+
                 container bfd-liveness {
                     status obsolete;
                     presence "Enable the bfd-liveness context";
@@ -1958,6 +2018,21 @@ submodule nokia-conf-svc-ipipe {
                     } // container bfd-liveness
 
                 } // container bfd
+
+                container transit-policy {
+                    presence "Enable the transit-policy context";
+                    description "Enter the transit-policy context";
+
+                    leaf prefix {
+                        type leafref {
+                            path "../../../../../application-assurance/group/partition/transit-prefix-policy/prefix-policy-id";
+                        }
+                        sros-ext:immutable;
+                        mandatory true;
+                        description "IP prefix policy ID";
+                    }
+
+                } // container transit-policy
 
             } // list spoke-sdp
 

@@ -46,7 +46,7 @@ submodule nokia-state-service {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2021-08-02";
+    revision "2021-08-19";
 
     grouping state-service {
         container service {
@@ -344,6 +344,51 @@ submodule nokia-state-service {
                 container fdb {
                     description "Enter the fdb context";
 
+                    container usage {
+                        description "Enter the usage context";
+
+                        leaf allocated {
+                            type yang:counter32;
+                            description "The total number of FDB entries that are currently allocated on this system.";
+                        }
+
+                        leaf global {
+                            type yang:counter32;
+                            description "The total number of non-selective FDB entries that are currently reserved on this system.";
+                        }
+
+                        container rvpls {
+                            description "Enter the rvpls context";
+
+                            leaf in-use {
+                                type yang:counter32;
+                                description "The total number of resources that are in-use on this system.";
+                            }
+
+                            leaf allocated {
+                                type yang:counter32;
+                                description "The total number of resources that are currently allocated on this system.";
+                            }
+
+                        } // container rvpls
+
+                        container es-bmac {
+                            description "Enter the es-bmac context";
+
+                            leaf in-use {
+                                type yang:counter32;
+                                description "The total number of resources that are in-use on this system.";
+                            }
+
+                            leaf allocated {
+                                type yang:counter32;
+                                description "The total number of resources that are currently allocated on this system.";
+                            }
+
+                        } // container es-bmac
+
+                    } // container usage
+
                 } // container fdb
 
                 container bgp {
@@ -351,6 +396,21 @@ submodule nokia-state-service {
 
                     container evpn {
                         description "Enter the evpn context";
+
+                        leaf oper-route-distinguisher {
+                            type string;
+                            description "Indicates Operational route-distinguisher used for ethernet segment (ES) routes";
+                        }
+
+                        leaf oper-route-distinguisher-type {
+                            type types-services:route-distinguisher-type;
+                            description "Indicates type of operational route-distinguisher.";
+                        }
+
+                        leaf oper-etree-leaf-label {
+                            type uint32;
+                            description "Indicates the label allocated and signaled to the far end PEs for etree leaf traffic.";
+                        }
 
                         list ethernet-segment {
                             key "ethernet-segment-name";
@@ -366,6 +426,33 @@ submodule nokia-state-service {
                                 description "LACP derived ethernet segment identifier";
                             }
 
+                            leaf oper-state {
+                                type types-sros:oper-state;
+                                description "Indicates the operational state of the ethernet segment entry.";
+                            }
+
+                            leaf split-horizon-label {
+                                type int32;
+                                description "Indicates the split horizon group label advertised for the ethernet segment.";
+                            }
+
+                            leaf oper-service-carving-mode {
+                                type enumeration {
+                                    enum "auto"                         { value 1; }
+                                    enum "manual"                       { value 2; }
+                                    enum "off"                          { value 3; }
+                                }
+                                description "Indicates the operational service carving mode for the ethernet segment entry.";
+                            }
+
+                            leaf configured-ranges-df-alg-type {
+                                type enumeration {
+                                    enum "primary"                      { value 1; }
+                                    enum "lowest-preference"            { value 2; }
+                                }
+                                description "Indicates the mode that the configured evi or isid ranges are in for this ethernet segment entry.";
+                            }
+
                             container df-election {
                                 description "Enter the df-election context";
 
@@ -374,6 +461,16 @@ submodule nokia-state-service {
 
                                     container preference {
                                         description "Enter the preference context";
+
+                                        leaf operational-preference-value {
+                                            type uint32;
+                                            description "Indicates the operational preference value assigned while electing the designated forwarder.";
+                                        }
+
+                                        leaf do-not-preempt-status {
+                                            type boolean;
+                                            description "Indicates the status of the don't peempt bit used in electing the next designated forwarder.";
+                                        }
 
                                     } // container preference
 
@@ -384,7 +481,163 @@ submodule nokia-state-service {
                             container pbb {
                                 description "Enter the pbb context";
 
+                                leaf bmac-table-entries {
+                                    type int32;
+                                    description "Indicates the size of BMAC table used for this ethernet segment.";
+                                }
+
+                                list service-name {
+                                    key "service-name";
+                                    description "Enter the service-name list instance";
+
+                                    leaf service-name {
+                                        type types-services:service-name;
+                                        description "Name of the service.";
+                                    }
+
+                                    leaf backbone-mac-address {
+                                        type yang:mac-address;
+                                        description "Indicates the backbone MAC address.";
+                                    }
+
+                                } // list service-name
+
                             } // container pbb
+
+                            list evi {
+                                key "id";
+                                description "Enter the evi list instance";
+
+                                leaf id {
+                                    type int32 {
+                                        range "1..16777215";
+                                    }
+                                    description "EVPN indetifier";
+                                }
+
+                                leaf df {
+                                    type boolean;
+                                    description "Indicates if the ethernet segment EVI entry is a designated forwarder.";
+                                }
+
+                                leaf remaining-activation-time {
+                                    type int32;
+                                    units "seconds";
+                                    description "Indicates the value of the remaining activation timer for this entry.";
+                                }
+
+                                leaf service-name {
+                                    type types-services:service-name;
+                                    description "Indicates service Name for this entry.";
+                                }
+
+                                leaf df-last-changed {
+                                    type types-sros:date-time;
+                                    description "Indicates the sysUpTime at the time of the last modification of Designated Forwarder.";
+                                }
+
+                                leaf oper-route-distinguisher {
+                                    type string;
+                                    description "Indicates operational route-distinguisher value in use by the system for this entry.";
+                                }
+
+                                container df-candidates {
+                                    description "Enter the df-candidates context";
+
+                                    list ip-address {
+                                        key "ip-address";
+                                        description "Enter the ip-address list instance";
+
+                                        leaf ip-address {
+                                            type types-sros:ip-address;
+                                            description "EVI candidate PE IP address.";
+                                        }
+
+                                        leaf time-added {
+                                            type types-sros:date-time;
+                                            description "Indicates the time at which this entry was added in the DF candidate list.";
+                                        }
+
+                                        leaf operational-preference-value {
+                                            type uint32;
+                                            description "Indicates the operational preference value assigned while electing the designated forwarder.";
+                                        }
+
+                                        leaf do-not-preempt-status {
+                                            type boolean;
+                                            description "Indicates the status of the don't peempt bit used in electing the next designated forwarder.";
+                                        }
+
+                                    } // list ip-address
+
+                                } // container df-candidates
+
+                            } // list evi
+
+                            list isid {
+                                key "id";
+                                description "Enter the isid list instance";
+
+                                leaf id {
+                                    type int32 {
+                                        range "1..16777215";
+                                    }
+                                    description "Service instance identifier.";
+                                }
+
+                                leaf df {
+                                    type boolean;
+                                    description "Indicates if the ethernet segment EVI entry is a designated forwarder.";
+                                }
+
+                                leaf remaining-activation-time {
+                                    type int32;
+                                    units "seconds";
+                                    description "Indicates the value of the remaining activation timer for this entry.";
+                                }
+
+                                leaf service-name {
+                                    type types-services:service-name;
+                                    description "Indicates service Name for this entry.";
+                                }
+
+                                leaf df-last-changed {
+                                    type types-sros:date-time;
+                                    description "Indicates the sysUpTime at the time of the last modification of Designated Forwarder.";
+                                }
+
+                                container df-candidates {
+                                    description "Enter the df-candidates context";
+
+                                    list ip-address {
+                                        key "ip-address";
+                                        description "Enter the ip-address list instance";
+
+                                        leaf ip-address {
+                                            type types-sros:ip-address;
+                                            description "ISID candidate PE IP address.";
+                                        }
+
+                                        leaf time-added {
+                                            type types-sros:date-time;
+                                            description "Indicates the time at which this entry was added in the DF candidate list.";
+                                        }
+
+                                        leaf operational-preference-value {
+                                            type uint32;
+                                            description "Indicates the operational preference value assigned while electing the designated forwarder.";
+                                        }
+
+                                        leaf do-not-preempt-status {
+                                            type boolean;
+                                            description "Indicates the status of the don't peempt bit used in electing the next designated forwarder.";
+                                        }
+
+                                    } // list ip-address
+
+                                } // container df-candidates
+
+                            } // list isid
 
                         } // list ethernet-segment
 
@@ -427,6 +680,126 @@ submodule nokia-state-service {
                     } // list tep
 
                 } // container mpls
+
+                container statistics {
+                    description "Enter the statistics context";
+
+                    leaf num-mpls-etree-leaf-dests {
+                        type uint32;
+                        description "Indicates the number of mpls etree leaf dests.";
+                    }
+
+                    leaf num-etree-leaf-labels {
+                        type uint32;
+                        description "Indicates the number of etree leaf labels.";
+                    }
+
+                    container num-tep {
+                        description "Enter the num-tep context";
+
+                        leaf mpls {
+                            type uint32;
+                            description "Indicates the number of mpls tep.";
+                        }
+
+                        leaf srv6 {
+                            type uint32;
+                            description "Indicates the number of srv6 tep.";
+                        }
+
+                        leaf vxlan {
+                            type uint32;
+                            description "Indicates the number of vxlan tep.";
+                        }
+
+                        leaf in-use {
+                            type uint32;
+                            description "Indicates the total number of tep in use.";
+                        }
+
+                        leaf total {
+                            type uint32;
+                            description "Indicates the total number of tep on this chassis.";
+                        }
+
+                        container peer {
+                            description "Enter the peer context";
+
+                            leaf in-use {
+                                type uint32;
+                                description "Indicates the total number of tep in-use on peer.";
+                            }
+
+                            leaf total {
+                                type uint32;
+                                description "Indicates the total number of tep on peer chassis.";
+                            }
+
+                        } // container peer
+
+                    } // container num-tep
+
+                    container num-evpn-dests {
+                        description "Enter the num-evpn-dests context";
+
+                        leaf mpls {
+                            type uint32;
+                            description "Indicates the number of mpls dests.";
+                        }
+
+                        leaf srv6 {
+                            type uint32;
+                            description "Indicates the number of srv6 dests.";
+                        }
+
+                        leaf vxlan {
+                            type uint32;
+                            description "Indicates the number of vxlan dests.";
+                        }
+
+                        leaf in-use {
+                            type uint32;
+                            description "Indicates the total number of dests in use.";
+                        }
+
+                        leaf total {
+                            type uint32;
+                            description "Indicates the total number of dests on this chassis.";
+                        }
+
+                    } // container num-evpn-dests
+
+                    container num-es-pbr {
+                        description "Enter the num-es-pbr context";
+
+                        leaf in-use {
+                            type uint32;
+                            description "Indicates the number of ES PBRs in use.";
+                        }
+
+                        leaf total {
+                            type uint32;
+                            description "Indicates the total number of PBRs on this chassis.";
+                        }
+
+                    } // container num-es-pbr
+
+                    container num-sdp-bind-and-evpn-dests {
+                        description "Enter the num-sdp-bind-and-evpn-dests context";
+
+                        leaf in-use {
+                            type uint32;
+                            description "Indicates the number of SDP bind and Evpn dests in use.";
+                        }
+
+                        leaf total {
+                            type uint32;
+                            description "Indicated the number of total binds on this chassis.";
+                        }
+
+                    } // container num-sdp-bind-and-evpn-dests
+
+                } // container statistics
 
             } // container evpn
 

@@ -4,7 +4,9 @@ submodule nokia-state-router-segment-routing {
 
     belongs-to nokia-state { prefix "state"; }
 
+    import ietf-yang-types                { prefix "yang"; }
     import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-igp                { prefix "types-igp"; }
     import nokia-types-sr-mpls            { prefix "types-sr-mpls"; }
     import nokia-types-sros               { prefix "types-sros"; }
 
@@ -38,11 +40,47 @@ submodule nokia-state-router-segment-routing {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2021-08-11";
+    revision "2021-09-15";
 
     grouping state-router-segment-routing {
         container segment-routing {
             description "Enter the segment-routing context";
+
+            container sr-mpls {
+                description "Enter the sr-mpls context";
+
+                list prefix-sids {
+                    key "interface-name";
+                    description "Enter the prefix-sids list instance";
+
+                    leaf interface-name {
+                        type leafref {
+                            path "../../../../interface/interface-name";
+                        }
+                        description "Loopback interface name that owns the prefix to be advertised";
+                    }
+
+                    container ipv4-sid {
+                        description "Enter the ipv4-sid context";
+
+                        leaf oper-state {
+                            type types-sr-mpls:sid-oper-state;
+                        }
+
+                    } // container ipv4-sid
+
+                    container ipv6-sid {
+                        description "Enter the ipv6-sid context";
+
+                        leaf oper-state {
+                            type types-sr-mpls:sid-oper-state;
+                        }
+
+                    } // container ipv6-sid
+
+                } // list prefix-sids
+
+            } // container sr-mpls
 
             container sr-policies {
                 description "Enter the sr-policies context";
@@ -172,14 +210,12 @@ submodule nokia-state-router-segment-routing {
 
                     leaf origin-asn {
                         type uint32;
-                        description
-                            "Specifies the ASN of the node/controller signalling the candidate path
-                             when it has a BGP session to the headend.";
+                        description "Specifies the ASN of the node/controller signalling the candidate path when it has a BGP session to the headend.";
                     }
 
                     leaf maintenance-policy {
                         type types-sros:named-item-or-empty;
-                        description "Specifes the  maintenance-policy for the sr-path.";
+                        description "Specifes the maintenance-policy for the sr-path.";
                     }
 
                     list sr-path-seg-list {
@@ -415,6 +451,72 @@ submodule nokia-state-router-segment-routing {
 
                             } // list end-x
 
+                            list end-x-dynamic {
+                                key "value";
+                                description "Enter the end-x-dynamic list instance";
+
+                                leaf value {
+                                    type uint32;
+                                    description "SRv6 function value";
+                                }
+
+                                leaf segment-identifier {
+                                    type types-sros:ipv6-address;
+                                    description "address used in the SRv6 packet.";
+                                }
+
+                                leaf srh-mode {
+                                    type enumeration {
+                                        enum "psp"                          { value 1; }
+                                        enum "usp"                          { value 2; }
+                                    }
+                                    description "Indicates the srh-mode.";
+                                }
+
+                                leaf protection {
+                                    type enumeration {
+                                        enum "unprotected"                  { value 0; }
+                                        enum "protected"                    { value 1; }
+                                    }
+                                    description "Indicates whether the adjacency is protected or not.";
+                                }
+
+                                leaf interface-name {
+                                    type types-sros:named-item;
+                                    description "Indicates the interface for the end.x function.";
+                                }
+
+                                leaf instance-id {
+                                    type uint32;
+                                    description "Indicates the instance-id for the end.x function.";
+                                }
+
+                                container isis {
+                                    description "Enter the isis context";
+
+                                    leaf sid-level {
+                                        type enumeration {
+                                            enum "isisl1"                       { value 1; }
+                                            enum "isisl2"                       { value 2; }
+                                            enum "isisl1l2"                     { value 3; }
+                                        }
+                                        description "Sid level for end-x function";
+                                    }
+
+                                    leaf mac-address {
+                                        type yang:mac-address;
+                                        description "MAC address for end-x function";
+                                    }
+
+                                    leaf neighbor-system-id {
+                                        type types-igp:system-id;
+                                        description "Indicates the neighbor system-id for end.x function";
+                                    }
+
+                                } // container isis
+
+                            } // list end-x-dynamic
+
                             container end-dt4 {
                                 description "Enter the end-dt4 context";
 
@@ -480,6 +582,37 @@ submodule nokia-state-router-segment-routing {
                     } // list locator
 
                 } // container base-routing-instance
+
+                container events {
+                    description "Enter the events context";
+
+                    container last-service-sid-index-threshold-change {
+                        description "Enter the last-service-sid-index-threshold-change context";
+
+                        leaf service-sid-index-usage {
+                            type uint32 {
+                                range "0..100";
+                            }
+                            units "percent";
+                            description "The value indicates percentage of service sid used by the system";
+                        }
+
+                        leaf change-type {
+                            type enumeration {
+                                enum "increase"                     { value 1; }
+                                enum "decrease"                     { value 2; }
+                            }
+                            description "The value indicates whether service sid index usage is increasing or decreasing.";
+                        }
+
+                        leaf last-occurrence {
+                            type yang:date-and-time;
+                            description "Indicates the timestamp of the last time the event was detected.";
+                        }
+
+                    } // container last-service-sid-index-threshold-change
+
+                } // container events
 
             } // container segment-routing-v6
 

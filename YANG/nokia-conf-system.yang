@@ -10,6 +10,7 @@ submodule nokia-conf-system {
     import nokia-types-eth-cfm            { prefix "types-eth-cfm"; }
     import nokia-types-l2tp               { prefix "types-l2tp"; }
     import nokia-types-operation          { prefix "types-operation"; }
+    import nokia-types-qos                { prefix "types-qos"; }
     import nokia-types-sros               { prefix "types-sros"; }
     import nokia-types-system             { prefix "types-system"; }
 
@@ -56,7 +57,7 @@ submodule nokia-conf-system {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2021-08-02";
+    revision "2021-10-15";
 
     grouping conf-system {
         container system {
@@ -238,6 +239,7 @@ submodule nokia-conf-system {
                         enum "ip-only"                      { value 3; }
                         enum "eth-encap-ip"                 { value 4; }
                         enum "lbl-ip-l4-teid"               { value 5; }
+                        enum "lbl-ip-or-teid"               { value 7; }
                     }
                     description "Hashing algorithm for system-wide LSR load balancing";
                 }
@@ -283,13 +285,13 @@ submodule nokia-conf-system {
                     leaf ecmp {
                         type types-system:hash-polynomial-type;
                         default "poly1";
-                        description "CRC polynomial used in the ECMP hashing.";
+                        description "Hashing polynomial for (IP) ECMP";
                     }
 
                     leaf lag {
                         type types-system:hash-polynomial-type;
                         default "poly2";
-                        description "CRC polynomial used in the LAG hashing.";
+                        description "Hashing polynomial for LAG";
                     }
 
                 } // container hash-polynomial
@@ -792,7 +794,7 @@ submodule nokia-conf-system {
                             leaf admin-state {
                                 type types-sros:admin-state;
                                 default "enable";
-                                description "Administratively enable/disable the VPLS-EVPN-MPLS option.";
+                                description "Administrative state of the VPLS EVPN MPLS option";
                             }
 
                         } // container vpls-evpn-mpls
@@ -847,6 +849,22 @@ submodule nokia-conf-system {
 
                     } // container ethernet
 
+                    container ipv6-filter {
+                        description "Enter the ipv6-filter context";
+
+                        container egress {
+                            description "Enter the egress context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "enable";
+                                description "Administrative state of the egress ipv6-filter option";
+                            }
+
+                        } // container egress
+
+                    } // container ipv6-filter
+
                     container lpm-allocation {
                         description "Enter the lpm-allocation context";
 
@@ -884,7 +902,7 @@ submodule nokia-conf-system {
                             range "0|512|1024|2048|4096|6144|8192|10240";
                         }
                         default "0";
-                        description "Cam bank allocation for v6 multicast configurations.";
+                        description "CAM bank allocation for v6 multicast configurations";
                     }
 
                     leaf-list apply-groups {
@@ -914,7 +932,7 @@ submodule nokia-conf-system {
                         type uint32 {
                             range "0..4096";
                         }
-                        description "Max G8032 SAP entries IXR-e Ux - 700 max IXR-e Ax - 2048 max IXR-R6/s - 4096 max";
+                        description "Maximum number of resources allocated to G.8032 SAPs";
                     }
 
                     leaf-list apply-groups {
@@ -934,6 +952,18 @@ submodule nokia-conf-system {
                         ordered-by user;
                         description "Exclude a configuration group at this level";
                     }
+
+                    container filter {
+                        description "Enter the filter context";
+
+                        leaf ipv6-number {
+                            type uint32 {
+                                range "0|2|4|6|8|10";
+                            }
+                            description "Number of IPv6 filter resources (banks) allocated for egress IPv6 filters";
+                        }
+
+                    } // container filter
 
                     list pool {
                         key "pool-id";
@@ -979,6 +1009,23 @@ submodule nokia-conf-system {
 
                     } // list pool
 
+                    container fec {
+                        description "Enter the fec context";
+
+                        container system-wide {
+                            description "Enter the FEC system-wide context";
+
+                            leaf unpaired {
+                                type uint32 {
+                                    range "2..8192";
+                                }
+                                description "Number of system-wide unpaired FEC space";
+                            }
+
+                        } // container system-wide
+
+                    } // container fec
+
                 } // container resource-allocation
 
             } // container fp
@@ -989,7 +1036,7 @@ submodule nokia-conf-system {
 
                 leaf name {
                     type types-sros:named-item;
-                    description "Name of file transmission profile";
+                    description "File transmission profile name";
                 }
 
                 leaf ipv4-source-address {
@@ -1249,6 +1296,14 @@ submodule nokia-conf-system {
                     description "Schema path URL";
                 }
 
+                leaf commit-history {
+                    type uint32 {
+                        range "0..200";
+                    }
+                    default "50";
+                    description "Number of commit history IDs to store";
+                }
+
                 leaf-list apply-groups {
                     type leafref {
                         path "../../../groups/group/name";
@@ -1369,6 +1424,13 @@ submodule nokia-conf-system {
                             description "Automatically save configuration as part of operation";
                         }
 
+                        leaf command-accounting-during-load {
+                            status obsolete;
+                            type boolean;
+                            default "true";
+                            description "Perform remote command accounting during a load or rollback operation";
+                        }
+
                         leaf-list apply-groups {
                             type leafref {
                                 path "../../../../../groups/group/name";
@@ -1385,13 +1447,6 @@ submodule nokia-conf-system {
                             max-elements 8;
                             ordered-by user;
                             description "Exclude a configuration group at this level";
-                        }
-
-                        leaf command-accounting-during-load {
-                            status obsolete;
-                            type boolean;
-                            default "true";
-                            description "Perform remote command accounting during a load or rollback operation";
                         }
 
                         container environment {
@@ -1439,6 +1494,12 @@ submodule nokia-conf-system {
                                         description "Alias name";
                                     }
 
+                                    leaf admin-state {
+                                        type types-sros:admin-state;
+                                        default "disable";
+                                        description "Administrative state of the alias";
+                                    }
+
                                     leaf description {
                                         type types-sros:string-not-all-spaces {
                                             length "1..110";
@@ -1472,7 +1533,7 @@ submodule nokia-conf-system {
                                                 type leafref {
                                                     path "../../../../../../../../python/python-script/name";
                                                 }
-                                                description "Python script to run when executing this alias.";
+                                                description "Python script to run when executing the alias";
                                             }
 
                                         }
@@ -1627,6 +1688,36 @@ submodule nokia-conf-system {
                                 }
 
                             } // container prompt
+
+                            container python {
+                                description "Enter the python context";
+
+                                leaf memory-reservation {
+                                    type uint32 {
+                                        range "1..500";
+                                    }
+                                    units "megabytes";
+                                    description "Memory reserved per interpreter";
+                                }
+
+                                leaf minimum-available-memory {
+                                    type uint32 {
+                                        range "5..50";
+                                    }
+                                    units "percent";
+                                    description "Minimum memory requirement to spawn Python interpreter";
+                                }
+
+                                leaf timeout {
+                                    type uint32 {
+                                        range "30..86400";
+                                    }
+                                    units "seconds";
+                                    default "3600";
+                                    description "Maximum run time before a Python application is stopped";
+                                }
+
+                            } // container python
 
                         } // container environment
 
@@ -1982,6 +2073,12 @@ submodule nokia-conf-system {
                         description "Support base release 13 YANG models";
                     }
 
+                    leaf nokia-modules {
+                        status obsolete;
+                        type boolean;
+                        description "Support Nokia YANG models";
+                    }
+
                     leaf nokia-submodules {
                         type boolean;
                         description "Support submodule-based packaging of Nokia YANG models";
@@ -2014,12 +2111,6 @@ submodule nokia-conf-system {
                         max-elements 8;
                         ordered-by user;
                         description "Exclude a configuration group at this level";
-                    }
-
-                    leaf nokia-modules {
-                        status obsolete;
-                        type boolean;
-                        description "Support Nokia YANG models";
                     }
 
                     container nmda {
@@ -2123,7 +2214,7 @@ submodule nokia-conf-system {
 
                     leaf cflash-id {
                         type types-sros:thresholds-cflash-url;
-                        description "Capacity that monitors the cflash (compact flash) assigned in this command";
+                        description "cflash device name monitored for capacity";
                     }
 
                     leaf rising-threshold {
@@ -2187,7 +2278,7 @@ submodule nokia-conf-system {
 
                     leaf cflash-id {
                         type types-sros:thresholds-cflash-url;
-                        description "Capacity that monitors the cflash (compact flash) assigned in this command";
+                        description "cflash device name monitored for capacity";
                     }
 
                     leaf rising-threshold {
@@ -2247,7 +2338,7 @@ submodule nokia-conf-system {
 
                 container kb-memory-use-alarm {
                     presence "Enable the kb-memory-use-alarm context";
-                    description "Enable the kb-memory-use-alarm context";
+                    description "Enter the kb-memory-use-alarm context";
 
                     leaf rising-threshold {
                         type int64 {
@@ -2304,7 +2395,7 @@ submodule nokia-conf-system {
 
                 container kb-memory-use-warn {
                     presence "Enable the kb-memory-use-warn context";
-                    description "Enable the kb-memory-use-warn context";
+                    description "Enter the kb-memory-use-warn context";
 
                     leaf rising-threshold {
                         type int64 {
@@ -2528,7 +2619,7 @@ submodule nokia-conf-system {
                 leaf mpls-tunnel-mode {
                     type types-sros:mpls-tunnel-mode;
                     default "uniform";
-                    description "Specifies the MPLS tunnel mode.";
+                    description "MPLS tunnel mode";
                 }
 
                 leaf forward-6in4 {
@@ -2555,7 +2646,7 @@ submodule nokia-conf-system {
                 leaf allow-cpu-fragmentation {
                     type boolean;
                     default "false";
-                    description "Enables IP fragmentation for packets exceeding IP MTU via system CPU.";
+                    description "Enable IP fragmentation for packets exceeding IP MTU";
                 }
 
                 leaf allow-icmp-redirect {
@@ -2854,7 +2945,7 @@ submodule nokia-conf-system {
 
                 leaf repository-name {
                     type types-sros:named-item;
-                    description "Unique name for the system software repository";
+                    description "Software repository name";
                 }
 
                 leaf description {
@@ -2914,7 +3005,7 @@ submodule nokia-conf-system {
                         type uint32 {
                             range "1..2";
                         }
-                        description "ECMP profile ID";
+                        description "ECMP profile identifier";
                     }
 
                     leaf type {
@@ -2940,7 +3031,7 @@ submodule nokia-conf-system {
                             range "1..2048";
                         }
                         mandatory true;
-                        description "Maximum number of groups allowed for the ECMP bundle";
+                        description "Maximum number of groups allowed by the profile";
                     }
 
                     leaf-list apply-groups {
@@ -3014,13 +3105,13 @@ submodule nokia-conf-system {
                     type enumeration {
                         enum "cf2"                          { value 2; }
                     }
-                    description "Specifies the compact flash id.";
+                    description "Specifies the compact flash ID";
                 }
 
                 leaf admin-state {
                     type types-sros:admin-state;
                     default "disable";
-                    description "Enable/disable the Universal Serial Bus (USB) port.";
+                    description "Administrative state of the USB port";
                 }
 
                 leaf-list apply-groups {
