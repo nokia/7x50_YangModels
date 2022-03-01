@@ -1,0 +1,799 @@
+submodule nokia-conf-python {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-groups;
+    include nokia-conf-isa;
+    include nokia-conf-redundancy;
+
+
+    sros-ext:sros-major-release "rel22";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure Python scripts on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-python YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2021-10-04";
+
+    grouping conf-python {
+        container python {
+            description "Enter the python context";
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            leaf-list apply-groups-exclude {
+                type leafref {
+                    path "../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Exclude a configuration group at this level";
+            }
+
+            list python-script {
+                key "name";
+                max-elements 256;
+                description "Enter the python-script list instance";
+
+                leaf name {
+                    type types-sros:named-item;
+                    description "Python script policy name";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of the Python script";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf action-on-fail {
+                    type enumeration {
+                        enum "passthrough"                  { value 1; }
+                        enum "drop"                         { value 2; }
+                    }
+                    default "drop";
+                    description "Action taken when Python fails to modify the given message";
+                }
+
+                leaf-list urls {
+                    type types-sros:url;
+                    max-elements 3;
+                    ordered-by user;
+                    description "The script locations in URL format";
+                }
+
+                leaf version {
+                    type enumeration {
+                        enum "python2"                      { value 2; }
+                        enum "python3"                      { value 3; }
+                    }
+                    sros-ext:immutable;
+                    default "python2";
+                    description "the version of Python this script is written for.";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                container protection {
+                    description "Enter the protection context";
+
+                    leaf hmac-sha256 {
+                        type types-sros:encrypted-leaf {
+                            length "1..199";
+                        }
+                        description "Python script to consist of the hash value as obtained by the hmac-sha256 hashing algorithm";
+                    }
+
+                } // container protection
+
+            } // list python-script
+
+            list python-policy {
+                key "name";
+                max-elements 64;
+                description "Enter the python-policy list instance";
+
+                leaf name {
+                    type types-sros:named-item;
+                    description "Python policy name";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                choice isa {
+                    case wlan-gw-group {
+
+                        leaf wlan-gw-group {
+                            type leafref {
+                                path "../../../isa/wlan-gw-group/id";
+                            }
+                            sros-ext:immutable;
+                            description "WLAN ISA group for this Python policy";
+                        }
+
+                    }
+                    case nat-group {
+
+                        leaf nat-group {
+                            type leafref {
+                                path "../../../isa/nat-group/id";
+                            }
+                            sros-ext:immutable;
+                            description "NAT ISA group for this Python policy";
+                        }
+
+                    }
+                }
+                container cache {
+                    when "not(../wlan-gw-group) and not(../nat-group)";
+                    presence "Enable the cache context";
+                    description "Enter the cache context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of the Python cache";
+                    }
+
+                    leaf entry-size {
+                        type int32 {
+                            range "32..2048";
+                        }
+                        units "bytes";
+                        sros-ext:auto-restart-to-modify;
+                        default "256";
+                        description "Maximum data structure size for Python cache entry";
+                    }
+
+                    leaf max-entries {
+                        type int32 {
+                            range "1..1000000";
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        default "128000";
+                        description "Maximum number of Python cache entries to be stored";
+                    }
+
+                    leaf max-entry-lifetime {
+                        type types-sros:time-duration {
+                            range "1..604800";
+                        }
+                        units "seconds";
+                        default "86400";
+                        description "Maximum lifetime allowed for each entry of the Python cache of this Python policy";
+                    }
+
+                    leaf persistence {
+                        type boolean;
+                        sros-ext:auto-restart-to-modify;
+                        default "false";
+                        description "Allow persistency support for the cached entries of the Python policy";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container mcs-peer {
+                        presence "Enable the mcs-peer context";
+                        description "Enable the mcs-peer context";
+
+                        leaf ip-address {
+                            type leafref {
+                                path "../../../../../redundancy/multi-chassis/peer/ip-address";
+                            }
+                            mandatory true;
+                            description "IP address of the MCS peer";
+                        }
+
+                        leaf sync-tag {
+                            type types-sros:named-item;
+                            mandatory true;
+                            description "Python policy cache that is uniquely identified within the scope of MCS peer";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // container mcs-peer
+
+                    container minimum-lifetimes {
+                        description "Enter the minimum-lifetimes context";
+
+                        leaf multi-chassis-redundancy {
+                            type uint32 {
+                                range "1..600";
+                            }
+                            units "seconds";
+                            description "Minimum value for the remaining lifetime of any cache entry to be synchronized with peer system";
+                        }
+
+                        leaf high-availability {
+                            type uint32 {
+                                range "1..600";
+                            }
+                            units "seconds";
+                            description "Minimum value for the remaining lifetime of any cache entry to be synchronized with standby CPM";
+                        }
+
+                        leaf persistence {
+                            type uint32 {
+                                range "1..1800";
+                            }
+                            units "seconds";
+                            description "Minimum value for the remaining lifetime of any cache entry to be written to system persistence";
+                        }
+
+                    } // container minimum-lifetimes
+
+                } // container cache
+
+                list dhcp {
+                    when "not(../wlan-gw-group) and not(../nat-group)";
+                    key "message-type direction";
+                    description "Enter the dhcp list instance";
+
+                    leaf message-type {
+                        type enumeration {
+                            enum "discover"                     { value 1001; }
+                            enum "offer"                        { value 1002; }
+                            enum "request"                      { value 1003; }
+                            enum "decline"                      { value 1004; }
+                            enum "ack"                          { value 1005; }
+                            enum "nak"                          { value 1006; }
+                            enum "release"                      { value 1007; }
+                            enum "inform"                       { value 1008; }
+                            enum "force-renew"                  { value 1009; }
+                            enum "lease-query"                  { value 1010; }
+                            enum "lease-unassigned"             { value 1011; }
+                            enum "lease-unknown"                { value 1012; }
+                            enum "lease-active"                 { value 1013; }
+                        }
+                        description "DHCP message type";
+                    }
+
+                    leaf direction {
+                        type types-sros:direction;
+                        description "Event that is either incoming or outgoing";
+                    }
+
+                    leaf script {
+                        type leafref {
+                            path "../../../python-script/name";
+                        }
+                        mandatory true;
+                        description "Python script name for the message specified by message-type";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // list dhcp
+
+                list dhcp6 {
+                    when "not(../wlan-gw-group) and not(../nat-group)";
+                    key "message-type direction";
+                    description "Enter the dhcp6 list instance";
+
+                    leaf message-type {
+                        type enumeration {
+                            enum "solicit"                      { value 2001; }
+                            enum "advertise"                    { value 2002; }
+                            enum "request"                      { value 2003; }
+                            enum "confirm"                      { value 2004; }
+                            enum "renew"                        { value 2005; }
+                            enum "rebind"                       { value 2006; }
+                            enum "reply"                        { value 2007; }
+                            enum "release"                      { value 2008; }
+                            enum "decline"                      { value 2009; }
+                            enum "reconfigure"                  { value 2010; }
+                            enum "info-request"                 { value 2011; }
+                            enum "relay-forward"                { value 2012; }
+                            enum "relay-reply"                  { value 2013; }
+                        }
+                        description "DHCPv6 message type";
+                    }
+
+                    leaf direction {
+                        type types-sros:direction;
+                        description "Event that is either incoming or outgoing";
+                    }
+
+                    leaf script {
+                        type leafref {
+                            path "../../../python-script/name";
+                        }
+                        mandatory true;
+                        description "Python script name for the message specified by message-type";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // list dhcp6
+
+                list radius {
+                    key "message-type direction";
+                    description "Enter the radius list instance";
+
+                    leaf message-type {
+                        type enumeration {
+                            enum "access-request"               { value 1; }
+                            enum "access-accept"                { value 2; }
+                            enum "access-reject"                { value 3; }
+                            enum "accounting-request"           { value 4; }
+                            enum "accounting-response"          { value 5; }
+                            enum "access-challenge"             { value 6; }
+                            enum "disconnect-request"           { value 7; }
+                            enum "change-of-authorization-request" { value 8; }
+                        }
+                        description "RADIUS message type";
+                    }
+
+                    leaf direction {
+                        type types-sros:direction;
+                        description "Event that is either incoming or outgoing";
+                    }
+
+                    leaf script {
+                        type leafref {
+                            path "../../../python-script/name";
+                        }
+                        mandatory true;
+                        description "Python script name for the message specified by message-type";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // list radius
+
+                list diameter {
+                    when "not(../wlan-gw-group) and not(../nat-group)";
+                    key "message-type direction";
+                    description "Enter the diameter list instance";
+
+                    leaf message-type {
+                        type enumeration {
+                            enum "ccr"                          { value 3001; }
+                            enum "cca"                          { value 3002; }
+                            enum "rar"                          { value 3003; }
+                            enum "raa"                          { value 3004; }
+                            enum "cer"                          { value 3005; }
+                            enum "cea"                          { value 3006; }
+                            enum "dwr"                          { value 3007; }
+                            enum "dwa"                          { value 3008; }
+                            enum "dpr"                          { value 3009; }
+                            enum "dpa"                          { value 3010; }
+                            enum "asr"                          { value 3011; }
+                            enum "asa"                          { value 3012; }
+                            enum "aar"                          { value 3013; }
+                            enum "aaa"                          { value 3014; }
+                        }
+                        description "Diameter message type";
+                    }
+
+                    leaf direction {
+                        type types-sros:direction;
+                        description "Event that is either incoming or outgoing";
+                    }
+
+                    leaf script {
+                        type leafref {
+                            path "../../../python-script/name";
+                        }
+                        mandatory true;
+                        description "Python script name for the message specified by message-type";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // list diameter
+
+                container vsd {
+                    when "not(../wlan-gw-group) and not(../nat-group)";
+                    presence "Enable the vsd context";
+                    description "Enable the vsd context";
+
+                    leaf script {
+                        type leafref {
+                            path "../../../python-script/name";
+                        }
+                        mandatory true;
+                        description "Python script name for the received XMPP Service-Config response messages";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // container vsd
+
+                list gtpv1-c {
+                    when "not(../wlan-gw-group) and not(../nat-group)";
+                    key "message-type direction";
+                    description "Enter the gtpv1-c list instance";
+
+                    leaf message-type {
+                        type enumeration {
+                            enum "echo-request"                 { value 5001; }
+                            enum "echo-response"                { value 5002; }
+                            enum "version-not-supported"        { value 5003; }
+                            enum "create-pdp-context-request"   { value 5004; }
+                            enum "create-pdp-context-response"  { value 5005; }
+                            enum "delete-pdp-context-request"   { value 5008; }
+                            enum "delete-pdp-context-response"  { value 5009; }
+                            enum "error-indication"             { value 5010; }
+                            enum "end-marker"                   { value 5011; }
+                        }
+                        description "GTPv1-C message type";
+                    }
+
+                    leaf direction {
+                        type types-sros:direction;
+                        description "Event that is either incoming or outgoing";
+                    }
+
+                    leaf script {
+                        type leafref {
+                            path "../../../python-script/name";
+                        }
+                        mandatory true;
+                        description "Python script name for the message specified by message-type";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // list gtpv1-c
+
+                list gtpv2-c {
+                    when "not(../wlan-gw-group) and not(../nat-group)";
+                    key "message-type direction";
+                    description "Enter the gtpv2-c list instance";
+
+                    leaf message-type {
+                        type enumeration {
+                            enum "echo-request"                 { value 6001; }
+                            enum "echo-response"                { value 6002; }
+                            enum "version-not-supported"        { value 6003; }
+                            enum "create-session-request"       { value 6004; }
+                            enum "create-session-response"      { value 6005; }
+                            enum "modify-bearer-request"        { value 6006; }
+                            enum "modify-bearer-response"       { value 6007; }
+                            enum "delete-session-request"       { value 6008; }
+                            enum "delete-session-response"      { value 6009; }
+                            enum "delete-bearer-request"        { value 6010; }
+                            enum "delete-bearer-response"       { value 6011; }
+                            enum "release-access-bearers-request" { value 6012; }
+                            enum "release-access-bearers-response" { value 6013; }
+                            enum "downlink-data-notification"   { value 6014; }
+                            enum "downlink-data-notification-ack" { value 6015; }
+                            enum "change-notification-request"  { value 6016; }
+                            enum "change-notification-response" { value 6017; }
+                            enum "stop-paging-indication"       { value 6018; }
+                        }
+                        description "GTPv2-C message type";
+                    }
+
+                    leaf direction {
+                        type types-sros:direction;
+                        description "Event that is either incoming or outgoing";
+                    }
+
+                    leaf script {
+                        type leafref {
+                            path "../../../python-script/name";
+                        }
+                        mandatory true;
+                        description "Python script name for the message specified by message-type";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // list gtpv2-c
+
+                list pppoe {
+                    when "not(../wlan-gw-group) and not(../nat-group)";
+                    key "message-type direction";
+                    description "Enter the pppoe list instance";
+
+                    leaf message-type {
+                        type enumeration {
+                            enum "session-lcp"                  { value 7001; }
+                            enum "session-pap"                  { value 7002; }
+                            enum "session-chap"                 { value 7003; }
+                            enum "session-ipcp"                 { value 7004; }
+                            enum "session-ip6cp"                { value 7005; }
+                            enum "pado"                         { value 7006; }
+                            enum "padi"                         { value 7007; }
+                            enum "padr"                         { value 7008; }
+                            enum "pads"                         { value 7009; }
+                            enum "padt"                         { value 7010; }
+                        }
+                        description "PPPoE message type";
+                    }
+
+                    leaf direction {
+                        type types-sros:direction;
+                        description "Event that is either incoming or outgoing";
+                    }
+
+                    leaf script {
+                        type leafref {
+                            path "../../../python-script/name";
+                        }
+                        mandatory true;
+                        description "Python script name for the message specified by message-type";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // list pppoe
+
+                container syslog {
+                    when "not(../wlan-gw-group) and not(../nat-group)";
+                    presence "Enable the syslog context";
+                    description "Enable the syslog context";
+
+                    leaf script {
+                        type leafref {
+                            path "../../../python-script/name";
+                        }
+                        mandatory true;
+                        description "Python script name for outgoing syslog messages";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // container syslog
+
+            } // list python-policy
+
+        } // container python
+
+    } // grouping conf-python
+
+}
