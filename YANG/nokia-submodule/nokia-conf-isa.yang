@@ -48,7 +48,7 @@ submodule nokia-conf-isa {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2021-12-23";
+    revision "2022-03-11";
 
     grouping conf-isa {
         container isa {
@@ -137,7 +137,7 @@ submodule nokia-conf-isa {
 
                         leaf primary {
                             type types-isa:slot-mda;
-                            description "Primary ISA IPsec module assigned to the tunnel group";
+                            description "Primary ISA IPsec module assigned for the tunnel group";
                         }
 
                         leaf backup {
@@ -150,7 +150,7 @@ submodule nokia-conf-isa {
 
                         container multi-active {
                             presence "Enable the multi-active context";
-                            description "Enable the multi-active context";
+                            description "Enter the multi-active context";
 
                             leaf active-isa-number {
                                 type uint32 {
@@ -172,7 +172,7 @@ submodule nokia-conf-isa {
 
                                         leaf isa-id {
                                             type types-isa:slot-mda;
-                                            description "ISA ID associated with the multi-active tunnel group";
+                                            description "ISA ID associated with the tunnel member pool";
                                         }
 
                                     } // list isa
@@ -201,6 +201,16 @@ submodule nokia-conf-isa {
                                     } // list esa
 
                                 }
+                                case pool {
+
+                                    leaf member-pool {
+                                        type leafref {
+                                            path "../../../tunnel-member-pool/name";
+                                        }
+                                        description "Tunnel member pool name";
+                                    }
+
+                                }
                             }
                         } // container multi-active
 
@@ -214,7 +224,7 @@ submodule nokia-conf-isa {
                             range "1..5000";
                         }
                         units "milliseconds";
-                        description "Maximum time to receive packet fragments for reassembly";
+                        description "Maximum time to receive fragments for packet reassembly";
                     }
 
                 } // container reassembly
@@ -231,6 +241,82 @@ submodule nokia-conf-isa {
                 } // container stats-collection
 
             } // list tunnel-group
+
+            list tunnel-member-pool {
+                key "name";
+                description "Enter the tunnel-member-pool list instance";
+
+                leaf name {
+                    type types-sros:named-item;
+                    description "ISA tunnel member pool name";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                choice group-members {
+                    description "MDA or ESA-VM members of this tunnel group";
+                    case isa {
+
+                        list isa {
+                            key "isa-id";
+                            max-elements 16;
+                            description "Add a list entry for isa";
+
+                            leaf isa-id {
+                                type types-isa:slot-mda;
+                                description "ISA ID associated with the tunnel member pool";
+                            }
+
+                        } // list isa
+
+                    }
+                    case esa {
+
+                        list esa {
+                            key "esa-id vm";
+                            max-elements 16;
+                            description "Add a list entry for esa";
+
+                            leaf esa-id {
+                                type leafref {
+                                    path "../../../../esa/esa-id";
+                                }
+                                description "ESA ID";
+                            }
+
+                            leaf vm {
+                                type leafref {
+                                    path "../../../../esa[esa-id=current()/../esa-id]/vm/vm-id";
+                                }
+                                description "VM ID";
+                            }
+
+                        } // list esa
+
+                    }
+                }
+            } // list tunnel-member-pool
 
             list nat-group {
                 key "id";
