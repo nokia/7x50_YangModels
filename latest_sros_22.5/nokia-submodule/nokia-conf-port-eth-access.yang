@@ -1,0 +1,920 @@
+submodule nokia-conf-port-eth-access {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-qos                { prefix "types-qos"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+    import nokia-types-subscriber-mgmt    { prefix "types-submgt"; }
+
+    include nokia-conf-groups;
+    include nokia-conf-log;
+    include nokia-conf-port;
+    include nokia-conf-port-eth-egress;
+    include nokia-conf-port-ethernet;
+    include nokia-conf-qos;
+
+
+    sros-ext:sros-major-release "rel22";
+
+    organization "Nokia";
+
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+
+    description
+        "Nokia YANG Data model to configure access capabilities for ethernet ports on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-port-eth-access YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+
+    revision "2022-03-17";
+
+    grouping conf-port-eth-access {
+        container access {
+            description "Enter the access context";
+
+            leaf bandwidth {
+                type uint64 {
+                    range "1..6400000000";
+                }
+                units "kilobps";
+                description "Administrative bandwidth assigned to Ethernet ports";
+            }
+
+            leaf booking-factor {
+                type uint32 {
+                    range "1..1000";
+                }
+                default "100";
+                description "Booking factor applied to the Ethernet port";
+            }
+
+            leaf accounting-policy {
+                type leafref {
+                    path "../../../../log/accounting-policy/policy-id";
+                }
+                description "Accounting policy for the Ethernet port access queue";
+            }
+
+            leaf collect-stats {
+                type boolean;
+                default "false";
+                description "Allow collection of statistics on the queue";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            leaf-list apply-groups-exclude {
+                type leafref {
+                    path "../../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Exclude a configuration group at this level";
+            }
+
+            container egress {
+                description "Enter the egress context";
+
+                list queue-group {
+                    key "queue-group-name instance-id";
+                    description "Enter the queue-group list instance";
+
+                    leaf queue-group-name {
+                        type leafref {
+                            path "../../../../../../qos/queue-group-templates/egress/queue-group/egress-queue-group-name";
+                        }
+                        description "Queue group name";
+                    }
+
+                    leaf instance-id {
+                        type uint16 {
+                            range "1..65535";
+                        }
+                        description "Instance ID for the egress queue group";
+                    }
+
+                    leaf accounting-policy {
+                        type leafref {
+                            path "../../../../../../log/accounting-policy/policy-id";
+                        }
+                        description "Accounting policy for the Ethernet port";
+                    }
+
+                    leaf collect-stats {
+                        type boolean;
+                        default "false";
+                        description "Collect accounting and statistical data";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf hs-turbo {
+                        type boolean;
+                        default "false";
+                        description "Enable HS turbo queues for higher throughput";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container aggregate-rate {
+                        description "Enter the aggregate-rate context";
+
+                        leaf queue-frame-based-accounting {
+                            type boolean;
+                            default "false";
+                            description "Enable frame-based accounting on policers and queues";
+                        }
+
+                        leaf limit-unused-bandwidth {
+                            type boolean;
+                            default "false";
+                            description "Control unused bandwidth";
+                        }
+
+                        leaf rate {
+                            type union {
+                                type uint32 {
+                                    range "1..3200000000";
+                                }
+                                type enumeration {
+                                    enum "max"                          { value -1; }
+                                }
+                            }
+                            units "kilobps";
+                            default "max";
+                            description "Aggregate rate for all queues";
+                        }
+
+                    } // container aggregate-rate
+
+                    container host-match {
+                        description "Enter the host-match context";
+
+                        list int-dest-id {
+                            key "destination-string";
+                            description "Add a list entry for int-dest-id";
+
+                            leaf destination-string {
+                                type types-submgt:int-dest-id;
+                                description "Host match destination ID";
+                            }
+
+                        } // list int-dest-id
+
+                    } // container host-match
+
+                    container hsmda-queue-overrides {
+                        status obsolete;
+                        description "Enter the hsmda-queue-overrides context";
+
+                        leaf packet-byte-offset {
+                            status obsolete;
+                            type types-qos:egress-per-packet-offset-override;
+                            description "Packet offset for HSMDA queue accounting";
+                        }
+
+                        leaf secondary-shaper {
+                            status obsolete;
+                            type leafref {
+                                path "../../../../../egress/expanded-secondary-shaper/secondary-shaper-name";
+                            }
+                            description "HSMDA egress secondary shaper";
+                        }
+
+                        leaf wrr-policy {
+                            status obsolete;
+                            type leafref {
+                                path "../../../../../../../qos/hsmda-wrr-policy/hsmda-wrr-policy-name";
+                            }
+                            description "HSMDA egress WRR policy";
+                        }
+
+                        list queue {
+                            status obsolete;
+                            key "queue-id";
+                            description "Enter the queue list instance";
+
+                            leaf queue-id {
+                                status obsolete;
+                                type leafref {
+                                    path "../../../../../../../../qos/queue-group-templates/egress/queue-group[egress-queue-group-name=current()/../../../queue-group-name]/hsmda-queues/queue/queue-id";
+                                }
+                                description "HSMDA queue overrides queue ID";
+                            }
+
+                            leaf mbs {
+                                status obsolete;
+                                type types-qos:hsmda-queue-burst-size-override;
+                                units "bytes";
+                                description "Maximum buffer space override";
+                            }
+
+                            leaf rate {
+                                status obsolete;
+                                type types-qos:pir-rate-override;
+                                units "kilobps";
+                                description "PIR";
+                            }
+
+                            leaf slope-policy {
+                                status obsolete;
+                                type leafref {
+                                    path "../../../../../../../../qos/hsmda-slope-policy/hsmda-slope-policy-name";
+                                }
+                                description "Slope policy";
+                            }
+
+                            leaf wrr-weight {
+                                status obsolete;
+                                type int32 {
+                                    range "1..32";
+                                }
+                                description "Weighted round robin (WRR)";
+                            }
+
+                            leaf-list apply-groups {
+                                status obsolete;
+                                type leafref {
+                                    path "../../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                status obsolete;
+                                type leafref {
+                                    path "../../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                        } // list queue
+
+                    } // container hsmda-queue-overrides
+
+                    container queue-overrides {
+                        description "Enter the queue-overrides context";
+
+                        list queue {
+                            key "queue-id";
+                            description "Enter the queue list instance";
+
+                            leaf queue-id {
+                                type leafref {
+                                    path "../../../../../../../../qos/queue-group-templates/egress/queue-group[egress-queue-group-name=current()/../../../queue-group-name]/queue/queue-id";
+                                }
+                                description "Queue ID";
+                            }
+
+                            leaf cbs {
+                                type types-qos:burst-size-override;
+                                description "CBS for the template queue";
+                            }
+
+                            leaf mbs {
+                                type types-qos:queue-burst-size-override;
+                                units "bytes";
+                                description "MBS for the template queue";
+                            }
+
+                            leaf monitor-depth {
+                                status obsolete;
+                                type boolean;
+                                default "false";
+                                description "Enable queue depth monitoring";
+                            }
+
+                            leaf burst-limit {
+                                type types-qos:burst-limit-override;
+                                description "Override for the shaping burst size for the queue";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                            choice queue-override-rate {
+                                default "rate";
+                                case percent-rate {
+
+                                    container percent-rate {
+                                        description "Enter the percent-rate context";
+
+                                        leaf cir {
+                                            type types-qos:cir-percent-override;
+                                            units "percent";
+                                            description "CIR for the queue";
+                                        }
+
+                                        leaf pir {
+                                            type types-qos:pir-percent-override;
+                                            units "percent";
+                                            description "PIR for the queue";
+                                        }
+
+                                    } // container percent-rate
+
+                                }
+                                case rate {
+
+                                    container rate {
+                                        description "Enter the rate context";
+
+                                        leaf cir {
+                                            type types-qos:queue-cir-rate-override;
+                                            units "kilobps";
+                                            description "CIR for the queue";
+                                        }
+
+                                        leaf pir {
+                                            type types-qos:queue-pir-rate-override;
+                                            units "kilobps";
+                                            description "PIR for the queue";
+                                        }
+
+                                    } // container rate
+
+                                }
+                            }
+                            container adaptation-rule {
+                                description "Enter the adaptation-rule context";
+
+                                leaf cir {
+                                    type types-qos:adaptation-rule-override;
+                                    description "Constraint used when deriving the operational CIR value";
+                                }
+
+                                leaf pir {
+                                    type types-qos:adaptation-rule-override;
+                                    description "Constraint used when deriving the operational PIR value";
+                                }
+
+                            } // container adaptation-rule
+
+                            container drop-tail {
+                                description "Enter the drop-tail context";
+
+                                container low {
+                                    description "Enter the low context";
+
+                                    leaf percent-reduction-from-mbs {
+                                        type types-qos:burst-percent-or-default-override;
+                                        description "Percentage reduction from the MBS for a queue drop tail";
+                                    }
+
+                                } // container low
+
+                            } // container drop-tail
+
+                            container parent {
+                                description "Enter the parent context";
+
+                                leaf cir-weight {
+                                    type types-qos:weight-override;
+                                    description "CIR that overrides the parent for the queue group";
+                                }
+
+                                leaf weight {
+                                    type types-qos:weight-override;
+                                    description "PIR that overrides the parent for the queue group";
+                                }
+
+                            } // container parent
+
+                            container monitor-queue-depth {
+                                presence "Enable the monitor-queue-depth context";
+                                description "Enable the monitor-queue-depth context";
+
+                                leaf fast-polling {
+                                    type boolean;
+                                    default "false";
+                                    description "Enable fast polling of the queue depth";
+                                }
+
+                                leaf violation-threshold {
+                                    type decimal64 {
+                                        range "0.01..99.99";
+                                        fraction-digits 2;
+                                    }
+                                    description "Threshold for queue depth before violation is raised";
+                                }
+
+                            } // container monitor-queue-depth
+
+                        } // list queue
+
+                    } // container queue-overrides
+
+                    container scheduler-policy {
+                        description "Enter the scheduler-policy context";
+
+                        leaf policy-name {
+                            type leafref {
+                                path "../../../../../../../qos/scheduler-policy/scheduler-policy-name";
+                            }
+                            description "Scheduler policy name";
+                        }
+
+                        container overrides {
+                            description "Enter the overrides context";
+
+                            list scheduler {
+                                key "scheduler-name";
+                                description "Enter the scheduler list instance";
+
+                                leaf scheduler-name {
+                                    type types-sros:named-item;
+                                    description "Scheduler name";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                leaf-list apply-groups-exclude {
+                                    type leafref {
+                                        path "../../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Exclude a configuration group at this level";
+                                }
+
+                                container parent {
+                                    description "Enter the parent context";
+
+                                    leaf cir-weight {
+                                        type types-qos:weight-override;
+                                        description "CIR that overrides the parent";
+                                    }
+
+                                    leaf weight {
+                                        type types-qos:weight-override;
+                                        description "PIR that overrides the parent";
+                                    }
+
+                                } // container parent
+
+                                container rate {
+                                    description "Enter the rate context";
+
+                                    leaf cir {
+                                        type types-qos:sched-cir-rate-ovr;
+                                        units "kilobps";
+                                        description "CIR for the scheduler";
+                                    }
+
+                                    leaf pir {
+                                        type types-qos:sched-pir-rate-ovr;
+                                        units "kilobps";
+                                        description "PIR for the scheduler";
+                                    }
+
+                                } // container rate
+
+                            } // list scheduler
+
+                        } // container overrides
+
+                    } // container scheduler-policy
+
+                } // list queue-group
+
+                list virtual-port {
+                    key "vport-name";
+                    description "Enter the virtual-port list instance";
+
+                    leaf vport-name {
+                        type types-sros:named-item;
+                        description "Vport scheduling node name";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf monitor-port-scheduler {
+                        type boolean;
+                        default "false";
+                        description "Enable congestion monitoring on egress port scheduler";
+                    }
+
+                    leaf multicast-hqos-adjustment {
+                        type boolean;
+                        default "false";
+                        description "Apply HQoS Adjustment (egress rate modification)";
+                    }
+
+                    leaf port-scheduler-policy {
+                        type leafref {
+                            path "../../../../../../qos/port-scheduler-policy/name";
+                        }
+                        description "Port scheduler policy name";
+                    }
+
+                    leaf hw-agg-shaper-scheduler-policy {
+                        type leafref {
+                            path "../../../../../../qos/hw-agg-shaper-scheduler-policy/name";
+                        }
+                        description "Hardware aggregate shaper scheduler policy to apply";
+                    }
+
+                    leaf monitor-hw-agg-shaper-scheduler {
+                        type boolean;
+                        default "false";
+                        description "Enable monitoring hardware aggregate shaper scheduler";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container aggregate-rate {
+                        description "Enter the aggregate-rate context";
+
+                        leaf limit-unused-bandwidth {
+                            type boolean;
+                            default "false";
+                            description "Control unused bandwidth";
+                        }
+
+                        leaf rate {
+                            type union {
+                                type int64 {
+                                    range "1..6400000000";
+                                }
+                                type enumeration {
+                                    enum "max"                          { value -1; }
+                                }
+                            }
+                            units "kilobps";
+                            default "max";
+                            description "Enforced aggregate rate for the queue";
+                        }
+
+                    } // container aggregate-rate
+
+                    container host-match {
+                        description "Enter the host-match context";
+
+                        list int-dest-id {
+                            key "destination-string";
+                            description "Add a list entry for int-dest-id";
+
+                            leaf destination-string {
+                                type types-submgt:int-dest-id;
+                                description "Host match destination ID";
+                            }
+
+                        } // list int-dest-id
+
+                    } // container host-match
+
+                    container scheduler-policy {
+                        description "Scheduler policy for the egress virtual port";
+
+                        leaf policy-name {
+                            type leafref {
+                                path "../../../../../../../qos/scheduler-policy/scheduler-policy-name";
+                            }
+                            description "Egress scheduler policy";
+                        }
+
+                    } // container scheduler-policy
+
+                } // list virtual-port
+
+            } // container egress
+
+            container ingress {
+                description "Enter the ingress context";
+
+                list queue-group {
+                    key "queue-group-name";
+                    description "Enter the queue-group list instance";
+
+                    leaf queue-group-name {
+                        type leafref {
+                            path "../../../../../../qos/queue-group-templates/ingress/queue-group/ingress-queue-group-name";
+                        }
+                        description "Queue group name";
+                    }
+
+                    leaf accounting-policy {
+                        type leafref {
+                            path "../../../../../../log/accounting-policy/policy-id";
+                        }
+                        description "Accounting policy for the Ethernet port";
+                    }
+
+                    leaf collect-stats {
+                        type boolean;
+                        default "false";
+                        description "Collect accounting and statistical data";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container queue-overrides {
+                        description "Enter the queue-overrides context";
+
+                        list queue {
+                            key "queue-id";
+                            description "Enter the queue list instance";
+
+                            leaf queue-id {
+                                type leafref {
+                                    path "../../../../../../../../qos/queue-group-templates/ingress/queue-group[ingress-queue-group-name=current()/../../../queue-group-name]/queue/queue-id";
+                                }
+                                description "Queue ID for the queue group template";
+                            }
+
+                            leaf cbs {
+                                type types-qos:burst-size-override;
+                                description "CBS for the template queue";
+                            }
+
+                            leaf mbs {
+                                type types-qos:queue-burst-size-override;
+                                units "bytes";
+                                description "MBS for the template queue";
+                            }
+
+                            leaf monitor-depth {
+                                status obsolete;
+                                type boolean;
+                                default "false";
+                                description "Enable queue depth monitoring";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                            container adaptation-rule {
+                                description "Enter the adaptation-rule context";
+
+                                leaf cir {
+                                    type types-qos:adaptation-rule-override;
+                                    description "Constraint used when deriving the operational CIR value";
+                                }
+
+                                leaf pir {
+                                    type types-qos:adaptation-rule-override;
+                                    description "Constraint used when deriving the operational PIR value";
+                                }
+
+                            } // container adaptation-rule
+
+                            container drop-tail {
+                                description "Enter the drop-tail context";
+
+                                container low {
+                                    description "Enter the low context";
+
+                                    leaf percent-reduction-from-mbs {
+                                        type types-qos:burst-percent-or-default-override;
+                                        description "Percentage reduction from the MBS for a queue drop tail";
+                                    }
+
+                                } // container low
+
+                            } // container drop-tail
+
+                            container rate {
+                                description "Enter the rate context";
+
+                                leaf cir {
+                                    type types-qos:queue-cir-rate-override;
+                                    units "kilobps";
+                                    description "CIR for the queue";
+                                }
+
+                                leaf pir {
+                                    type types-qos:queue-pir-rate-override;
+                                    units "kilobps";
+                                    description "PIR for the queue";
+                                }
+
+                            } // container rate
+
+                            container monitor-queue-depth {
+                                presence "Enable the monitor-queue-depth context";
+                                description "Enable the monitor-queue-depth context";
+
+                                leaf fast-polling {
+                                    type boolean;
+                                    default "false";
+                                    description "Enable fast polling of the queue depth";
+                                }
+
+                            } // container monitor-queue-depth
+
+                        } // list queue
+
+                    } // container queue-overrides
+
+                    container scheduler-policy {
+                        description "Enter the scheduler-policy context";
+
+                        leaf policy-name {
+                            type leafref {
+                                path "../../../../../../../qos/scheduler-policy/scheduler-policy-name";
+                            }
+                            description "Scheduler policy name";
+                        }
+
+                        container overrides {
+                            description "Enter the overrides context";
+
+                            list scheduler {
+                                key "scheduler-name";
+                                description "Enter the scheduler list instance";
+
+                                leaf scheduler-name {
+                                    type types-sros:named-item;
+                                    description "Scheduler name";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                leaf-list apply-groups-exclude {
+                                    type leafref {
+                                        path "../../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Exclude a configuration group at this level";
+                                }
+
+                                container parent {
+                                    description "Enter the parent context";
+
+                                    leaf cir-weight {
+                                        type types-qos:weight-override;
+                                        description "CIR that overrides the parent";
+                                    }
+
+                                    leaf weight {
+                                        type types-qos:weight-override;
+                                        description "PIR that overrides the parent";
+                                    }
+
+                                } // container parent
+
+                                container rate {
+                                    description "Enter the rate context";
+
+                                    leaf cir {
+                                        type types-qos:sched-cir-rate-ovr;
+                                        units "kilobps";
+                                        description "CIR for the scheduler";
+                                    }
+
+                                    leaf pir {
+                                        type types-qos:sched-pir-rate-ovr;
+                                        units "kilobps";
+                                        description "PIR for the scheduler";
+                                    }
+
+                                } // container rate
+
+                            } // list scheduler
+
+                        } // container overrides
+
+                    } // container scheduler-policy
+
+                } // list queue-group
+
+            } // container ingress
+
+        } // container access
+
+    } // grouping conf-port-eth-access
+
+}
