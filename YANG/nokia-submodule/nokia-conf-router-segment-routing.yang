@@ -40,7 +40,7 @@ submodule nokia-conf-router-segment-routing {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2022-05-13";
+    revision "2022-06-06";
 
     grouping conf-router-segment-routing {
         container segment-routing {
@@ -82,6 +82,7 @@ submodule nokia-conf-router-segment-routing {
 
                 leaf bfd-liveness {
                     type boolean;
+                    sros-ext:auto-restart-to-modify;
                     default "false";
                     description "Enable seamless BFD for segment lists of candidate path";
                 }
@@ -90,6 +91,7 @@ submodule nokia-conf-router-segment-routing {
                     type leafref {
                         path "../../../../bfd/bfd-template/name";
                     }
+                    sros-ext:auto-restart-to-modify;
                     description "BFD template to be used by seamless BFD";
                 }
 
@@ -108,6 +110,7 @@ submodule nokia-conf-router-segment-routing {
                     type uint32 {
                         range "1..32";
                     }
+                    sros-ext:auto-restart-to-modify;
                     default "1";
                     description "Minimum number of up S-BFD sessions for up path status";
                 }
@@ -117,6 +120,7 @@ submodule nokia-conf-router-segment-routing {
                         range "0..5000";
                     }
                     units "deciseconds";
+                    sros-ext:auto-restart-to-modify;
                     default "0";
                     description "Hold down timer for SR policy candidate paths";
                 }
@@ -430,6 +434,15 @@ submodule nokia-conf-router-segment-routing {
                         description "Policy name";
                     }
 
+                    leaf type {
+                        type enumeration {
+                            enum "sr-mpls"                      { value 1; }
+                            enum "srv6"                         { value 2; }
+                        }
+                        default "sr-mpls";
+                        description "Static policy type";
+                    }
+
                     leaf-list apply-groups {
                         type leafref {
                             path "../../../../../groups/group/name";
@@ -447,6 +460,87 @@ submodule nokia-conf-router-segment-routing {
                         ordered-by user;
                         description "Exclude a configuration group at this level";
                     }
+
+                    container segment-routing-v6 {
+                        presence "Enable the segment-routing-v6 context";
+                        sros-ext:auto-restart-to-modify;
+                        description "Enable the segment-routing-v6 context";
+
+                        list binding-sid {
+                            key "index";
+                            max-elements 1;
+                            description "Enter the binding-sid list instance";
+
+                            leaf index {
+                                type uint32 {
+                                    range "1";
+                                }
+                                description "Binding SID index";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                            choice binding-sid-type {
+                                case remote-binding-sid {
+
+                                    leaf ip-address {
+                                        type types-sros:ipv6-address;
+                                        description "Remote SRv6 binding SID";
+                                    }
+
+                                }
+                                case local-binding-sid {
+
+                                    container locator {
+                                        presence "Enable the locator context";
+                                        description "Enter the locator context";
+
+                                        leaf locator-name {
+                                            type leafref {
+                                                path "../../../../../../../../router/segment-routing/segment-routing-v6/locator/locator-name";
+                                            }
+                                            mandatory true;
+                                            description "Local SRv6 binding SID locator name";
+                                        }
+
+                                        leaf function {
+                                            type enumeration {
+                                                enum "end-b6-encaps-red"            { value 1; }
+                                            }
+                                            mandatory true;
+                                            description "Local SRv6 binding SID locator function";
+                                        }
+
+                                        leaf function-value {
+                                            type uint32 {
+                                                range "1..1048575";
+                                            }
+                                            description "Local SRv6 binding SID locator function value";
+                                        }
+
+                                    } // container locator
+
+                                }
+                            }
+                        } // list binding-sid
+
+                    } // container segment-routing-v6
 
                     list segment-list {
                         key "seg-list-index";
@@ -512,6 +606,12 @@ submodule nokia-conf-router-segment-routing {
                                 }
                                 sros-ext:auto-restart-to-modify;
                                 description "Value for the MPLS label";
+                            }
+
+                            leaf srv6-sid {
+                                type types-sros:ipv6-address;
+                                sros-ext:auto-restart-to-modify;
+                                description "Segment ID for segment routing IPv6";
                             }
 
                             leaf-list apply-groups {
@@ -609,14 +709,6 @@ submodule nokia-conf-router-segment-routing {
                         description "Function length";
                     }
 
-                    leaf label-block {
-                        type leafref {
-                            path "../../../../../router/mpls-labels/reserved-label-block/label-block-name";
-                        }
-                        sros-ext:auto-restart-to-modify;
-                        description "Unified label block for SRv6 locator allows to allocate static and dynamic label from associated reserved label block";
-                    }
-
                     leaf admin-state {
                         type types-sros:admin-state;
                         default "disable";
@@ -637,6 +729,14 @@ submodule nokia-conf-router-segment-routing {
                         }
                         sros-ext:auto-restart-to-modify;
                         description "Algorithm ID";
+                    }
+
+                    leaf label-block {
+                        type leafref {
+                            path "../../../../../router/mpls-labels/reserved-label-block/label-block-name";
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        description "Reserved label block name for service termination";
                     }
 
                     leaf-list apply-groups {

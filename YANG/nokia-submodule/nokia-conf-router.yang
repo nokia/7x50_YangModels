@@ -95,7 +95,7 @@ submodule nokia-conf-router {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2022-02-22";
+    revision "2022-07-13";
 
     grouping conf-router {
         list router {
@@ -883,7 +883,7 @@ submodule nokia-conf-router {
                         type uint32 {
                             range "160..10240";
                         }
-                        description "Insert or decrease the TCP Maximum Segment Size option to this value for upstream IPv6 SYN messages";
+                        description "TCP-MSS adjustment value in upstream direction for DSM";
                     }
 
                     leaf-list apply-groups {
@@ -918,7 +918,7 @@ submodule nokia-conf-router {
                     leaf tunnel-source-ip {
                         type types-sros:ipv6-prefix;
                         sros-ext:auto-restart-to-modify;
-                        description "IPv6 prefix from which source addresses of cross-connect tunnels will be chosen";
+                        description "IPv6 address and prefix for the tunnel source";
                     }
 
                     leaf wlan-gw-group {
@@ -959,7 +959,7 @@ submodule nokia-conf-router {
                     type uint32;
                     sros-ext:immutable;
                     mandatory true;
-                    description "NAT group (including WLAN Gateway group) that executes the adjustment";
+                    description "NAT group used for TCP-MSS adjustment";
                 }
 
                 leaf segment-size {
@@ -967,7 +967,7 @@ submodule nokia-conf-router {
                         range "160..10240";
                     }
                     mandatory true;
-                    description "Intended value for the Maximum Segment Size (MSS) option in transmitted TCP SYN requests";
+                    description "TCP-MSS option value in transmitted TCP SYN requests";
                 }
 
                 leaf-list apply-groups {
@@ -1273,6 +1273,74 @@ submodule nokia-conf-router {
                             description "Exclude a configuration group at this level";
                         }
 
+                        choice egress-agg-rate {
+                            default "agg-rate";
+                            case agg-rate {
+
+                                container agg-rate {
+                                    description "Enter the agg-rate context";
+
+                                    container rate {
+                                        description "Enter the rate context";
+
+                                        leaf pir {
+                                            type union {
+                                                type int32 {
+                                                    range "1..400000000";
+                                                }
+                                                type enumeration {
+                                                    enum "max"                          { value -1; }
+                                                }
+                                            }
+                                            units "kilobps";
+                                            default "max";
+                                            description "Administrative PIR";
+                                        }
+
+                                        leaf cir {
+                                            type union {
+                                                type int32 {
+                                                    range "0..400000000";
+                                                }
+                                                type enumeration {
+                                                    enum "max"                          { value -1; }
+                                                }
+                                            }
+                                            units "kilobps";
+                                            default "0";
+                                            description "Administrative CIR";
+                                        }
+
+                                    } // container rate
+
+                                } // container agg-rate
+
+                            }
+                            case percent-agg-rate {
+
+                                container percent-agg-rate {
+                                    description "Enter the percent-agg-rate context";
+
+                                    leaf pir {
+                                        type decimal64 {
+                                            range "0.01..100.00";
+                                            fraction-digits 2;
+                                        }
+                                        description "PIR percent rate";
+                                    }
+
+                                    leaf cir {
+                                        type decimal64 {
+                                            range "0.00..100.00";
+                                            fraction-digits 2;
+                                        }
+                                        description "CIR percent rate";
+                                    }
+
+                                } // container percent-agg-rate
+
+                            }
+                        }
                         container vlan-qos-policy {
                             description "Enter the vlan-qos-policy context";
 
@@ -1302,44 +1370,6 @@ submodule nokia-conf-router {
                             }
 
                         } // container egress-remark-policy
-
-                        container agg-rate {
-                            description "Enter the agg-rate context";
-
-                            container rate {
-                                description "Enter the rate context";
-
-                                leaf pir {
-                                    type union {
-                                        type int32 {
-                                            range "1..400000000";
-                                        }
-                                        type enumeration {
-                                            enum "max"                          { value -1; }
-                                        }
-                                    }
-                                    units "kilobps";
-                                    default "max";
-                                    description "Administrative PIR";
-                                }
-
-                                leaf cir {
-                                    type union {
-                                        type int32 {
-                                            range "0..400000000";
-                                        }
-                                        type enumeration {
-                                            enum "max"                          { value -1; }
-                                        }
-                                    }
-                                    units "kilobps";
-                                    default "0";
-                                    description "Administrative CIR";
-                                }
-
-                            } // container rate
-
-                        } // container agg-rate
 
                     } // container qos
 
@@ -1699,6 +1729,611 @@ submodule nokia-conf-router {
                     } // container ipv4
 
                 } // container autoconfigure
+
+                container ipsec {
+                    presence "Enable the ipsec context";
+                    description "Enter the ipsec context";
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of IPsec secured interface";
+                    }
+
+                    leaf tunnel-group {
+                        type leafref {
+                            path "../../../../isa/tunnel-group/id";
+                        }
+                        sros-ext:immutable;
+                        mandatory true;
+                        description "Tunnel group ID";
+                    }
+
+                    leaf public-sap {
+                        type uint32 {
+                            range "0..4094";
+                        }
+                        sros-ext:immutable;
+                        mandatory true;
+                        description "Public SAP ID";
+                    }
+
+                    leaf ip-exception {
+                        type leafref {
+                            path "../../../../filter/ip-exception/filter-name";
+                        }
+                        description "IP exception filter";
+                    }
+
+                    leaf ipv6-exception {
+                        type leafref {
+                            path "../../../../filter/ipv6-exception/filter-name";
+                        }
+                        description "IPv6 filter exception used to bypass encryption";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    list ipsec-tunnel {
+                        key "name";
+                        description "Enter the ipsec-tunnel list instance";
+
+                        leaf name {
+                            type types-sros:named-item {
+                                pattern "[a-zA-Z]+.*" {
+                                    error-message "IPSec tunnel name cannot start with a number";
+                                }
+                            }
+                            description "IPsec tunnel name";
+                        }
+
+                        leaf private-sap {
+                            type uint32 {
+                                range "0..4094";
+                            }
+                            sros-ext:immutable;
+                            sros-ext:auto-restart-to-modify;
+                            mandatory true;
+                            description "Private SAP ID";
+                        }
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of the IPsec tunnel";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf clear-df-bit {
+                            type boolean;
+                            sros-ext:auto-restart-to-modify;
+                            default "false";
+                            description "Reset the DF bit to 0 in all payload IP packets";
+                        }
+
+                        leaf copy-traffic-class-upon-decapsulation {
+                            type boolean;
+                            sros-ext:auto-restart-to-modify;
+                            default "false";
+                            description "Enable traffic class copy upon decapsulation";
+                        }
+
+                        leaf encapsulated-ip-mtu {
+                            type uint32 {
+                                range "512..9000";
+                            }
+                            units "bytes";
+                            sros-ext:auto-restart-to-modify;
+                            description "Maximum size of the encapsulated tunnel packet";
+                        }
+
+                        leaf ip-mtu {
+                            type uint32 {
+                                range "512..9000";
+                            }
+                            units "bytes";
+                            sros-ext:auto-restart-to-modify;
+                            description "Private MTU of the IIPsec tunnel";
+                        }
+
+                        leaf replay-window {
+                            type uint32 {
+                                range "32|64|128|256|512";
+                            }
+                            units "packets";
+                            sros-ext:auto-restart-to-modify;
+                            description "Anti-replay window size";
+                        }
+
+                        leaf public-tcp-mss-adjust {
+                            type union {
+                                type uint32 {
+                                    range "512..9000";
+                                }
+                                type enumeration {
+                                    enum "auto"                         { value 0; }
+                                }
+                            }
+                            units "bytes";
+                            sros-ext:auto-restart-to-modify;
+                            description "TCP maximum segment size (MSS) on the public network";
+                        }
+
+                        leaf private-tcp-mss-adjust {
+                            type int32 {
+                                range "512..9000";
+                            }
+                            units "bytes";
+                            sros-ext:auto-restart-to-modify;
+                            description "TCP maximum segment size (MSS) adjustment";
+                        }
+
+                        leaf local-gateway-address-override {
+                            type types-sros:ip-address;
+                            sros-ext:auto-restart-to-modify;
+                            description "Local IPsec tunnel endpoint address";
+                        }
+
+                        leaf remote-gateway-address {
+                            type types-sros:ip-address;
+                            sros-ext:auto-restart-to-modify;
+                            description "Remote IPsec tunnel endpoint address";
+                        }
+
+                        leaf private-service {
+                            type types-services:service-name;
+                            sros-ext:immutable;
+                            sros-ext:auto-restart-to-modify;
+                            description "Private service name";
+                        }
+
+                        leaf propagate-pmtu-v4 {
+                            type boolean;
+                            sros-ext:auto-restart-to-modify;
+                            default "true";
+                            description "Enable propagation of the path MTU to IPv4 hosts";
+                        }
+
+                        leaf propagate-pmtu-v6 {
+                            type boolean;
+                            sros-ext:auto-restart-to-modify;
+                            default "true";
+                            description "Enable propagation of the path MTU to IPv6 hosts";
+                        }
+
+                        leaf pmtu-discovery-aging {
+                            type uint32 {
+                                range "900..3600";
+                            }
+                            units "seconds";
+                            sros-ext:auto-restart-to-modify;
+                            default "900";
+                            description "Aging out time of the learned path MTU";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            sros-ext:auto-restart-to-modify;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            sros-ext:auto-restart-to-modify;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container bfd {
+                            sros-ext:auto-restart-to-modify;
+                            description "Enter the bfd context";
+
+                            leaf bfd-designate {
+                                type boolean;
+                                sros-ext:auto-restart-to-modify;
+                                default "false";
+                                description "Designate IPsec tunnel to carry BFD traffic";
+                            }
+
+                            container bfd-liveness {
+                                presence "Enable the bfd-liveness context";
+                                sros-ext:auto-restart-to-modify;
+                                description "Enter the bfd-liveness context";
+
+                                leaf dest-ip {
+                                    type types-sros:ipv4-unicast-address;
+                                    sros-ext:auto-restart-to-modify;
+                                    mandatory true;
+                                    description "Destination address used for the BFD session";
+                                }
+
+                                leaf interface {
+                                    type types-sros:interface-name;
+                                    sros-ext:auto-restart-to-modify;
+                                    mandatory true;
+                                    description "Name of the interface used by the BFD session";
+                                }
+
+                                leaf service-name {
+                                    type types-services:service-name;
+                                    sros-ext:auto-restart-to-modify;
+                                    mandatory true;
+                                    description "Administrative service name";
+                                }
+
+                            } // container bfd-liveness
+
+                        } // container bfd
+
+                        container icmp6-generation {
+                            sros-ext:auto-restart-to-modify;
+                            description "Enter the icmp6-generation context";
+
+                            container packet-too-big {
+                                sros-ext:auto-restart-to-modify;
+                                description "Enter the packet-too-big context";
+
+                                leaf admin-state {
+                                    type types-sros:admin-state;
+                                    sros-ext:auto-restart-to-modify;
+                                    default "enable";
+                                    description "Administrative state of Packet Too Big message sends";
+                                }
+
+                                leaf message-count {
+                                    type uint32 {
+                                        range "10..1000";
+                                    }
+                                    sros-ext:auto-restart-to-modify;
+                                    default "100";
+                                    description "Maximum number of ICMPv6 PTB messages that can be sent";
+                                }
+
+                                leaf interval {
+                                    type uint32 {
+                                        range "1..60";
+                                    }
+                                    units "seconds";
+                                    sros-ext:auto-restart-to-modify;
+                                    default "10";
+                                    description "Interval for sending Packet Too Big messages";
+                                }
+
+                            } // container packet-too-big
+
+                        } // container icmp6-generation
+
+                        container key-exchange {
+                            sros-ext:auto-restart-to-modify;
+                            description "Enter the key-exchange context";
+
+                            choice type {
+                                case dynamic {
+
+                                    container dynamic {
+                                        presence "Enable the dynamic context";
+                                        sros-ext:auto-restart-to-modify;
+                                        description "Enter the dynamic context";
+
+                                        leaf auto-establish {
+                                            type boolean;
+                                            sros-ext:auto-restart-to-modify;
+                                            default "false";
+                                            description "Attempt to establish automatic phase 1 exchange";
+                                        }
+
+                                        leaf ike-policy {
+                                            type leafref {
+                                                path "../../../../../../../ipsec/ike-policy/id";
+                                            }
+                                            sros-ext:auto-restart-to-modify;
+                                            description "IKE policy ID";
+                                        }
+
+                                        leaf-list ipsec-transform {
+                                            type leafref {
+                                                path "../../../../../../../ipsec/ipsec-transform/id";
+                                            }
+                                            max-elements 4;
+                                            sros-ext:auto-restart-to-modify;
+                                            description "IPsec transform IDs used by the dynamic key";
+                                        }
+
+                                        leaf pre-shared-key {
+                                            type types-sros:encrypted-leaf {
+                                                length "1..115";
+                                            }
+                                            sros-ext:auto-restart-to-modify;
+                                            description "Pre-shared key for authentication";
+                                        }
+
+                                        container cert {
+                                            sros-ext:auto-restart-to-modify;
+                                            description "Enter the cert context";
+
+                                            leaf cert-profile {
+                                                type leafref {
+                                                    path "../../../../../../../../ipsec/cert-profile/name";
+                                                }
+                                                description "Certificate profile name";
+                                            }
+
+                                            leaf trust-anchor-profile {
+                                                type leafref {
+                                                    path "../../../../../../../../ipsec/trust-anchor-profile/name";
+                                                }
+                                                description "Trust anchor profile name";
+                                            }
+
+                                            container status-verify {
+                                                sros-ext:auto-restart-to-modify;
+                                                description "Enter the status-verify context";
+
+                                                leaf default-result {
+                                                    type enumeration {
+                                                        enum "revoked"                      { value 0; }
+                                                        enum "good"                         { value 1; }
+                                                    }
+                                                    default "revoked";
+                                                    description "Default result for Certificate Status Verification";
+                                                }
+
+                                                leaf primary {
+                                                    type types-ipsec:cert-revocation-status;
+                                                    default "crl";
+                                                    description "Primary method of CSV to verify the revocation status";
+                                                }
+
+                                                leaf secondary {
+                                                    type types-ipsec:cert-revocation-status-with-none;
+                                                    default "none";
+                                                    description "Secondary method used to verify certificate revocation";
+                                                }
+
+                                            } // container status-verify
+
+                                        } // container cert
+
+                                        container id {
+                                            sros-ext:auto-restart-to-modify;
+                                            description "Enter the id context";
+
+                                            choice id {
+                                                case ipv4 {
+
+                                                    leaf ipv4 {
+                                                        type types-sros:ipv4-unicast-address;
+                                                        sros-ext:auto-restart-to-modify;
+                                                        description "IPv4 as the local ID type";
+                                                    }
+
+                                                }
+                                                case ipv6 {
+
+                                                    leaf ipv6 {
+                                                        type types-sros:ip-address;
+                                                        sros-ext:auto-restart-to-modify;
+                                                        description "IPv6 used as the local IKE ID type";
+                                                    }
+
+                                                }
+                                                case fqdn {
+
+                                                    leaf fqdn {
+                                                        type types-sros:fully-qualified-domain-name;
+                                                        sros-ext:auto-restart-to-modify;
+                                                        description "FQDN used as the local ID IKE type";
+                                                    }
+
+                                                }
+                                            }
+                                        } // container id
+
+                                    } // container dynamic
+
+                                }
+                                case manual {
+
+                                    container manual {
+                                        presence "Enable the manual context";
+                                        sros-ext:auto-restart-to-modify;
+                                        description "Enable the manual context";
+
+                                        list keys {
+                                            key "security-association direction";
+                                            sros-ext:auto-restart-to-modify;
+                                            description "Enter the keys list instance";
+
+                                            leaf security-association {
+                                                type uint32 {
+                                                    range "1..16";
+                                                }
+                                                description "SA entry ID";
+                                            }
+
+                                            leaf direction {
+                                                type enumeration {
+                                                    enum "inbound"                      { value 1; }
+                                                    enum "outbound"                     { value 2; }
+                                                }
+                                                description "Direction of the IPsec tunnel";
+                                            }
+
+                                            leaf ipsec-transform {
+                                                type leafref {
+                                                    path "../../../../../../../../ipsec/ipsec-transform/id";
+                                                }
+                                                sros-ext:immutable;
+                                                sros-ext:auto-restart-to-modify;
+                                                mandatory true;
+                                                description "Transform entry used by manual SAs";
+                                            }
+
+                                            leaf spi {
+                                                type uint32 {
+                                                    range "256..16383";
+                                                }
+                                                sros-ext:immutable;
+                                                sros-ext:auto-restart-to-modify;
+                                                mandatory true;
+                                                description "SPI of inbound and outbound packets";
+                                            }
+
+                                            leaf authentication-key {
+                                                type types-sros:hex-string {
+                                                    length "1..130";
+                                                }
+                                                sros-ext:immutable;
+                                                sros-ext:auto-restart-to-modify;
+                                                description "Key used for the authentication algorithm";
+                                            }
+
+                                            leaf encryption-key {
+                                                type types-sros:hex-string {
+                                                    length "1..66";
+                                                }
+                                                sros-ext:immutable;
+                                                sros-ext:auto-restart-to-modify;
+                                                description "Key used for the encryption algorithm";
+                                            }
+
+                                            leaf-list apply-groups {
+                                                type leafref {
+                                                    path "../../../../../../../../groups/group/name";
+                                                }
+                                                max-elements 8;
+                                                ordered-by user;
+                                                sros-ext:auto-restart-to-modify;
+                                                description "Apply a configuration group at this level";
+                                            }
+
+                                            leaf-list apply-groups-exclude {
+                                                type leafref {
+                                                    path "../../../../../../../../groups/group/name";
+                                                }
+                                                max-elements 8;
+                                                ordered-by user;
+                                                sros-ext:auto-restart-to-modify;
+                                                description "Exclude a configuration group at this level";
+                                            }
+
+                                        } // list keys
+
+                                    } // container manual
+
+                                }
+                            }
+                        } // container key-exchange
+
+                        container max-history-key-records {
+                            sros-ext:auto-restart-to-modify;
+                            description "Enter the max-history-key-records context";
+
+                            leaf ike {
+                                type uint32 {
+                                    range "1..3";
+                                }
+                                sros-ext:auto-restart-to-modify;
+                                description "Maximum number of historical IKE key records";
+                            }
+
+                            leaf esp {
+                                type uint32 {
+                                    range "1..48";
+                                }
+                                sros-ext:auto-restart-to-modify;
+                                description "Maximum number of recent records";
+                            }
+
+                        } // container max-history-key-records
+
+                        container icmp-generation {
+                            sros-ext:auto-restart-to-modify;
+                            description "Enter the icmp-generation context";
+
+                            container frag-required {
+                                sros-ext:auto-restart-to-modify;
+                                description "Enter the frag-required context";
+
+                                leaf admin-state {
+                                    type types-sros:admin-state;
+                                    sros-ext:auto-restart-to-modify;
+                                    default "enable";
+                                    description "Administrative state of sending ICMP messages";
+                                }
+
+                                leaf message-count {
+                                    type uint32 {
+                                        range "10..1000";
+                                    }
+                                    sros-ext:auto-restart-to-modify;
+                                    default "100";
+                                    description "Maximum number of ICMP messages that can be sent";
+                                }
+
+                                leaf interval {
+                                    type uint32 {
+                                        range "1..60";
+                                    }
+                                    units "seconds";
+                                    sros-ext:auto-restart-to-modify;
+                                    default "10";
+                                    description "Interval for sending ICMP messages";
+                                }
+
+                            } // container frag-required
+
+                        } // container icmp-generation
+
+                        container security-policy {
+                            sros-ext:auto-restart-to-modify;
+                            description "Enter the security-policy context";
+
+                            leaf id {
+                                type uint32;
+                                sros-ext:auto-restart-to-modify;
+                                description "Security policy ID for use by the tunnel";
+                            }
+
+                            leaf strict-match {
+                                type boolean;
+                                sros-ext:auto-restart-to-modify;
+                                default "false";
+                                description "Enable strict match of the security policy entry";
+                            }
+
+                        } // container security-policy
+
+                    } // list ipsec-tunnel
+
+                } // container ipsec
 
                 container cflowd-parameters {
                     when "../../router-name = 'Base'";
@@ -2133,7 +2768,7 @@ submodule nokia-conf-router {
 
                     container icmp {
                         when "../../../router-name = 'Base' and not(../../flavor = 'control-tunnel')";
-                        description "Enter the icmp context";
+                        description "Enter the ICMP context";
 
                         leaf mask-reply {
                             type boolean;
@@ -2782,7 +3417,7 @@ submodule nokia-conf-router {
                             leaf log-only {
                                 type boolean;
                                 default "false";
-                                description "Apply the limit to log entries only";
+                                description "Generate log entries only if limit is reached";
                             }
 
                             leaf threshold {
@@ -3096,7 +3731,7 @@ submodule nokia-conf-router {
                     }
 
                     container icmp6 {
-                        description "Enter the icmp6 context";
+                        description "Enter the ICMPv6 context";
 
                         container packet-too-big {
                             description "Enter the packet-too-big context";
@@ -3474,7 +4109,7 @@ submodule nokia-conf-router {
                             leaf log-only {
                                 type boolean;
                                 default "false";
-                                description "Send log warning message at threshold or limit exceed";
+                                description "Generate log entries when limit is reached";
                             }
 
                             leaf threshold {
@@ -5003,6 +5638,168 @@ submodule nokia-conf-router {
 
             container ipsec {
                 description "Enter the ipsec context";
+
+                list security-policy {
+                    key "id";
+                    description "Enter the security-policy list instance";
+
+                    leaf id {
+                        type uint32 {
+                            range "1..32768";
+                        }
+                        description "IPsec security policy ID";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    list entry {
+                        key "entry-id";
+                        description "Enter the entry list instance";
+
+                        leaf entry-id {
+                            type uint32 {
+                                range "1..16";
+                            }
+                            description "IPsec security policy entry ID";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container local-ip {
+                            description "Enter the local-ip context";
+
+                            choice any-or-ip {
+                                default "any";
+                                case any {
+
+                                    leaf any {
+                                        type boolean;
+                                        default "false";
+                                        description "Use any IP address";
+                                    }
+
+                                }
+                                case ip {
+
+                                    leaf address {
+                                        type types-sros:ipv4-prefix;
+                                        description "Destination IPv4 address of the aggregate route";
+                                    }
+
+                                }
+                            }
+                        } // container local-ip
+
+                        container local-ipv6 {
+                            description "Enter the local-ipv6 context";
+
+                            choice any-or-ip {
+                                default "any";
+                                case any {
+
+                                    leaf any {
+                                        type boolean;
+                                        default "false";
+                                        description "Use any IP address";
+                                    }
+
+                                }
+                                case ip {
+
+                                    leaf address {
+                                        type types-sros:ipv6-prefix;
+                                        description "Destination IPv6 address of the aggregate route";
+                                    }
+
+                                }
+                            }
+                        } // container local-ipv6
+
+                        container remote-ip {
+                            description "Enter the remote-ip context";
+
+                            choice any-or-ip {
+                                default "any";
+                                case any {
+
+                                    leaf any {
+                                        type boolean;
+                                        default "false";
+                                        description "Use any IP address";
+                                    }
+
+                                }
+                                case ip {
+
+                                    leaf address {
+                                        type types-sros:ipv4-prefix;
+                                        description "Destination IPv4 address of the aggregate route";
+                                    }
+
+                                }
+                            }
+                        } // container remote-ip
+
+                        container remote-ipv6 {
+                            description "Enter the remote-ipv6 context";
+
+                            choice any-or-ip {
+                                default "any";
+                                case any {
+
+                                    leaf any {
+                                        type boolean;
+                                        default "false";
+                                        description "Use any IP address";
+                                    }
+
+                                }
+                                case ip {
+
+                                    leaf address {
+                                        type types-sros:ipv6-prefix;
+                                        description "Destination IPv6 address of the aggregate route";
+                                    }
+
+                                }
+                            }
+                        } // container remote-ipv6
+
+                    } // list entry
+
+                } // list security-policy
 
                 list multi-chassis-shunt-interface {
                     key "name";

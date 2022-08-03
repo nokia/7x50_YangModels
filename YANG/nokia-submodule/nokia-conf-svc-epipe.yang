@@ -55,7 +55,7 @@ submodule nokia-conf-svc-epipe {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2022-04-22";
+    revision "2022-07-06";
 
     grouping conf-svc-epipe {
         list epipe {
@@ -1788,6 +1788,13 @@ submodule nokia-conf-svc-epipe {
                 container ingress {
                     description "Enter the ingress context";
 
+                    leaf shared-policer {
+                        type leafref {
+                            path "../../../../../qos/shared-policers/policer/shared-policer-name";
+                        }
+                        description "Ingress shared policer";
+                    }
+
                     container qos {
                         description "Enter the qos context";
 
@@ -2404,19 +2411,19 @@ submodule nokia-conf-svc-epipe {
 
                         leaf action {
                             type types-services:vlan-manipulation-ingress-action-type;
-                            description "Action to manipulate the VLAN tag(s) of the packets.";
+                            description "Action to manipulate the VLAN tags of the packets";
                         }
 
                         leaf outer-tag {
                             type types-services:vlan-manipulate-ingress-vlan-type;
                             default "null";
-                            description "Outer VLAN tag to be applied.";
+                            description "Outer VLAN tag to apply";
                         }
 
                         leaf inner-tag {
                             type types-services:vlan-manipulate-ingress-vlan-type;
                             default "null";
-                            description "Inner VLAN tag to be applied in case of QinQ encapsulation.";
+                            description "Inner VLAN tag to apply in case of QinQ encapsulation";
                         }
 
                     } // container vlan-manipulation
@@ -2456,6 +2463,73 @@ submodule nokia-conf-svc-epipe {
                 container egress {
                     description "Enter the egress context";
 
+                    choice agg-rate-or-percent-agg-rate {
+                        default "agg-rate";
+                        case agg-rate {
+
+                            container agg-rate {
+                                description "Enter the agg-rate context";
+
+                                leaf limit-unused-bandwidth {
+                                    type boolean;
+                                    default "false";
+                                    description "Enable aggregate rate overrun protection";
+                                }
+
+                                leaf rate {
+                                    type types-services:agg-rate-rate;
+                                    units "kilobps";
+                                    description "Enforced aggregate rate for all queues";
+                                }
+
+                                leaf queue-frame-based-accounting {
+                                    type boolean;
+                                    default "false";
+                                    description "Enable frame-based accounting on all policers and queues associated with context";
+                                }
+
+                                leaf cir {
+                                    type union {
+                                        type int32 {
+                                            range "0..400000000";
+                                        }
+                                        type enumeration {
+                                            enum "max"                          { value -1; }
+                                        }
+                                    }
+                                    units "kilobps";
+                                    default "0";
+                                    description "Administrative CIR";
+                                }
+
+                            } // container agg-rate
+
+                        }
+                        case percent-agg-rate {
+
+                            container percent-agg-rate {
+                                description "Enter the percent-agg-rate context";
+
+                                leaf pir {
+                                    type decimal64 {
+                                        range "0.01..100.00";
+                                        fraction-digits 2;
+                                    }
+                                    description "PIR percent rate";
+                                }
+
+                                leaf cir {
+                                    type decimal64 {
+                                        range "0.00..100.00";
+                                        fraction-digits 2;
+                                    }
+                                    description "CIR percent rate";
+                                }
+
+                            } // container percent-agg-rate
+
+                        }
+                    }
                     container qos {
                         description "Enter the qos context";
 
@@ -3243,55 +3317,18 @@ submodule nokia-conf-svc-epipe {
 
                     } // container filter
 
-                    container agg-rate {
-                        description "Enter the agg-rate context";
-
-                        leaf limit-unused-bandwidth {
-                            type boolean;
-                            default "false";
-                            description "Enable aggregate rate overrun protection";
-                        }
-
-                        leaf rate {
-                            type types-services:agg-rate-rate;
-                            units "kilobps";
-                            description "Enforced aggregate rate for all queues";
-                        }
-
-                        leaf queue-frame-based-accounting {
-                            type boolean;
-                            default "false";
-                            description "Enable frame-based accounting on all policers and queues associated with context";
-                        }
-
-                        leaf cir {
-                            type union {
-                                type int32 {
-                                    range "0..400000000";
-                                }
-                                type enumeration {
-                                    enum "max"                          { value -1; }
-                                }
-                            }
-                            units "kilobps";
-                            default "0";
-                            description "Administrative CIR";
-                        }
-
-                    } // container agg-rate
-
                     container vlan-manipulation {
                         description "Enter the vlan-manipulation context";
 
                         leaf action {
                             type types-services:vlan-manipulation-egress-action-type;
-                            description "Action to manipulate the VLAN tag(s) of the packets.";
+                            description "Action to manipulate the VLAN tags of the packets";
                         }
 
                         leaf tag {
                             type types-services:vlan-manipulation-egress-vlan-type;
                             default "null";
-                            description "VLAN tag to be applied by action.";
+                            description "VLAN tag to be applied by action";
                         }
 
                     } // container vlan-manipulation
@@ -4372,6 +4409,12 @@ submodule nokia-conf-svc-epipe {
                             description "Enable flexible algorithm fallback";
                         }
 
+                        leaf weighted-ecmp {
+                            type boolean;
+                            default "false";
+                            description "Allow weighted load balancing";
+                        }
+
                         container resolution-filter {
                             description "Enter the resolution-filter context";
 
@@ -4551,6 +4594,12 @@ submodule nokia-conf-svc-epipe {
                         sros-ext:auto-restart-to-modify;
                         default "false";
                         description "Auto-derive the BGP EVPN route target";
+                    }
+
+                    leaf resolution {
+                        type types-sros:srv6-route-resolution;
+                        default "route-table";
+                        description "Resolution options for routes";
                     }
 
                     leaf-list apply-groups {

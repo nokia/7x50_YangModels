@@ -51,7 +51,7 @@ submodule nokia-conf-port {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2022-06-06";
+    revision "2022-06-14";
 
     grouping conf-port {
         list port {
@@ -90,6 +90,13 @@ submodule nokia-conf-port {
                     path "../../service/oper-group/name";
                 }
                 description "Operational group ID";
+            }
+
+            leaf monitor-oper-group {
+                type leafref {
+                    path "../../service/oper-group/name";
+                }
+                description "Operational group to monitor";
             }
 
             leaf-list apply-groups {
@@ -222,6 +229,123 @@ submodule nokia-conf-port {
                 }
 
             } // container transceiver
+
+            container scheduler {
+                description "Enable the scheduler context";
+
+                leaf mode {
+                    type enumeration {
+                        enum "vlan-qos"                     { value 1; }
+                    }
+                    description "Specify the mode";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                list vlan-qos-policy {
+                    when "../mode = 'vlan-qos'";
+                    key "policy-name";
+                    description "Enter the vlan-qos-policy list instance";
+
+                    leaf policy-name {
+                        type leafref {
+                            path "../../../../qos/vlan-qos-policy/vlan-qos-policy-name";
+                        }
+                        description "Vlan QOS policy name";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    choice egress-queue-agg-rate {
+                        default "agg-rate";
+                        case agg-rate {
+
+                            container agg-rate {
+                                description "Enter the agg-rate context";
+
+                                leaf rate {
+                                    type types-services:agg-rate-rate;
+                                    units "kilobps";
+                                    description "Maximum total rate of all egress queues";
+                                }
+
+                                leaf cir {
+                                    type union {
+                                        type int32 {
+                                            range "0..400000000";
+                                        }
+                                        type enumeration {
+                                            enum "max"                          { value -1; }
+                                        }
+                                    }
+                                    units "kilobps";
+                                    default "0";
+                                    description "Administrative CIR";
+                                }
+
+                            } // container agg-rate
+
+                        }
+                        case percent-agg-rate {
+
+                            container percent-agg-rate {
+                                description "Enter the percent-agg-rate context";
+
+                                leaf pir {
+                                    type decimal64 {
+                                        range "0.01..100.00";
+                                        fraction-digits 2;
+                                    }
+                                    description "PIR percent rate";
+                                }
+
+                                leaf cir {
+                                    type decimal64 {
+                                        range "0.00..100.00";
+                                        fraction-digits 2;
+                                    }
+                                    description "CIR percent rate";
+                                }
+
+                            } // container percent-agg-rate
+
+                        }
+                    }
+                } // list vlan-qos-policy
+
+            } // container scheduler
 
             uses conf-port-access;
             uses conf-port-connector;

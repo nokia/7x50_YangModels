@@ -66,7 +66,7 @@ submodule nokia-conf-svc-vpls {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2022-04-29";
+    revision "2022-07-15";
 
     grouping conf-svc-vpls {
         list vpls {
@@ -838,6 +838,12 @@ submodule nokia-conf-svc-vpls {
                     description "Maximum number of learned and static entries allowed in the proxy table of this service";
                 }
 
+                leaf process-arp-probes {
+                    type boolean;
+                    default "true";
+                    description "Enable replies to DAD ARP probes";
+                }
+
                 leaf-list apply-groups {
                     type leafref {
                         path "../../../../groups/group/name";
@@ -1078,6 +1084,12 @@ submodule nokia-conf-svc-vpls {
                     }
                     default "250";
                     description "Maximum number of learned and static entries allowed in the proxy table of this service";
+                }
+
+                leaf process-dad-neighbor-solicitations {
+                    type boolean;
+                    default "true";
+                    description "Enable replies to DAD neighbor solicitations";
                 }
 
                 leaf-list apply-groups {
@@ -2179,6 +2191,100 @@ submodule nokia-conf-svc-vpls {
 
             } // container spbm-control-vpls
 
+            list segment-routing-v6 {
+                when "not(../pbb-type = 'b-vpls') and not(../pbb-type = 'i-vpls') and ../m-vpls = 'false' and ../etree = 'false' and not(../routed-vpls)";
+                key "instance";
+                max-elements 1;
+                description "Enter the segment-routing-v6 list instance";
+
+                leaf instance {
+                    type types-services:vpls-srv6-instance;
+                    description "Segment routing v6 instance";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                list locator {
+                    key "locator-name";
+                    max-elements 1;
+                    description "Enter the locator list instance";
+
+                    leaf locator-name {
+                        type leafref {
+                            path "../../../../../router/segment-routing/segment-routing-v6/locator/locator-name";
+                        }
+                        description "SRv6 locator name";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container function {
+                        description "Enter the function context";
+
+                        container end-dt2u {
+                            presence "Enable the end-dt2u context";
+                            description "Enable the end-dt2u context";
+
+                            leaf value {
+                                type uint32 {
+                                    range "1..1048575";
+                                }
+                                description "SRv6 function value";
+                            }
+
+                        } // container end-dt2u
+
+                        container end-dt2m {
+                            presence "Enable the end-dt2m context";
+                            description "Enable the end-dt2m context";
+
+                            leaf value {
+                                type uint32 {
+                                    range "1..1048575";
+                                }
+                                description "SRv6 function value";
+                            }
+
+                        } // container end-dt2m
+
+                    } // container function
+
+                } // list locator
+
+            } // list segment-routing-v6
+
             container stp {
                 description "Enter the stp context";
 
@@ -2891,6 +2997,44 @@ submodule nokia-conf-svc-vpls {
                             description "Domain ID of received BGP route before readvertisement";
                         }
 
+                        container link-bandwidth {
+                            description "Enter the link-bandwidth context";
+
+                            leaf weighted-ecmp {
+                                type boolean;
+                                default "false";
+                                description "Enable weighted ECMP";
+                            }
+
+                            container advertise {
+                                presence "Enable the advertise context";
+                                description "Enable the advertise context";
+
+                                leaf max-dynamic-weight {
+                                    type uint32 {
+                                        range "1..128";
+                                    }
+                                    default "128";
+                                    description "Maximum weight of the advertised evpn-iff route";
+                                }
+
+                                leaf weight {
+                                    type union {
+                                        type uint32 {
+                                            range "1..128";
+                                        }
+                                        type enumeration {
+                                            enum "dynamic"                      { value 0; }
+                                        }
+                                    }
+                                    default "dynamic";
+                                    description "Weight of the advertised evpn-iff route";
+                                }
+
+                            } // container advertise
+
+                        } // container link-bandwidth
+
                     } // container ip-prefix
 
                     container incl-mcast {
@@ -3022,6 +3166,164 @@ submodule nokia-conf-svc-vpls {
                     } // list range
 
                 } // container isid-route-target
+
+                list segment-routing-v6 {
+                    when "not(../../pbb-type = 'b-vpls') and not(../../pbb-type = 'i-vpls') and ../../m-vpls = 'false' and ../../etree = 'false' and not(../../routed-vpls)";
+                    key "bgp-instance";
+                    max-elements 1;
+                    description "Enter the segment-routing-v6 list instance";
+
+                    leaf bgp-instance {
+                        type int32 {
+                            range "1..2";
+                        }
+                        description "BGP instance";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of segment routing over IPv6";
+                    }
+
+                    leaf default-route-tag {
+                        type types-services:one-byte-value;
+                        sros-ext:auto-restart-to-modify;
+                        description "Default route tag";
+                    }
+
+                    leaf oper-group {
+                        type leafref {
+                            path "../../../../oper-group/name";
+                        }
+                        description "Operational group";
+                    }
+
+                    leaf ecmp {
+                        type types-services:ecmp-value;
+                        default "1";
+                        description "Maximum ECMP value configured on the service";
+                    }
+
+                    leaf force-vc-forwarding {
+                        type enumeration {
+                            enum "vlan"                         { value 1; }
+                        }
+                        description "Datapath forwarding to force vlan-vc-type";
+                    }
+
+                    leaf evi-three-byte-auto-rt {
+                        type boolean;
+                        sros-ext:auto-restart-to-modify;
+                        default "false";
+                        description "Auto-derive the BGP EVPN route target";
+                    }
+
+                    leaf split-horizon-group {
+                        type leafref {
+                            path "../../../../vpls/split-horizon-group/shg-name";
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        description "Split horizon group";
+                    }
+
+                    leaf source-address {
+                        type types-sros:ipv6-unicast-address;
+                        sros-ext:auto-restart-to-modify;
+                        description "Source IPv6 address";
+                    }
+
+                    leaf resolution {
+                        type types-sros:srv6-route-resolution;
+                        default "route-table";
+                        description "Resolution options for routes";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container srv6 {
+                        description "Enter the srv6 context";
+
+                        leaf instance {
+                            type leafref {
+                                path "../../../../segment-routing-v6/instance";
+                            }
+                            sros-ext:immutable;
+                            description "Segment Routing SRv6 instance";
+                        }
+
+                        leaf default-locator {
+                            type leafref {
+                                path "../../../../segment-routing-v6[instance=current()/../instance]/locator/locator-name";
+                            }
+                            sros-ext:immutable;
+                            description "Default route locator";
+                        }
+
+                    } // container srv6
+
+                    container route-next-hop {
+                        description "Enter the route-next-hop context";
+
+                        choice tag {
+                            default "ipv4";
+                            case ipv4 {
+
+                                leaf system-ipv4 {
+                                    type empty;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "System IPv4 address for service EVPN route next hop";
+                                }
+
+                            }
+                            case ipv6 {
+
+                                leaf system-ipv6 {
+                                    type empty;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "System IPv6 address for service EVPN route next hop";
+                                }
+
+                            }
+                            case explicit {
+
+                                leaf ip-address {
+                                    type types-sros:ip-address;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "IP address of the next-hop for the service EVPN route";
+                                }
+
+                            }
+                        }
+                    } // container route-next-hop
+
+                    container fdb {
+                        description "Enter the fdb context";
+
+                        leaf protected-src-mac-violation-action {
+                            type types-services:protected-src-mac-violation-df-action;
+                            description "Relearn request for a protected MAC is received action";
+                        }
+
+                    } // container fdb
+
+                } // list segment-routing-v6
 
                 list vxlan {
                     key "bgp-instance";
@@ -3293,6 +3595,12 @@ submodule nokia-conf-svc-vpls {
                             description "Enable flexible algorithm fallback";
                         }
 
+                        leaf weighted-ecmp {
+                            type boolean;
+                            default "false";
+                            description "Allow weighted load balancing";
+                        }
+
                         container resolution-filter {
                             description "Enter the resolution-filter context";
 
@@ -3406,7 +3714,7 @@ submodule nokia-conf-svc-vpls {
 
                         leaf protected-src-mac-violation-action {
                             type types-services:protected-src-mac-violation-df-action;
-                            description "Action when a relearn request for a protected MAC is received";
+                            description "Relearn request for a protected MAC is received action";
                         }
 
                     } // container fdb
@@ -7290,6 +7598,13 @@ submodule nokia-conf-svc-vpls {
                 container ingress {
                     description "Enter the ingress context";
 
+                    leaf shared-policer {
+                        type leafref {
+                            path "../../../../../qos/shared-policers/policer/shared-policer-name";
+                        }
+                        description "Ingress shared policer";
+                    }
+
                     container qos {
                         description "Enter the qos context";
 
@@ -7890,19 +8205,19 @@ submodule nokia-conf-svc-vpls {
 
                         leaf action {
                             type types-services:vlan-manipulation-ingress-action-type;
-                            description "Action to manipulate the VLAN tag(s) of the packets.";
+                            description "Action to manipulate the VLAN tags of the packets";
                         }
 
                         leaf outer-tag {
                             type types-services:vlan-manipulate-ingress-vlan-type;
                             default "null";
-                            description "Outer VLAN tag to be applied.";
+                            description "Outer VLAN tag to apply";
                         }
 
                         leaf inner-tag {
                             type types-services:vlan-manipulate-ingress-vlan-type;
                             default "null";
-                            description "Inner VLAN tag to be applied in case of QinQ encapsulation.";
+                            description "Inner VLAN tag to apply in case of QinQ encapsulation";
                         }
 
                     } // container vlan-manipulation
@@ -7947,6 +8262,73 @@ submodule nokia-conf-svc-vpls {
                         description "Destination MAC overwrite for unicast";
                     }
 
+                    choice agg-rate-or-percent-agg-rate {
+                        default "agg-rate";
+                        case agg-rate {
+
+                            container agg-rate {
+                                description "Enter the agg-rate context";
+
+                                leaf limit-unused-bandwidth {
+                                    type boolean;
+                                    default "false";
+                                    description "Enable aggregate rate overrun protection";
+                                }
+
+                                leaf rate {
+                                    type types-services:agg-rate-rate;
+                                    units "kilobps";
+                                    description "Enforced aggregate rate for all queues";
+                                }
+
+                                leaf queue-frame-based-accounting {
+                                    type boolean;
+                                    default "false";
+                                    description "Enable frame-based accounting on all policers and queues associated with context";
+                                }
+
+                                leaf cir {
+                                    type union {
+                                        type int32 {
+                                            range "0..400000000";
+                                        }
+                                        type enumeration {
+                                            enum "max"                          { value -1; }
+                                        }
+                                    }
+                                    units "kilobps";
+                                    default "0";
+                                    description "Administrative CIR";
+                                }
+
+                            } // container agg-rate
+
+                        }
+                        case percent-agg-rate {
+
+                            container percent-agg-rate {
+                                description "Enter the percent-agg-rate context";
+
+                                leaf pir {
+                                    type decimal64 {
+                                        range "0.01..100.00";
+                                        fraction-digits 2;
+                                    }
+                                    description "PIR percent rate";
+                                }
+
+                                leaf cir {
+                                    type decimal64 {
+                                        range "0.00..100.00";
+                                        fraction-digits 2;
+                                    }
+                                    description "CIR percent rate";
+                                }
+
+                            } // container percent-agg-rate
+
+                        }
+                    }
                     container qos {
                         description "Enter the qos context";
 
@@ -8734,55 +9116,18 @@ submodule nokia-conf-svc-vpls {
 
                     } // container filter
 
-                    container agg-rate {
-                        description "Enter the agg-rate context";
-
-                        leaf limit-unused-bandwidth {
-                            type boolean;
-                            default "false";
-                            description "Enable aggregate rate overrun protection";
-                        }
-
-                        leaf rate {
-                            type types-services:agg-rate-rate;
-                            units "kilobps";
-                            description "Enforced aggregate rate for all queues";
-                        }
-
-                        leaf queue-frame-based-accounting {
-                            type boolean;
-                            default "false";
-                            description "Enable frame-based accounting on all policers and queues associated with context";
-                        }
-
-                        leaf cir {
-                            type union {
-                                type int32 {
-                                    range "0..400000000";
-                                }
-                                type enumeration {
-                                    enum "max"                          { value -1; }
-                                }
-                            }
-                            units "kilobps";
-                            default "0";
-                            description "Administrative CIR";
-                        }
-
-                    } // container agg-rate
-
                     container vlan-manipulation {
                         description "Enter the vlan-manipulation context";
 
                         leaf action {
                             type types-services:vlan-manipulation-egress-action-type;
-                            description "Action to manipulate the VLAN tag(s) of the packets.";
+                            description "Action to manipulate the VLAN tags of the packets";
                         }
 
                         leaf tag {
                             type types-services:vlan-manipulation-egress-vlan-type;
                             default "null";
-                            description "VLAN tag to be applied by action.";
+                            description "VLAN tag to be applied by action";
                         }
 
                     } // container vlan-manipulation
@@ -11932,7 +12277,7 @@ submodule nokia-conf-svc-vpls {
 
             container provider-tunnel {
                 presence "Enable the provider-tunnel context";
-                description "Enable the provider-tunnel context";
+                description "Enter the provider-tunnel context";
 
                 leaf-list apply-groups {
                     type leafref {
