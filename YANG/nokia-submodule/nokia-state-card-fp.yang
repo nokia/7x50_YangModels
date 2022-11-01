@@ -40,7 +40,7 @@ submodule nokia-state-card-fp {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2022-05-09";
+    revision "2022-10-12";
 
     grouping state-card-fp {
         list fp {
@@ -99,7 +99,67 @@ submodule nokia-state-card-fp {
                             description "Total number of DRAM BDBs on the core";
                         }
 
+                        container bandwidth {
+                            description "Enter the bandwidth context";
+
+                            leaf max-consecutive-poll-blocked {
+                                type yang:counter64;
+                                description "Maximum consecutive FP polls with external buffer memory access attempt blocks";
+                            }
+
+                            leaf packet-rejects-last-poll {
+                                type yang:counter64;
+                                description "Failed write attempts to external buffer memory due to bandwidth exhaustion";
+                            }
+
+                            leaf total-packet-rejects {
+                                type yang:counter64;
+                                description "Total failed write attempts to external buffer memory due to bandwidth exhaustion";
+                            }
+
+                        } // container bandwidth
+
                     } // container dram
+
+                    container mesh-fabric-bandwidth {
+                        description "Enter the mesh-fabric-bandwidth context";
+
+                        leaf assert-congestion-fp1 {
+                            type yang:counter64;
+                            description "Drops due to congestion in FP1 to specified FP direction";
+                        }
+
+                        leaf assert-congestion-fp2 {
+                            type yang:counter64;
+                            description "Drops due to congestion in FP2 to specified FP direction";
+                        }
+
+                        leaf assert-congestion-fp3 {
+                            type yang:counter64;
+                            description "Drops due to congestion in FP3 to specified FP direction";
+                        }
+
+                    } // container mesh-fabric-bandwidth
+
+                    container processing-pipeline {
+                        description "Enter the processing-pipeline context";
+
+                        leaf max-consecutive-poll-nif-prd-drops {
+                            type yang:counter64;
+                            description "Maximum consecutive FP polls with packet drops due to processing capacity exhaustion";
+                        }
+
+                        leaf nif-prd-drops-last-poll {
+                            type yang:counter64;
+                            description "Number of packet drops due to processing capacity exhaustion, since last poll";
+                        }
+
+                        leaf total-nif-prd-drops {
+                            type yang:counter64;
+                            description "Total packet drops due to processing capacity exhaustion";
+                        }
+
+                    } // container processing-pipeline
 
                     container sram {
                         description "Enter the sram context";
@@ -2015,6 +2075,29 @@ submodule nokia-state-card-fp {
 
             } // container ingress
 
+            list oversubscribed-resource {
+                key "resource-type";
+                description "Enter the oversubscribed-resource list instance";
+
+                leaf resource-type {
+                    type enumeration {
+                        enum "sram-buf"                     { value 1; }
+                        enum "sram-pdb"                     { value 2; }
+                        enum "dram-bdb"                     { value 3; }
+                        enum "dram-bandwidth"               { value 4; }
+                        enum "core-process-pipeline"        { value 5; }
+                        enum "mesh-fabric-bandwidth"        { value 6; }
+                    }
+                    description "Specifies the FP resource which may be oversubscribed.";
+                }
+
+                leaf detected {
+                    type uint32;
+                    description "Indicates the number of times it has been detected that the resource has been oversubscribed.";
+                }
+
+            } // list oversubscribed-resource
+
             container statistics {
                 description "Enter the statistics context";
 
@@ -2145,6 +2228,18 @@ submodule nokia-state-card-fp {
 
             container resource-usage {
                 description "Enter the resource-usage context";
+
+                leaf resource-oversubscribed {
+                    type bits {
+                        bit sram-buf                       { position 0; }
+                        bit sram-pdb                       { position 1; }
+                        bit dram-bdb                       { position 2; }
+                        bit dram-bandwidth                 { position 3; }
+                        bit core-processing-pipeline       { position 4; }
+                        bit mesh-fabric-bandwidth          { position 5; }
+                    }
+                    description "Indicates which resources are oversubscribed on this FP. When no bits are set, none of the FP's resources are exhausted.";
+                }
 
                 container sap-ingress-qos-policies {
                     description "Enter the sap-ingress-qos-policies context";
@@ -3145,6 +3240,46 @@ submodule nokia-state-card-fp {
                     }
 
                 } // container hw-aggregate-shaper-schedulers
+
+                container hw-aggregate-shaper-qset-size {
+                    description "Enter the hw-aggregate-shaper-qset-size context";
+
+                    leaf total {
+                        type yang:counter32;
+                        description "The total number of resources supported on this FP.";
+                    }
+
+                    leaf allocated {
+                        type yang:counter32;
+                        description "The total number of resources that are currently allocated on this FP.";
+                    }
+
+                    leaf free {
+                        type yang:counter32;
+                        description "The total number of resources that are remaining free on this FP.";
+                    }
+
+                } // container hw-aggregate-shaper-qset-size
+
+                container hw-aggregate-shaper-def-qset-size {
+                    description "Enter the hw-aggregate-shaper-def-qset-size context";
+
+                    leaf saps {
+                        type uint32;
+                        description "The default queue set size for this sap on this FP when hardware aggregate shaper is enabled";
+                    }
+
+                    leaf subscribers {
+                        type uint32;
+                        description "The default queue set size for this subscribers on this FP when hardware aggregate shaper is enabled";
+                    }
+
+                    leaf queue-groups {
+                        type uint32;
+                        description "The default queue set size for this queue groups on this FP when hardware aggregate shaper is enabled";
+                    }
+
+                } // container hw-aggregate-shaper-def-qset-size
 
                 container fdb {
                     description "Enter the fdb context";

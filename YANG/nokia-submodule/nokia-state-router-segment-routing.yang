@@ -40,7 +40,7 @@ submodule nokia-state-router-segment-routing {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2022-06-06";
+    revision "2022-10-14";
 
     grouping state-router-segment-routing {
         container segment-routing {
@@ -143,11 +143,6 @@ submodule nokia-state-router-segment-routing {
                                 description "Binding SID index";
                             }
 
-                            leaf srv6-oper-binding-sid {
-                                type types-sros:ipv6-address;
-                                description "Operational SRv6 Binding SID IP address";
-                            }
-
                             choice binding-sid-type {
                                 case local-binding-sid {
 
@@ -248,6 +243,7 @@ submodule nokia-state-router-segment-routing {
                             enum "sr-failure"                   { value 5; }
                             enum "route-audit"                  { value 6; }
                             enum "admin-no-shut"                { value 7; }
+                            enum "bsid-failure"                 { value 8; }
                         }
                         description "Specifies the reason for the last re-evaluation of the segment routing path.";
                     }
@@ -418,7 +414,7 @@ submodule nokia-state-router-segment-routing {
 
                     leaf segment-index {
                         type uint32 {
-                            range "1..11";
+                            range "1..32";
                         }
                         description "Index into identifying a particular segment.";
                     }
@@ -459,7 +455,54 @@ submodule nokia-state-router-segment-routing {
                         description "SRv6 locator name";
                     }
 
+                    leaf oper-state {
+                        type types-sros:oper-state;
+                        description "Locator operational state.";
+                    }
+
+                    leaf down-reason {
+                        type types-sros:srv6-error-status;
+                        description "Locator down reason.";
+                    }
+
                 } // list locator
+
+                container micro-segment {
+                    description "Enter the micro-segment context";
+
+                    list block {
+                        key "block-name";
+                        description "Enter the block list instance";
+
+                        leaf block-name {
+                            type types-sros:named-item-64;
+                            description "Micro-SID block name";
+                        }
+
+                    } // list block
+
+                } // container micro-segment
+
+                list micro-segment-locator {
+                    key "locator-name";
+                    description "Enter the micro-segment-locator list instance";
+
+                    leaf locator-name {
+                        type types-sros:named-item-64;
+                        description "SRv6 locator name";
+                    }
+
+                    leaf oper-state {
+                        type types-sros:oper-state;
+                        description "Locator operational state.";
+                    }
+
+                    leaf down-reason {
+                        type types-sros:srv6-error-status;
+                        description "Locator down reason.";
+                    }
+
+                } // list micro-segment-locator
 
                 container base-routing-instance {
                     description "Enter the base-routing-instance context";
@@ -663,6 +706,178 @@ submodule nokia-state-router-segment-routing {
                         } // container function
 
                     } // list locator
+
+                    list micro-segment-locator {
+                        key "locator-name";
+                        description "Enter the micro-segment-locator list instance";
+
+                        leaf locator-name {
+                            type leafref {
+                                path "../../../../../../router/segment-routing/segment-routing-v6/micro-segment-locator/locator-name";
+                            }
+                            description "SRv6 micro-segment locator name";
+                        }
+
+                        container function {
+                            description "Enter the function context";
+
+                            list ua {
+                                key "value";
+                                description "Enter the ua list instance";
+
+                                leaf value {
+                                    type uint32 {
+                                        range "1..1048575";
+                                    }
+                                    description "SRv6 End SID function value";
+                                }
+
+                                leaf oper-value {
+                                    type uint32;
+                                    description "SRv6 function value.";
+                                }
+
+                                leaf status {
+                                    type types-sros:srv6-error-status;
+                                    description "specifies the current state of this function.";
+                                }
+
+                                leaf segment-identifier {
+                                    type types-sros:ipv6-address;
+                                    description "address used in the SRv6 packet.";
+                                }
+
+                            } // list ua
+
+                            list ua-dynamic {
+                                key "value";
+                                description "Enter the ua-dynamic list instance";
+
+                                leaf value {
+                                    type uint32;
+                                    description "SRv6 function value";
+                                }
+
+                                leaf segment-identifier {
+                                    type types-sros:ipv6-address;
+                                    description "address used in the SRv6 packet.";
+                                }
+
+                                leaf srh-mode {
+                                    type enumeration {
+                                        enum "psp"                          { value 1; }
+                                        enum "usp"                          { value 2; }
+                                    }
+                                    description "Indicates the srh-mode.";
+                                }
+
+                                leaf protection {
+                                    type enumeration {
+                                        enum "unprotected"                  { value 0; }
+                                        enum "protected"                    { value 1; }
+                                    }
+                                    description "Indicates whether the adjacency is protected or not.";
+                                }
+
+                                leaf interface-name {
+                                    type types-sros:named-item;
+                                    description "Indicates the interface for the end.x function.";
+                                }
+
+                                leaf instance-id {
+                                    type uint32;
+                                    description "Indicates the instance-id for the end.x function.";
+                                }
+
+                                container isis {
+                                    description "Enter the isis context";
+
+                                    leaf sid-level {
+                                        type enumeration {
+                                            enum "isisl1"                       { value 1; }
+                                            enum "isisl2"                       { value 2; }
+                                            enum "isisl1l2"                     { value 3; }
+                                        }
+                                        description "Sid level for end-x function";
+                                    }
+
+                                    leaf mac-address {
+                                        type yang:mac-address;
+                                        description "MAC address for end-x function";
+                                    }
+
+                                    leaf neighbor-system-id {
+                                        type types-igp:system-id;
+                                        description "Indicates the neighbor system-id for end.x function";
+                                    }
+
+                                } // container isis
+
+                            } // list ua-dynamic
+
+                            container udt4 {
+                                description "Enter the udt4 context";
+
+                                leaf oper-value {
+                                    type uint32;
+                                    description "SRv6 function value.";
+                                }
+
+                                leaf status {
+                                    type types-sros:srv6-error-status;
+                                    description "specifies the current state of this function.";
+                                }
+
+                                leaf segment-identifier {
+                                    type types-sros:ipv6-address;
+                                    description "address used in the SRv6 packet.";
+                                }
+
+                            } // container udt4
+
+                            container udt6 {
+                                description "Enter the udt6 context";
+
+                                leaf oper-value {
+                                    type uint32;
+                                    description "SRv6 function value.";
+                                }
+
+                                leaf status {
+                                    type types-sros:srv6-error-status;
+                                    description "specifies the current state of this function.";
+                                }
+
+                                leaf segment-identifier {
+                                    type types-sros:ipv6-address;
+                                    description "address used in the SRv6 packet.";
+                                }
+
+                            } // container udt6
+
+                            container udt46 {
+                                description "Enter the udt46 context";
+
+                                leaf oper-value {
+                                    type uint32;
+                                    description "SRv6 function value.";
+                                }
+
+                                leaf status {
+                                    type types-sros:srv6-error-status;
+                                    description "specifies the current state of this function.";
+                                }
+
+                                leaf segment-identifier {
+                                    type types-sros:ipv6-address;
+                                    description "address used in the SRv6 packet.";
+                                }
+
+                            } // container udt46
+
+                        } // container function
+
+                    } // list micro-segment-locator
 
                 } // container base-routing-instance
 

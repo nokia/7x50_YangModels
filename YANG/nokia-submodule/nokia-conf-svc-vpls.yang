@@ -22,6 +22,7 @@ submodule nokia-conf-svc-vpls {
     include nokia-conf-eth-cfm;
     include nokia-conf-filter;
     include nokia-conf-groups;
+    include nokia-conf-isa;
     include nokia-conf-log;
     include nokia-conf-mcast-cac;
     include nokia-conf-mcast-mgmt;
@@ -66,7 +67,7 @@ submodule nokia-conf-svc-vpls {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2022-08-29";
+    revision "2022-10-14";
 
     grouping conf-svc-vpls {
         list vpls {
@@ -2283,6 +2284,69 @@ submodule nokia-conf-svc-vpls {
 
                 } // list locator
 
+                list micro-segment-locator {
+                    key "locator-name";
+                    max-elements 1;
+                    description "Enter the micro-segment-locator list instance";
+
+                    leaf locator-name {
+                        type leafref {
+                            path "../../../../../router/segment-routing/segment-routing-v6/micro-segment-locator/locator-name";
+                        }
+                        description "Micro-segment SRv6 locator name";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container function {
+                        description "Enter the function context";
+
+                        container udt2m {
+                            presence "Enable the udt2m context";
+                            description "Enable the udt2m context";
+
+                            leaf value {
+                                type uint32 {
+                                    range "1..1048575";
+                                }
+                                description "SRv6 function value";
+                            }
+
+                        } // container udt2m
+
+                        container udt2u {
+                            presence "Enable the udt2u context";
+                            description "Enable the udt2u context";
+
+                            leaf value {
+                                type uint32 {
+                                    range "1..1048575";
+                                }
+                                description "SRv6 function value";
+                            }
+
+                        } // container udt2u
+
+                    } // container function
+
+                } // list micro-segment-locator
+
             } // list segment-routing-v6
 
             container stp {
@@ -3208,6 +3272,8 @@ submodule nokia-conf-svc-vpls {
                     leaf force-vc-forwarding {
                         type enumeration {
                             enum "vlan"                         { value 1; }
+                            enum "qinq-c-tag-c-tag"             { value 2; }
+                            enum "qinq-s-tag-c-tag"             { value 3; }
                         }
                         description "Datapath forwarding to force vlan-vc-type";
                     }
@@ -3237,6 +3303,16 @@ submodule nokia-conf-svc-vpls {
                         type types-sros:srv6-route-resolution;
                         default "route-table";
                         description "Resolution options for routes";
+                    }
+
+                    leaf mh-mode {
+                        type enumeration {
+                            enum "access"                       { value 0; }
+                            enum "network"                      { value 1; }
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        default "network";
+                        description "Multihoming mode";
                     }
 
                     leaf-list apply-groups {
@@ -3269,9 +3345,7 @@ submodule nokia-conf-svc-vpls {
                         }
 
                         leaf default-locator {
-                            type leafref {
-                                path "../../../../segment-routing-v6[instance=current()/../instance]/locator/locator-name";
-                            }
+                            type string;
                             sros-ext:immutable;
                             description "Default route locator";
                         }
@@ -3726,7 +3800,7 @@ submodule nokia-conf-svc-vpls {
             container bgp-vpls {
                 when "not(../pbb-type = 'i-vpls') and ../etree = 'false'";
                 presence "Enable the bgp-vpls context";
-                description "Enable the bgp-vpls context";
+                description "Enter the bgp-vpls context";
 
                 leaf admin-state {
                     type types-sros:admin-state;
@@ -3857,6 +3931,63 @@ submodule nokia-conf-svc-vpls {
                     }
 
                 } // container fdb
+
+                list mc-endpoint {
+                    key "mc-ep-id";
+                    max-elements 1;
+                    description "Enter the MC-EP context";
+
+                    leaf mc-ep-id {
+                        type uint32 {
+                            range "1..4294967295";
+                        }
+                        description "MC-EP ID";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container mc-ep-peer {
+                        description "Enter the mc-ep-peer context";
+
+                        choice peer {
+                            case address {
+
+                                leaf peer-address {
+                                    type leafref {
+                                        path "../../../../../../redundancy/multi-chassis/peer/ip-address";
+                                    }
+                                    description "IP address of the MC-EP peer";
+                                }
+
+                            }
+                            case name {
+
+                                leaf name {
+                                    type types-sros:named-item;
+                                    description "Name of the MC-EP peer";
+                                }
+
+                            }
+                        }
+                    } // container mc-ep-peer
+
+                } // list mc-endpoint
 
             } // list endpoint
 
@@ -8197,6 +8328,21 @@ submodule nokia-conf-svc-vpls {
                                 }
 
                             }
+                            case push-qinq-vlan {
+
+                                leaf s-tag {
+                                    type int32 {
+                                        range "0..4094";
+                                    }
+                                    description "Outer ingress VLAN translation for two service delimiting VLAN values";
+                                }
+
+                                leaf c-tag {
+                                    type types-services:qinq-vlan-translation-ctag;
+                                    description "Inner ingress vlan translation for two service delimiting vlan values";
+                                }
+
+                            }
                         }
                     } // container qtag-manipulation
 
@@ -8299,6 +8445,25 @@ submodule nokia-conf-svc-vpls {
                                     units "kilobps";
                                     default "0";
                                     description "Administrative CIR";
+                                }
+
+                                leaf burst-limit {
+                                    type union {
+                                        type types-qos:bytes {
+                                            range "1..14000000";
+                                        }
+                                        type enumeration {
+                                            enum "auto"                         { value -1; }
+                                        }
+                                    }
+                                    default "auto";
+                                    description "Shaping burst size when an aggregate shaper is used";
+                                }
+
+                                leaf adaptation-rule {
+                                    type types-qos:adaptation-rule;
+                                    default "closest";
+                                    description "Adaptation rule to compute the operational PIR value when an aggregate shaper is used";
                                 }
 
                             } // container agg-rate
@@ -12433,6 +12598,23 @@ submodule nokia-conf-svc-vpls {
                 } // list entry
 
             } // container isid-policy
+
+            container network {
+                description "Enter the network context";
+
+                container ingress {
+                    description "Enter the ingress context";
+
+                    leaf classification-override {
+                        type leafref {
+                            path "../../../../../qos/ingress-classification-policy/ingress-classification-policy-name";
+                        }
+                        description "Short-pipe mode for CoS propagation";
+                    }
+
+                } // container ingress
+
+            } // container network
 
         } // list vpls
 

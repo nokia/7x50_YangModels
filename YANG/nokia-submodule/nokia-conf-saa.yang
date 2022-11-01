@@ -7,6 +7,7 @@ submodule nokia-conf-saa {
     import ietf-yang-types                { prefix "yang"; }
     import nokia-sros-yang-extensions     { prefix "sros-ext"; }
     import nokia-types-oam                { prefix "types-oam"; }
+    import nokia-types-qos                { prefix "types-qos"; }
     import nokia-types-sros               { prefix "types-sros"; }
 
     include nokia-conf-groups;
@@ -40,7 +41,7 @@ submodule nokia-conf-saa {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2022-06-07";
+    revision "2022-10-12";
 
     grouping conf-saa {
         container saa {
@@ -70,7 +71,7 @@ submodule nokia-conf-saa {
 
                 leaf owner-name {
                     type types-sros:named-item;
-                    description "Owner name of the SAA operation";
+                    description "Optional owner name of the SAA operation";
                 }
 
                 leaf test {
@@ -275,6 +276,133 @@ submodule nokia-conf-saa {
                     description "Enter the type context";
 
                     choice saa-types {
+                        case saa-dns {
+
+                            container dns {
+                                presence "Enable the dns context";
+                                description "Enable the dns context";
+
+                                leaf target-address {
+                                    type types-sros:string-not-all-spaces {
+                                        length "1..255";
+                                    }
+                                    mandatory true;
+                                    description "DNS name to be resolved to an IP address";
+                                }
+
+                                leaf name-server {
+                                    type types-sros:ip-address;
+                                    mandatory true;
+                                    description "IP address of the DNS name server used for the test";
+                                }
+
+                                leaf count {
+                                    type uint32 {
+                                        range "1..100";
+                                    }
+                                    units "packets";
+                                    default "1";
+                                    description "Number of messages to send in a sample window";
+                                }
+
+                                leaf interval {
+                                    type uint32 {
+                                        range "1..10";
+                                    }
+                                    units "seconds";
+                                    default "1";
+                                    description "Minimum time before the next message request is sent";
+                                }
+
+                                leaf source-address {
+                                    type types-sros:ip-address;
+                                    description "IP address on the local system";
+                                }
+
+                                leaf timeout {
+                                    type uint32 {
+                                        range "1..120";
+                                    }
+                                    units "seconds";
+                                    default "5";
+                                    description "Maximum time to wait for a reply message";
+                                }
+
+                                leaf router-instance {
+                                    type string;
+                                    default "_Base_and_management";
+                                    description "Router name or VPRN service name";
+                                }
+
+                                leaf record-type {
+                                    type enumeration {
+                                        enum "ipv4-a-record"                { value 1; }
+                                        enum "ipv6-aaaa-record"             { value 2; }
+                                    }
+                                    default "ipv4-a-record";
+                                    description "Record type";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                leaf-list apply-groups-exclude {
+                                    type leafref {
+                                        path "../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Exclude a configuration group at this level";
+                                }
+
+                                container trap-generation {
+                                    description "Enter the trap-generation context";
+
+                                    leaf probe-fail {
+                                        type boolean;
+                                        default "false";
+                                        description "Enable the generation of probe fail notifications";
+                                    }
+
+                                    leaf test-complete {
+                                        type boolean;
+                                        default "false";
+                                        description "Enable generation of test complete notifications";
+                                    }
+
+                                    leaf test-fail {
+                                        type boolean;
+                                        default "false";
+                                        description "Enable the generation of test fail notifications";
+                                    }
+
+                                    leaf probe-fail-threshold {
+                                        type uint32 {
+                                            range "0..15";
+                                        }
+                                        default "1";
+                                        description "Consecutive probe failure count";
+                                    }
+
+                                    leaf test-fail-threshold {
+                                        type uint32 {
+                                            range "0..15";
+                                        }
+                                        default "1";
+                                        description "Total probe failures for trap generation";
+                                    }
+
+                                } // container trap-generation
+
+                            } // container dns
+
+                        }
                         case saa-icmp-ping {
 
                             container icmp-ping {
@@ -289,7 +417,7 @@ submodule nokia-conf-saa {
                                         }
                                     }
                                     mandatory true;
-                                    description "Far-end IP address or DNS name to send the ping request";
+                                    description "Destination IP address or DNS name to send ping request";
                                 }
 
                                 leaf count {
@@ -298,13 +426,13 @@ submodule nokia-conf-saa {
                                     }
                                     units "packets";
                                     default "5";
-                                    description "Number of ICMP Echo Request packets to send";
+                                    description "ICMP Echo Request packets to send in a sample window";
                                 }
 
                                 leaf do-not-fragment {
                                     type boolean;
                                     default "false";
-                                    description "Set the DF bit in the ICMP ping packet";
+                                    description "Prevent fragmentation of the ICMP Echo Request packet";
                                 }
 
                                 leaf interval {
@@ -340,7 +468,7 @@ submodule nokia-conf-saa {
                                     }
                                     units "bytes";
                                     default "56";
-                                    description "Request packet size";
+                                    description "Packet padding size";
                                 }
 
                                 leaf source-address {
@@ -362,7 +490,7 @@ submodule nokia-conf-saa {
                                         range "1..128";
                                     }
                                     default "64";
-                                    description "TTL value for the MPLS label";
+                                    description "Time to live in the IP header";
                                 }
 
                                 leaf-list apply-groups {
@@ -390,7 +518,7 @@ submodule nokia-conf-saa {
                                         leaf bypass-routing {
                                             type boolean;
                                             default "false";
-                                            description "Bypass the routing table when sending a ping request";
+                                            description "Bypass routing table for directly connected interfaces";
                                         }
 
                                     }
@@ -406,7 +534,7 @@ submodule nokia-conf-saa {
 
                                         leaf next-hop-address {
                                             type types-sros:ip-address;
-                                            description "Next-hop IP address to display static routes";
+                                            description "Next-hop IP address to reach destination";
                                         }
 
                                     }
@@ -417,7 +545,7 @@ submodule nokia-conf-saa {
                                     leaf fc {
                                         type types-sros:fc-name;
                                         default "nc";
-                                        description "Forwarding class of the SAA";
+                                        description "Forwarding class";
                                     }
 
                                     leaf tos {
@@ -425,12 +553,555 @@ submodule nokia-conf-saa {
                                             range "0..255";
                                         }
                                         default "0";
-                                        description "Service type";
+                                        description "Type of service";
                                     }
 
                                 } // container qos
 
+                                container trap-generation {
+                                    description "Enter the trap-generation context";
+
+                                    leaf probe-fail {
+                                        type boolean;
+                                        default "false";
+                                        description "Enable the generation of probe fail notifications";
+                                    }
+
+                                    leaf test-complete {
+                                        type boolean;
+                                        default "false";
+                                        description "Enable generation of test complete notifications";
+                                    }
+
+                                    leaf test-fail {
+                                        type boolean;
+                                        default "false";
+                                        description "Enable the generation of test fail notifications";
+                                    }
+
+                                    leaf probe-fail-threshold {
+                                        type uint32 {
+                                            range "0..15";
+                                        }
+                                        default "1";
+                                        description "Consecutive probe failure count";
+                                    }
+
+                                    leaf test-fail-threshold {
+                                        type uint32 {
+                                            range "0..15";
+                                        }
+                                        default "1";
+                                        description "Total probe failures for trap generation";
+                                    }
+
+                                } // container trap-generation
+
                             } // container icmp-ping
+
+                        }
+                        case saa-lsp-ping {
+
+                            container lsp-ping {
+                                presence "Enable the lsp-ping context";
+                                description "Enable the lsp-ping context";
+
+                                leaf interval {
+                                    type uint32 {
+                                        range "1..10";
+                                    }
+                                    units "seconds";
+                                    default "1";
+                                    description "Minimum time before the next lsp-ping request is sent";
+                                }
+
+                                leaf send-count {
+                                    type uint32 {
+                                        range "1..100";
+                                    }
+                                    units "packets";
+                                    default "1";
+                                    description "Number of request packets to send in a sample window";
+                                }
+
+                                leaf size {
+                                    type uint32 {
+                                        range "1..9786";
+                                    }
+                                    units "bytes";
+                                    default "1";
+                                    description "Packet pad size";
+                                }
+
+                                leaf source-ip-address {
+                                    type types-sros:ip-address;
+                                    description "Source IP address";
+                                }
+
+                                leaf timeout {
+                                    type uint32 {
+                                        range "1..10";
+                                    }
+                                    units "seconds";
+                                    default "5";
+                                    description "Time router waits for a reply to an echo request";
+                                }
+
+                                leaf ttl {
+                                    type uint32 {
+                                        range "1..255";
+                                    }
+                                    default "255";
+                                    description "TTL value for the echo request MPLS label";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                leaf-list apply-groups-exclude {
+                                    type leafref {
+                                        path "../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Exclude a configuration group at this level";
+                                }
+
+                                container qos {
+                                    description "Enter the qos context";
+
+                                    leaf fc {
+                                        type types-sros:fc-name;
+                                        default "be";
+                                        description "Forwarding class";
+                                    }
+
+                                    leaf profile {
+                                        type types-qos:profile-in-out;
+                                        default "out";
+                                        description "Profile";
+                                    }
+
+                                } // container qos
+
+                                container sub-type {
+                                    description "Enter the sub-type context";
+
+                                    choice saa-lsp-ping-sub-type {
+                                        case case-sub-type-bgp-label {
+
+                                            container bgp-label {
+                                                presence "Enable the bgp-label context";
+                                                description "Enable the bgp-label context";
+
+                                                leaf prefix {
+                                                    type types-sros:ip-prefix;
+                                                    mandatory true;
+                                                    description "Destination IP prefix for the test";
+                                                }
+
+                                                container path-destination {
+                                                    description "Enter the path-destination context";
+
+                                                    leaf ip-address {
+                                                        type types-sros:ip-address;
+                                                        description "IP address of the path destination";
+                                                    }
+
+                                                    choice path-destination-egress {
+                                                        case case-interface {
+
+                                                            leaf interface {
+                                                                type types-sros:interface-name;
+                                                                description "Egress router interface used with the path destination";
+                                                            }
+
+                                                        }
+                                                        case case-next-hop {
+
+                                                            leaf next-hop {
+                                                                type types-sros:ip-address;
+                                                                description "Egress IP next hop address used with path destination";
+                                                            }
+
+                                                        }
+                                                    }
+                                                } // container path-destination
+
+                                            } // container bgp-label
+
+                                        }
+                                        case case-sub-type-ldp {
+
+                                            container ldp {
+                                                presence "Enable the ldp context";
+                                                description "Enable the ldp context";
+
+                                                leaf prefix {
+                                                    type types-sros:ip-prefix;
+                                                    mandatory true;
+                                                    description "Destination IP prefix for the test";
+                                                }
+
+                                                container path-destination {
+                                                    description "Enter the path-destination context";
+
+                                                    leaf ip-address {
+                                                        type types-sros:ip-address;
+                                                        description "IP address of the path destination";
+                                                    }
+
+                                                    choice path-destination-egress {
+                                                        case case-interface {
+
+                                                            leaf interface {
+                                                                type types-sros:interface-name;
+                                                                description "Egress router interface used with the path destination";
+                                                            }
+
+                                                        }
+                                                        case case-next-hop {
+
+                                                            leaf next-hop {
+                                                                type types-sros:ip-address;
+                                                                description "Egress IP next hop address used with path destination";
+                                                            }
+
+                                                        }
+                                                    }
+                                                } // container path-destination
+
+                                            } // container ldp
+
+                                        }
+                                        case case-sub-type-rsvp-te {
+
+                                            container rsvp-te {
+                                                presence "Enable the rsvp-te context";
+                                                description "Enable the rsvp-te context";
+
+                                                leaf lsp-name {
+                                                    type types-sros:named-item-64;
+                                                    mandatory true;
+                                                    description "Name of the LSP to be tested";
+                                                }
+
+                                                leaf path {
+                                                    type types-sros:named-item-64;
+                                                    description "Name of the MPLS path to be tested";
+                                                }
+
+                                            } // container rsvp-te
+
+                                        }
+                                        case case-sub-type-sr-isis {
+
+                                            container sr-isis {
+                                                presence "Enable the sr-isis context";
+                                                description "Enable the sr-isis context";
+
+                                                leaf prefix {
+                                                    type types-sros:ip-prefix;
+                                                    mandatory true;
+                                                    description "Destination IP prefix for the test";
+                                                }
+
+                                                leaf igp-instance {
+                                                    type uint32 {
+                                                        range "0..127";
+                                                    }
+                                                    default "0";
+                                                    description "IGP instance for the SR IS-IS test";
+                                                }
+
+                                                container path-destination {
+                                                    description "Enter the path-destination context";
+
+                                                    leaf ip-address {
+                                                        type types-sros:ip-address;
+                                                        description "IP address of the path destination";
+                                                    }
+
+                                                    choice path-destination-egress {
+                                                        case case-interface {
+
+                                                            leaf interface {
+                                                                type types-sros:interface-name;
+                                                                description "Egress router interface used with the path destination";
+                                                            }
+
+                                                        }
+                                                        case case-next-hop {
+
+                                                            leaf next-hop {
+                                                                type types-sros:ip-address;
+                                                                description "Egress IP next hop address used with path destination";
+                                                            }
+
+                                                        }
+                                                    }
+                                                } // container path-destination
+
+                                            } // container sr-isis
+
+                                        }
+                                        case case-sub-type-sr-ospf {
+
+                                            container sr-ospf {
+                                                presence "Enable the sr-ospf context";
+                                                description "Enable the sr-ospf context";
+
+                                                leaf prefix {
+                                                    type types-sros:ip-prefix;
+                                                    mandatory true;
+                                                    description "Destination IP prefix for the test";
+                                                }
+
+                                                leaf igp-instance {
+                                                    type uint32 {
+                                                        range "0..31";
+                                                    }
+                                                    default "0";
+                                                    description "IGP instance for the SR OSPF test";
+                                                }
+
+                                                container path-destination {
+                                                    description "Enter the path-destination context";
+
+                                                    leaf ip-address {
+                                                        type types-sros:ip-address;
+                                                        description "IP address of the path destination";
+                                                    }
+
+                                                    choice path-destination-egress {
+                                                        case case-interface {
+
+                                                            leaf interface {
+                                                                type types-sros:interface-name;
+                                                                description "Egress router interface used with the path destination";
+                                                            }
+
+                                                        }
+                                                        case case-next-hop {
+
+                                                            leaf next-hop {
+                                                                type types-sros:ip-address;
+                                                                description "Egress IP next hop address used with path destination";
+                                                            }
+
+                                                        }
+                                                    }
+                                                } // container path-destination
+
+                                            } // container sr-ospf
+
+                                        }
+                                        case case-sub-type-sr-ospf3 {
+
+                                            container sr-ospf3 {
+                                                presence "Enable the sr-ospf3 context";
+                                                description "Enable the sr-ospf3 context";
+
+                                                leaf prefix {
+                                                    type types-sros:ip-prefix;
+                                                    mandatory true;
+                                                    description "Destination IP prefix for the test";
+                                                }
+
+                                                leaf igp-instance {
+                                                    type uint32 {
+                                                        range "0..31|64..95";
+                                                    }
+                                                    default "0";
+                                                    description "IGP instance for the SR OSPFv3 test";
+                                                }
+
+                                                container path-destination {
+                                                    description "Enter the path-destination context";
+
+                                                    leaf ip-address {
+                                                        type types-sros:ip-address;
+                                                        description "IP address of the path destination";
+                                                    }
+
+                                                    choice path-destination-egress {
+                                                        case case-interface {
+
+                                                            leaf interface {
+                                                                type types-sros:interface-name;
+                                                                description "Egress router interface used with the path destination";
+                                                            }
+
+                                                        }
+                                                        case case-next-hop {
+
+                                                            leaf next-hop {
+                                                                type types-sros:ip-address;
+                                                                description "Egress IP next hop address used with path destination";
+                                                            }
+
+                                                        }
+                                                    }
+                                                } // container path-destination
+
+                                            } // container sr-ospf3
+
+                                        }
+                                        case case-sub-type-sr-policy {
+
+                                            container sr-policy {
+                                                presence "Enable the sr-policy context";
+                                                description "Enable the sr-policy context";
+
+                                                leaf color {
+                                                    type int64 {
+                                                        range "0..4294967295";
+                                                    }
+                                                    mandatory true;
+                                                    description "Segment Routing color for the test";
+                                                }
+
+                                                leaf endpoint {
+                                                    type types-sros:ip-address;
+                                                    mandatory true;
+                                                    description "Segment Routing endpoint for the test";
+                                                }
+
+                                                leaf segment-list {
+                                                    type uint32 {
+                                                        range "1..32";
+                                                    }
+                                                    description "Segment Routing segment list for the test";
+                                                }
+
+                                                container path-destination {
+                                                    description "Enter the path-destination context";
+
+                                                    leaf ip-address {
+                                                        type types-sros:ip-address;
+                                                        description "IP address of the path destination";
+                                                    }
+
+                                                    choice path-destination-egress {
+                                                        case case-interface {
+
+                                                            leaf interface {
+                                                                type types-sros:interface-name;
+                                                                description "Egress router interface used with the path destination";
+                                                            }
+
+                                                        }
+                                                        case case-next-hop {
+
+                                                            leaf next-hop {
+                                                                type types-sros:ip-address;
+                                                                description "Egress IP next hop address used with path destination";
+                                                            }
+
+                                                        }
+                                                    }
+                                                } // container path-destination
+
+                                            } // container sr-policy
+
+                                        }
+                                        case case-sub-type-sr-te {
+
+                                            container sr-te {
+                                                presence "Enable the sr-te context";
+                                                description "Enable the sr-te context";
+
+                                                leaf lsp-name {
+                                                    type types-sros:named-item-64;
+                                                    mandatory true;
+                                                    description "Name of the LSP to be tested";
+                                                }
+
+                                                leaf path {
+                                                    type types-sros:named-item-64;
+                                                    description "Name of the MPLS path to be tested";
+                                                }
+
+                                                container path-destination {
+                                                    description "Enter the path-destination context";
+
+                                                    leaf ip-address {
+                                                        type types-sros:ip-address;
+                                                        description "IP address of the path destination";
+                                                    }
+
+                                                    choice path-destination-egress {
+                                                        case case-interface {
+
+                                                            leaf interface {
+                                                                type types-sros:interface-name;
+                                                                description "Egress router interface used with the path destination";
+                                                            }
+
+                                                        }
+                                                        case case-next-hop {
+
+                                                            leaf next-hop {
+                                                                type types-sros:ip-address;
+                                                                description "Egress IP next hop address used with path destination";
+                                                            }
+
+                                                        }
+                                                    }
+                                                } // container path-destination
+
+                                            } // container sr-te
+
+                                        }
+                                    }
+                                } // container sub-type
+
+                                container trap-generation {
+                                    description "Enter the trap-generation context";
+
+                                    leaf probe-fail {
+                                        type boolean;
+                                        default "false";
+                                        description "Enable the generation of probe fail notifications";
+                                    }
+
+                                    leaf test-complete {
+                                        type boolean;
+                                        default "false";
+                                        description "Enable generation of test complete notifications";
+                                    }
+
+                                    leaf test-fail {
+                                        type boolean;
+                                        default "false";
+                                        description "Enable the generation of test fail notifications";
+                                    }
+
+                                    leaf probe-fail-threshold {
+                                        type uint32 {
+                                            range "0..15";
+                                        }
+                                        default "1";
+                                        description "Consecutive probe failure count";
+                                    }
+
+                                    leaf test-fail-threshold {
+                                        type uint32 {
+                                            range "0..15";
+                                        }
+                                        default "1";
+                                        description "Total probe failures for trap generation";
+                                    }
+
+                                } // container trap-generation
+
+                            } // container lsp-ping
 
                         }
                     }

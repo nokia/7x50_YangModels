@@ -45,7 +45,7 @@ submodule nokia-state-svc-ies-sub-if {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2022-05-09";
+    revision "2022-09-07";
 
     grouping state-svc-ies-sub-if-subscriber-interface {
         list subscriber-interface {
@@ -65,6 +65,19 @@ submodule nokia-state-svc-ies-sub-if {
             leaf system-if-index {
                 type int32;
                 description "The interface system index.";
+            }
+
+            leaf oper-state {
+                type enumeration {
+                    enum "up"                           { value 1; }
+                    enum "down"                         { value 2; }
+                    enum "testing"                      { value 3; }
+                    enum "unknown"                      { value 4; }
+                    enum "dormant"                      { value 5; }
+                    enum "not-present"                  { value 6; }
+                    enum "lower-layer-down"             { value 7; }
+                }
+                description "The current operational state of the interface. This leaf has the same semantics as ifOperStatus. in RFC 2863: The Interfaces Group MIB";
             }
 
             container ipv4 {
@@ -555,6 +568,25 @@ submodule nokia-state-svc-ies-sub-if {
                 leaf system-if-index {
                     type int32;
                     description "The interface system index.";
+                }
+
+                leaf oper-state {
+                    type enumeration {
+                        enum "up"                           { value 1; }
+                        enum "down"                         { value 2; }
+                        enum "testing"                      { value 3; }
+                        enum "unknown"                      { value 4; }
+                        enum "dormant"                      { value 5; }
+                        enum "not-present"                  { value 6; }
+                        enum "lower-layer-down"             { value 7; }
+                    }
+                    description "The current operational state of the interface. This leaf has the same semantics as ifOperStatus. in RFC 2863: The Interfaces Group MIB";
+                }
+
+                leaf oper-ip-mtu {
+                    type uint32;
+                    units "bytes";
+                    description "Indicates the interface operational IP MTU.";
                 }
 
                 container ingress {
@@ -3345,6 +3377,110 @@ submodule nokia-state-svc-ies-sub-if {
 
                                 } // container traffic-manager
 
+                                container aggregate-shapers {
+                                    description "Enter the aggregate-shapers context";
+
+                                    list aggregate-shaper-port {
+                                        key "port-id";
+                                        description "Enter the aggregate-shaper-port list instance";
+
+                                        leaf port-id {
+                                            type types-sros:port;
+                                            description "The identifier which uniquely identifies the port.";
+                                        }
+
+                                        leaf burst-limit {
+                                            type int32;
+                                            units "bytes";
+                                            description "Operational burst";
+                                        }
+
+                                        leaf depth {
+                                            type uint32;
+                                            units "bytes";
+                                            description "Leaky-bucket depth of the aggregate shaper PIR";
+                                        }
+
+                                        leaf packet-mode {
+                                            type types-qos:packet-mode;
+                                            description "Packet-mode";
+                                        }
+
+                                        leaf out-of-date {
+                                            type boolean;
+                                            description "Info is out-of-date with respect to the latest config; the shaper-algorithm still needs to re-calculate the implemented rate.";
+                                        }
+
+                                        leaf queue-set-size {
+                                            type int32;
+                                            description "Queue set size";
+                                        }
+
+                                        container rate {
+                                            description "Enter the rate context";
+
+                                            leaf assigned {
+                                                type uint32;
+                                                units "kilobps";
+                                                description "Rate assigned by a hw-agg-shaper-scheduler";
+                                            }
+
+                                            leaf implemented {
+                                                type uint32;
+                                                units "kilobps";
+                                                description "Implemented rate (based on hardware restrictions and based on avg-frame-overhead and ATM adjustments)";
+                                            }
+
+                                            leaf consumed {
+                                                type uint32;
+                                                units "kilobps";
+                                                description "Sum of the rates of the queues feeding into the aggregate shaper";
+                                            }
+
+                                        } // container rate
+
+                                        container avg-frame-overhead {
+                                            description "Enter the avg-frame-overhead context";
+
+                                            leaf overhead {
+                                                type decimal64 {
+                                                    fraction-digits 2;
+                                                }
+                                                units "percent";
+                                                description "Percentage average frame overhead";
+                                            }
+
+                                            leaf real-time {
+                                                type boolean;
+                                                description "Is it real-time?";
+                                            }
+
+                                        } // container avg-frame-overhead
+
+                                        container hw-agg-shaper-scheduler {
+                                            description "Enter the hw-agg-shaper-scheduler context";
+
+                                            leaf active {
+                                                type boolean;
+                                                description "The aggregate shaper is controlled by a hw-agg-shaper-scheduler";
+                                            }
+
+                                            leaf running {
+                                                type boolean;
+                                                description "The hw-agg-shaper-scheduler is currently running and updating the aggregate shaper rates";
+                                            }
+
+                                            leaf invalid-class-usage {
+                                                type boolean;
+                                                description "The aggregate shaper has queues in multiple classes in the same group in the hw-agg-shaper-scheduler";
+                                            }
+
+                                        } // container hw-agg-shaper-scheduler
+
+                                    } // list aggregate-shaper-port
+
+                                } // container aggregate-shapers
+
                                 list queue {
                                     key "queue-id";
                                     description "Enter the queue list instance";
@@ -4671,6 +4807,16 @@ submodule nokia-state-svc-ies-sub-if {
                                 description "Detection time remaining for a given policer.";
                             }
 
+                            leaf total-exceed-count {
+                                type uint64;
+                                description "Total number of packets exceeding policing parameters";
+                            }
+
+                            leaf exit-conform-state-count {
+                                type uint32;
+                                description "Total number of transition of the policer to the exceed state.";
+                            }
+
                         } // list static-policer
 
                         list local-monitor-policer {
@@ -4707,6 +4853,16 @@ submodule nokia-state-svc-ies-sub-if {
                             leaf all-dynamic-policer-allocation {
                                 type boolean;
                                 description "All dynamic-policers allocation status";
+                            }
+
+                            leaf total-exceed-count {
+                                type uint64;
+                                description "Total number of packets exceeding policing parameters";
+                            }
+
+                            leaf exit-conform-state-count {
+                                type uint32;
+                                description "Total number of transition of the policer to the exceed state.";
                             }
 
                         } // list local-monitor-policer
@@ -4757,6 +4913,16 @@ submodule nokia-state-svc-ies-sub-if {
                             leaf dynamic-policer-allocation {
                                 type boolean;
                                 description "Dynamic-policer allocation status";
+                            }
+
+                            leaf total-exceed-count {
+                                type uint64;
+                                description "Total number of packets exceeding policing parameters";
+                            }
+
+                            leaf exit-conform-state-count {
+                                type uint32;
+                                description "Total number of transition of the policer to the exceed state.";
                             }
 
                         } // list dynamic-policer
@@ -5128,6 +5294,50 @@ submodule nokia-state-svc-ies-sub-if {
                                     description "The state of this managed route.";
                                 }
 
+                                container cpe-check {
+                                    description "Enter the cpe-check context";
+
+                                    leaf up-time {
+                                        type yang:timeticks;
+                                        description "Indicates how long (in centiseconds) the CPE has been available.";
+                                    }
+
+                                    leaf in-packet-count {
+                                        type yang:counter32;
+                                        description "Indicates the number of echo-reply packets received.";
+                                    }
+
+                                    leaf out-packet-count {
+                                        type yang:counter32;
+                                        description "Indicates the number of echo-request packets sent.";
+                                    }
+
+                                    leaf down-transition {
+                                        type yang:gauge32;
+                                        description "Indicates the number of times the CPE has transitioned to the unavailable state.";
+                                    }
+
+                                    leaf up-transition {
+                                        type yang:gauge32;
+                                        description "Indicates the number of times the CPE has transitioned to the available state.";
+                                    }
+
+                                    leaf ttl {
+                                        type uint32;
+                                        units "seconds";
+                                        description "Indicates the time, in seconds, before the CPE will be declared down.";
+                                    }
+
+                                    leaf status {
+                                        type enumeration {
+                                            enum "reachable"                    { value 1; }
+                                            enum "unreachable"                  { value 2; }
+                                        }
+                                        description "Indicates if the CPE associated with the address is reachable.";
+                                    }
+
+                                } // container cpe-check
+
                             } // list managed-route
 
                         } // list ipv4
@@ -5224,6 +5434,50 @@ submodule nokia-state-svc-ies-sub-if {
                                     }
                                     description "The state of this managed route.";
                                 }
+
+                                container cpe-check {
+                                    description "Enter the cpe-check context";
+
+                                    leaf up-time {
+                                        type yang:timeticks;
+                                        description "Indicates how long (in centiseconds) the CPE has been available.";
+                                    }
+
+                                    leaf in-packet-count {
+                                        type yang:counter32;
+                                        description "Indicates the number of echo-reply packets received.";
+                                    }
+
+                                    leaf out-packet-count {
+                                        type yang:counter32;
+                                        description "Indicates the number of echo-request packets sent.";
+                                    }
+
+                                    leaf down-transition {
+                                        type yang:gauge32;
+                                        description "Indicates the number of times the CPE has transitioned to the unavailable state.";
+                                    }
+
+                                    leaf up-transition {
+                                        type yang:gauge32;
+                                        description "Indicates the number of times the CPE has transitioned to the available state.";
+                                    }
+
+                                    leaf ttl {
+                                        type uint32;
+                                        units "seconds";
+                                        description "Indicates the time, in seconds, before the CPE will be declared down.";
+                                    }
+
+                                    leaf status {
+                                        type enumeration {
+                                            enum "reachable"                    { value 1; }
+                                            enum "unreachable"                  { value 2; }
+                                        }
+                                        description "Indicates if the CPE associated with the address is reachable.";
+                                    }
+
+                                } // container cpe-check
 
                             } // list managed-route
 

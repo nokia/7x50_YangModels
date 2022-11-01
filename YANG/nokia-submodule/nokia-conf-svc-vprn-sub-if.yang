@@ -66,7 +66,7 @@ submodule nokia-conf-svc-vprn-sub-if {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2022-05-09";
+    revision "2022-09-07";
 
     grouping conf-svc-vprn-sub-if-subscriber-interface {
         list subscriber-interface {
@@ -1907,6 +1907,12 @@ submodule nokia-conf-svc-vprn-sub-if {
                                 units "seconds";
                                 default "10";
                                 description "Time used to limit the number of TTL expired messages";
+                            }
+
+                            leaf use-matching-address {
+                                type boolean;
+                                default "false";
+                                description "Use the subscriber interface address as source address";
                             }
 
                         } // container ttl-expired
@@ -4611,6 +4617,25 @@ submodule nokia-conf-svc-vprn-sub-if {
                                         description "Enable frame-based accounting on all policers and queues associated with context";
                                     }
 
+                                    leaf burst-limit {
+                                        type union {
+                                            type types-qos:bytes {
+                                                range "1..14000000";
+                                            }
+                                            type enumeration {
+                                                enum "auto"                         { value -1; }
+                                            }
+                                        }
+                                        default "auto";
+                                        description "Shaping burst size when an aggregate shaper is used";
+                                    }
+
+                                    leaf adaptation-rule {
+                                        type types-qos:adaptation-rule;
+                                        default "closest";
+                                        description "Adaptation rule to compute the operational PIR value when an aggregate shaper is used";
+                                    }
+
                                 } // container agg-rate
 
                             }
@@ -5336,8 +5361,7 @@ submodule nokia-conf-svc-vprn-sub-if {
 
                             list managed-route {
                                 key "prefix";
-                                max-elements 50;
-                                description "Add a list entry for managed-route";
+                                description "Enter the managed-route list instance";
 
                                 leaf prefix {
                                     type types-sros:ipv4-unicast-prefix;
@@ -5347,7 +5371,7 @@ submodule nokia-conf-svc-vprn-sub-if {
                                 leaf metric {
                                     type uint32;
                                     default "0";
-                                    description "Managed route metric";
+                                    description "Metric associated with the provisioned managed route";
                                 }
 
                                 leaf preference {
@@ -5355,13 +5379,13 @@ submodule nokia-conf-svc-vprn-sub-if {
                                         range "0..255";
                                     }
                                     default "0";
-                                    description "Managed route preference";
+                                    description "Preference associated to the provisioned managed route";
                                 }
 
                                 leaf tag {
                                     type uint32;
                                     default "0";
-                                    description "Managed route tag";
+                                    description "Route tag used if CPE check fails";
                                 }
 
                                 leaf-list apply-groups {
@@ -5381,6 +5405,120 @@ submodule nokia-conf-svc-vprn-sub-if {
                                     ordered-by user;
                                     description "Exclude a configuration group at this level";
                                 }
+
+                                container cpe-check {
+                                    presence "Enable the cpe-check context";
+                                    description "Enter the cpe-check list instance";
+
+                                    leaf destination-ip-address {
+                                        type types-sros:ip-address;
+                                        sros-ext:immutable;
+                                        description "IP address of the target CPE device";
+                                    }
+
+                                    leaf drop-count {
+                                        type uint32 {
+                                            range "1..255";
+                                        }
+                                        default "3";
+                                        description "Consecutive ping replies missed before CPE deemed down";
+                                    }
+
+                                    leaf interval {
+                                        type uint32 {
+                                            range "1..255";
+                                        }
+                                        units "seconds";
+                                        default "1";
+                                        description "Time between ICMP pings to the target CPE IP address";
+                                    }
+
+                                    leaf log {
+                                        type boolean;
+                                        default "false";
+                                        description "Log CPE connectivity checks transitions";
+                                    }
+
+                                    leaf padding-size {
+                                        type uint32 {
+                                            range "0..16384";
+                                        }
+                                        units "bytes";
+                                        default "56";
+                                        description "Padding size for CPE connectivity checks";
+                                    }
+
+                                    leaf timeout {
+                                        type uint32 {
+                                            range "1..10";
+                                        }
+                                        units "seconds";
+                                        default "1";
+                                        description "Time interval determining that a ping is missed";
+                                    }
+
+                                    leaf source-ip-address {
+                                        type types-sros:ip-address;
+                                        description "Source IP address used in the ICMP messages";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                    leaf-list apply-groups-exclude {
+                                        type leafref {
+                                            path "../../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Exclude a configuration group at this level";
+                                    }
+
+                                    container failed-action {
+                                        description "Enter the failed-action context";
+
+                                        choice withdraw-or-modify {
+                                            case withdraw {
+
+                                                leaf withdraw {
+                                                    type boolean;
+                                                    default "false";
+                                                    description "Withdraw the route when the CPE check fails";
+                                                }
+
+                                            }
+                                            case modify {
+
+                                                leaf metric {
+                                                    type uint32;
+                                                    default "0";
+                                                    description "Metric associated with the provisioned managed route";
+                                                }
+
+                                                leaf preference {
+                                                    type int32 {
+                                                        range "0..255";
+                                                    }
+                                                    description "Preference associated to the provisioned managed route";
+                                                }
+
+                                                leaf tag {
+                                                    type uint32;
+                                                    default "0";
+                                                    description "Route tag used if CPE check fails";
+                                                }
+
+                                            }
+                                        }
+                                    } // container failed-action
+
+                                } // container cpe-check
 
                             } // list managed-route
 
@@ -5507,7 +5645,6 @@ submodule nokia-conf-svc-vprn-sub-if {
 
                             list managed-route {
                                 key "ipv6-prefix";
-                                max-elements 50;
                                 description "Enter the managed-route list instance";
 
                                 leaf ipv6-prefix {
@@ -5526,13 +5663,13 @@ submodule nokia-conf-svc-vprn-sub-if {
                                         range "0..255";
                                     }
                                     default "0";
-                                    description "Managed route preference";
+                                    description "Preference associated to the provisioned managed route";
                                 }
 
                                 leaf tag {
                                     type uint32;
                                     default "0";
-                                    description "Managed route tag";
+                                    description "Route tag used if CPE check fails";
                                 }
 
                                 leaf-list apply-groups {
@@ -5552,6 +5689,120 @@ submodule nokia-conf-svc-vprn-sub-if {
                                     ordered-by user;
                                     description "Exclude a configuration group at this level";
                                 }
+
+                                container cpe-check {
+                                    presence "Enable the cpe-check context";
+                                    description "Enter the cpe-check list instance";
+
+                                    leaf destination-ip-address {
+                                        type types-sros:ip-address;
+                                        sros-ext:immutable;
+                                        description "IP address of the target CPE device";
+                                    }
+
+                                    leaf drop-count {
+                                        type uint32 {
+                                            range "1..255";
+                                        }
+                                        default "3";
+                                        description "Consecutive ping replies missed before CPE deemed down";
+                                    }
+
+                                    leaf interval {
+                                        type uint32 {
+                                            range "1..255";
+                                        }
+                                        units "seconds";
+                                        default "1";
+                                        description "Time between ICMP pings to the target CPE IP address";
+                                    }
+
+                                    leaf log {
+                                        type boolean;
+                                        default "false";
+                                        description "Log CPE connectivity checks transitions";
+                                    }
+
+                                    leaf padding-size {
+                                        type uint32 {
+                                            range "0..16384";
+                                        }
+                                        units "bytes";
+                                        default "56";
+                                        description "Padding size for CPE connectivity checks";
+                                    }
+
+                                    leaf timeout {
+                                        type uint32 {
+                                            range "1..10";
+                                        }
+                                        units "seconds";
+                                        default "1";
+                                        description "Time interval determining that a ping is missed";
+                                    }
+
+                                    leaf source-ip-address {
+                                        type types-sros:ip-address;
+                                        description "Source IP address used in the ICMP messages";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                    leaf-list apply-groups-exclude {
+                                        type leafref {
+                                            path "../../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Exclude a configuration group at this level";
+                                    }
+
+                                    container failed-action {
+                                        description "Enter the failed-action context";
+
+                                        choice withdraw-or-modify {
+                                            case withdraw {
+
+                                                leaf withdraw {
+                                                    type boolean;
+                                                    default "false";
+                                                    description "Withdraw the route when the CPE check fails";
+                                                }
+
+                                            }
+                                            case modify {
+
+                                                leaf metric {
+                                                    type uint32;
+                                                    default "0";
+                                                    description "Metric associated with the provisioned managed route";
+                                                }
+
+                                                leaf preference {
+                                                    type int32 {
+                                                        range "0..255";
+                                                    }
+                                                    description "Preference associated to the provisioned managed route";
+                                                }
+
+                                                leaf tag {
+                                                    type uint32;
+                                                    default "0";
+                                                    description "Route tag used if CPE check fails";
+                                                }
+
+                                            }
+                                        }
+                                    } // container failed-action
+
+                                } // container cpe-check
 
                             } // list managed-route
 

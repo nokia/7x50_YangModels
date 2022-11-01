@@ -41,7 +41,7 @@ submodule nokia-conf-qos {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2022-07-15";
+    revision "2022-08-23";
 
     grouping conf-qos {
         container qos {
@@ -12799,7 +12799,7 @@ submodule nokia-conf-qos {
 
             list fp-resource-policy {
                 key "fp-resource-policy-name";
-                max-elements 16;
+                max-elements 15;
                 description "Enter the fp-resource-policy list instance";
 
                 leaf fp-resource-policy-name {
@@ -12854,6 +12854,14 @@ submodule nokia-conf-qos {
                         description "Enables auto-creation of hardware aggregate shapers";
                     }
 
+                    leaf reserved-non-shaper-queues {
+                        type uint32 {
+                            range "2048..262144";
+                        }
+                        default "8192";
+                        description "Number of queues reserved for non-shaper queues";
+                    }
+
                     container hw-agg-shapers {
                         description "Enter the hw-agg-shapers context";
 
@@ -12864,7 +12872,101 @@ submodule nokia-conf-qos {
                             description "Enables hardware aggregate shapers for subscribers";
                         }
 
+                        leaf saps {
+                            type boolean;
+                            sros-ext:card-auto-reset-on-modify;
+                            default "false";
+                            description "Enable hardware aggregate shapers for SAPs";
+                        }
+
                     } // container hw-agg-shapers
+
+                    container queue-sets {
+                        description "Enter the queue-sets context";
+
+                        container default-size {
+                            description "Enter the default-size context";
+
+                            leaf subscribers {
+                                type union {
+                                    type uint32 {
+                                        range "2..8";
+                                    }
+                                    type enumeration {
+                                        enum "non-shaper-queues"            { value 0; }
+                                    }
+                                }
+                                default "8";
+                                description "Default queue set size for subscribers";
+                            }
+
+                            leaf saps {
+                                type union {
+                                    type uint32 {
+                                        range "2..8";
+                                    }
+                                    type enumeration {
+                                        enum "non-shaper-queues"            { value 0; }
+                                    }
+                                }
+                                default "8";
+                                description "Default queue set size for SAPs";
+                            }
+
+                            leaf queue-groups {
+                                type union {
+                                    type uint32 {
+                                        range "2..8";
+                                    }
+                                    type enumeration {
+                                        enum "non-shaper-queues"            { value 0; }
+                                    }
+                                }
+                                default "8";
+                                description "Default size of queue-groups";
+                            }
+
+                        } // container default-size
+
+                        list size {
+                            key "qset-size";
+                            description "Enter the size list instance";
+
+                            leaf qset-size {
+                                type uint32 {
+                                    range "2..8";
+                                }
+                                description "Size of the queue sets";
+                            }
+
+                            leaf allocation-weight {
+                                type uint32 {
+                                    range "0..100";
+                                }
+                                description "Allocation weight of the queue set size";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                        } // list size
+
+                    } // container queue-sets
 
                 } // container aggregate-shapers
 
@@ -13022,7 +13124,7 @@ submodule nokia-conf-qos {
                             range "1..8";
                         }
                         default "1";
-                        description "Weight associated with the group";
+                        description "Weight associated with the scheduling class";
                     }
 
                     leaf-list apply-groups {

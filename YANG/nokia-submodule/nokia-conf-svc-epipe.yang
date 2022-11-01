@@ -55,7 +55,7 @@ submodule nokia-conf-svc-epipe {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2022-08-12";
+    revision "2022-10-07";
 
     grouping conf-svc-epipe {
         list epipe {
@@ -227,6 +227,56 @@ submodule nokia-conf-svc-epipe {
                     } // container function
 
                 } // list locator
+
+                list micro-segment-locator {
+                    key "locator-name";
+                    max-elements 1;
+                    description "Enter the micro-segment-locator list instance";
+
+                    leaf locator-name {
+                        type leafref {
+                            path "../../../../../router/segment-routing/segment-routing-v6/micro-segment-locator/locator-name";
+                        }
+                        description "Micro-segment SRv6 locator name";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container function {
+                        description "Enter the function context";
+
+                        container udx2 {
+                            presence "Enable the udx2 context";
+                            description "Enable the udx2 context";
+
+                            leaf value {
+                                type uint32 {
+                                    range "1..1048575";
+                                }
+                                description "SRv6 function value";
+                            }
+
+                        } // container udx2
+
+                    } // container function
+
+                } // list micro-segment-locator
 
             } // list segment-routing-v6
 
@@ -2396,9 +2446,7 @@ submodule nokia-conf-svc-epipe {
                                 }
 
                                 leaf c-tag {
-                                    type int32 {
-                                        range "0..4094";
-                                    }
+                                    type types-services:qinq-vlan-translation-ctag;
                                     description "Inner ingress VLAN translation for two service delimiting VLAN values";
                                 }
 
@@ -2500,6 +2548,25 @@ submodule nokia-conf-svc-epipe {
                                     units "kilobps";
                                     default "0";
                                     description "Administrative CIR";
+                                }
+
+                                leaf burst-limit {
+                                    type union {
+                                        type types-qos:bytes {
+                                            range "1..14000000";
+                                        }
+                                        type enumeration {
+                                            enum "auto"                         { value -1; }
+                                        }
+                                    }
+                                    default "auto";
+                                    description "Shaping burst size when an aggregate shaper is used";
+                                }
+
+                                leaf adaptation-rule {
+                                    type types-qos:adaptation-rule;
+                                    default "closest";
+                                    description "Adaptation rule to compute the operational PIR value when an aggregate shaper is used";
                                 }
 
                             } // container agg-rate
@@ -4585,6 +4652,8 @@ submodule nokia-conf-svc-epipe {
                     leaf force-vc-forwarding {
                         type enumeration {
                             enum "vlan"                         { value 1; }
+                            enum "qinq-c-tag-c-tag"             { value 2; }
+                            enum "qinq-s-tag-c-tag"             { value 3; }
                         }
                         description "Datapath forwarding to force vlan-vc-type";
                     }
@@ -4632,9 +4701,7 @@ submodule nokia-conf-svc-epipe {
                         }
 
                         leaf default-locator {
-                            type leafref {
-                                path "../../../../segment-routing-v6[instance=current()/../instance]/locator/locator-name";
-                            }
+                            type string;
                             sros-ext:immutable;
                             description "Default route locator";
                         }
@@ -4679,6 +4746,23 @@ submodule nokia-conf-svc-epipe {
                 } // list segment-routing-v6
 
             } // container bgp-evpn
+
+            container network {
+                description "Enter the network context";
+
+                container ingress {
+                    description "Enter the ingress context";
+
+                    leaf classification-override {
+                        type leafref {
+                            path "../../../../../qos/ingress-classification-policy/ingress-classification-policy-name";
+                        }
+                        description "Short-pipe mode for CoS propagation";
+                    }
+
+                } // container ingress
+
+            } // container network
 
         } // list epipe
 

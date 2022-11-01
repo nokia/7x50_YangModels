@@ -40,7 +40,7 @@ submodule nokia-conf-system-security-pki {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2022-06-10";
+    revision "2022-08-16";
 
     grouping conf-system-security-pki {
         container pki {
@@ -245,12 +245,44 @@ submodule nokia-conf-system-security-pki {
 
                     choice response-signing {
                         default "response-signing-cert";
+                        case response-signing-use-extracert {
+
+                            leaf response-signing-use-extracert {
+                                type empty;
+                                sros-ext:auto-restart-to-modify;
+                                description "Use extraCerts certificate to verify response signature";
+                            }
+
+                        }
                         case response-signing-cert {
 
                             leaf response-signing-cert {
                                 type types-security:pki-file-name;
                                 sros-ext:auto-restart-to-modify;
                                 description "File name of the certificate to verify the signature of received CMPv2 responses";
+                            }
+
+                        }
+                    }
+                    choice recipient {
+                        default "use-ca-subject";
+                        case use-ca-subject {
+
+                            leaf use-ca-subject {
+                                type empty;
+                                sros-ext:auto-restart-to-modify;
+                                description "Use subject DN in CA certificate as CMPv2 request recipient";
+                            }
+
+                        }
+                        case recipient-subject {
+
+                            leaf recipient-subject {
+                                type string {
+                                    length "1..256";
+                                }
+                                sros-ext:auto-restart-to-modify;
+                                description "DN attributes for CMPv2 request as recipient subject";
                             }
 
                         }
@@ -684,6 +716,209 @@ submodule nokia-conf-system-security-pki {
                 } // container http-authentication
 
             } // list est-profile
+
+            list certificate-update-profile {
+                key "name";
+                max-elements 256;
+                description "Enter the certificate-update-profile list instance";
+
+                leaf name {
+                    type types-sros:named-item;
+                    description "Certificate update profile name";
+                }
+
+                leaf hash-algorithm {
+                    type types-security:hash-algorithm;
+                    default "sha256";
+                    description "Hash algorithm for a certificate request";
+                }
+
+                leaf retry-interval {
+                    type uint32 {
+                        range "60..36000";
+                    }
+                    units "seconds";
+                    default "3600";
+                    description "Retry interval after a failed update";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                choice protocol {
+                    default "cmpv2";
+                    case cmpv2 {
+
+                        container cmpv2 {
+                            description "Enter the cmpv2 context";
+
+                            leaf ca-profile {
+                                type leafref {
+                                    path "../../../ca-profile/ca-profile-name";
+                                }
+                                description "CA profile name.";
+                            }
+
+                        } // container cmpv2
+
+                    }
+                    case est {
+
+                        container est {
+                            description "Enter the est context";
+
+                            leaf est-profile {
+                                type leafref {
+                                    path "../../../est-profile/name";
+                                }
+                                description "EST profile name";
+                            }
+
+                        } // container est
+
+                    }
+                }
+                choice key-generation {
+                    default "same-as-existing-key";
+                    case same-as-existing-key {
+
+                        leaf same-as-existing-key {
+                            type empty;
+                            description "New key is same type and key length as existing key";
+                        }
+
+                    }
+                    case rsa {
+
+                        container rsa {
+                            description "Enter the rsa context";
+
+                            leaf key-size {
+                                type uint32 {
+                                    range "512..8192";
+                                }
+                                default "2048";
+                                description "Length of the generated RSA key";
+                            }
+
+                        } // container rsa
+
+                    }
+                    case dsa {
+
+                        container dsa {
+                            description "Enter the dsa context";
+
+                            leaf key-size {
+                                type uint32 {
+                                    range "512..8192";
+                                }
+                                default "2048";
+                                description "Length of the generated DSA key";
+                            }
+
+                        } // container dsa
+
+                    }
+                    case ecdsa {
+
+                        container ecdsa {
+                            description "Enter the ecdsa context";
+
+                            leaf curve {
+                                type types-security:ecdsa-curve;
+                                default "secp256r1";
+                                description "Elliptic curve to be used in ECDSA key generation";
+                            }
+
+                        } // container ecdsa
+
+                    }
+                }
+                choice schedule {
+                    default "before-expiry";
+                    case before-expiry {
+
+                        leaf before-expiry {
+                            type uint32 {
+                                range "3600..157680000";
+                            }
+                            units "seconds";
+                            default "86400";
+                            description "Time scheduler updates before certificate expiry";
+                        }
+
+                    }
+                    case after-issue {
+
+                        leaf after-issue {
+                            type uint32 {
+                                range "864000..157680000";
+                            }
+                            units "seconds";
+                            description "Time for scheduler updates after certificate issuance";
+                        }
+
+                    }
+                }
+            } // list certificate-update-profile
+
+            list certificate-auto-update {
+                key "certificate-file-name";
+                max-elements 256;
+                description "Enter the certificate-auto-update list instance";
+
+                leaf certificate-file-name {
+                    type types-security:pki-file-name;
+                    description "Certificate file name";
+                }
+
+                leaf key-file-name {
+                    type types-security:pki-file-name;
+                    description "Imported key filename";
+                }
+
+                leaf profile {
+                    type leafref {
+                        path "../../certificate-update-profile/name";
+                    }
+                    description "Certificate update profile name";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+            } // list certificate-auto-update
 
         } // container pki
 
