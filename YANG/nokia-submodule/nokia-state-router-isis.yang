@@ -13,7 +13,7 @@ submodule nokia-state-router-isis {
     import nokia-types-sros               { prefix "types-sros"; }
 
 
-    sros-ext:sros-major-release "rel22";
+    sros-ext:sros-major-release "rel23";
 
     organization "Nokia";
 
@@ -40,7 +40,7 @@ submodule nokia-state-router-isis {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2022-09-12";
+    revision "2023-01-16";
 
     grouping state-router-isis {
         list isis {
@@ -604,6 +604,326 @@ submodule nokia-state-router-isis {
                         } // list flex-algo-definitions
 
                     } // list level
+
+                    list route {
+                        key "multi-topology-id destination";
+                        description "Enter the route list instance";
+
+                        leaf multi-topology-id {
+                            type uint32;
+                            description
+                                "The value specifies the multi-topology id number for the path.
+
+                                 If multi-topology is not supported for the path then
+                                 the value should be 0.";
+                        }
+
+                        leaf destination {
+                            type types-sros:ip-prefix;
+                            description "The value specifies the IP address and mask of the route destination.";
+                        }
+
+                        leaf level {
+                            type types-isis:level;
+                            description "The value indicates the IS-IS Level at which the prefix was learned.";
+                        }
+
+                        leaf status {
+                            type enumeration {
+                                enum "active"                       { value 0; }
+                                enum "rtm-add-failed"               { value 1; }
+                                enum "fib-add-failed"               { value 2; }
+                            }
+                            description "The value indicates the reason why a route is not active.";
+                        }
+
+                        leaf metric {
+                            type uint32;
+                            description
+                                "The value indicates the routing metric for a backup route.
+
+                                 The semantics of this metric are determined by the routing-protocol
+                                 specified in the route's ipCidrRouteProto value.
+
+                                 The value is only valid when backup-flags has a value of 'has-lfa'.";
+                        }
+
+                        leaf type {
+                            type enumeration {
+                                enum "internal"                     { value 1; }
+                                enum "external"                     { value 2; }
+                            }
+                            description "The value indicates the type of route represented by this row entry.";
+                        }
+
+                        leaf tag {
+                            type uint32;
+                            description
+                                "The value indicates a 32-bit integer route tag for this route.
+
+                                 A value of 0 indicates that the tag has not been set.";
+                        }
+
+                        container backup {
+                            description "Enter the backup context";
+
+                            leaf next-hop-ip {
+                                type types-sros:ip-address-with-zone;
+                                description "The value specifies the IP address of the next hop for this route.";
+                            }
+
+                            leaf next-hop-type {
+                                type types-isis:cidr-next-hop-type;
+                                description "The value indicates the type of next hop for this backup route.";
+                            }
+
+                            leaf next-hop-owner {
+                                type types-isis:cidr-next-hop-owner;
+                                description "The value indicates the owner of next hop for this backup route.";
+                            }
+
+                            leaf next-hop-tunnel-id {
+                                type uint32;
+                                description
+                                    "The value indicates the auxiliary information, for next hop owner as indicated by
+                                     backup-next-hop-owner.
+
+                                     The value of indicates the tunnel-id existing for this backup next hop type and owner.";
+                            }
+
+                            leaf type {
+                                type enumeration {
+                                    enum "node-protection"              { value 1; }
+                                    enum "link-protection"              { value 2; }
+                                }
+                                description
+                                    "The value indicates the type of protection used by the backup next-hop.
+
+                                     The value 'not-applicable' indicates that the backup next hop type
+                                     is not applicable
+                                     the value 'node-protection' indicates that the backup next hop uses a
+                                     node-protection mechanism
+                                     the value 'link-protection' indicates that the backup next hop uses
+                                     link-protection mechanism.";
+                            }
+
+                            leaf metric {
+                                type uint32;
+                                description
+                                    "The value indicates the routing metric for a backup route.
+
+                                     The semantics of this metric are determined by the routing-protocol
+                                     specified in the route's ipCidrRouteProto value.
+
+                                     The value is only valid when backup-flags has a value of 'has-lfa'.";
+                            }
+
+                            leaf flags {
+                                type enumeration {
+                                    enum "none"                         { value 0; }
+                                    enum "has-lfa"                      { value 1; }
+                                }
+                                description
+                                    "The value indicates the presence or absence of LFA next-hops.
+
+                                     The value 'none' indicates that no next hop is present
+                                     the value 'has-lfa' indicates that an LFA next hop is present in addition
+                                     to the regular next-hop.";
+                            }
+
+                        } // container backup
+
+                        container prefix-sid {
+                            description "Enter the prefix-sid context";
+
+                            leaf label {
+                                type uint32;
+                                description "The value specifies the SID label or index for this prefix.";
+                            }
+
+                            leaf flags {
+                                type bits {
+                                    bit bit-r                          { position 0; }
+                                    bit bit-n                          { position 1; }
+                                    bit bit-p                          { position 2; }
+                                    bit bit-e                          { position 3; }
+                                    bit bit-v                          { position 4; }
+                                    bit bit-l                          { position 5; }
+                                }
+                                description
+                                    "The value indicates the flags of a Prefix-SID advertised by
+                                     an IP Reach or Label Binding TLV.
+
+                                     bit-r   (0)  - Re-advertisement flag.  If set, then the prefix to
+                                       which this Prefix-SID is attached, has been propagated by the
+                                       router either from another level (i.e.: from level-1 to level-2
+                                       or the opposite) or from redistribution (e.g.: from another
+                                       protocol).
+                                     bit-n   (1)  - Node-SID flag. The N-Flag is set on Prefix-SIDs
+                                       attached to a router loopback address.
+                                     bit-p   (2)  - no-PHP flag. If set, then the penultimate hop MUST NOT
+                                       pop the Prefix-SID before delivering the packet to the node
+                                       that advertised the Prefix-SID.
+                                     bit-e   (3)  - Explicit-Null Flag.  If set, any upstream neighbor
+                                       of the Prefix-SID originator MUST replace the Prefix-SID with
+                                       a Prefix-SID having an Explicit-NULL value (0 for IPv4 and 2 for
+                                       IPv6) before forwarding the packet.
+                                     bit-v   (4)  - Value flag. If set, then the Prefix-SID carries a
+                                       value (instead of an index).
+                                     bit-l   (5)  - Local Flag.  If set, then the value/index carried by
+                                       the Prefix-SID has local significance.";
+                            }
+
+                        } // container prefix-sid
+
+                        list next-hop {
+                            key "ecmp-index";
+                            description "Enter the next-hop list instance";
+
+                            leaf ecmp-index {
+                                type types-router:ip-ecmp;
+                                description "ECMP index of this route next-hop.";
+                            }
+
+                            leaf next-hop-ip {
+                                type types-sros:ip-address-with-zone;
+                                description "The value specifies the IP address of the next hop for this route.";
+                            }
+
+                            leaf next-hop-type {
+                                type types-isis:cidr-next-hop-type;
+                                description "The value indicates the type of next hop for this backup route.";
+                            }
+
+                            leaf next-hop-owner {
+                                type types-isis:cidr-next-hop-owner;
+                                description "The value indicates the owner of next hop for this backup route.";
+                            }
+
+                            leaf next-hop-tunnel-id {
+                                type uint32;
+                                description
+                                    "The value indicates the auxiliary information, for next hop owner as indicated by
+                                     backup-next-hop-owner.
+
+                                     The value of indicates the tunnel-id existing for this backup next hop type and owner.";
+                            }
+
+                            leaf spf-version {
+                                type yang:counter32;
+                                description "The value indicates the run of SPF calculation in which this route was selected.";
+                            }
+
+                            leaf next-hop-system-id {
+                                type types-igp:system-id;
+                                description
+                                    "The value indicates the system-id of the next hop IS through
+                                     which this route is reachable.";
+                            }
+
+                            leaf rtm-status {
+                                type enumeration {
+                                    enum "success"                      { value 0; }
+                                    enum "discarded"                    { value 1; }
+                                }
+                                description "Indicates the next hop status in RTM";
+                            }
+
+                        } // list next-hop
+
+                    } // list route
+
+                    list sr-lfa-coverage {
+                        key "level-number multi-topology-id sid-type protocol-version";
+                        description "Enter the sr-lfa-coverage list instance";
+
+                        leaf level-number {
+                            type types-isis:level;
+                            description "Specifies the IS-IS protocol level to which these attributes are applied.";
+                        }
+
+                        leaf multi-topology-id {
+                            type enumeration {
+                                enum "ipv4"                         { value 0; }
+                                enum "ipv6"                         { value 1; }
+                                enum "ipv4-mcast"                   { value 2; }
+                                enum "ipv6-mcast"                   { value 3; }
+                            }
+                            description
+                                "The value specifies the multi-topology id number for the path.
+
+                                 Possible values are:
+
+                                 ipv4(0)      - indicates MT0 or standard topology
+                                 ipv6(1)      - indicates MT2 or IPv6 routing topology
+                                 ipv4-mcast(2) - indicates MT3 or IPv4 multicast routing topology
+                                 ipv6-mcast(3) - indicates MT4 or IPv6 multicast routing topology.";
+                        }
+
+                        leaf sid-type {
+                            type enumeration {
+                                enum "node-sid"                     { value 0; }
+                                enum "adj-sid"                      { value 1; }
+                            }
+                            description
+                                "The value specifies the SID type for which SR LFA coverage
+                                 has been computed.";
+                        }
+
+                        leaf protocol-version {
+                            type enumeration {
+                                enum "ipv4"                         { value 0; }
+                                enum "ipv6"                         { value 1; }
+                            }
+                            description "The value specifies the protocol version for which SR LFA coverage has been computed.";
+                        }
+
+                        leaf lfa-covered {
+                            type uint32;
+                            description "The value indicates the number of SIDs for which an LFA is found.";
+                        }
+
+                        leaf lfa-covered-percent {
+                            type types-sros:percent;
+                            description "The value indicates the portion of SIDs for which an LFA is found.";
+                        }
+
+                        leaf remote-lfa-covered {
+                            type uint32;
+                            description "The value indicates the number of SIDs for which an Remote LFA is found.";
+                        }
+
+                        leaf remote-lfa-covered-percent {
+                            type types-sros:percent;
+                            description "The value indicates the portion of SIDs for which an Remote LFA is found.";
+                        }
+
+                        leaf ti-lfa-covered {
+                            type uint32;
+                            description "The value indicates the number of SIDs for which an Topology Independent LFA is found.";
+                        }
+
+                        leaf ti-lfa-covered-percent {
+                            type types-sros:percent;
+                            description "The value indicates the portion of SIDs for which an LFA is found.";
+                        }
+
+                        leaf total-sid {
+                            type uint32;
+                            description "The value indicates the number of SIDs eligible for SR LFA calculation";
+                        }
+
+                        leaf backup-total-sid {
+                            type uint32;
+                            description "The value indicates the number of SIDs for which an LFA, Remote LFA or Topology Independent LFA is found";
+                        }
+
+                        leaf backup-total-sid-percent {
+                            type uint32;
+                            description "The value indicates the portion of SIDs for which an LFA, Remote LFA or Topology Independent LFA is found";
+                        }
+
+                    } // list sr-lfa-coverage
 
                 } // list flex-algo
 
@@ -3117,6 +3437,13 @@ submodule nokia-state-router-isis {
                            the Prefix-SID has local significance.";
                 }
 
+                leaf algorithm {
+                    type int32 {
+                        range "0|128..255";
+                    }
+                    description "The value indicates the algorithm related to the prefix SID.";
+                }
+
                 leaf type {
                     type enumeration {
                         enum "internal"                     { value 1; }
@@ -3187,6 +3514,15 @@ submodule nokia-state-router-isis {
                 leaf interface {
                     type types-sros:interface-name;
                     description "When type is adjacency then this is the interface on which the adjacency is formed";
+                }
+
+                leaf algorithm {
+                    type uint8;
+                    description
+                        "The value indicates the algorithm related to the prefix SID.
+
+                         The value can indicate a defined IGP Algorithm (value 0 is SPF) or
+                         a Flexible Algorithm (range 128..255).";
                 }
 
                 container egress {

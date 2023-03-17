@@ -10,13 +10,12 @@ module nokia-oper-admin {
     import nokia-conf                     { prefix "conf"; }
     import nokia-sros-yang-extensions     { prefix "sros-ext"; }
     import nokia-state                    { prefix "state"; }
-    import nokia-types-card               { prefix "types-card"; }
     import nokia-types-chassis            { prefix "types-chassis"; }
     import nokia-types-operation          { prefix "types-operation"; }
     import nokia-types-security           { prefix "types-security"; }
     import nokia-types-sros               { prefix "types-sros"; }
 
-    sros-ext:sros-major-release "rel22";
+    sros-ext:sros-major-release "rel23";
 
     organization "Nokia";
 
@@ -625,7 +624,7 @@ module nokia-oper-admin {
 
                             leaf boot-environment {
                                 type empty;
-                                description "Synchronize files used in system initialization";
+                                description "Synchronize all files required for the boot process";
                             }
 
                         }
@@ -633,7 +632,15 @@ module nokia-oper-admin {
 
                             leaf configuration {
                                 type empty;
-                                description "Synchronize the configuration files only";
+                                description "Synchronize the configuration files";
+                            }
+
+                        }
+                        case certificate {
+
+                            leaf certificate {
+                                type empty;
+                                description "Synchronize imported certificate, key, and CRL files";
                             }
 
                         }
@@ -1009,25 +1016,12 @@ module nokia-oper-admin {
 
                     input {
 
-                        choice admin-passwords {
+                        leaf admin-password {
+                            type empty;
                             mandatory true;
-                            case admin-password {
-
-                                leaf admin-password {
-                                    type empty;
-                                    description "Administrative password";
-                                }
-
-                            }
-                            case vsd-password {
-
-                                leaf vsd-password {
-                                    type empty;
-                                    description "VSD password";
-                                }
-
-                            }
+                            description "Administrative password";
                         }
+
                     }
                     output {
 
@@ -1073,6 +1067,1713 @@ module nokia-oper-admin {
 
                     }
                 }
+
+                container pki {
+                    description "Perform PKI related operations";
+
+                    action clear-ocsp-cache {
+                        description "Clear the current OCSP response cache";
+
+                        input {
+
+                            leaf entry-id {
+                                type uint32 {
+                                    range "1..2000";
+                                }
+                                description "Local OCSP response cache entry ID to clear";
+                            }
+
+                        }
+                        output {
+
+                            leaf operation-id {
+                                type types-operation:operation-id;
+                                description "ID assigned to the operation.";
+                            }
+
+                            leaf start-time {
+                                type types-operation:operation-timestamp;
+                                description "Time when the operation started its execution.";
+                            }
+
+                            leaf results-path {
+                                type types-operation:operation-path;
+                                description "Path to the results of the operation formatted as xpath.";
+                            }
+
+                            leaf status {
+                                type types-operation:operation-status;
+                                description "Status of the operation";
+                            }
+
+                            leaf-list error-message {
+                                type types-operation:operation-message;
+                                description "Error messages reported during execution of the operation.";
+                            }
+
+                            leaf-list warning-message {
+                                type types-operation:operation-message;
+                                description "Warning messages reported during execution of the operation.";
+                            }
+
+                            leaf-list info-message {
+                                type types-operation:operation-message;
+                                description "Info messages reported during execution of the operation.";
+                            }
+
+                            leaf end-time {
+                                type types-operation:operation-timestamp;
+                                description "Time when the operation ended its execution.";
+                            }
+
+                        }
+                    }
+
+                    container cmpv2 {
+                        description "Perform CMPv2 operations";
+
+                        action cert-request {
+                            description "Request an additional certificate";
+
+                            input {
+
+                                leaf ca-profile {
+                                    type leafref {
+                                        path "/state:state/state:system/state:security/state:pki/state:ca-profile/state:ca-profile-name";
+                                    }
+                                    mandatory true;
+                                    description "PKI CA profile name";
+                                }
+
+                                leaf current-key {
+                                    type types-security:pki-file-name;
+                                    mandatory true;
+                                    description "Imported key file used to create the request";
+                                }
+
+                                leaf current-certificate {
+                                    type types-security:pki-file-name;
+                                    mandatory true;
+                                    description "Existing imported certificate file to create request";
+                                }
+
+                                leaf new-key {
+                                    type types-security:pki-file-name;
+                                    mandatory true;
+                                    description "New imported key file to create certificate request";
+                                }
+
+                                leaf hash-algorithm {
+                                    type types-security:hash-algorithm;
+                                    description "Hash algorithm used for the certificate signature";
+                                }
+
+                                leaf subject-dn {
+                                    type string {
+                                        length "1..256";
+                                    }
+                                    description "Subject of the requesting certificate";
+                                }
+
+                                leaf domain-name {
+                                    type string {
+                                        length "1..512";
+                                    }
+                                    description "FQDNs for the Subject Alternative Name";
+                                }
+
+                                leaf ip-address {
+                                    type types-sros:ip-address;
+                                    description "IP address for the Subject Alternative Name";
+                                }
+
+                                leaf save-as {
+                                    type types-sros:cflash-url;
+                                    mandatory true;
+                                    description "Full path to save the result certificate";
+                                }
+
+                            }
+                            output {
+
+                                leaf operation-id {
+                                    type types-operation:operation-id;
+                                    description "ID assigned to the operation.";
+                                }
+
+                                leaf start-time {
+                                    type types-operation:operation-timestamp;
+                                    description "Time when the operation started its execution.";
+                                }
+
+                                leaf results-path {
+                                    type types-operation:operation-path;
+                                    description "Path to the results of the operation formatted as xpath.";
+                                }
+
+                                container results {
+
+                                    container request-parameters {
+
+                                        leaf ca-profile {
+                                            type string {
+                                                length "1..32";
+                                            }
+                                            description "The pki ca-profile name";
+                                        }
+
+                                        leaf save-as {
+                                            type types-sros:cflash-url;
+                                            description "Path to result certificate file";
+                                        }
+
+                                        leaf current-key {
+                                            type types-security:pki-file-name;
+                                        }
+
+                                        leaf current-certificate {
+                                            type types-security:pki-file-name;
+                                        }
+
+                                        leaf new-key {
+                                            type types-security:pki-file-name;
+                                        }
+
+                                        leaf hash-algorithm {
+                                            type types-security:hash-algorithm;
+                                            description "Hash algorithm used for the certificate signature";
+                                        }
+
+                                        leaf subject-dn {
+                                            type string {
+                                                length "1..256";
+                                            }
+                                            description "Subject of the requesting certificate";
+                                        }
+
+                                        leaf domain-name {
+                                            type string {
+                                                length "1..512";
+                                            }
+                                            description "FQDNs for the Subject Alternative Name";
+                                        }
+
+                                        leaf ip-address {
+                                            type types-sros:ip-address;
+                                            description "IP address for the Subject Alternative Name";
+                                        }
+
+                                    } // container request-parameters
+
+                                    leaf last-ca-response-time {
+                                        type yang:date-and-time;
+                                        description "Time when CA last response";
+                                    }
+
+                                    leaf transaction-status {
+                                        type types-security:cmpv2-transaction-status;
+                                        description "CMPv2 transaction status";
+                                    }
+
+                                    leaf transaction-status-code {
+                                        type types-security:cmpv2-transaction-status-code;
+                                        description "CMPv2 transaction status code";
+                                    }
+
+                                    leaf transaction-status-string {
+                                        type string {
+                                            length "1..255";
+                                        }
+                                        description "CMPv2 transaction extra status info";
+                                    }
+
+                                } // container results
+
+                                leaf status {
+                                    type types-operation:operation-status;
+                                    description "Status of the operation";
+                                }
+
+                                leaf-list error-message {
+                                    type types-operation:operation-message;
+                                    description "Error messages reported during execution of the operation.";
+                                }
+
+                                leaf-list warning-message {
+                                    type types-operation:operation-message;
+                                    description "Warning messages reported during execution of the operation.";
+                                }
+
+                                leaf-list info-message {
+                                    type types-operation:operation-message;
+                                    description "Info messages reported during execution of the operation.";
+                                }
+
+                                leaf end-time {
+                                    type types-operation:operation-timestamp;
+                                    description "Time when the operation ended its execution.";
+                                }
+
+                            }
+                        }
+
+                        action clear-request {
+                            description "Clear pending CMPv2 requests";
+
+                            input {
+
+                                leaf ca-profile {
+                                    type leafref {
+                                        path "/state:state/state:system/state:security/state:pki/state:ca-profile/state:ca-profile-name";
+                                    }
+                                    mandatory true;
+                                    description "PKI CA profile name";
+                                }
+
+                            }
+                            output {
+
+                                leaf operation-id {
+                                    type types-operation:operation-id;
+                                    description "ID assigned to the operation.";
+                                }
+
+                                leaf start-time {
+                                    type types-operation:operation-timestamp;
+                                    description "Time when the operation started its execution.";
+                                }
+
+                                leaf results-path {
+                                    type types-operation:operation-path;
+                                    description "Path to the results of the operation formatted as xpath.";
+                                }
+
+                                leaf status {
+                                    type types-operation:operation-status;
+                                    description "Status of the operation";
+                                }
+
+                                leaf-list error-message {
+                                    type types-operation:operation-message;
+                                    description "Error messages reported during execution of the operation.";
+                                }
+
+                                leaf-list warning-message {
+                                    type types-operation:operation-message;
+                                    description "Warning messages reported during execution of the operation.";
+                                }
+
+                                leaf-list info-message {
+                                    type types-operation:operation-message;
+                                    description "Info messages reported during execution of the operation.";
+                                }
+
+                                leaf end-time {
+                                    type types-operation:operation-timestamp;
+                                    description "Time when the operation ended its execution.";
+                                }
+
+                            }
+                        }
+
+                        action initial-registration {
+                            description "Request initial certificate using the CMPv2 protocol";
+
+                            input {
+
+                                leaf ca-profile {
+                                    type leafref {
+                                        path "/state:state/state:system/state:security/state:pki/state:ca-profile/state:ca-profile-name";
+                                    }
+                                    mandatory true;
+                                    description "PKI CA profile name";
+                                }
+
+                                leaf key-to-certify {
+                                    type types-security:pki-file-name;
+                                    mandatory true;
+                                    description "Name of the key file used to create initial request";
+                                }
+
+                                choice protection-algorithm {
+                                    mandatory true;
+                                    case password {
+
+                                        leaf password {
+                                            type string {
+                                                length "1..64";
+                                            }
+                                            description "Password for message protection";
+                                        }
+
+                                        leaf reference {
+                                            type string {
+                                                length "1..64";
+                                            }
+                                            description "Password reference number";
+                                        }
+
+                                    }
+                                    case signature {
+
+                                        leaf certificate {
+                                            type types-security:pki-file-name;
+                                            description "Filename of the certificate for the protection key";
+                                        }
+
+                                        leaf send-chain {
+                                            type empty;
+                                            description "Send a certificate chain";
+                                        }
+
+                                        leaf with-ca {
+                                            type leafref {
+                                                path "/state:state/state:system/state:security/state:pki/state:ca-profile/state:ca-profile-name";
+                                            }
+                                            description "Name of CA profile with certificate in the send chain";
+                                        }
+
+                                        leaf protection-key {
+                                            type types-security:pki-file-name;
+                                            description "Key file used to generate message protection signature";
+                                        }
+
+                                        leaf hash-algorithm {
+                                            type types-security:hash-algorithm;
+                                            description "Hash algorithm used for the certificate signature";
+                                        }
+
+                                    }
+                                }
+                                leaf subject-dn {
+                                    type string {
+                                        length "1..256";
+                                    }
+                                    description "Subject of the requesting certificate";
+                                }
+
+                                leaf domain-name {
+                                    type string {
+                                        length "1..512";
+                                    }
+                                    description "FQDNs for the Subject Alternative Name";
+                                }
+
+                                leaf ip-address {
+                                    type types-sros:ip-address;
+                                    description "IP address for the Subject Alternative Name";
+                                }
+
+                                leaf save-as {
+                                    type types-sros:cflash-url;
+                                    mandatory true;
+                                    description "Full path to save the result certificate";
+                                }
+
+                            }
+                            output {
+
+                                leaf operation-id {
+                                    type types-operation:operation-id;
+                                    description "ID assigned to the operation.";
+                                }
+
+                                leaf start-time {
+                                    type types-operation:operation-timestamp;
+                                    description "Time when the operation started its execution.";
+                                }
+
+                                leaf results-path {
+                                    type types-operation:operation-path;
+                                    description "Path to the results of the operation formatted as xpath.";
+                                }
+
+                                container results {
+
+                                    container request-parameters {
+
+                                        leaf ca-profile {
+                                            type string {
+                                                length "1..32";
+                                            }
+                                            description "The pki ca-profile name";
+                                        }
+
+                                        leaf save-as {
+                                            type types-sros:cflash-url;
+                                            description "Path to result certificate file";
+                                        }
+
+                                        leaf key-to-certify {
+                                            type types-security:pki-file-name;
+                                        }
+
+                                        choice protection-algorithm {
+                                            case password {
+
+                                                leaf reference {
+                                                    type string {
+                                                        length "1..64";
+                                                    }
+                                                }
+
+                                            }
+                                            case signature {
+
+                                                leaf certificate {
+                                                    type types-security:pki-file-name;
+                                                }
+
+                                                leaf send-chain {
+                                                    type empty;
+                                                }
+
+                                                leaf with-ca {
+                                                    type string {
+                                                        length "1..32";
+                                                    }
+                                                }
+
+                                                leaf protection-key {
+                                                    type types-security:pki-file-name;
+                                                }
+
+                                                leaf hash-algorithm {
+                                                    type types-security:hash-algorithm;
+                                                    description "Hash algorithm used for the certificate signature";
+                                                }
+
+                                            }
+                                        }
+                                        leaf subject-dn {
+                                            type string {
+                                                length "1..256";
+                                            }
+                                            description "Subject of the requesting certificate";
+                                        }
+
+                                        leaf domain-name {
+                                            type string {
+                                                length "1..512";
+                                            }
+                                            description "FQDNs for the Subject Alternative Name";
+                                        }
+
+                                        leaf ip-address {
+                                            type types-sros:ip-address;
+                                            description "IP address for the Subject Alternative Name";
+                                        }
+
+                                    } // container request-parameters
+
+                                    leaf ca-profile {
+                                        type string {
+                                            length "1..32";
+                                        }
+                                        description "The pki ca-profile name";
+                                    }
+
+                                    leaf save-as {
+                                        type types-sros:cflash-url;
+                                        description "Path to result certificate file";
+                                    }
+
+                                    leaf last-ca-response-time {
+                                        type yang:date-and-time;
+                                        description "Time when CA last response";
+                                    }
+
+                                    leaf transaction-status {
+                                        type types-security:cmpv2-transaction-status;
+                                        description "CMPv2 transaction status";
+                                    }
+
+                                    leaf transaction-status-code {
+                                        type types-security:cmpv2-transaction-status-code;
+                                        description "CMPv2 transaction status code";
+                                    }
+
+                                    leaf transaction-status-string {
+                                        type string {
+                                            length "1..255";
+                                        }
+                                        description "CMPv2 transaction extra status info";
+                                    }
+
+                                } // container results
+
+                                leaf status {
+                                    type types-operation:operation-status;
+                                    description "Status of the operation";
+                                }
+
+                                leaf-list error-message {
+                                    type types-operation:operation-message;
+                                    description "Error messages reported during execution of the operation.";
+                                }
+
+                                leaf-list warning-message {
+                                    type types-operation:operation-message;
+                                    description "Warning messages reported during execution of the operation.";
+                                }
+
+                                leaf-list info-message {
+                                    type types-operation:operation-message;
+                                    description "Info messages reported during execution of the operation.";
+                                }
+
+                                leaf end-time {
+                                    type types-operation:operation-timestamp;
+                                    description "Time when the operation ended its execution.";
+                                }
+
+                            }
+                        }
+
+                        action key-update {
+                            description "Request new certificate to update existing certificate";
+
+                            input {
+
+                                leaf ca-profile {
+                                    type leafref {
+                                        path "/state:state/state:system/state:security/state:pki/state:ca-profile/state:ca-profile-name";
+                                    }
+                                    mandatory true;
+                                    description "PKI CA profile name";
+                                }
+
+                                leaf new-key {
+                                    type types-security:pki-file-name;
+                                    mandatory true;
+                                    description "Name of new imported key file used for the key update";
+                                }
+
+                                leaf old-key {
+                                    type types-security:pki-file-name;
+                                    mandatory true;
+                                    description "Name of the old key file to be replaced";
+                                }
+
+                                leaf old-certificate {
+                                    type types-security:pki-file-name;
+                                    mandatory true;
+                                    description "Name of the old certificate file to be replaced";
+                                }
+
+                                leaf hash-algorithm {
+                                    type types-security:hash-algorithm;
+                                    description "Hash algorithm used for the certificate signature";
+                                }
+
+                                leaf save-as {
+                                    type types-sros:cflash-url;
+                                    mandatory true;
+                                    description "Full path to save the result certificate file";
+                                }
+
+                            }
+                            output {
+
+                                leaf operation-id {
+                                    type types-operation:operation-id;
+                                    description "ID assigned to the operation.";
+                                }
+
+                                leaf start-time {
+                                    type types-operation:operation-timestamp;
+                                    description "Time when the operation started its execution.";
+                                }
+
+                                leaf results-path {
+                                    type types-operation:operation-path;
+                                    description "Path to the results of the operation formatted as xpath.";
+                                }
+
+                                container results {
+
+                                    container request-parameters {
+
+                                        leaf ca-profile {
+                                            type string {
+                                                length "1..32";
+                                            }
+                                            description "The pki ca-profile name";
+                                        }
+
+                                        leaf save-as {
+                                            type types-sros:cflash-url;
+                                            description "Path to result certificate file";
+                                        }
+
+                                        leaf new-key {
+                                            type types-security:pki-file-name;
+                                        }
+
+                                        leaf old-key {
+                                            type types-security:pki-file-name;
+                                        }
+
+                                        leaf old-certificate {
+                                            type types-security:pki-file-name;
+                                        }
+
+                                        leaf hash-algorithm {
+                                            type types-security:hash-algorithm;
+                                            description "Hash algorithm used for the certificate signature";
+                                        }
+
+                                    } // container request-parameters
+
+                                    leaf last-ca-response-time {
+                                        type yang:date-and-time;
+                                        description "Time when CA last response";
+                                    }
+
+                                    leaf transaction-status {
+                                        type types-security:cmpv2-transaction-status;
+                                        description "CMPv2 transaction status";
+                                    }
+
+                                    leaf transaction-status-code {
+                                        type types-security:cmpv2-transaction-status-code;
+                                        description "CMPv2 transaction status code";
+                                    }
+
+                                    leaf transaction-status-string {
+                                        type string {
+                                            length "1..255";
+                                        }
+                                        description "CMPv2 transaction extra status info";
+                                    }
+
+                                } // container results
+
+                                leaf status {
+                                    type types-operation:operation-status;
+                                    description "Status of the operation";
+                                }
+
+                                leaf-list error-message {
+                                    type types-operation:operation-message;
+                                    description "Error messages reported during execution of the operation.";
+                                }
+
+                                leaf-list warning-message {
+                                    type types-operation:operation-message;
+                                    description "Warning messages reported during execution of the operation.";
+                                }
+
+                                leaf-list info-message {
+                                    type types-operation:operation-message;
+                                    description "Info messages reported during execution of the operation.";
+                                }
+
+                                leaf end-time {
+                                    type types-operation:operation-timestamp;
+                                    description "Time when the operation ended its execution.";
+                                }
+
+                            }
+                        }
+
+                        action poll {
+                            description "Poll the CMPv2 server for pending request status";
+
+                            input {
+
+                                leaf ca-profile {
+                                    type leafref {
+                                        path "/state:state/state:system/state:security/state:pki/state:ca-profile/state:ca-profile-name";
+                                    }
+                                    mandatory true;
+                                    description "PKI CA profile name";
+                                }
+
+                            }
+                            output {
+
+                                leaf operation-id {
+                                    type types-operation:operation-id;
+                                    description "ID assigned to the operation.";
+                                }
+
+                                leaf start-time {
+                                    type types-operation:operation-timestamp;
+                                    description "Time when the operation started its execution.";
+                                }
+
+                                leaf results-path {
+                                    type types-operation:operation-path;
+                                    description "Path to the results of the operation formatted as xpath.";
+                                }
+
+                                container results {
+
+                                    leaf request-type {
+                                        type types-security:cmpv2-request-type;
+                                        description "CMPv2 request type";
+                                    }
+
+                                    leaf ca-profile {
+                                        type string {
+                                            length "1..32";
+                                        }
+                                        description "The pki ca-profile name";
+                                    }
+
+                                    leaf save-as {
+                                        type types-sros:cflash-url;
+                                        description "Path to result certificate file";
+                                    }
+
+                                    leaf last-ca-response-time {
+                                        type yang:date-and-time;
+                                        description "Time when CA last response";
+                                    }
+
+                                    leaf transaction-status {
+                                        type types-security:cmpv2-transaction-status;
+                                        description "CMPv2 transaction status";
+                                    }
+
+                                    leaf transaction-status-code {
+                                        type types-security:cmpv2-transaction-status-code;
+                                        description "CMPv2 transaction status code";
+                                    }
+
+                                    leaf transaction-status-string {
+                                        type string {
+                                            length "1..255";
+                                        }
+                                        description "CMPv2 transaction extra status info";
+                                    }
+
+                                } // container results
+
+                                leaf status {
+                                    type types-operation:operation-status;
+                                    description "Status of the operation";
+                                }
+
+                                leaf-list error-message {
+                                    type types-operation:operation-message;
+                                    description "Error messages reported during execution of the operation.";
+                                }
+
+                                leaf-list warning-message {
+                                    type types-operation:operation-message;
+                                    description "Warning messages reported during execution of the operation.";
+                                }
+
+                                leaf-list info-message {
+                                    type types-operation:operation-message;
+                                    description "Info messages reported during execution of the operation.";
+                                }
+
+                                leaf end-time {
+                                    type types-operation:operation-timestamp;
+                                    description "Time when the operation ended its execution.";
+                                }
+
+                            }
+                        }
+
+                    } // container cmpv2
+
+                    action convert-file {
+                        description "Convert imported file between secure and legacy format";
+
+                        input {
+
+                            leaf input-file {
+                                type types-security:pki-file-name;
+                                mandatory true;
+                                description "Name of the file to be converted";
+                            }
+
+                            leaf output-file {
+                                type types-security:pki-file-name;
+                                mandatory true;
+                                description "Output filename";
+                            }
+
+                            leaf format {
+                                type types-security:cert-file-convert-format;
+                                mandatory true;
+                                description "File format to convert to";
+                            }
+
+                            leaf force {
+                                type empty;
+                                description "Force the conversion";
+                            }
+
+                        }
+                        output {
+
+                            leaf operation-id {
+                                type types-operation:operation-id;
+                                description "ID assigned to the operation.";
+                            }
+
+                            leaf start-time {
+                                type types-operation:operation-timestamp;
+                                description "Time when the operation started its execution.";
+                            }
+
+                            leaf results-path {
+                                type types-operation:operation-path;
+                                description "Path to the results of the operation formatted as xpath.";
+                            }
+
+                            leaf status {
+                                type types-operation:operation-status;
+                                description "Status of the operation";
+                            }
+
+                            leaf-list error-message {
+                                type types-operation:operation-message;
+                                description "Error messages reported during execution of the operation.";
+                            }
+
+                            leaf-list warning-message {
+                                type types-operation:operation-message;
+                                description "Warning messages reported during execution of the operation.";
+                            }
+
+                            leaf-list info-message {
+                                type types-operation:operation-message;
+                                description "Info messages reported during execution of the operation.";
+                            }
+
+                            leaf end-time {
+                                type types-operation:operation-timestamp;
+                                description "Time when the operation ended its execution.";
+                            }
+
+                        }
+                    }
+
+                    action crl-update {
+                        description "Trigger the CRL update for the CA profile";
+
+                        input {
+
+                            leaf ca-profile {
+                                type leafref {
+                                    path "/state:state/state:system/state:security/state:pki/state:ca-profile/state:ca-profile-name";
+                                }
+                                mandatory true;
+                                description "PKI CA profile name";
+                            }
+
+                        }
+                        output {
+
+                            leaf operation-id {
+                                type types-operation:operation-id;
+                                description "ID assigned to the operation.";
+                            }
+
+                            leaf start-time {
+                                type types-operation:operation-timestamp;
+                                description "Time when the operation started its execution.";
+                            }
+
+                            leaf results-path {
+                                type types-operation:operation-path;
+                                description "Path to the results of the operation formatted as xpath.";
+                            }
+
+                            leaf status {
+                                type types-operation:operation-status;
+                                description "Status of the operation";
+                            }
+
+                            leaf-list error-message {
+                                type types-operation:operation-message;
+                                description "Error messages reported during execution of the operation.";
+                            }
+
+                            leaf-list warning-message {
+                                type types-operation:operation-message;
+                                description "Warning messages reported during execution of the operation.";
+                            }
+
+                            leaf-list info-message {
+                                type types-operation:operation-message;
+                                description "Info messages reported during execution of the operation.";
+                            }
+
+                            leaf end-time {
+                                type types-operation:operation-timestamp;
+                                description "Time when the operation ended its execution.";
+                            }
+
+                        }
+                    }
+
+                    container est {
+                        description "Perform Enrollment over Secure Transport operations";
+
+                        action ca-certificates {
+                            description "Download CA certificates from the EST server";
+
+                            input {
+
+                                leaf est-profile {
+                                    type string {
+                                        length "1..32";
+                                    }
+                                    mandatory true;
+                                    description "PKI EST profile name";
+                                }
+
+                                leaf output-url {
+                                    type types-sros:cflash-url;
+                                    mandatory true;
+                                    description "Path to the result file";
+                                }
+
+                                leaf force {
+                                    type empty;
+                                    description "Force an overwrite of the result file";
+                                }
+
+                            }
+                            output {
+
+                                leaf operation-id {
+                                    type types-operation:operation-id;
+                                    description "ID assigned to the operation.";
+                                }
+
+                                leaf start-time {
+                                    type types-operation:operation-timestamp;
+                                    description "Time when the operation started its execution.";
+                                }
+
+                                leaf results-path {
+                                    type types-operation:operation-path;
+                                    description "Path to the results of the operation formatted as xpath.";
+                                }
+
+                                leaf status {
+                                    type types-operation:operation-status;
+                                    description "Status of the operation";
+                                }
+
+                                leaf-list error-message {
+                                    type types-operation:operation-message;
+                                    description "Error messages reported during execution of the operation.";
+                                }
+
+                                leaf-list warning-message {
+                                    type types-operation:operation-message;
+                                    description "Warning messages reported during execution of the operation.";
+                                }
+
+                                leaf-list info-message {
+                                    type types-operation:operation-message;
+                                    description "Info messages reported during execution of the operation.";
+                                }
+
+                                leaf end-time {
+                                    type types-operation:operation-timestamp;
+                                    description "Time when the operation ended its execution.";
+                                }
+
+                            }
+                        }
+
+                        action enroll {
+                            description "Enroll a new certificate with CA with the EST protocol";
+
+                            input {
+
+                                leaf est-profile {
+                                    type string {
+                                        length "1..32";
+                                    }
+                                    mandatory true;
+                                    description "PKI EST profile name";
+                                }
+
+                                leaf key {
+                                    type types-sros:cflash-url;
+                                    mandatory true;
+                                    description "Name of the imported the key file to enroll";
+                                }
+
+                                leaf hash-algorithm {
+                                    type types-security:hash-algorithm;
+                                    description "Hash algorithm used for the certificate signature";
+                                }
+
+                                leaf subject-dn {
+                                    type string {
+                                        length "1..256";
+                                    }
+                                    description "Subject of the requesting certificate";
+                                }
+
+                                leaf domain-name {
+                                    type string {
+                                        length "1..512";
+                                    }
+                                    description "FQDNs for the Subject Alternative Name";
+                                }
+
+                                leaf ip-address {
+                                    type types-sros:ip-address;
+                                    description "IP address for the Subject Alternative Name";
+                                }
+
+                                leaf output-file {
+                                    type types-security:pki-file-name;
+                                    mandatory true;
+                                    description "Name of the result file";
+                                }
+
+                                leaf force {
+                                    type empty;
+                                    description "Force an overwrite of the result file";
+                                }
+
+                                leaf validate-certificate-chain {
+                                    type empty;
+                                    description "Validate result certificate chain before importing";
+                                }
+
+                            }
+                            output {
+
+                                leaf operation-id {
+                                    type types-operation:operation-id;
+                                    description "ID assigned to the operation.";
+                                }
+
+                                leaf start-time {
+                                    type types-operation:operation-timestamp;
+                                    description "Time when the operation started its execution.";
+                                }
+
+                                leaf results-path {
+                                    type types-operation:operation-path;
+                                    description "Path to the results of the operation formatted as xpath.";
+                                }
+
+                                leaf status {
+                                    type types-operation:operation-status;
+                                    description "Status of the operation";
+                                }
+
+                                leaf-list error-message {
+                                    type types-operation:operation-message;
+                                    description "Error messages reported during execution of the operation.";
+                                }
+
+                                leaf-list warning-message {
+                                    type types-operation:operation-message;
+                                    description "Warning messages reported during execution of the operation.";
+                                }
+
+                                leaf-list info-message {
+                                    type types-operation:operation-message;
+                                    description "Info messages reported during execution of the operation.";
+                                }
+
+                                leaf end-time {
+                                    type types-operation:operation-timestamp;
+                                    description "Time when the operation ended its execution.";
+                                }
+
+                            }
+                        }
+
+                        action renew {
+                            description "Renew a CA certificate using the EST protocol";
+
+                            input {
+
+                                leaf est-profile {
+                                    type string {
+                                        length "1..32";
+                                    }
+                                    mandatory true;
+                                    description "PKI EST profile name";
+                                }
+
+                                leaf certificate {
+                                    type types-sros:cflash-url;
+                                    mandatory true;
+                                    description "Name of the imported certificate file to renew";
+                                }
+
+                                leaf key {
+                                    type types-sros:cflash-url;
+                                    mandatory true;
+                                    description "Imported key file of the certificate to renew";
+                                }
+
+                                leaf hash-algorithm {
+                                    type types-security:hash-algorithm;
+                                    description "Hash algorithm used for the certificate signature";
+                                }
+
+                                leaf output-file {
+                                    type types-security:pki-file-name;
+                                    mandatory true;
+                                    description "Name of the result file";
+                                }
+
+                                leaf force {
+                                    type empty;
+                                    description "Force an overwrite of the result file";
+                                }
+
+                                leaf validate-certificate-chain {
+                                    type empty;
+                                    description "Validate result certificate chain before importing";
+                                }
+
+                            }
+                            output {
+
+                                leaf operation-id {
+                                    type types-operation:operation-id;
+                                    description "ID assigned to the operation.";
+                                }
+
+                                leaf start-time {
+                                    type types-operation:operation-timestamp;
+                                    description "Time when the operation started its execution.";
+                                }
+
+                                leaf results-path {
+                                    type types-operation:operation-path;
+                                    description "Path to the results of the operation formatted as xpath.";
+                                }
+
+                                leaf status {
+                                    type types-operation:operation-status;
+                                    description "Status of the operation";
+                                }
+
+                                leaf-list error-message {
+                                    type types-operation:operation-message;
+                                    description "Error messages reported during execution of the operation.";
+                                }
+
+                                leaf-list warning-message {
+                                    type types-operation:operation-message;
+                                    description "Warning messages reported during execution of the operation.";
+                                }
+
+                                leaf-list info-message {
+                                    type types-operation:operation-message;
+                                    description "Info messages reported during execution of the operation.";
+                                }
+
+                                leaf end-time {
+                                    type types-operation:operation-timestamp;
+                                    description "Time when the operation ended its execution.";
+                                }
+
+                            }
+                        }
+
+                    } // container est
+
+                    action export {
+                        description "Export an imported file";
+
+                        input {
+
+                            leaf input-file {
+                                type types-security:pki-file-name;
+                                mandatory true;
+                                description "Name of the file to be exported";
+                            }
+
+                            leaf output-url {
+                                type types-sros:cflash-url;
+                                mandatory true;
+                                description "Full path to export the result file";
+                            }
+
+                            leaf type {
+                                type types-security:cert-export-file-type;
+                                mandatory true;
+                                description "Type of file to be exported";
+                            }
+
+                            leaf format {
+                                type types-security:cert-export-file-format;
+                                mandatory true;
+                                description "Output file format";
+                            }
+
+                            leaf password {
+                                type string {
+                                    length "1..32";
+                                }
+                                description "Password used to encrypt the output file";
+                            }
+
+                            leaf key-file {
+                                type types-security:pki-file-name;
+                                description "Name of the key file to be exported";
+                            }
+
+                        }
+                        output {
+
+                            leaf operation-id {
+                                type types-operation:operation-id;
+                                description "ID assigned to the operation.";
+                            }
+
+                            leaf start-time {
+                                type types-operation:operation-timestamp;
+                                description "Time when the operation started its execution.";
+                            }
+
+                            leaf results-path {
+                                type types-operation:operation-path;
+                                description "Path to the results of the operation formatted as xpath.";
+                            }
+
+                            leaf status {
+                                type types-operation:operation-status;
+                                description "Status of the operation";
+                            }
+
+                            leaf-list error-message {
+                                type types-operation:operation-message;
+                                description "Error messages reported during execution of the operation.";
+                            }
+
+                            leaf-list warning-message {
+                                type types-operation:operation-message;
+                                description "Warning messages reported during execution of the operation.";
+                            }
+
+                            leaf-list info-message {
+                                type types-operation:operation-message;
+                                description "Info messages reported during execution of the operation.";
+                            }
+
+                            leaf end-time {
+                                type types-operation:operation-timestamp;
+                                description "Time when the operation ended its execution.";
+                            }
+
+                        }
+                    }
+
+                    action generate-keypair {
+                        description "Generate PKI key pair";
+
+                        input {
+
+                            leaf save-path {
+                                type types-sros:cflash-url;
+                                mandatory true;
+                                description "Full path to save the result key file";
+                            }
+
+                            choice key-type {
+                                mandatory true;
+                                case rsa {
+
+                                    leaf rsa-key-size {
+                                        type uint32 {
+                                            range "512..8192";
+                                        }
+                                        default "2048";
+                                        description "Length of the RSA key to be generated";
+                                    }
+
+                                }
+                                case dsa {
+
+                                    leaf dsa-key-size {
+                                        type uint32 {
+                                            range "512..8192";
+                                        }
+                                        default "2048";
+                                        description "Length of the DSA key to be generated";
+                                    }
+
+                                }
+                                case ecdsa {
+
+                                    leaf ecdsa-curve {
+                                        type types-security:ecdsa-curve;
+                                        default "secp256r1";
+                                        description "Elliptic curve of the ECDSA key to be generated";
+                                    }
+
+                                }
+                            }
+                        }
+                        output {
+
+                            leaf operation-id {
+                                type types-operation:operation-id;
+                                description "ID assigned to the operation.";
+                            }
+
+                            leaf start-time {
+                                type types-operation:operation-timestamp;
+                                description "Time when the operation started its execution.";
+                            }
+
+                            leaf results-path {
+                                type types-operation:operation-path;
+                                description "Path to the results of the operation formatted as xpath.";
+                            }
+
+                            leaf status {
+                                type types-operation:operation-status;
+                                description "Status of the operation";
+                            }
+
+                            leaf-list error-message {
+                                type types-operation:operation-message;
+                                description "Error messages reported during execution of the operation.";
+                            }
+
+                            leaf-list warning-message {
+                                type types-operation:operation-message;
+                                description "Warning messages reported during execution of the operation.";
+                            }
+
+                            leaf-list info-message {
+                                type types-operation:operation-message;
+                                description "Info messages reported during execution of the operation.";
+                            }
+
+                            leaf end-time {
+                                type types-operation:operation-timestamp;
+                                description "Time when the operation ended its execution.";
+                            }
+
+                        }
+                    }
+
+                    action generate-csr {
+                        description "Generate a PKCS#10 certificate signing request file";
+
+                        input {
+
+                            leaf key-url {
+                                type types-sros:cflash-url;
+                                mandatory true;
+                                description "Full path to the key file used to generate the request";
+                            }
+
+                            leaf hash-algorithm {
+                                type types-security:hash-algorithm;
+                                description "Hash algorithm used for the certificate signature";
+                            }
+
+                            leaf subject-dn {
+                                type string {
+                                    length "1..256";
+                                }
+                                description "Subject of the requesting certificate";
+                            }
+
+                            leaf domain-name {
+                                type string {
+                                    length "1..512";
+                                }
+                                description "FQDNs for the Subject Alternative Name";
+                            }
+
+                            leaf ip-address {
+                                type types-sros:ip-address;
+                                description "IP address for the Subject Alternative Name";
+                            }
+
+                            leaf output-url {
+                                type types-sros:cflash-url;
+                                mandatory true;
+                                description "Full path to result certificate signing request file";
+                            }
+
+                            leaf use-printable {
+                                type empty;
+                                description "Force ASCII encoding for input subject DN attributes";
+                            }
+
+                        }
+                        output {
+
+                            leaf operation-id {
+                                type types-operation:operation-id;
+                                description "ID assigned to the operation.";
+                            }
+
+                            leaf start-time {
+                                type types-operation:operation-timestamp;
+                                description "Time when the operation started its execution.";
+                            }
+
+                            leaf results-path {
+                                type types-operation:operation-path;
+                                description "Path to the results of the operation formatted as xpath.";
+                            }
+
+                            leaf status {
+                                type types-operation:operation-status;
+                                description "Status of the operation";
+                            }
+
+                            leaf-list error-message {
+                                type types-operation:operation-message;
+                                description "Error messages reported during execution of the operation.";
+                            }
+
+                            leaf-list warning-message {
+                                type types-operation:operation-message;
+                                description "Warning messages reported during execution of the operation.";
+                            }
+
+                            leaf-list info-message {
+                                type types-operation:operation-message;
+                                description "Info messages reported during execution of the operation.";
+                            }
+
+                            leaf end-time {
+                                type types-operation:operation-timestamp;
+                                description "Time when the operation ended its execution.";
+                            }
+
+                        }
+                    }
+
+                    action import {
+                        description "Import a certificate related file";
+
+                        input {
+
+                            leaf input-url {
+                                type types-sros:cflash-url;
+                                mandatory true;
+                                description "Full path to the file to import";
+                            }
+
+                            leaf output-file {
+                                type types-security:pki-file-name;
+                                mandatory true;
+                                description "Name of the result file";
+                            }
+
+                            leaf type {
+                                type types-security:cert-export-file-type;
+                                mandatory true;
+                                description "Type of file to be exported";
+                            }
+
+                            leaf format {
+                                type types-security:cert-export-file-format;
+                                mandatory true;
+                                description "Output file format";
+                            }
+
+                            leaf password {
+                                type string {
+                                    length "1..32";
+                                }
+                                description "Password used to encrypt the output file";
+                            }
+
+                            leaf validate-certificate-chain {
+                                type empty;
+                                description "Validate the certificate chain";
+                            }
+
+                        }
+                        output {
+
+                            leaf operation-id {
+                                type types-operation:operation-id;
+                                description "ID assigned to the operation.";
+                            }
+
+                            leaf start-time {
+                                type types-operation:operation-timestamp;
+                                description "Time when the operation started its execution.";
+                            }
+
+                            leaf results-path {
+                                type types-operation:operation-path;
+                                description "Path to the results of the operation formatted as xpath.";
+                            }
+
+                            leaf status {
+                                type types-operation:operation-status;
+                                description "Status of the operation";
+                            }
+
+                            leaf-list error-message {
+                                type types-operation:operation-message;
+                                description "Error messages reported during execution of the operation.";
+                            }
+
+                            leaf-list warning-message {
+                                type types-operation:operation-message;
+                                description "Warning messages reported during execution of the operation.";
+                            }
+
+                            leaf-list info-message {
+                                type types-operation:operation-message;
+                                description "Info messages reported during execution of the operation.";
+                            }
+
+                            leaf end-time {
+                                type types-operation:operation-timestamp;
+                                description "Time when the operation ended its execution.";
+                            }
+
+                        }
+                    }
+
+                    action reload {
+                        description "Reload key or certificate files";
+
+                        input {
+
+                            leaf application {
+                                type enumeration {
+                                    enum "ipsec"                        { value 0; }
+                                }
+                                mandatory true;
+                                description "Application to be reloaded";
+                            }
+
+                            leaf certificate {
+                                type types-security:pki-file-name;
+                                mandatory true;
+                                description "Name of the certificate file to reload";
+                            }
+
+                            leaf key {
+                                type types-security:pki-file-name;
+                                mandatory true;
+                                description "Name of the key file to reload";
+                            }
+
+                        }
+                        output {
+
+                            leaf operation-id {
+                                type types-operation:operation-id;
+                                description "ID assigned to the operation.";
+                            }
+
+                            leaf start-time {
+                                type types-operation:operation-timestamp;
+                                description "Time when the operation started its execution.";
+                            }
+
+                            leaf results-path {
+                                type types-operation:operation-path;
+                                description "Path to the results of the operation formatted as xpath.";
+                            }
+
+                            leaf status {
+                                type types-operation:operation-status;
+                                description "Status of the operation";
+                            }
+
+                            leaf-list error-message {
+                                type types-operation:operation-message;
+                                description "Error messages reported during execution of the operation.";
+                            }
+
+                            leaf-list warning-message {
+                                type types-operation:operation-message;
+                                description "Warning messages reported during execution of the operation.";
+                            }
+
+                            leaf-list info-message {
+                                type types-operation:operation-message;
+                                description "Info messages reported during execution of the operation.";
+                            }
+
+                            leaf end-time {
+                                type types-operation:operation-timestamp;
+                                description "Time when the operation ended its execution.";
+                            }
+
+                        }
+                    }
+
+                    action update-certificate {
+                        description "Update End Entity certificate";
+
+                        input {
+
+                            leaf certificate {
+                                type leafref {
+                                    path "/state:state/state:system/state:security/state:pki/state:certificate-auto-update/state:certificate-file-name";
+                                }
+                                mandatory true;
+                                description "Name of the certificate file to be updated";
+                            }
+
+                        }
+                        output {
+
+                            leaf operation-id {
+                                type types-operation:operation-id;
+                                description "ID assigned to the operation.";
+                            }
+
+                            leaf start-time {
+                                type types-operation:operation-timestamp;
+                                description "Time when the operation started its execution.";
+                            }
+
+                            leaf results-path {
+                                type types-operation:operation-path;
+                                description "Path to the results of the operation formatted as xpath.";
+                            }
+
+                            leaf status {
+                                type types-operation:operation-status;
+                                description "Status of the operation";
+                            }
+
+                            leaf-list error-message {
+                                type types-operation:operation-message;
+                                description "Error messages reported during execution of the operation.";
+                            }
+
+                            leaf-list warning-message {
+                                type types-operation:operation-message;
+                                description "Warning messages reported during execution of the operation.";
+                            }
+
+                            leaf-list info-message {
+                                type types-operation:operation-message;
+                                description "Info messages reported during execution of the operation.";
+                            }
+
+                            leaf end-time {
+                                type types-operation:operation-timestamp;
+                                description "Time when the operation ended its execution.";
+                            }
+
+                        }
+                    }
+
+                } // container pki
 
             } // container security
 
@@ -1223,6 +2924,7 @@ module nokia-oper-admin {
 
                     }
                 }
+
 
                 action validate {
                     description "Load and validate a system license";

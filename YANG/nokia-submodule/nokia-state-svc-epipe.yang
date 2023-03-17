@@ -18,7 +18,7 @@ submodule nokia-state-svc-epipe {
     include nokia-state-router-segment-routing;
 
 
-    sros-ext:sros-major-release "rel22";
+    sros-ext:sros-major-release "rel23";
 
     organization "Nokia";
 
@@ -45,7 +45,7 @@ submodule nokia-state-svc-epipe {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2022-10-07";
+    revision "2023-01-31";
 
     grouping state-svc-epipe {
         list epipe {
@@ -172,6 +172,73 @@ submodule nokia-state-svc-epipe {
 
                 } // list micro-segment-locator
 
+                container destinations {
+                    description "Enter the destinations context";
+
+                    list ethernet-segment-destination {
+                        key "esi";
+                        description "Enter the ethernet-segment-destination list instance";
+
+                        leaf esi {
+                            type string;
+                            description "Ethernet segment identifier";
+                        }
+
+                        leaf last-update {
+                            type types-sros:date-time;
+                            description "Time this entry was last updated.";
+                        }
+
+                        list tep {
+                            key "tep-address sid-address";
+                            description "Enter the tep list instance";
+
+                            leaf tep-address {
+                                type types-sros:ip-address;
+                                description "Tunnel endpoint ip-address";
+                            }
+
+                            leaf sid-address {
+                                type types-sros:ipv6-address;
+                                description "SID ip-address";
+                            }
+
+                            leaf last-update {
+                                type types-sros:date-time;
+                                description "Time this entry was last updated.";
+                            }
+
+                        } // list tep
+
+                    } // list ethernet-segment-destination
+
+                    list non-ethernet-segment-destination {
+                        key "tep-address sid-address";
+                        description "Enter the non-ethernet-segment-destination list instance";
+
+                        leaf tep-address {
+                            type types-sros:ip-address;
+                            description "Tunnel endpoint ip-address";
+                        }
+
+                        leaf sid-address {
+                            type types-sros:ipv6-address;
+                            description "SID ip-address";
+                        }
+
+                        leaf srv6-type {
+                            type enumeration {
+                                enum "none"                         { value 0; }
+                                enum "static"                       { value 1; }
+                                enum "evpn"                         { value 2; }
+                            }
+                            description "Type of SRv6 instance created";
+                        }
+
+                    } // list non-ethernet-segment-destination
+
+                } // container destinations
+
             } // list segment-routing-v6
 
             list bgp {
@@ -226,7 +293,7 @@ submodule nokia-state-svc-epipe {
                 description "Enter the bgp-vpws context";
 
                 leaf pw-template-name {
-                    status deprecated;
+                    status obsolete;
                     type string;
                     description "Name of PW template used in transmitting BGP-VPWS NLRI information for this VPWS edge";
                 }
@@ -1170,7 +1237,11 @@ submodule nokia-state-svc-epipe {
 
                                     leaf dropped-packets {
                                         type yang:counter64;
-                                        description "Policy ID";
+                                        description
+                                            "The number of packets dropped by the
+                                             ingress packet processor due to: SAP state,
+                                             ingress MAC, IP or IPv6 filter, same segment
+                                             discard, bad checksum, etc.";
                                     }
 
                                     leaf dropped-octets {
@@ -2106,6 +2177,16 @@ submodule nokia-state-svc-epipe {
                                         description "Low droptail.";
                                     }
 
+                                    leaf operational-exceed-burst {
+                                        type types-qos:int64-max;
+                                        description "Oper burst exceed.";
+                                    }
+
+                                    leaf operational-max-transmit-data-size {
+                                        type types-qos:int64-max;
+                                        description "Oper max transmit data size.";
+                                    }
+
                                 } // list hardware-queue
 
                             } // list queue
@@ -2825,12 +2906,22 @@ submodule nokia-state-svc-epipe {
                                 } // container statistics
 
                                 list hardware-policer {
-                                    key "hardware-policer-string";
+                                    key "source-card source-fp source-port";
                                     description "Enter the hardware-policer list instance";
 
-                                    leaf hardware-policer-string {
-                                        type types-sros:named-item-255;
-                                        description "Name of the policer formatted by IOM.";
+                                    leaf source-card {
+                                        type int32;
+                                        description "Card number";
+                                    }
+
+                                    leaf source-fp {
+                                        type int32;
+                                        description "FP number";
+                                    }
+
+                                    leaf source-port {
+                                        type types-sros:port;
+                                        description "Port identifier";
                                     }
 
                                     leaf adapted-admin-cbs {
@@ -2858,32 +2949,17 @@ submodule nokia-state-svc-epipe {
                                     }
 
                                     leaf operational-cir {
-                                        type union {
-                                            type enumeration {
-                                                enum "max"                          { value -1; }
-                                            }
-                                            type int64;
-                                        }
+                                        type types-qos:int64-max;
                                         description "Oper CIR.";
                                     }
 
                                     leaf operational-fir {
-                                        type union {
-                                            type enumeration {
-                                                enum "max"                          { value -1; }
-                                            }
-                                            type int64;
-                                        }
+                                        type types-qos:int64-max;
                                         description "Oper FIR.";
                                     }
 
                                     leaf operational-pir {
-                                        type union {
-                                            type enumeration {
-                                                enum "max"                          { value -1; }
-                                            }
-                                            type int64;
-                                        }
+                                        type types-qos:int64-max;
                                         description "Oper PIR.";
                                     }
 
@@ -3147,7 +3223,11 @@ submodule nokia-state-svc-epipe {
 
                                     leaf in-inplus-profile-dropped-packets {
                                         type yang:counter64;
-                                        description "Policy ID to associate with SAP for mirrored service";
+                                        description
+                                            "The number of in-profile packets
+                                             discarded by the egress traffic manager due
+                                             to: MBS exceeded, buffer pool limit
+                                             exceeded, etc.";
                                     }
 
                                     leaf in-inplus-profile-dropped-octets {
@@ -3729,6 +3809,16 @@ submodule nokia-state-svc-epipe {
                                             type int64;
                                         }
                                         description "Depth CIR.";
+                                    }
+
+                                    leaf operational-exceed-burst {
+                                        type types-qos:int64-max;
+                                        description "Oper burst exceed.";
+                                    }
+
+                                    leaf operational-max-transmit-data-size {
+                                        type types-qos:int64-max;
+                                        description "Oper max transmit data size.";
                                     }
 
                                     container exceed-slope {
@@ -4620,12 +4710,22 @@ submodule nokia-state-svc-epipe {
                                 } // container statistics
 
                                 list hardware-policer {
-                                    key "hardware-policer-string";
+                                    key "dest-card dest-fp dest-port";
                                     description "Enter the hardware-policer list instance";
 
-                                    leaf hardware-policer-string {
-                                        type types-sros:named-item-255;
-                                        description "Name of the policer formatted by IOM.";
+                                    leaf dest-card {
+                                        type int32;
+                                        description "Card number";
+                                    }
+
+                                    leaf dest-fp {
+                                        type int32;
+                                        description "FP number";
+                                    }
+
+                                    leaf dest-port {
+                                        type types-sros:port;
+                                        description "Port identifier";
                                     }
 
                                     leaf adapted-admin-cbs {
@@ -4653,32 +4753,17 @@ submodule nokia-state-svc-epipe {
                                     }
 
                                     leaf operational-cir {
-                                        type union {
-                                            type enumeration {
-                                                enum "max"                          { value -1; }
-                                            }
-                                            type int64;
-                                        }
+                                        type types-qos:int64-max;
                                         description "Oper CIR.";
                                     }
 
                                     leaf operational-fir {
-                                        type union {
-                                            type enumeration {
-                                                enum "max"                          { value -1; }
-                                            }
-                                            type int64;
-                                        }
+                                        type types-qos:int64-max;
                                         description "Oper FIR.";
                                     }
 
                                     leaf operational-pir {
-                                        type union {
-                                            type enumeration {
-                                                enum "max"                          { value -1; }
-                                            }
-                                            type int64;
-                                        }
+                                        type types-qos:int64-max;
                                         description "Oper PIR.";
                                     }
 
@@ -5517,6 +5602,16 @@ submodule nokia-state-svc-epipe {
                                     description "VNI of the vxlan";
                                 }
 
+                                leaf oper-state {
+                                    type types-sros:up-down-status;
+                                    description "Operational status of vxlan esi tunnel endpoint";
+                                }
+
+                                leaf oper-flags {
+                                    type types-services:oper-flags;
+                                    description "Conditions affecting the operational status of the vxlan esi tunnel endpoint";
+                                }
+
                             } // list tep
 
                         } // list ethernet-segment-destination
@@ -5662,6 +5757,16 @@ submodule nokia-state-svc-epipe {
                                     description "Indicates tunnel identifier associated with Tunnel Endpoint";
                                 }
 
+                                leaf oper-state {
+                                    type types-sros:up-down-status;
+                                    description "Operational status of evpn-mpls tunnel endpoint";
+                                }
+
+                                leaf oper-flags {
+                                    type types-services:oper-flags;
+                                    description "Conditions affecting the operational status of the evpn-mpls tunnel endpoint";
+                                }
+
                             } // list tep
 
                         } // list ethernet-segment-destination
@@ -5682,37 +5787,45 @@ submodule nokia-state-svc-epipe {
                     }
 
                     container destinations {
+                        status deprecated;
                         description "Enter the destinations context";
 
                         list ethernet-segment-destination {
+                            status deprecated;
                             key "esi";
                             description "Enter the ethernet-segment-destination list instance";
 
                             leaf esi {
+                                status deprecated;
                                 type string;
                                 description "Ethernet segment identifier";
                             }
 
                             leaf last-update {
+                                status deprecated;
                                 type types-sros:date-time;
                                 description "Time this entry was last updated.";
                             }
 
                             list tep {
+                                status deprecated;
                                 key "tep-address sid-address";
                                 description "Enter the tep list instance";
 
                                 leaf tep-address {
+                                    status deprecated;
                                     type types-sros:ip-address;
                                     description "Tunnel endpoint ip-address";
                                 }
 
                                 leaf sid-address {
+                                    status deprecated;
                                     type types-sros:ipv6-address;
                                     description "SID ip-address";
                                 }
 
                                 leaf last-update {
+                                    status deprecated;
                                     type types-sros:date-time;
                                     description "Time this entry was last updated.";
                                 }
@@ -5722,20 +5835,24 @@ submodule nokia-state-svc-epipe {
                         } // list ethernet-segment-destination
 
                         list non-ethernet-segment-destination {
+                            status deprecated;
                             key "tep-address sid-address";
                             description "Enter the non-ethernet-segment-destination list instance";
 
                             leaf tep-address {
+                                status deprecated;
                                 type types-sros:ip-address;
                                 description "Tunnel endpoint ip-address";
                             }
 
                             leaf sid-address {
+                                status deprecated;
                                 type types-sros:ipv6-address;
                                 description "SID ip-address";
                             }
 
                             leaf srv6-type {
+                                status deprecated;
                                 type enumeration {
                                     enum "none"                         { value 0; }
                                     enum "static"                       { value 1; }

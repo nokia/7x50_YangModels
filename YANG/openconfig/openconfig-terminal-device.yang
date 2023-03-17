@@ -10,6 +10,7 @@ module openconfig-terminal-device {
   import openconfig-types { prefix oc-types; }
   import openconfig-transport-types { prefix oc-opt-types; }
   import openconfig-if-ethernet { prefix oc-eth; }
+  import openconfig-interfaces { prefix oc-if; }
   import openconfig-platform { prefix oc-platform; }
   import openconfig-platform-transceiver { prefix oc-transceiver; }
   import openconfig-lldp { prefix oc-lldp; }
@@ -29,12 +30,15 @@ module openconfig-terminal-device {
     "This module describes a terminal optics device model for
     managing the terminal systems (client and line side) in a
     DWDM transport network.
+
     Elements of the model:
+
     physical port: corresponds to a physical, pluggable client
     port on the terminal device. Examples includes 10G, 40G, 100G
     (e.g., 10x10G, 4x25G or 1x100G) and 400G/1T in the future.
     Physical client ports will have associated operational state or
     PMs.
+
     physical channel: a physical lane or channel in the
     physical client port.  Each physical client port has 1 or more
     channels. An example is 100GBASE-LR4 client physical port having
@@ -43,6 +47,7 @@ module openconfig-terminal-device {
     channel power).  Physical client channels are defined in the
     model as part of a physical client port, and are modeled
     primarily for reading their PMs.
+
     logical channel: a logical grouping of logical grooming elements
     that may be assigned to subsequent grooming stages for
     multiplexing / de-multiplexing, or to an optical channel for
@@ -53,21 +58,41 @@ module openconfig-terminal-device {
     assigned to an optical channel.  Note that different types of
     logical channels may be present, each with their corresponding
     PMs.
+
     optical channel:  corresponds to an optical carrier and is
     assigned a wavelength/frequency.  Optical channels have PMs
     such as power, BER, and operational mode.
+
     Directionality:
+
     To maintain simplicity in the model, the configuration is
     described from client-to-line direction.  The assumption is that
     equivalent reverse configuration is implicit, resulting in
     the same line-to-client configuration.
+
     Physical layout:
+
     The model does not assume a particular physical layout of client
     and line ports on the terminal device (e.g., such as number of
     ports per linecard, separate linecards for client and line ports,
     etc.).";
 
-  oc-ext:openconfig-version "1.7.3";
+  oc-ext:openconfig-version "1.9.0";
+
+  revision "2021-07-29" {
+    description
+      "Add several coherent performance monitors to optical channel.
+      Re-group and add PHY-related performance monitors to optical
+      channel and logical channel.";
+    reference "1.9.0";
+  }
+
+  revision "2021-02-23" {
+    description
+      "Small additions to support ZR transceivers. Adds a new
+      ingress type of interface and a client mapping mode leaf.";
+    reference "1.8.0";
+  }
 
   revision "2020-05-09" {
     description
@@ -228,6 +253,13 @@ module openconfig-terminal-device {
 
       uses oc-eth:ethernet-interface-state-counters;
       uses terminal-ethernet-protocol-state-counters;
+      uses terminal-phy-protocol-stats {
+        description
+          "When 400ZR/ZR+ transceivers are plugged in switches or routers,
+          this grouping will be attached to logical channel with Ethernet
+          protocol framing, in order to involve host-side fec-related
+          error performances.";
+      }
   }
 
   grouping terminal-ethernet-protocol-state-counters {
@@ -293,7 +325,7 @@ module openconfig-terminal-device {
       description
         "The number of transmitted errored blocks. Error detection
         codes are capable of detecting whether one or more errors have
-        occurred in a given sequence of bits - the block. It is
+        occurred in a given sequence of bits – the block. It is
         normally not possible to determine the exact number of errored
         bits within the block";
     }
@@ -524,16 +556,10 @@ module openconfig-terminal-device {
       description
         "The number of errored blocks. Error detection codes are
         capable to detect whether one or more errors have occurred
-        in a given sequence of bits - the block. It is normally not
+        in a given sequence of bits – the block. It is normally not
         possible to determine the exact number of errored bits within
         the block.";
       reference "ITU-T Rec. G.826";
-    }
-
-    leaf fec-uncorrectable-blocks {
-      type yang:counter64;
-      description
-        "The number of blocks that were uncorrectable by the FEC";
     }
 
     leaf fec-uncorrectable-words {
@@ -561,10 +587,17 @@ module openconfig-terminal-device {
     }
   }
 
-  grouping terminal-otn-protocol-multi-stats {
+  grouping terminal-phy-protocol-stats {
     description
-      "Multi-value statistics containers for logical channels using
-      OTN framing (e.g., max, min, avg, instant)";
+      "Counters and multi-value statistics for FEC-related error
+      performance";
+
+    leaf fec-uncorrectable-blocks {
+      type yang:counter64;
+      description
+        "The number of blocks or frames that were uncorrectable by
+        the FEC";
+    }
 
     container pre-fec-ber {
       description
@@ -639,7 +672,11 @@ module openconfig-terminal-device {
           "Remote defect indication (RDI) message received";
       }
       uses terminal-otn-protocol-counter-stats;
-      uses terminal-otn-protocol-multi-stats;
+      uses terminal-phy-protocol-stats {
+        description
+          "This grouping may be used when the logical-channel-type
+          is 'PROT_OTN.";
+      }
   }
 
   grouping terminal-otn-protocol-top {
@@ -897,11 +934,13 @@ module openconfig-terminal-device {
           stage) or de-multiplex (i.e., combine the current element
           with other elements into the same element in the subsequent
           stage) logical elements in each stage.
+
           Note that to support the ability to groom the logical
           elements, the list of logical channel elements should be
           populated with an entry for the logical elements at
           each stage, starting with the initial assignment from the
           respective client physical port.
+
           Each logical element assignment consists of a pointer to
           an element in the next stage, or to an optical channel,
           along with a bandwidth allocation for the corresponding
@@ -969,6 +1008,17 @@ module openconfig-terminal-device {
         all physical channels in the transceiver are assumed to be
         mapped to the logical channel.";
     }
+
+    leaf interface {
+      type oc-if:base-interface-ref;
+      description
+        "Reference to the interface carrying the input signal
+        for the logical channel. The ingress will specify an interface
+        in the case of a transceiver being utilized directly in a
+        router and bypassing a dedicated terminal device. When
+        specified, the other leaves in the ingress config must be
+        empty.";
+    }
   }
 
   grouping terminal-logical-channel-ingress-state {
@@ -984,7 +1034,7 @@ module openconfig-terminal-device {
       description
         "Top-level container for specifying references to the
         source of signal for the logical channel, either a
-        transceiver or individual physical channels";
+        transceiver, individual physical channels, or an interface";
 
       container config {
         description
@@ -1051,19 +1101,25 @@ module openconfig-terminal-device {
         the TributaryProtocol of the LogicalChannels will define a
         specific mapping/demapping or multiplexing/demultiplexing
         function.
+
         Not all protocols are valid, depending on the value
         of trib-rate-class.  The expectation is that the NMS
         will validate that a correct combination of rate class
         and protocol are specfied.  Basic combinations are:
+
         rate class: 1G
         protocols: 1GE
+
         rate class: 2.5G
         protocols: OC48, STM16
+
         rate class: 10G
         protocols:  10GE LAN, 10GE WAN, OC192, STM64, OTU2, OTU2e,
                     OTU1e, ODU2, ODU2e, ODU1e
+
         rate class: 40G
         protocols:  40GE, OC768, STM256, OTU3, ODU3
+
         rate class: 100G
         protocols:  100GE, 100G MLG, OTU4, OTUCn, ODU4";
     }
@@ -1091,6 +1147,23 @@ module openconfig-terminal-device {
       description
         "When enabled the logical channel's DSP will generate a pseudo
         randmon bit stream (PRBS) which can be used during testing.";
+    }
+
+    leaf client-mapping-mode {
+      type identityref {
+        base oc-opt-types:CLIENT_MAPPING_MODE;
+      }
+      description
+        "The client side mapping mode internal to the device that
+        specifies the number of client electrical interfaces and
+        the data rate of each client electrical interface. For
+        example, a ZR+ transceiver with an optical line rate of 400G
+        could be configured to break out into four 100G client
+        signals which might connect to an interface or a
+        physical-channel. This would be configured on the aggregate
+        logical channel as MODE_4X100G. This is only valid on the
+        aggregate logical channel that is connected directly to the
+        optical-channel.";
     }
   }
 
@@ -1218,7 +1291,6 @@ module openconfig-terminal-device {
       // leaf to be a leafref to a r/o leaf.
     }
 
-
     leaf line-port {
       type leafref {
         path "/oc-platform:components/oc-platform:component/" +
@@ -1292,6 +1364,152 @@ module openconfig-terminal-device {
         instant value";
 
       uses oc-types:avg-min-max-instant-stats-precision2-dB;
+    }
+
+    container modulator-bias-xi {
+      description
+        "The bias on in-phase path and Polarization X of
+        the coherent modulator. This is represented as a percentage
+        with 2 decimal precision. This term is defined by OIF
+        Implementation Agreement for Coherent CMIS. Values include
+        the instantaneous, average, minimum, and maximum statistics.
+        If avg/min/max statistics are not supported, the target is
+        expected to just supply the instant value.";
+
+      reference "IA OIF-C-CMIS-01.1 Table 7";
+
+      uses oc-opt-types:avg-min-max-instant-stats-precision2-pct;
+    }
+
+    container modulator-bias-xq {
+      description
+        "The bias on quadrature path and Polarization X of
+        the coherent modulator. This is represented as a percentage
+        with 2 decimal precision. This term is defined by OIF
+        Implementation Agreement for Coherent CMIS. Values include
+        the instantaneous, average, minimum, and maximum statistics.
+        If avg/min/max statistics are not supported, the target is
+        expected to just supply the instant value.";
+
+      reference "IA OIF-C-CMIS-01.1 Table 7";
+
+      uses oc-opt-types:avg-min-max-instant-stats-precision2-pct;
+    }
+
+    container modulator-bias-yi {
+      description
+        "The bias on in-phase path and Polarization Y of
+        the coherent modulator. This is represented as a percentage
+        with 2 decimal precision. This term is defined by OIF
+        Implementation Agreement for Coherent CMIS. Values include
+        the instantaneous, average, minimum, and maximum statistics.
+        If avg/min/max statistics are not supported, the target is
+        expected to just supply the instant value.";
+
+      reference "IA OIF-C-CMIS-01.1 Table 7";
+
+      uses oc-opt-types:avg-min-max-instant-stats-precision2-pct;
+    }
+
+    container modulator-bias-yq {
+      description
+        "The bias on quadrature path and Polarization Y of
+        the coherent modulator. This is represented as a percentage
+        with 2 decimal precision. This term is defined by OIF
+        Implementation Agreement for Coherent CMIS. Values include
+        the instantaneous, average, minimum, and maximum statistics.
+        If avg/min/max statistics are not supported, the target is
+        expected to just supply the instant value.";
+
+      reference "IA OIF-C-CMIS-01.1 Table 7";
+
+      uses oc-opt-types:avg-min-max-instant-stats-precision2-pct;
+    }
+
+    container modulator-bias-x-phase {
+      description
+        "The X-Phase bias of the coherent modulator. This is
+        represented as a percentage with 2 decimal precision. This
+        term is defined by OIF Implementation Agreement for
+        Coherent CMIS. Values include the instantaneous, average,
+        minimum, and maximum statistics. If avg/min/max statistics
+        are not supported, the target is expected to just supply
+        the instant value.";
+
+      reference "IA OIF-C-CMIS-01.1 Table 7";
+
+      uses oc-opt-types:avg-min-max-instant-stats-precision2-pct;
+    }
+
+    container modulator-bias-y-phase {
+      description
+        "The Y-Phase bias of the coherent modulator. This is
+        represented as a percentage with 2 decimal precision. This
+        term is defined by OIF Implementation Agreement for
+        Coherent CMIS. Values include the instantaneous, average,
+        minimum, and maximum statistics. If avg/min/max statistics
+        are not supported, the target is expected to just supply
+        the instant value.";
+
+      reference "IA OIF-C-CMIS-01.1 Table 7";
+
+      uses oc-opt-types:avg-min-max-instant-stats-precision2-pct;
+    }
+
+    container osnr {
+      description
+        "Optical signal to noise ratio at 12.5GHz noise bandwidth
+        in dB with two decimal precision. Values include the
+        instantaneous, average, minimum, and maximum statistics.
+        If avg/min/max statistics are not supported, the target
+        is expected to just supply the instant value.";
+
+      reference "IA OIF-C-CMIS-01.1 Table 7";
+
+      uses oc-types:avg-min-max-instant-stats-precision2-dB;
+    }
+
+    container carrier-frequency-offset {
+      description
+        "Carrier frequency offset in MHz with 1 decimal precision.
+        Values include the instantaneous, average, minimum, and
+        maximum statistics. If avg/min/max statistics are not supported,
+        the target is expected to just supply the instant value.";
+
+      reference "IA OIF-C-CMIS-01.1 Table 7";
+
+      uses oc-opt-types:avg-min-max-instant-stats-precision1-mhz;
+    }
+
+    container sop-roc {
+      description
+        "State-of-polarization rate-of-change (SOP-ROC) in krad/s with 1
+        decimal precision. This term is defined by OIF Implementation
+        Agreement for Coherent CMIS. Values include the instantaneous,
+        average, minimum, and maximum statistics. If avg/min/max
+        statistics are not supported, the target is expected to just
+        supply the instant value.";
+
+      reference "IA OIF-C-CMIS-01.1 Table 7";
+
+      uses oc-opt-types:avg-min-max-instant-stats-precision1-krads;
+    }
+
+    container modulation-error-ratio {
+      description
+        "Modulation error ratio in dB with two decimal precision. Values
+        include the instantaneous, average, minimum, and maximum statistics.
+        If avg/min/max statistics are not supported, the target is
+        expected to just supply the instant value.";
+
+      reference "IA OIF-C-CMIS-01.1 Table 7";
+
+      uses oc-types:avg-min-max-instant-stats-precision2-dB;
+    }
+
+    uses terminal-phy-protocol-stats {
+      description
+        "When there is no OTN framing e.g. 400ZR, this grouping will be used.";
     }
   }
 

@@ -8,12 +8,13 @@ submodule nokia-conf-system-security-pki {
     import nokia-types-security           { prefix "types-security"; }
     import nokia-types-services           { prefix "types-services"; }
     import nokia-types-sros               { prefix "types-sros"; }
+    import nokia-types-system             { prefix "types-system"; }
 
     include nokia-conf-groups;
     include nokia-conf-system;
 
 
-    sros-ext:sros-major-release "rel22";
+    sros-ext:sros-major-release "rel23";
 
     organization "Nokia";
 
@@ -40,7 +41,7 @@ submodule nokia-conf-system-security-pki {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2022-08-16";
+    revision "2022-12-07";
 
     grouping conf-system-security-pki {
         container pki {
@@ -243,6 +244,14 @@ submodule nokia-conf-system-security-pki {
                         description "Same recipNonce as the last CMPv2 response for a poll request";
                     }
 
+                    leaf signing-cert-subject {
+                        type string {
+                            length "1..256";
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        description "Comma separated subject DN attributes used to identify the signing certificate in the extraCerts field from CMPv2 response. If not configured, subject DN in sender field of CMPv2 response will be used to identify the signing certificate. Format: attr1=val1,attr2=val2... where: attrN={C|ST|O|OU|CN}";
+                    }
+
                     choice response-signing {
                         default "response-signing-cert";
                         case response-signing-use-extracert {
@@ -322,12 +331,8 @@ submodule nokia-conf-system-security-pki {
                         }
 
                         leaf version {
-                            type enumeration {
-                                enum "1.0"                          { value 1; }
-                                enum "1.1"                          { value 2; }
-                            }
+                            type types-system:http-version-type;
                             sros-ext:auto-restart-to-modify;
-                            default "1.1";
                             description "HTTP version for CMPv2 messages";
                         }
 
@@ -345,12 +350,28 @@ submodule nokia-conf-system-security-pki {
                             description "URL for CMPv2";
                         }
 
-                        leaf service-name {
-                            type types-services:service-name;
-                            sros-ext:auto-restart-to-modify;
-                            description "Administrative service name";
-                        }
+                        choice transport {
+                            case service {
 
+                                leaf service-name {
+                                    type types-services:service-name;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Administrative service name";
+                                }
+
+                            }
+                            case transmission {
+
+                                leaf transmission-profile {
+                                    type leafref {
+                                        path "../../../../../../transmission-profile/name";
+                                    }
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Configure transmission profile for CMPv2.";
+                                }
+
+                            }
+                        }
                     } // container url
 
                     container key-list {
@@ -360,7 +381,6 @@ submodule nokia-conf-system-security-pki {
                         list key {
                             key "reference-number";
                             max-elements 128;
-                            sros-ext:auto-restart-to-modify;
                             description "Enter the key list instance";
 
                             leaf reference-number {
@@ -377,7 +397,6 @@ submodule nokia-conf-system-security-pki {
                                 type types-sros:encrypted-leaf {
                                     length "1..115";
                                 }
-                                sros-ext:auto-restart-to-modify;
                                 description "Shared secret for this CA initial authentication key";
                             }
 
@@ -387,7 +406,6 @@ submodule nokia-conf-system-security-pki {
                                 }
                                 max-elements 8;
                                 ordered-by user;
-                                sros-ext:auto-restart-to-modify;
                                 description "Apply a configuration group at this level";
                             }
 
@@ -397,7 +415,6 @@ submodule nokia-conf-system-security-pki {
                                 }
                                 max-elements 8;
                                 ordered-by user;
-                                sros-ext:auto-restart-to-modify;
                                 description "Exclude a configuration group at this level";
                             }
 
@@ -409,12 +426,10 @@ submodule nokia-conf-system-security-pki {
 
                 container auto-crl-update {
                     presence "Enable the auto-crl-update context";
-                    sros-ext:auto-restart-to-modify;
-                    description "Enable the auto-crl-update context";
+                    description "Enter the auto-crl-update context";
 
                     leaf admin-state {
                         type types-sros:admin-state;
-                        sros-ext:auto-restart-to-modify;
                         default "disable";
                         description "Administrative state of the automatic CRL update";
                     }
@@ -485,7 +500,6 @@ submodule nokia-conf-system-security-pki {
 
                         list url-entry {
                             key "entry-id";
-                            sros-ext:auto-restart-to-modify;
                             description "Enter the url-entry list instance";
 
                             leaf entry-id {
@@ -499,7 +513,6 @@ submodule nokia-conf-system-security-pki {
                                 type leafref {
                                     path "../../../../../../../transmission-profile/name";
                                 }
-                                sros-ext:auto-restart-to-modify;
                                 description "File transmission profile to update CRL";
                             }
 
@@ -507,7 +520,6 @@ submodule nokia-conf-system-security-pki {
                                 type union {
                                     type types-sros:http-url-path-loose;
                                 }
-                                sros-ext:auto-restart-to-modify;
                                 description "Location of updated CRL";
                             }
 
@@ -517,7 +529,6 @@ submodule nokia-conf-system-security-pki {
                                 }
                                 max-elements 8;
                                 ordered-by user;
-                                sros-ext:auto-restart-to-modify;
                                 description "Apply a configuration group at this level";
                             }
 
@@ -527,7 +538,6 @@ submodule nokia-conf-system-security-pki {
                                 }
                                 max-elements 8;
                                 ordered-by user;
-                                sros-ext:auto-restart-to-modify;
                                 description "Exclude a configuration group at this level";
                             }
 

@@ -13,7 +13,7 @@ submodule nokia-state-router-ospf {
     import nokia-types-sros               { prefix "types-sros"; }
 
 
-    sros-ext:sros-major-release "rel22";
+    sros-ext:sros-major-release "rel23";
 
     organization "Nokia";
 
@@ -40,7 +40,7 @@ submodule nokia-state-router-ospf {
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
 
-    revision "2022-06-09";
+    revision "2022-12-07";
 
     grouping state-router-ospf {
         list ospf {
@@ -222,10 +222,33 @@ submodule nokia-state-router-ospf {
             container export-limit {
                 description "Enter the export-limit context";
 
+                leaf state {
+                    type enumeration {
+                        enum "below-limits"                 { value 1; }
+                        enum "log-level-reached"            { value 2; }
+                        enum "limit-reached"                { value 3; }
+                    }
+                    description "the value of export-limit-state indicates the current state of the export of routes into OSPF.";
+                }
+
             } // container export-limit
 
             container rtr-adv-lsa-limit {
                 description "Enter the rtr-adv-lsa-limit context";
+
+                leaf state {
+                    type enumeration {
+                        enum "below-limits"                 { value 1; }
+                        enum "warning-threshold-exceeded"   { value 2; }
+                        enum "max-lsa-count-exceeded"       { value 3; }
+                    }
+                    description "the value of rtr-adv-lsa-limit-state indicates the current state according to config in rtr-adv-lsa-limit.";
+                }
+
+                leaf adv-router-id {
+                    type types-sros:ipv4-address;
+                    description "the identity of the router that is advertising too many LSAs.";
+                }
 
             } // container rtr-adv-lsa-limit
 
@@ -931,6 +954,129 @@ submodule nokia-state-router-ospf {
 
                         } // list flex-algo-definitions
 
+                        list paths {
+                            key "destination-router-id if-index nexthop-router-id";
+                            description "Enter the paths list instance";
+
+                            leaf destination-router-id {
+                                type types-igp:router-id;
+                                description "Identifies the destination node associated with this route.";
+                            }
+
+                            leaf if-index {
+                                type int32 {
+                                    range "1..2147483647";
+                                }
+                                description "Identifies the the outgoing interface for the route.";
+                            }
+
+                            leaf nexthop-router-id {
+                                type types-igp:router-id;
+                                description "Identifies the next hop through which this route is reachable.";
+                            }
+
+                            leaf metric {
+                                type uint32;
+                                description
+                                    "The metric assigned to this route after SPF calculations.
+                                     The lower the metric value, the shorter is the path and
+                                     hence more preferred by the protocol.";
+                            }
+
+                            leaf lfa-if-index {
+                                type int32 {
+                                    range "1..2147483647";
+                                }
+                                description "The outgoing interface for the LFA path.";
+                            }
+
+                            leaf lfa-nexthop-router-id {
+                                type types-igp:router-id;
+                                description
+                                    "the next-hop node in this loopfree-alternate path to reach
+                                     a given destination node.";
+                            }
+
+                            leaf lfa-type {
+                                type enumeration {
+                                    enum "none"                         { value 0; }
+                                    enum "node"                         { value 1; }
+                                    enum "link"                         { value 2; }
+                                }
+                                description "The level of LFA protection represented by this entry.";
+                            }
+
+                            leaf lfa-metric {
+                                type uint32;
+                                description
+                                    "The value indicates the metric assigned to this entry after LFA calculations.
+                                     The lower the metric value, the shorter is the path and hence more preferred
+                                     by the protocol.";
+                            }
+
+                        } // list paths
+
+                        list sr-lfa-coverage {
+                            key "sid-type";
+                            description "Enter the sr-lfa-coverage list instance";
+
+                            leaf sid-type {
+                                type enumeration {
+                                    enum "node-sid"                     { value 0; }
+                                    enum "adj-sid"                      { value 1; }
+                                }
+                                description
+                                    "The value specifies the SID type for which SR LFA coverage
+                                     has been computed.";
+                            }
+
+                            leaf lfa-covered {
+                                type uint32;
+                                description "The value indicates the number of SIDs for which an LFA is found.";
+                            }
+
+                            leaf lfa-covered-percent {
+                                type types-sros:percent;
+                                description "The value indicates the portion of SIDs for which an LFA is found.";
+                            }
+
+                            leaf remote-lfa-covered {
+                                type uint32;
+                                description "The value indicates the number of SIDs for which an Remote LFA is found.";
+                            }
+
+                            leaf remote-lfa-covered-percent {
+                                type types-sros:percent;
+                                description "The value indicates the portion of SIDs for which an Remote LFA is found.";
+                            }
+
+                            leaf ti-lfa-covered {
+                                type uint32;
+                                description "The value indicates the number of SIDs for which an Topology Independent LFA is found.";
+                            }
+
+                            leaf ti-lfa-covered-percent {
+                                type types-sros:percent;
+                                description "The value indicates the portion of SIDs for which an LFA is found.";
+                            }
+
+                            leaf total-sid {
+                                type uint32;
+                                description "The value indicates the number of SIDs eligible for SR LFA calculation";
+                            }
+
+                            leaf backup-total-sid {
+                                type uint32;
+                                description "The value indicates the number of SIDs for which an LFA, Remote LFA or Topology Independent LFA is found";
+                            }
+
+                            leaf backup-total-sid-percent {
+                                type uint32;
+                                description "The value indicates the portion of SIDs for which an LFA, Remote LFA or Topology Independent LFA is found";
+                            }
+
+                        } // list sr-lfa-coverage
+
                     } // list area
 
                 } // list flex-algo
@@ -1400,6 +1546,41 @@ submodule nokia-state-router-ospf {
 
                     } // container packets
 
+                    container last-packet-drop {
+                        description "Enter the last-packet-drop context";
+
+                        leaf reason {
+                            type types-ospf:packet-drop-reason;
+                            description "The reason for dropping the packet.";
+                        }
+
+                        leaf packet-type {
+                            type uint8;
+                            description "the OSPF packet type of the dropped packet from the packet header.";
+                        }
+
+                        leaf router-id {
+                            type types-sros:ipv4-address;
+                            description "the OSPF router ID of the dropped packet from the packet header.";
+                        }
+
+                        leaf area-id {
+                            type types-sros:ipv4-address;
+                            description "the OSPF area ID of the dropped packet from the packet header.";
+                        }
+
+                        leaf checksum {
+                            type uint32;
+                            description "the OSPF checksum of the dropped packet from the packet header.";
+                        }
+
+                        leaf drop-time {
+                            type yang:date-and-time;
+                            description "the time when the drop occured.";
+                        }
+
+                    } // container last-packet-drop
+
                     list neighbor {
                         key "address";
                         description "Enter the neighbor list instance";
@@ -1475,6 +1656,16 @@ submodule nokia-state-router-ospf {
                             description "the value of bdr-id indicates the BDR value advertised in the HELLO packets received from the OSPF neighbor. if it is not a broadcast interface bdr-id will be zero.";
                         }
 
+                        leaf bfd-strict-state {
+                            type enumeration {
+                                enum "disabled"                     { value 0; }
+                                enum "up"                           { value 1; }
+                                enum "blocked"                      { value 2; }
+                                enum "held"                         { value 3; }
+                            }
+                            description "the value of bfd-strict-state indicates the state of the strict-bfd session";
+                        }
+
                         leaf oper-state {
                             type enumeration {
                                 enum "down"                         { value 1; }
@@ -1543,6 +1734,11 @@ submodule nokia-state-router-ospf {
                             }
                             units "centiseconds";
                             description "the value of up-time indicates the uninterrupted time, in hundredths of seconds, the adjacency to this neighbour has been up.";
+                        }
+
+                        leaf last-event {
+                            type types-ospf:neighbor-event;
+                            description "Indicates the last event as defined in RFC causing an oper-state change for this Neighbor.";
                         }
 
                         leaf last-event-time {
@@ -2041,6 +2237,41 @@ submodule nokia-state-router-ospf {
 
                     } // container packets
 
+                    container last-packet-drop {
+                        description "Enter the last-packet-drop context";
+
+                        leaf reason {
+                            type types-ospf:packet-drop-reason;
+                            description "The reason for dropping the packet.";
+                        }
+
+                        leaf packet-type {
+                            type uint8;
+                            description "the OSPF packet type of the dropped packet from the packet header.";
+                        }
+
+                        leaf router-id {
+                            type types-sros:ipv4-address;
+                            description "the OSPF router ID of the dropped packet from the packet header.";
+                        }
+
+                        leaf area-id {
+                            type types-sros:ipv4-address;
+                            description "the OSPF area ID of the dropped packet from the packet header.";
+                        }
+
+                        leaf checksum {
+                            type uint32;
+                            description "the OSPF checksum of the dropped packet from the packet header.";
+                        }
+
+                        leaf drop-time {
+                            type yang:date-and-time;
+                            description "the time when the drop occured.";
+                        }
+
+                    } // container last-packet-drop
+
                 } // list virtual-link
 
                 list linkstate-database {
@@ -2242,6 +2473,11 @@ submodule nokia-state-router-ospf {
                     description "the value of up-time indicates the uninterrupted time, in hundredths of seconds, the adjacency to this neighbour has been up.";
                 }
 
+                leaf last-event {
+                    type types-ospf:neighbor-event;
+                    description "Indicates the last event as defined in RFC causing an oper-state change for this Neighbor.";
+                }
+
                 leaf last-event-time {
                     type yang:date-and-time;
                     description "the value of last-event-time indicates the value of sys-up-time when the last event occurred that affected the adjacency to the neighbour.";
@@ -2404,6 +2640,15 @@ submodule nokia-state-router-ospf {
                          Can only be true for self-originated prefix-sids.";
                 }
 
+                leaf algorithm {
+                    type uint8;
+                    description
+                        "The value indicates the algorithm related to the prefix SID.
+
+                         It can indicate a defined IGP Algorithm (value 0 is SPF) or
+                         a Flexible Algorithm (range 128..255).";
+                }
+
             } // list prefix-sid
 
             list sid-statistics {
@@ -2439,6 +2684,15 @@ submodule nokia-state-router-ospf {
                 leaf interface {
                     type types-sros:interface-name;
                     description "When type is adjacency then this is the interface on which the adjacency is formed";
+                }
+
+                leaf algorithm {
+                    type uint8;
+                    description
+                        "The value indicates the algorithm related to the prefix SID.
+
+                         The value can indicate a defined IGP Algorithm (value 0 is SPF) or
+                         a Flexible Algorithm (range 128..255).";
                 }
 
                 container egress {
