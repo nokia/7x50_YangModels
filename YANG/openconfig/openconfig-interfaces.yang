@@ -12,6 +12,7 @@ module openconfig-interfaces {
   import openconfig-yang-types { prefix oc-yang; }
   import openconfig-types { prefix oc-types; }
   import openconfig-extensions { prefix oc-ext; }
+  import openconfig-transport-types { prefix oc-opt-types; }
 
   // meta
   organization "OpenConfig working group";
@@ -50,7 +51,75 @@ module openconfig-interfaces {
     Section 4.c of the IETF Trust's Legal Provisions Relating
     to IETF Documents (http://trustee.ietf.org/license-info).";
 
-  oc-ext:openconfig-version "2.0.0";
+  oc-ext:openconfig-version "3.0.0";
+
+  revision "2022-10-25" {
+    description
+      "change loopback-mode to align with available modes";
+    reference "3.0.0";
+  }
+
+  revision "2021-04-06" {
+    description
+      "Add leaves for management and cpu interfaces";
+    reference "2.5.0";
+  }
+
+  revision "2019-11-19" {
+    description
+      "Update description of interface name.";
+    reference "2.4.3";
+  }
+
+  revision "2019-07-10" {
+    description
+      "Remove redundant nanosecond units statements to reflect
+      universal definition of timeticks64 type.";
+    reference "2.4.2";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "2.4.1";
+  }
+
+  revision "2018-08-07" {
+    description
+      "Add leaf to indicate whether an interface is physical or
+      logical.";
+    reference "2.4.0";
+  }
+
+  revision "2018-07-02" {
+    description
+      "Add in-pkts and out-pkts in counters";
+    reference "2.3.2";
+  }
+
+  revision "2018-04-24" {
+    description
+      "Clarified behavior of last-change state leaf";
+    reference "2.3.1";
+  }
+
+  revision "2018-01-05" {
+    description
+      "Add logical loopback to interface.";
+    reference "2.3.0";
+  }
+
+  revision "2017-12-22" {
+    description
+      "Add IPv4 proxy ARP configuration.";
+    reference "2.2.0";
+  }
+
+  revision "2017-12-21" {
+    description
+      "Added IPv6 router advertisement configuration.";
+    reference "2.1.0";
+  }
 
   revision "2017-07-14" {
     description
@@ -72,6 +141,10 @@ module openconfig-interfaces {
     reference "1.1.0";
   }
 
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
 
   // typedef statements
 
@@ -150,6 +223,7 @@ module openconfig-interfaces {
       container config {
         description
           "Configured reference to interface / subinterface";
+        oc-ext:telemetry-on-change;
 
         uses interface-ref-common;
       }
@@ -322,6 +396,14 @@ module openconfig-interfaces {
         Ethernet interface.";
     }
 
+    leaf loopback-mode {
+      type oc-opt-types:loopback-mode-type;
+      description
+        "Sets the loopback type on the interface. Setting the
+        mode to something besides NONE activates the loopback in
+        the specified mode.";
+    }
+
     uses interface-common-config;
   }
 
@@ -369,6 +451,7 @@ module openconfig-interfaces {
       container config {
         description
           "Configuration data for interface hold-time settings.";
+        oc-ext:telemetry-on-change;
 
         uses interface-phys-holdtime-config;
       }
@@ -391,6 +474,8 @@ module openconfig-interfaces {
       "Operational state data (in addition to intended configuration)
       at the global level for this interface";
 
+    oc-ext:operational;
+
     leaf ifindex {
       type uint32;
       description
@@ -398,6 +483,7 @@ module openconfig-interfaces {
         ifIndex object in SNMP Interface MIB";
       reference
         "RFC 2863 - The Interfaces Group MIB";
+      oc-ext:telemetry-on-change;
     }
 
     leaf admin-status {
@@ -429,6 +515,7 @@ module openconfig-interfaces {
         disabling the interface.";
       reference
         "RFC 2863: The Interfaces Group MIB - ifAdminStatus";
+      oc-ext:telemetry-on-change;
     }
 
     leaf oper-status {
@@ -480,23 +567,53 @@ module openconfig-interfaces {
          This leaf has the same semantics as ifOperStatus.";
       reference
         "RFC 2863: The Interfaces Group MIB - ifOperStatus";
+      oc-ext:telemetry-on-change;
     }
 
     leaf last-change {
       type oc-types:timeticks64;
-      units nanoseconds;
       description
-        "This timestamp indicates the time of the last state change
-        of the interface (e.g., up-to-down transition). This
-        corresponds to the ifLastChange object in the standard
-        interface MIB.
+        "This timestamp indicates the absolute time of the last
+        state change of the interface (e.g., up-to-down transition).
+        This is different than the SNMP ifLastChange object in the
+        standard interface MIB in that it is not relative to the
+        system boot time (i.e,. sysUpTime).
 
         The value is the timestamp in nanoseconds relative to
         the Unix Epoch (Jan 1, 1970 00:00:00 UTC).";
-      reference
-        "RFC 2863: The Interfaces Group MIB - ifLastChange";
+      oc-ext:telemetry-on-change;
     }
 
+    leaf logical {
+      type boolean;
+      description
+        "When set to true, the interface is a logical interface
+        which does not have an associated physical port or
+        channel on the system.";
+      oc-ext:telemetry-on-change;
+    }
+
+    leaf management {
+      type boolean;
+      description
+        "When set to true, the interface is a dedicated
+        management interface that is not connected to dataplane
+        interfaces.  It may be used to connect the system to an
+        out-of-band management network, for example.";
+      oc-ext:telemetry-on-change;
+    }
+
+    leaf cpu {
+      type boolean;
+      description
+        "When set to true, the interface is for traffic
+        that is handled by the system CPU, sometimes also called the
+        control plane interface.  On systems that represent the CPU
+        interface as an Ethernet interface, for example, this leaf
+        should be used to distinguish the CPU interface from dataplane
+        interfaces.";
+      oc-ext:telemetry-on-change;
+    }
   }
 
 
@@ -509,6 +626,8 @@ module openconfig-interfaces {
       //that would appear for physical vs. subinterface or logical
       //interfaces.  For now, just replicating the full stats
       //grouping to both interface and subinterface.
+
+    oc-ext:operational;
 
     container counters {
       description
@@ -526,6 +645,17 @@ module openconfig-interfaces {
           'last-clear'.";
         reference
           "RFC 2863: The Interfaces Group MIB - ifHCInOctets";
+      }
+
+      leaf in-pkts {
+        type oc-yang:counter64;
+        description
+          "The total number of packets received on the interface,
+          including all unicast, multicast, broadcast and bad packets
+          etc.";
+        reference
+          "RFC 2819: Remote Network Monitoring Management Information
+          Base";
       }
 
       leaf in-unicast-pkts {
@@ -660,6 +790,17 @@ module openconfig-interfaces {
           "RFC 2863: The Interfaces Group MIB - ifHCOutOctets";
       }
 
+      leaf out-pkts {
+        type oc-yang:counter64;
+        description
+          "The total number of packets transmitted out of the
+          interface, including all unicast, multicast, broadcast,
+          and bad packets etc.";
+        reference
+          "RFC 2819: Remote Network Monitoring Management Information
+          Base";
+      }
+
       leaf out-unicast-pkts {
         type oc-yang:counter64;
         description
@@ -753,17 +894,18 @@ module openconfig-interfaces {
           "Number of times the interface state has transitioned
           between up and down since the time the device restarted
           or the last-clear time, whichever is most recent.";
+        oc-ext:telemetry-on-change;
       }
 
       leaf last-clear {
         type oc-types:timeticks64;
-        units nanoseconds;
         description
           "Timestamp of the last time the interface counters were
           cleared.
 
           The value is the timestamp in nanoseconds relative to
           the Unix Epoch (Jan 1, 1970 00:00:00 UTC).";
+        oc-ext:telemetry-on-change;
       }
     }
   }
@@ -802,6 +944,7 @@ module openconfig-interfaces {
       container config {
         description
           "Configuration data for unnumbered interface";
+        oc-ext:telemetry-on-change;
 
         uses sub-unnumbered-config;
       }
@@ -843,6 +986,8 @@ module openconfig-interfaces {
     description
       "Operational state data for subinterfaces";
 
+    oc-ext:operational;
+
     leaf name {
       type string;
       description
@@ -850,6 +995,7 @@ module openconfig-interfaces {
         be a combination of the base interface name and the
         subinterface index, or some other convention used by the
         system.";
+      oc-ext:telemetry-on-change;
     }
 
     uses interface-common-state;
@@ -885,6 +1031,7 @@ module openconfig-interfaces {
         container config {
           description
             "Configurable items at the subinterface level";
+          oc-ext:telemetry-on-change;
 
           uses subinterfaces-config;
         }
@@ -924,7 +1071,7 @@ module openconfig-interfaces {
             path "../config/name";
           }
           description
-            "References the configured name of the interface";
+            "References the name of the interface";
             //TODO: need to consider whether this should actually
             //reference the name in the state subtree, which
             //presumably would be the system-assigned name, or the
@@ -938,6 +1085,7 @@ module openconfig-interfaces {
           description
             "Configurable items at the global, physical interface
             level";
+          oc-ext:telemetry-on-change;
 
           uses interface-phys-config;
         }
@@ -960,6 +1108,5 @@ module openconfig-interfaces {
   }
 
   uses interfaces-top;
-
 
 }
