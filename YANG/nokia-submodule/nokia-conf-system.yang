@@ -52,7 +52,7 @@ submodule nokia-conf-system {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2023-07-14";
+    revision "2023-09-25";
 
     grouping conf-system {
         container system {
@@ -292,6 +292,7 @@ submodule nokia-conf-system {
 
                 } // container hash-polynomial
 
+
             } // container load-balancing
 
             list alarm-contact-input {
@@ -394,11 +395,11 @@ submodule nokia-conf-system {
                         type enumeration {
                             enum fall-through {
                                 value 1;
-                                description "Allow non-DNSSEC responses to fall-through to permit resolution in case of validation failure";
+                                description "Allow non-DNSSEC responses to fall-through to permit resolution in case of validation failure.";
                             }
                             enum drop {
                                 value 2;
-                                description "Drop non-DNSSEC responses in case of validation failure";
+                                description "Drop non-DNSSEC responses in case of validation failure.";
                             }
                         }
                         description "Validation of AD-bit presence in DNS server responses";
@@ -1652,6 +1653,44 @@ submodule nokia-conf-system {
 
                     } // container filter
 
+                    container statistics {
+                        description "Enter the statistics context";
+
+                        container policer {
+                            description "Enter the policer context";
+
+                            leaf banks {
+                                type uint32 {
+                                    range "0|1|2|4";
+                                }
+                                description "System-wide resources allocated for policer statistics. Max system-wide banks for policer statistics: Qmx (IXR-R6) - 1 bank max. 96k in bank. QmX (IXR-S) - 2 banks max. 16k in each bank. Qax (IXR-Eax/IXR-R4) - 4 banks max. 4k in each bank. Qux(IXR-Eux/IXR-Ec) - 4 banks max. 1 k each bank.";
+                            }
+
+                        } // container policer
+
+                        container filter {
+                            description "Enter the filter context";
+
+                            leaf ingress-banks {
+                                type uint32 {
+                                    range "0..4";
+                                }
+                                default "0";
+                                description "Resource allocated for ingress filter statistics.";
+                            }
+
+                            leaf egress-banks {
+                                type uint32 {
+                                    range "0..4";
+                                }
+                                default "0";
+                                description "Resource allocated for egress filter statistics.";
+                            }
+
+                        } // container filter
+
+                    } // container statistics
+
                     list pool {
                         key "pool-id";
                         description "Enter the pool list instance";
@@ -1704,7 +1743,7 @@ submodule nokia-conf-system {
 
                             leaf unpaired {
                                 type uint32 {
-                                    range "2..8192";
+                                    range "2..10240";
                                 }
                                 description "Number of system-wide unpaired FEC space";
                             }
@@ -1788,6 +1827,51 @@ submodule nokia-conf-system {
                             description "Exclude a configuration group at this level";
                         }
 
+                        list bank {
+                            key "bank-name";
+                            description "Enter the bank list instance";
+
+                            leaf bank-name {
+                                type enumeration {
+                                    enum dual-mode-16k-bank-1           { value 1; }
+                                    enum dual-mode-16k-bank-2           { value 2; }
+                                    enum dual-mode-16k-bank-3           { value 3; }
+                                }
+                                description "Bank name";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                            container application {
+                                description "Enter the application context";
+
+                                leaf group {
+                                    type int32 {
+                                        range "1..3";
+                                    }
+                                    description "Group associated to a bank";
+                                }
+
+                            } // container application
+
+                        } // list bank
+
                         container application-group {
                             description "Enter the application-group context";
 
@@ -1797,7 +1881,7 @@ submodule nokia-conf-system {
 
                                 leaf group-id {
                                     type uint32 {
-                                        range "1";
+                                        range "1..3";
                                     }
                                     description "Application group ID";
                                 }
@@ -1832,6 +1916,12 @@ submodule nokia-conf-system {
                                                 enum per-fc-unicast-broadcast-unknown-multicast { value 1; }
                                                 enum per-fc-unicast-multipoint      { value 2; }
                                                 enum per-fc                         { value 3; }
+                                                enum per-2-fc-unicast-multipoint    { value 4; }
+                                                enum per-4-fc-unicast-multipoint    { value 5; }
+                                                enum per-2-fc                       { value 6; }
+                                                enum per-4-fc                       { value 7; }
+                                                enum aggregate-policers             { value 8; }
+                                                enum shared-policers                { value 9; }
                                             }
                                             description "FC policer type";
                                         }
@@ -1871,6 +1961,23 @@ submodule nokia-conf-system {
 
                     } // container policer-and-statistics-override
 
+                    container segment-routing-v6 {
+                        description "Enter the segment-routing-v6 context";
+
+                        container tunnel-termination {
+                            description "Enter the tunnel-termination context";
+
+                            leaf entries {
+                                type uint32 {
+                                    range "256|1024|2048";
+                                }
+                                default "256";
+                                description "Maximum SRv6 tunnel termination TCAM entries";
+                            }
+
+                        } // container tunnel-termination
+
+                    } // container segment-routing-v6
 
                 } // container resource-allocation
 
@@ -1964,6 +2071,14 @@ submodule nokia-conf-system {
                     }
                     default "57400";
                     description "Listening port for the gRPC server";
+                }
+
+                leaf delay-on-boot {
+                    type uint16 {
+                        range "1..3600";
+                    }
+                    units "seconds";
+                    description "Delay for gRPC connections after system boot";
                 }
 
                 leaf max-msg-size {
@@ -2063,11 +2178,11 @@ submodule nokia-conf-system {
                         type enumeration {
                             enum latest {
                                 value 0;
-                                description "Latest supported version";
+                                description "Use latest supported version.";
                             }
                             enum v070 {
                                 value 1;
-                                description "gNMI version 0.7.0";
+                                description "Use gNMI 0.7.0 version.";
                             }
                         }
                         default "latest";
@@ -2154,6 +2269,14 @@ submodule nokia-conf-system {
 
             container grpc-tunnel {
                 description "Enter the grpc-tunnel context";
+
+                leaf delay-on-boot {
+                    type uint16 {
+                        range "1..3600";
+                    }
+                    units "seconds";
+                    description "Delay for gRPC tunnels after system boot";
+                }
 
                 leaf-list apply-groups {
                     type leafref {
@@ -2993,6 +3116,14 @@ submodule nokia-conf-system {
                         description "Port on which NETCONF server listens for connections";
                     }
 
+                    leaf delay-on-boot {
+                        type uint16 {
+                            range "1..3600";
+                        }
+                        units "seconds";
+                        description "Delay for NETCONF connections after system boot";
+                    }
+
                     leaf auto-config-save {
                         type boolean;
                         default "true";
@@ -3090,6 +3221,14 @@ submodule nokia-conf-system {
                         type types-sros:admin-state;
                         default "disable";
                         description "Administrative state of remote management registration";
+                    }
+
+                    leaf delay-on-boot {
+                        type uint16 {
+                            range "1..3600";
+                        }
+                        units "seconds";
+                        description "Delay for remote management after system boot";
                     }
 
                     leaf connection-timeout {
@@ -4234,13 +4373,16 @@ submodule nokia-conf-system {
             } // list software-repository
 
             container resource {
+                status deprecated;
                 description "Enter the resource context";
 
                 list ecmp-profile {
+                    status deprecated;
                     key "profile-id";
                     description "Enter the ecmp-profile list instance";
 
                     leaf profile-id {
+                        status deprecated;
                         type uint32 {
                             range "1..2";
                         }
@@ -4248,6 +4390,7 @@ submodule nokia-conf-system {
                     }
 
                     leaf type {
+                        status deprecated;
                         type enumeration {
                             enum mpls                           { value 1; }
                             enum ip                             { value 2; }
@@ -4258,6 +4401,7 @@ submodule nokia-conf-system {
                     }
 
                     leaf links {
+                        status deprecated;
                         type uint32 {
                             range "1..16";
                         }
@@ -4266,6 +4410,7 @@ submodule nokia-conf-system {
                     }
 
                     leaf groups {
+                        status deprecated;
                         type uint32 {
                             range "1..2048";
                         }
@@ -4274,6 +4419,7 @@ submodule nokia-conf-system {
                     }
 
                     leaf-list apply-groups {
+                        status deprecated;
                         type leafref {
                             path "../../../../groups/group/name";
                         }
@@ -4283,6 +4429,7 @@ submodule nokia-conf-system {
                     }
 
                     leaf-list apply-groups-exclude {
+                        status deprecated;
                         type leafref {
                             path "../../../../groups/group/name";
                         }

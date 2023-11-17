@@ -49,7 +49,7 @@ submodule nokia-state-system {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2023-07-14";
+    revision "2023-09-25";
 
     grouping state-system {
         container system {
@@ -169,9 +169,7 @@ submodule nokia-state-system {
             leaf up-time {
                 type uint64;
                 units "milliseconds";
-                description
-                    "The time since the network management portion of the system was
-                     last re-initialized.";
+                description "System uptime";
             }
 
             leaf current-time {
@@ -1110,6 +1108,42 @@ submodule nokia-state-system {
 
                     } // container filter
 
+                    container statistics {
+                        description "Enter the statistics context";
+
+                        container policer {
+                            description "Enter the policer context";
+
+                            leaf oper-banks {
+                                type uint32 {
+                                    range "0|1|2|4";
+                                }
+                                description "Operational policer stats resource allocated.";
+                            }
+
+                        } // container policer
+
+                        container filter {
+                            description "Enter the filter context";
+
+                            leaf oper-ingress-banks {
+                                type uint32 {
+                                    range "0..4";
+                                }
+                                description "Operational ingress filter stats resource allocated.";
+                            }
+
+                            leaf oper-egress-banks {
+                                type uint32 {
+                                    range "0..4";
+                                }
+                                description "Operational egress filter stats resource allocated.";
+                            }
+
+                        } // container filter
+
+                    } // container statistics
+
                     list pool {
                         key "pool-id";
                         description "Enter the pool list instance";
@@ -1186,6 +1220,33 @@ submodule nokia-state-system {
                             description "Oper state of policer-and-statistics override.";
                         }
 
+                        list bank {
+                            key "bank-name";
+                            description "Enter the bank list instance";
+
+                            leaf bank-name {
+                                type enumeration {
+                                    enum dual-mode-16k-bank-1           { value 1; }
+                                    enum dual-mode-16k-bank-2           { value 2; }
+                                    enum dual-mode-16k-bank-3           { value 3; }
+                                }
+                                description "Bank name";
+                            }
+
+                            container application {
+                                description "Enter the application context";
+
+                                leaf oper-group {
+                                    type int32 {
+                                        range "1..3";
+                                    }
+                                    description "Specifies the operational group.";
+                                }
+
+                            } // container application
+
+                        } // list bank
+
                         container application-group {
                             description "Enter the application-group context";
 
@@ -1215,7 +1276,7 @@ submodule nokia-state-system {
 
                                 leaf group-id {
                                     type uint32 {
-                                        range "1";
+                                        range "1..3";
                                     }
                                     description "Application group ID";
                                 }
@@ -1232,6 +1293,12 @@ submodule nokia-state-system {
                                                 enum per-fc-unicast-broadcast-unknown-multicast { value 1; }
                                                 enum per-fc-unicast-multipoint      { value 2; }
                                                 enum per-fc                         { value 3; }
+                                                enum per-2-fc-unicast-multipoint    { value 4; }
+                                                enum per-4-fc-unicast-multipoint    { value 5; }
+                                                enum per-2-fc                       { value 6; }
+                                                enum per-4-fc                       { value 7; }
+                                                enum aggregate-policers             { value 8; }
+                                                enum shared-policers                { value 9; }
                                             }
                                             description "FC policer type";
                                         }
@@ -1253,6 +1320,24 @@ submodule nokia-state-system {
 
                     } // container policer-and-statistics-override
 
+                    container segment-routing-v6 {
+                        description "Enter the segment-routing-v6 context";
+
+                        container tunnel-termination {
+                            description "Enter the tunnel-termination context";
+
+                            leaf oper-entries {
+                                type uint32 {
+                                    range "256|1024|2048";
+                                }
+                                description
+                                    "Operational value of the maximum number of
+                                     SRv6 tunnel termination TCAM entries on the system.";
+                            }
+
+                        } // container tunnel-termination
+
+                    } // container segment-routing-v6
 
                 } // container resource-allocation
 
@@ -1270,6 +1355,7 @@ submodule nokia-state-system {
                     type enumeration {
                         enum admin-down                     { value 1; }
                         enum listen-port-unavailable        { value 2; }
+                        enum active-delay-on-boot           { value 3; }
                     }
                     description "The reason due to which gRPC server is operationally down.";
                 }
@@ -1692,16 +1778,19 @@ submodule nokia-state-system {
                 }
 
                 leaf primary-schema-path {
+                    status deprecated;
                     type types-system:schema-path-state-type;
                     description "Location of schema files derived from primary-image.";
                 }
 
                 leaf secondary-schema-path {
+                    status deprecated;
                     type types-system:schema-path-state-type;
                     description "Location of schema files derived from secondary-image.";
                 }
 
                 leaf tertiary-schema-path {
+                    status deprecated;
                     type types-system:schema-path-state-type;
                     description "Location of schema files derived from tertiary-image.";
                 }
@@ -1918,6 +2007,15 @@ submodule nokia-state-system {
                     leaf oper-state {
                         type types-sros:oper-state;
                         description "operational state";
+                    }
+
+                    leaf oper-down-reason {
+                        type enumeration {
+                            enum admin-down                     { value 1; }
+                            enum no-connected-client            { value 2; }
+                            enum active-delay-on-boot           { value 3; }
+                        }
+                        description "The reason why the NETCONF server is operationally down";
                     }
 
                     container statistics {
@@ -2305,6 +2403,7 @@ submodule nokia-state-system {
                             enum unknown                        { value 0; }
                             enum admin-down                     { value 1; }
                             enum no-manager                     { value 2; }
+                            enum active-delay-on-boot           { value 3; }
                         }
                     }
 
@@ -2365,6 +2464,7 @@ submodule nokia-state-system {
                                 enum no-source-address              { value 3; }
                                 enum invalid-manager-address        { value 4; }
                                 enum registration-failed            { value 5; }
+                                enum active-delay-on-boot           { value 6; }
                             }
                         }
 
@@ -9106,6 +9206,26 @@ submodule nokia-state-system {
 
                 } // container input-output-capacity
 
+                container mtu-profile {
+                    description "Enter the mtu-profile context";
+
+                    leaf total {
+                        type yang:counter32;
+                        description "The total number of resources supported on this system.";
+                    }
+
+                    leaf allocated {
+                        type yang:counter32;
+                        description "The total number of resources that are currently allocated on this system.";
+                    }
+
+                    leaf free {
+                        type yang:counter32;
+                        description "The total number of resources that are remaining free on this system.";
+                    }
+
+                } // container mtu-profile
+
                 container dynamic-services-next-hop-entries {
                     description "Enter the dynamic-services-next-hop-entries context";
 
@@ -9330,6 +9450,86 @@ submodule nokia-state-system {
                     } // container vprn
 
                 } // container service
+
+                container egress-packet-re-injection-resources {
+                    description "Enter the egress-packet-re-injection-resources context";
+
+                    leaf total {
+                        type uint32;
+                        description "The total number of egress packet re-injection resources supported on this system.";
+                    }
+
+                    leaf allocated {
+                        type uint32;
+                        description "The total number of egress packet re-injection resources that are currently allocated on this system.";
+                    }
+
+                    leaf free {
+                        type uint32;
+                        description "The total number of egress packet re-injection resources that are remaining free on this system.";
+                    }
+
+                    container mirror {
+                        description "Enter the mirror context";
+
+                        leaf allocated {
+                            type uint32;
+                            description "Egress packet re-injection resources allocated to mirror.";
+                        }
+
+                    } // container mirror
+
+                    container radius {
+                        description "Enter the radius context";
+
+                        leaf allocated {
+                            type uint32;
+                            description "Egress packet re-injection resources allocated to radius.";
+                        }
+
+                    } // container radius
+
+                    container sat-traffic-generator {
+                        description "Enter the sat-traffic-generator context";
+
+                        leaf total {
+                            type uint32;
+                            description "Egress packet re-injection resources available to SAT traffic generator.";
+                        }
+
+                        leaf free {
+                            type uint32;
+                            description "SAT traffic generator resources unused by SAT traffic generator.";
+                        }
+
+                        leaf allocated {
+                            type uint32;
+                            description "SAT traffic generator resources allocated to SAT traffic generator.";
+                        }
+
+                    } // container sat-traffic-generator
+
+                    container reserved {
+                        description "Enter the reserved context";
+
+                        leaf allocated {
+                            type uint32;
+                            description "Egress packet re-injection resources reserved.";
+                        }
+
+                    } // container reserved
+
+                    container filter {
+                        description "Enter the filter context";
+
+                        leaf allocated {
+                            type uint32;
+                            description "Egress packet re-injection resources allocated to filter.";
+                        }
+
+                    } // container filter
+
+                } // container egress-packet-re-injection-resources
 
                 container ixr {
                     description "Enter the ixr context";
@@ -9600,6 +9800,376 @@ submodule nokia-state-system {
                         } // list by-owner
 
                     } // container oam-lm-ctr-id
+
+                    container mpls-nhlfe-lif {
+                        description "Enter the mpls-nhlfe-lif context";
+
+                        leaf total {
+                            type yang:counter32;
+                            description "The total number of resources.";
+                        }
+
+                        leaf allocated {
+                            type yang:counter32;
+                            description "The number of resources that are currently allocated.";
+                        }
+
+                        leaf free {
+                            type yang:counter32;
+                            description "The number of free resources that are currently available.";
+                        }
+
+                        list by-owner {
+                            key "owner";
+                            description "Enter the by-owner list instance";
+
+                            leaf owner {
+                                type types-system:ixr-resource-index-owner;
+                                description "Application that uses the pool resources.";
+                            }
+
+                            leaf allocated {
+                                type yang:counter32;
+                                description "The number of resources that are currently allocated.";
+                            }
+
+                        } // list by-owner
+
+                    } // container mpls-nhlfe-lif
+
+                    container ac-lif {
+                        description "Enter the ac-lif context";
+
+                        leaf total {
+                            type yang:counter32;
+                            description "The total number of resources.";
+                        }
+
+                        leaf allocated {
+                            type yang:counter32;
+                            description "The number of resources that are currently allocated.";
+                        }
+
+                        leaf free {
+                            type yang:counter32;
+                            description "The number of free resources that are currently available.";
+                        }
+
+                        list by-owner {
+                            key "owner";
+                            description "Enter the by-owner list instance";
+
+                            leaf owner {
+                                type types-system:ixr-resource-index-owner;
+                                description "Application that uses the pool resources.";
+                            }
+
+                            leaf allocated {
+                                type yang:counter32;
+                                description "The number of resources that are currently allocated.";
+                            }
+
+                        } // list by-owner
+
+                    } // container ac-lif
+
+                    container bgp-label-route-lif {
+                        description "Enter the bgp-label-route-lif context";
+
+                        leaf total {
+                            type yang:counter32;
+                            description "The total number of resources.";
+                        }
+
+                        leaf allocated {
+                            type yang:counter32;
+                            description "The number of resources that are currently allocated.";
+                        }
+
+                        leaf free {
+                            type yang:counter32;
+                            description "The number of free resources that are currently available.";
+                        }
+
+                        list by-owner {
+                            key "owner";
+                            description "Enter the by-owner list instance";
+
+                            leaf owner {
+                                type types-system:ixr-resource-index-owner;
+                                description "Application that uses the pool resources.";
+                            }
+
+                            leaf total {
+                                type yang:counter32;
+                                description "The total number of resources.";
+                            }
+
+                            leaf allocated {
+                                type yang:counter32;
+                                description "The number of resources that are currently allocated.";
+                            }
+
+                            leaf free {
+                                type yang:counter32;
+                                description "The number of free resources that are currently available.";
+                            }
+
+                        } // list by-owner
+
+                    } // container bgp-label-route-lif
+
+                    container sdp-bind-mpls-lif {
+                        description "Enter the sdp-bind-mpls-lif context";
+
+                        leaf total {
+                            type yang:counter32;
+                            description "The total number of resources.";
+                        }
+
+                        leaf allocated {
+                            type yang:counter32;
+                            description "The number of resources that are currently allocated.";
+                        }
+
+                        leaf free {
+                            type yang:counter32;
+                            description "The number of free resources that are currently available.";
+                        }
+
+                        list by-owner {
+                            key "owner";
+                            description "Enter the by-owner list instance";
+
+                            leaf owner {
+                                type types-system:ixr-resource-index-owner;
+                                description "Application that uses the pool resources.";
+                            }
+
+                            leaf allocated {
+                                type yang:counter32;
+                                description "The number of resources that are currently allocated.";
+                            }
+
+                        } // list by-owner
+
+                    } // container sdp-bind-mpls-lif
+
+                    container sdp-bind-gre-lif {
+                        description "Enter the sdp-bind-gre-lif context";
+
+                        leaf total {
+                            type yang:counter32;
+                            description "The total number of resources.";
+                        }
+
+                        leaf allocated {
+                            type yang:counter32;
+                            description "The number of resources that are currently allocated.";
+                        }
+
+                        leaf free {
+                            type yang:counter32;
+                            description "The number of free resources that are currently available.";
+                        }
+
+                        list by-owner {
+                            key "owner";
+                            description "Enter the by-owner list instance";
+
+                            leaf owner {
+                                type types-system:ixr-resource-index-owner;
+                                description "Application that uses the pool resources.";
+                            }
+
+                            leaf allocated {
+                                type yang:counter32;
+                                description "The number of resources that are currently allocated.";
+                            }
+
+                        } // list by-owner
+
+                    } // container sdp-bind-gre-lif
+
+                    container ssid-lif {
+                        description "Enter the ssid-lif context";
+
+                        leaf total {
+                            type yang:counter32;
+                            description "The total number of resources.";
+                        }
+
+                        leaf allocated {
+                            type yang:counter32;
+                            description "The number of resources that are currently allocated.";
+                        }
+
+                        leaf free {
+                            type yang:counter32;
+                            description "The number of free resources that are currently available.";
+                        }
+
+                        list by-owner {
+                            key "owner";
+                            description "Enter the by-owner list instance";
+
+                            leaf owner {
+                                type types-system:ixr-resource-index-owner;
+                                description "Application that uses the pool resources.";
+                            }
+
+                            leaf allocated {
+                                type yang:counter32;
+                                description "The number of resources that are currently allocated.";
+                            }
+
+                        } // list by-owner
+
+                    } // container ssid-lif
+
+                    container srv6-tunnel-lif {
+                        description "Enter the srv6-tunnel-lif context";
+
+                        leaf total {
+                            type yang:counter32;
+                            description "The total number of resources.";
+                        }
+
+                        leaf allocated {
+                            type yang:counter32;
+                            description "The number of resources that are currently allocated.";
+                        }
+
+                        leaf free {
+                            type yang:counter32;
+                            description "The number of free resources that are currently available.";
+                        }
+
+                        list by-owner {
+                            key "owner";
+                            description "Enter the by-owner list instance";
+
+                            leaf owner {
+                                type types-system:ixr-resource-index-owner;
+                                description "Application that uses the pool resources.";
+                            }
+
+                            leaf allocated {
+                                type yang:counter32;
+                                description "The number of resources that are currently allocated.";
+                            }
+
+                        } // list by-owner
+
+                    } // container srv6-tunnel-lif
+
+                    container vxlan-lif {
+                        description "Enter the vxlan-lif context";
+
+                        leaf total {
+                            type yang:counter32;
+                            description "The total number of resources.";
+                        }
+
+                        leaf allocated {
+                            type yang:counter32;
+                            description "The number of resources that are currently allocated.";
+                        }
+
+                        leaf free {
+                            type yang:counter32;
+                            description "The number of free resources that are currently available.";
+                        }
+
+                        list by-owner {
+                            key "owner";
+                            description "Enter the by-owner list instance";
+
+                            leaf owner {
+                                type types-system:ixr-resource-index-owner;
+                                description "Application that uses the pool resources.";
+                            }
+
+                            leaf allocated {
+                                type yang:counter32;
+                                description "The number of resources that are currently allocated.";
+                            }
+
+                        } // list by-owner
+
+                    } // container vxlan-lif
+
+                    container l2-service {
+                        description "Enter the l2-service context";
+
+                        leaf total {
+                            type yang:counter32;
+                            description "The total number of resources.";
+                        }
+
+                        leaf allocated {
+                            type yang:counter32;
+                            description "The number of resources that are currently allocated.";
+                        }
+
+                        leaf free {
+                            type yang:counter32;
+                            description "The number of free resources that are currently available.";
+                        }
+
+                        list by-owner {
+                            key "owner";
+                            description "Enter the by-owner list instance";
+
+                            leaf owner {
+                                type types-system:ixr-resource-index-owner;
+                                description "Application that uses the pool resources.";
+                            }
+
+                            leaf allocated {
+                                type yang:counter32;
+                                description "The number of resources that are currently allocated.";
+                            }
+
+                        } // list by-owner
+
+                    } // container l2-service
+
+                    container station-id {
+                        description "Enter the station-id context";
+
+                        leaf total {
+                            type yang:counter32;
+                            description "The total number of resources.";
+                        }
+
+                        leaf allocated {
+                            type yang:counter32;
+                            description "The number of resources that are currently allocated.";
+                        }
+
+                        leaf free {
+                            type yang:counter32;
+                            description "The number of free resources that are currently available.";
+                        }
+
+                        list by-owner {
+                            key "owner";
+                            description "Enter the by-owner list instance";
+
+                            leaf owner {
+                                type types-system:ixr-resource-index-owner;
+                                description "Application that uses the pool resources.";
+                            }
+
+                            leaf allocated {
+                                type yang:counter32;
+                                description "The number of resources that are currently allocated.";
+                            }
+
+                        } // list by-owner
+
+                    } // container station-id
 
                     container ingress-classification-policies {
                         description "Enter the ingress-classification-policies context";
@@ -9893,6 +10463,42 @@ submodule nokia-state-system {
 
             } // container switch-fabric
 
+            container last-reboot {
+                description "Enter the last-reboot context";
+
+                leaf reason {
+                    type enumeration {
+                        enum admin                          { value 1; }
+                        enum other                          { value 2; }
+                    }
+                    description "Indicates whether the last reboot was due to admin action.";
+                }
+
+                leaf user {
+                    type types-sros:named-item-or-empty;
+                    description "The unique identifier of the user who initiated the last reboot.";
+                }
+
+                leaf router {
+                    type types-sros:router-instance-base-management-vprn-loose;
+                    description
+                        "Router-instance of the management session which initiated the last
+                         reboot command.";
+                }
+
+                leaf ip-address {
+                    type types-sros:ip-address;
+                    description
+                        "Ip-address sourcing the management session which initiated the last
+                         reboot command.";
+                }
+
+                leaf time {
+                    type yang:date-and-time;
+                    description "The date and time the last reboot was initiated.";
+                }
+
+            } // container last-reboot
 
             uses state-system-bluetooth;
             uses state-system-bootup;
