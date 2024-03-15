@@ -1,0 +1,486 @@
+submodule nokia-conf-submgt-service-chaining {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-filter             { prefix "types-filter"; }
+    import nokia-types-services           { prefix "types-services"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-groups;
+
+    sros-ext:sros-major-release "rel24";
+    organization "Nokia";
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+    description
+        "Nokia YANG Data model to configure service chaining on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-submgt-service-chaining YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+    revision "2022-12-21";
+
+    grouping conf-submgt-service-chaining-isa-service-chaining {
+        container isa-service-chaining {
+            description "Enter the isa-service-chaining context";
+
+            leaf mac-prefix {
+                type string {
+                    length "8";
+                    pattern "[0-9a-f][02468ace](:[0-9a-f]{2}){2}";
+                }
+                description "MAC prefix for all NAT groups for Service Chaining";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            leaf-list apply-groups-exclude {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Exclude a configuration group at this level";
+            }
+
+            list evpn {
+                key "id";
+                max-elements 1024;
+                description "Enter the evpn list instance";
+
+                leaf id {
+                    type types-services:service-name {
+                        pattern "[0-9]{1,10}";
+                    }
+                    description "EVPN service ID";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of EVPN";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf import-mode {
+                    type enumeration {
+                        enum none                           { value 0; }
+                        enum bridged                        { value 1; }
+                        enum routed                         { value 2; }
+                    }
+                    sros-ext:immutable;
+                    default "none";
+                    description "Import mode for the EVPN";
+                }
+
+                leaf prefix-route-resolution {
+                    type enumeration {
+                        enum recursive                      { value 0; }
+                        enum non-recursive                  { value 1; }
+                    }
+                    sros-ext:immutable;
+                    default "recursive";
+                    description "How prefix routes should be resolved";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                container bgp {
+                    description "Enter the bgp context";
+
+                    container route-distinguisher {
+                        description "Enter the route-distinguisher context";
+
+                        leaf rd {
+                            type types-services:vpn-route-distinguisher-or-auto-rd;
+                            sros-ext:auto-restart-to-modify;
+                            description "RD component for NLRI";
+                        }
+
+                    } // container route-distinguisher
+
+                    container route-target {
+                        presence "Enable the route-target context";
+                        description "Enable the route-target context";
+
+                        leaf import {
+                            type types-services:route-target-32;
+                            sros-ext:auto-restart-to-modify;
+                            mandatory true;
+                            description "Extended community name for default import policy";
+                        }
+
+                        leaf export {
+                            type types-services:route-target-32;
+                            sros-ext:auto-restart-to-modify;
+                            mandatory true;
+                            description "Extended community name for default export policy";
+                        }
+
+                    } // container route-target
+
+                } // container bgp
+
+                container export {
+                    description "Enter the export context";
+
+                    container vxlan {
+                        description "Enter the vxlan context";
+
+                        leaf vni {
+                            type uint32 {
+                                range "1..16777215";
+                            }
+                            sros-ext:auto-restart-to-modify;
+                            description "VNI of the VXLAN created by the EVPN service";
+                        }
+
+                    } // container vxlan
+
+                    container gateway-address-range {
+                        when "not(../../import-mode = 'bridged') and ../../prefix-route-resolution = 'recursive'" {
+                            description "import-mode can not be 'bridged', prefix-route-resolution must be 'recursive'";
+                        }
+                        presence "Enable the gateway-address-range context";
+                        description "Enable the gateway-address-range context";
+
+                        leaf start {
+                            type types-sros:ipv4-unicast-address;
+                            mandatory true;
+                            description "Lower bound of the gateway address range";
+                        }
+
+                        leaf end {
+                            type types-sros:ipv4-unicast-address;
+                            mandatory true;
+                            description "Upper bound of the gateway address range";
+                        }
+
+                    } // container gateway-address-range
+
+                    container advertise-pools {
+                        when "not(../../import-mode = 'bridged')" {
+                            description "import-mode can not be 'bridged'";
+                        }
+                        description "Enter the advertise-pools context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of NAT pool route advertisement";
+                        }
+
+                        list pool {
+                            key "router-instance name";
+                            description "Add a list entry for pool";
+
+                            leaf router-instance {
+                                type string;
+                                description "Router-instance of the NAT pool";
+                            }
+
+                            leaf name {
+                                type types-sros:named-item;
+                                description "NAT pool name";
+                            }
+
+                        } // list pool
+
+                    } // container advertise-pools
+
+                } // container export
+
+            } // list evpn
+
+            list vas-filter {
+                key "name";
+                description "Enter the vas-filter list instance";
+
+                leaf name {
+                    type types-sros:named-item;
+                    description "VAS filter name";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                list entry {
+                    key "id";
+                    max-elements 64;
+                    description "Enter the entry list instance";
+
+                    leaf id {
+                        type types-filter:limited-entry-id;
+                        description "VAS filter entry ID";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of the VAS filter";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        sros-ext:auto-restart-to-modify;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        sros-ext:auto-restart-to-modify;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container match {
+                        sros-ext:auto-restart-to-modify;
+                        description "Enter the match context";
+
+                        leaf protocol {
+                            type enumeration {
+                                enum tcp-udp {
+                                    value -2;
+                                    description "TCP and UDP";
+                                }
+                                enum none {
+                                    value -1;
+                                    description "Matching disabled by the IP protocol";
+                                }
+                                enum icmp {
+                                    value 1;
+                                    description "ICMP";
+                                }
+                                enum tcp {
+                                    value 6;
+                                    description "TCP";
+                                }
+                                enum udp {
+                                    value 17;
+                                    description "UDP";
+                                }
+                            }
+                            sros-ext:auto-restart-to-modify;
+                            default "none";
+                            description "IP protocol to match the VAS filter";
+                        }
+
+                        leaf foreign-ip {
+                            type union {
+                                type types-sros:ipv4-unicast-prefix;
+                                type types-sros:ipv4-unicast-address;
+                            }
+                            sros-ext:auto-restart-to-modify;
+                            description "Foreign IP address or prefix for match criterion";
+                        }
+
+                        leaf foreign-port {
+                            type types-sros:tcp-udp-port-non-zero;
+                            sros-ext:auto-restart-to-modify;
+                            description "Foreign TCP or UDP port as the match criterion";
+                        }
+
+                    } // container match
+
+                    list action {
+                        key "direction";
+                        description "Enter the action list instance";
+
+                        leaf direction {
+                            type enumeration {
+                                enum upstream                       { value 1; }
+                                enum downstream                     { value 2; }
+                            }
+                            description "Direction for the action in a VAS filter entry";
+                        }
+
+                        leaf fail-action {
+                            type types-filter:filter-default-action;
+                            default "accept";
+                            description "Action for unresolved SF-IP or ESI";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container forward {
+                            presence "Enable the forward context";
+                            description "Enable the forward context";
+
+                            leaf sf-ip {
+                                type types-sros:ip-unicast-without-local-address;
+                                mandatory true;
+                                description "Forwarding SF IP address for the action";
+                            }
+
+                            leaf svc {
+                                type leafref {
+                                    path "../../../../../evpn/id";
+                                }
+                                mandatory true;
+                                description "EVPN service used for forwarding packets";
+                            }
+
+                            leaf esi {
+                                type types-services:ethernet-segment-id {
+                                    pattern "[0-9a-fA-F]{2}([:\\- ][0-9a-fA-F]{2}){9}";
+                                }
+                                default "00:00:00:00:00:00:00:00:00:00";
+                                description "ESI for the action in the VAS filter entry";
+                            }
+
+                        } // container forward
+
+                        container insert-nsh {
+                            description "Enter the insert-nsh context";
+
+                            container svc-path {
+                                presence "Enable the svc-path context";
+                                description "Enable the svc-path context";
+
+                                leaf path-id {
+                                    type uint32 {
+                                        range "1..16777215";
+                                    }
+                                    mandatory true;
+                                    description "Path ID in the base part of NSH";
+                                }
+
+                                leaf svc-index {
+                                    type uint32 {
+                                        range "1..255";
+                                    }
+                                    mandatory true;
+                                    description "Service index inserted in the base part of NSH";
+                                }
+
+                            } // container svc-path
+
+                            container meta-data {
+                                description "Enter the meta-data context";
+
+                                choice type {
+                                    case opaque-data {
+
+                                        leaf opaque-data {
+                                            type string {
+                                                length "10|18|26|34";
+                                            }
+                                            description "Opaque meta-data for the NSH";
+                                        }
+
+                                    }
+                                    case insert-subscriber-id {
+
+                                        leaf insert-subscriber-id {
+                                            type empty;
+                                            description "Insert the subscriber-id in the NSH";
+                                        }
+
+                                    }
+                                }
+                            } // container meta-data
+
+                        } // container insert-nsh
+
+                    } // list action
+
+                } // list entry
+
+            } // list vas-filter
+
+        } // container isa-service-chaining
+
+    } // grouping conf-submgt-service-chaining-isa-service-chaining
+
+}
