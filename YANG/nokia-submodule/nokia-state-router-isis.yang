@@ -12,7 +12,7 @@ submodule nokia-state-router-isis {
     import nokia-types-router             { prefix "types-router"; }
     import nokia-types-sros               { prefix "types-sros"; }
 
-    sros-ext:sros-major-release "rel23";
+    sros-ext:sros-major-release "rel24";
     organization "Nokia";
     contact
         "Nokia SR OS Support
@@ -35,7 +35,7 @@ submodule nokia-state-router-isis {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2023-09-13";
+    revision "2024-02-05";
 
     grouping state-router-isis {
         list isis {
@@ -599,6 +599,115 @@ submodule nokia-state-router-isis {
 
                         } // list flex-algo-definitions
 
+                        list topology {
+                            key "multi-topology-id path-id";
+                            description "Enter the topology list instance";
+
+                            leaf multi-topology-id {
+                                type uint32;
+                                description
+                                    "The value specifies the multi-topology id number for the path.
+
+                                     If multi-topology is not supported for the path then
+                                     the value should be 0.";
+                            }
+
+                            leaf path-id {
+                                type string {
+                                    length "16";
+                                }
+                                description
+                                    "The value specifies the path identifier
+                                     and has first 6 octets as the system-id followed by one octet
+                                     of the Lan-ID.";
+                            }
+
+                            leaf metric {
+                                type uint32;
+                                description
+                                    "The value indicates the metric
+                                     assigned to this path entry after SPF calculations.
+
+                                     The lower the metric value, the shorter the path and hence more
+                                     preferred by the protocol.";
+                            }
+
+                            leaf route-type {
+                                type enumeration {
+                                    enum spf                            { value 0; }
+                                    enum lfa                            { value 1; }
+                                }
+                                description "The value indicates whether a backup route exists for this row entry.";
+                            }
+
+                            container lfa {
+                                description "Enter the lfa context";
+
+                                leaf type {
+                                    type enumeration {
+                                        enum none                           { value 0; }
+                                        enum node-link                      { value 1; }
+                                        enum path-link                      { value 2; }
+                                    }
+                                    description "The value indicates the type of route represented by this row entry.";
+                                }
+
+                                leaf interface {
+                                    type types-sros:interface-name;
+                                    description
+                                        "The value indicates the
+                                         loopfree-alternate ifIndex of the outgoing interface for the path.";
+                                }
+
+                                leaf next-hop {
+                                    type types-igp:system-id;
+                                    description
+                                        "The value indicates the
+                                         loopfree-alternate next hop and is referenced by the system-id.";
+                                }
+
+                                leaf metric {
+                                    type uint32;
+                                    description
+                                        "The value indicates the metric assigned to this entry which are a result
+                                         of loopfree-alternate calculations.
+
+                                         The lower the metric value, the shorter is the path and hence more
+                                         preferred by the protocol.";
+                                }
+
+                            } // container lfa
+
+                            list next-hop {
+                                key "ecmp-index";
+                                description "Enter the next-hop list instance";
+
+                                leaf ecmp-index {
+                                    type uint32;
+                                    description "ECMP index of this route next-hop.";
+                                }
+
+                                leaf interface {
+                                    type types-sros:interface-name;
+                                    description "The value specifies the outgoing interface for the path.";
+                                }
+
+                                leaf next-hop-system-id {
+                                    type types-igp:system-id;
+                                    description
+                                        "The value specifies the system-id of the next hop and is used to reference the
+                                         next hop for this route.";
+                                }
+
+                                leaf snpa {
+                                    type types-isis:snpa-address;
+                                    description "The value indicates the subnet point of attachment for this path.";
+                                }
+
+                            } // list next-hop
+
+                        } // list topology
+
                     } // list level
 
                     list route {
@@ -629,6 +738,7 @@ submodule nokia-state-router-isis {
                                 enum active                         { value 0; }
                                 enum rtm-add-failed                 { value 1; }
                                 enum fib-add-failed                 { value 2; }
+                                enum unreachable                    { value 3; }
                             }
                             description "The value indicates the reason why a route is not active.";
                         }
@@ -1093,6 +1203,7 @@ submodule nokia-state-router-isis {
 
                     leaf backup-lfa-protection-type {
                         type enumeration {
+                            enum not-applicable                 { value 0; }
                             enum node-protection                { value 1; }
                             enum link-protection                { value 2; }
                         }
@@ -1132,6 +1243,7 @@ submodule nokia-state-router-isis {
                                 enum pq-node                        { value 2; }
                                 enum tr-node                        { value 3; }
                                 enum q-node                         { value 4; }
+                                enum nbr-node                       { value 5; }
                             }
                             description "The value indicates the node type.";
                         }
@@ -1468,6 +1580,7 @@ submodule nokia-state-router-isis {
 
                     leaf backup-lfa-protection-type {
                         type enumeration {
+                            enum not-applicable                 { value 0; }
                             enum node-protection                { value 1; }
                             enum link-protection                { value 2; }
                         }
@@ -2385,6 +2498,7 @@ submodule nokia-state-router-isis {
 
                         } // list lfa-label-stack
 
+
                     } // container sr-ipv4
 
                     container sr-ipv6 {
@@ -2539,6 +2653,7 @@ submodule nokia-state-router-isis {
 
                         } // list lfa-label-stack
 
+
                     } // container sr-ipv6
 
                     list area-address {
@@ -2641,6 +2756,65 @@ submodule nokia-state-router-isis {
                     }
 
                 } // container overload
+
+                list originated-unreachable-route {
+                    key "multi-topology-id destination";
+                    description "Enter the originated-unreachable-route list instance";
+
+                    leaf multi-topology-id {
+                        type uint32;
+                        description
+                            "The value specifies the multi-topology id number for the path.
+
+                             If multi-topology is not supported for the path then
+                             the value should be 0.";
+                    }
+
+                    leaf destination {
+                        type types-sros:ip-prefix;
+                        description "The value specifies the IP address and mask of the route destination.";
+                    }
+
+                    leaf metric {
+                        type uint32;
+                        description "The value indicates the routing metric that is advertised in the UPA.";
+                    }
+
+                    leaf type {
+                        type enumeration {
+                            enum internal                       { value 1; }
+                            enum external                       { value 2; }
+                        }
+                        description "The value indicates the type of route represented by this row entry.";
+                    }
+
+                    leaf tag {
+                        type uint32;
+                        description
+                            "The value indicates a 32-bit integer route tag for this route.
+
+                             A value of 0 indicates that the tag has not been set.";
+                    }
+
+                    leaf spf-version {
+                        type yang:counter32;
+                        description "The value indicates the run of SPF calculation in which this route was selected.";
+                    }
+
+                    leaf system-id {
+                        type types-igp:system-id;
+                        description "The value indicates the system-id.";
+                    }
+
+                    leaf lifetime-remaining {
+                        type int32 {
+                            range "0..65535";
+                        }
+                        units "seconds";
+                        description "The value indicates the Remaining lifetime of this UPA.";
+                    }
+
+                } // list originated-unreachable-route
 
             } // list level
 
@@ -3174,6 +3348,7 @@ submodule nokia-state-router-isis {
                         enum active                         { value 0; }
                         enum rtm-add-failed                 { value 1; }
                         enum fib-add-failed                 { value 2; }
+                        enum unreachable                    { value 3; }
                     }
                     description "The value indicates the reason why a route is not active.";
                 }
@@ -3748,7 +3923,7 @@ submodule nokia-state-router-isis {
                     type uint32 {
                         range "0..max";
                     }
-                    description "When type is adjacency-set then this is the adjacency-set for whcih the sid is used";
+                    description "When type is adjacency-set then this is the adjacency-set for which the sid is used";
                 }
 
                 leaf interface {
