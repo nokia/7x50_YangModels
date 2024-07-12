@@ -36,7 +36,7 @@ submodule nokia-conf-qos {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2024-02-06";
+    revision "2024-06-21";
 
     grouping conf-qos {
         container qos {
@@ -3046,6 +3046,21 @@ submodule nokia-conf-qos {
                             description "Interval for sampling the child's offered rate";
                         }
 
+                        leaf avg-frame-overhead-mode {
+                            type enumeration {
+                                enum auto {
+                                    value 1;
+                                    description "Automatically calculate average frame overhead";
+                                }
+                                enum from-queue {
+                                    value 2;
+                                    description "Manually configure average frame overhead";
+                                }
+                            }
+                            default "auto";
+                            description "Method of average frame overhead calculation";
+                        }
+
                         container add {
                             description "Enter the add context";
 
@@ -4702,6 +4717,7 @@ submodule nokia-conf-qos {
                             } // container adaptation-rule
 
                         } // list hs-wrr-group
+
 
                     } // list queue-group
 
@@ -8170,47 +8186,6 @@ submodule nokia-conf-qos {
                         description "Average packet-to-frame encapsulation overhead";
                     }
 
-                    leaf burst-limit {
-                        type union {
-                            type types-qos:bytes {
-                                range "1..14000000";
-                            }
-                            type enumeration {
-                                enum auto                           { value -1; }
-                            }
-                        }
-                        default "auto";
-                        description "Explicit shaping burst size of a queue";
-                    }
-
-                    leaf cbs {
-                        type union {
-                            type types-qos:bytes {
-                                range "0..1048576";
-                            }
-                            type enumeration {
-                                enum auto                           { value -1; }
-                            }
-                        }
-                        units "kilobytes";
-                        default "auto";
-                        description "Reserved buffer space for the queue";
-                    }
-
-                    leaf mbs {
-                        type union {
-                            type types-qos:bytes {
-                                range "0..1073741824";
-                            }
-                            type enumeration {
-                                enum auto                           { value -1; }
-                            }
-                        }
-                        units "bytes";
-                        default "auto";
-                        description "Buffer space allowed for the queue";
-                    }
-
                     leaf packet-byte-offset {
                         type int32 {
                             range "-64..32";
@@ -8294,6 +8269,116 @@ submodule nokia-conf-qos {
                         description "Exclude a configuration group at this level";
                     }
 
+                    choice burst-limit-or-delay-time {
+                        default "burst-limit";
+                        case burst-limit {
+
+                            leaf burst-limit {
+                                type union {
+                                    type types-qos:bytes {
+                                        range "1..14000000";
+                                    }
+                                    type enumeration {
+                                        enum auto                           { value -1; }
+                                    }
+                                }
+                                default "auto";
+                                description "Explicit shaping burst size of a queue";
+                            }
+
+                        }
+                        case burst-limit-delay-time {
+
+                            leaf burst-limit-delay-time {
+                                type types-sros:buffer-size-delay-time;
+                                units "microseconds";
+                                description "Burst limit as a function of time delay";
+                            }
+
+                        }
+                    }
+                    choice cbs-or-delay-time-or-delay-percent {
+                        default "cbs";
+                        case cbs {
+
+                            leaf cbs {
+                                type union {
+                                    type types-qos:bytes {
+                                        range "0..1048576";
+                                    }
+                                    type enumeration {
+                                        enum auto                           { value -1; }
+                                    }
+                                }
+                                units "kilobytes";
+                                default "auto";
+                                description "Reserved buffer space for the queue";
+                            }
+
+                        }
+                        case cbs-delay-percent {
+
+                            leaf cbs-delay-percent {
+                                type decimal64 {
+                                    range "0.00..100.00";
+                                    fraction-digits 2;
+                                }
+                                units "percent";
+                                description "CBS as a portion of SAP latency budget";
+                            }
+
+                        }
+                        case cbs-delay-time {
+
+                            leaf cbs-delay-time {
+                                type types-sros:buffer-size-delay-time;
+                                units "microseconds";
+                                description "CBS as a function of time delay";
+                            }
+
+                        }
+                    }
+                    choice mbs-or-delay-time-or-delay-percent {
+                        default "mbs";
+                        case mbs {
+
+                            leaf mbs {
+                                type union {
+                                    type types-qos:bytes {
+                                        range "0..1073741824";
+                                    }
+                                    type enumeration {
+                                        enum auto                           { value -1; }
+                                    }
+                                }
+                                units "bytes";
+                                default "auto";
+                                description "Buffer space allowed for the queue";
+                            }
+
+                        }
+                        case mbs-delay-percent {
+
+                            leaf mbs-delay-percent {
+                                type decimal64 {
+                                    range "0.00..100.00";
+                                    fraction-digits 2;
+                                }
+                                units "percent";
+                                description "MBS as a portion of SAP latency budget";
+                            }
+
+                        }
+                        case mbs-delay-time {
+
+                            leaf mbs-delay-time {
+                                type types-sros:buffer-size-delay-time;
+                                units "microseconds";
+                                description "MBS as a function of time delay";
+                            }
+
+                        }
+                    }
                     choice rate-or-percent-rate {
                         default "rate";
                         case rate {

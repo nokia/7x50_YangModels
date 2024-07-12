@@ -7,6 +7,7 @@ submodule nokia-conf-lag {
     import ietf-yang-types                { prefix "yang"; }
     import nokia-sros-yang-extensions     { prefix "sros-ext"; }
     import nokia-types-eth-cfm            { prefix "types-eth-cfm"; }
+    import nokia-types-lldp               { prefix "types-lldp"; }
     import nokia-types-port               { prefix "types-port"; }
     import nokia-types-qos                { prefix "types-qos"; }
     import nokia-types-services           { prefix "types-services"; }
@@ -41,7 +42,7 @@ submodule nokia-conf-lag {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2024-02-05";
+    revision "2024-04-17";
 
     grouping conf-lag {
         list lag {
@@ -1273,7 +1274,206 @@ submodule nokia-conf-lag {
 
             } // container scheduler
 
+            container lldp-member-template {
+                description "Enter the lldp-member-template context";
 
+                list dest-mac {
+                    key "mac-type";
+                    description "Enter the dest-mac list instance";
+
+                    leaf mac-type {
+                        type types-lldp:mac-addr-type;
+                        description "Destination MAC address type";
+                    }
+
+                    leaf notification {
+                        type boolean;
+                        default "false";
+                        description "Enable LLDP notifications";
+                    }
+
+                    leaf port-id-subtype {
+                        type enumeration {
+                            enum tx-if-alias {
+                                value 1;
+                                description "Transmit the ifAlias String (subtype 1)";
+                            }
+                            enum tx-if-name {
+                                value 5;
+                                description "Transmit the ifName string (subtype 5)";
+                            }
+                            enum tx-local {
+                                value 7;
+                                description "Transmit the interface ifIndex value (subtype 7)";
+                            }
+                        }
+                        default "tx-local";
+                        description "Encoding of the Port ID TLV transmitted to the peer";
+                    }
+
+                    leaf receive {
+                        type boolean;
+                        default "false";
+                        description "Enable LLDP received frame handling";
+                    }
+
+                    leaf transmit {
+                        type boolean;
+                        default "false";
+                        description "Enable LLDP transmitted frame handling";
+                    }
+
+                    leaf tunnel-nearest-bridge {
+                        when "../mac-type = 'nearest-bridge'" {
+                            description "Only valid for nearest-bridge mac-type";
+                        }
+                        type boolean;
+                        default "false";
+                        description "Enable nearest bridge tunneling";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container tx-tlvs {
+                        description "Enter the tx-tlvs context";
+
+                        leaf port-desc {
+                            type boolean;
+                            default "false";
+                            description "Transmit port description TLVs";
+                        }
+
+                        leaf sys-name {
+                            type boolean;
+                            default "false";
+                            description "Transmit system name TLVs";
+                        }
+
+                        leaf sys-desc {
+                            type boolean;
+                            default "false";
+                            description "Transmit system description TLVs";
+                        }
+
+                        leaf sys-cap {
+                            type boolean;
+                            default "false";
+                            description "Transmit system capabilities TLVs";
+                        }
+
+                    } // container tx-tlvs
+
+                    list tx-mgmt-address {
+                        key "mgmt-address-system-type";
+                        description "Enter the tx-mgmt-address list instance";
+
+                        leaf mgmt-address-system-type {
+                            type enumeration {
+                                enum oob {
+                                    value 0;
+                                    description "Transmit out-of-band IPv4 address for active CPM";
+                                }
+                                enum system {
+                                    value 1;
+                                    description "Transmit the system IP address";
+                                }
+                                enum system-ipv6 {
+                                    value 2;
+                                    description "Transmit the system IPv6 address";
+                                }
+                                enum oob-ipv6 {
+                                    value 3;
+                                    description "Transmit the out-of-band IPv6 address for active CPM";
+                                }
+                            }
+                            description "Management address to transmit";
+                        }
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of management address transmission";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // list tx-mgmt-address
+
+                } // list dest-mac
+
+            } // container lldp-member-template
+
+            container ptp-timestamping {
+                presence "Enable the ptp-timestamping context";
+                description "Enable the ptp-timestamping context";
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of PTP timestamping";
+                }
+
+                leaf ipv4-address {
+                    type types-sros:ipv4-address;
+                    description "IPv4 destination address for PTP messages into port";
+                }
+
+                leaf ipv6-address {
+                    type types-sros:ipv6-address;
+                    description "IPv6 destination address for PTP messages into port";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+            } // container ptp-timestamping
 
         } // list lag
 

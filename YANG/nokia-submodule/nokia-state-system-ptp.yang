@@ -35,7 +35,7 @@ submodule nokia-state-system-ptp {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2024-02-21";
+    revision "2024-05-10";
 
     grouping state-system-ptp {
         container ptp {
@@ -955,6 +955,45 @@ submodule nokia-state-system-ptp {
                                  for the last received PTP event packet.";
                         }
 
+                        leaf monitor-time-state {
+                            type enumeration {
+                                enum disabled                       { value 0; }
+                                enum initial                        { value 1; }
+                                enum acquiring                      { value 2; }
+                                enum locked                         { value 3; }
+                                enum holdover                       { value 4; }
+                            }
+                            description
+                                "The state of the time recovery process on a port or peer
+                                 where monitor-receiver has been enabled.";
+                        }
+
+                        leaf state-last-changed {
+                            type yang:date-and-time;
+                            description "Indicates the time when the time recovery process last changed state.";
+                        }
+
+                        leaf offset-from-master {
+                            type types-ptp:time-interval-type;
+                            description
+                                "The current value of the time difference between
+                                 a master clock and a slave clock as computed by the slave.";
+                        }
+
+                        leaf mean-path-delay {
+                            type types-ptp:time-interval-type;
+                            description
+                                "The current value of the mean propagation time between
+                                 a master clock and a slave clock as computed by the slave.";
+                        }
+
+                        leaf last-calc-time {
+                            type yang:date-and-time;
+                            description
+                                "The time when offset-from-master and mean-path-delay
+                                 were last calculated.";
+                        }
+
                         container grandmaster-clock-quality {
                             description "Enter the grandmaster-clock-quality context";
 
@@ -1023,6 +1062,153 @@ submodule nokia-state-system-ptp {
 
                         } // container last-rx-port
 
+                        container performance-monitoring {
+                            description "Enter the performance-monitoring context";
+
+                            list record {
+                                key "index";
+                                description "Enter the record list instance";
+
+                                leaf index {
+                                    type uint32 {
+                                        range "0..98 | 501..516";
+                                    }
+                                    description
+                                        "Index to specific record in the list. Values supported are:
+                                         0 : current 15 minute interval,
+                                         1..96 : completed 15 minute interval in last 24 hours,
+                                         97 : current 24 hour interval,
+                                         98 : previous 24 hour interval,
+                                         501 : current 1 minute interval,
+                                         502..516 : completed 1 minute interval in last 15 minutes";
+                                }
+
+                                leaf measurement-valid {
+                                    type boolean;
+                                    description
+                                        "This flag indicates the data can be correctly interpreted. Validity is
+                                         implementation specific and may be defined in a PTP Profile.
+                                         For SROS, as long as the clock received packets and did computations
+                                         during the period for the record, the measurement-valid flag shall
+                                         be true.  If no packets were received, the measurement-valid
+                                         flag shall be false.";
+                                }
+
+                                leaf period-complete {
+                                    type boolean;
+                                    description
+                                        "This flag is set to true when the recording period closes and measurements
+                                         were performed during the entire period (1 minute, 15 minute, or 24 hour).
+
+                                         For example, if the PTP instance is disabled for 5 minutes of
+                                         a 15 minute period, period-complete is false.
+
+                                         The period-complete flag is not related to the
+                                         validity of measurements that were performed.
+
+                                         The period-complete flag applies to all parameters for a
+                                         given measurement period.
+
+                                         A recording period closes at the next boundary for the record type
+                                         15 minute: 0, 15, 30, 45 minutes after the hour. UTC.
+                                         24 hour: 00:00. UTC.
+                                         1 minute: integral minute. UTC.";
+                                }
+
+                                leaf start-time {
+                                    type yang:date-and-time;
+                                    description "Time at which the recording started. UTC.";
+                                }
+
+                                leaf duration {
+                                    type uint32;
+                                    units "seconds";
+                                    description "The amount of time, in seconds, for which the data for this record was collected";
+                                }
+
+                                leaf average-master-slave-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Average of the MasterSlaveDelay for this interval.";
+                                }
+
+                                leaf minimum-master-slave-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Minimum of the MasterSlaveDelay for this interval.";
+                                }
+
+                                leaf maximum-master-slave-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Maximum of the MasterSlaveDelay for this interval.";
+                                }
+
+                                leaf stddev-master-slave-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Standard Deviation of the MasterSlaveDelay for this interval.";
+                                }
+
+                                leaf average-slave-master-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Average of the Slave Master Delay for this interval.";
+                                }
+
+                                leaf minimum-slave-master-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Minimum of the Slave Master Delay for this interval.";
+                                }
+
+                                leaf maximum-slave-master-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Maximum of the Slave Master Delay for this interval.";
+                                }
+
+                                leaf stddev-slave-master-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Standard Deviation of the Slave Master Delay for this interval.";
+                                }
+
+                                leaf average-mean-path-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Average of the Mean Path Delay for this interval.";
+                                }
+
+                                leaf minimum-mean-path-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Minimum of the Mean Path Delay for this interval.";
+                                }
+
+                                leaf maximum-mean-path-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Maximum of the Mean Path Delay for this interval.";
+                                }
+
+                                leaf stddev-mean-path-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Standard Deviation of the Mean Path Delay for this interval.";
+                                }
+
+                                leaf average-offset-from-master {
+                                    type types-ptp:time-interval-type;
+                                    description "Average of the Offset From Master for this interval.";
+                                }
+
+                                leaf minimum-offset-from-master {
+                                    type types-ptp:time-interval-type;
+                                    description "Minimum of the Offset From Master for this interval.";
+                                }
+
+                                leaf maximum-offset-from-master {
+                                    type types-ptp:time-interval-type;
+                                    description "Maximum of the Offset From Master for this interval.";
+                                }
+
+                                leaf stddev-offset-from-master {
+                                    type types-ptp:time-interval-type;
+                                    description "Standard Deviation of the Offset From Master for this interval.";
+                                }
+
+                            } // list record
+
+                        } // container performance-monitoring
 
                         list unicast-negotiation {
                             key "direction message-type";
@@ -1363,6 +1549,192 @@ submodule nokia-state-system-ptp {
                                  has Packet Timing Signal Fail (PTSF) unusable set.";
                         }
 
+                        leaf monitor-time-state {
+                            type enumeration {
+                                enum disabled                       { value 0; }
+                                enum initial                        { value 1; }
+                                enum acquiring                      { value 2; }
+                                enum locked                         { value 3; }
+                                enum holdover                       { value 4; }
+                            }
+                            description
+                                "The state of the time recovery process on a port or peer
+                                 where monitor-receiver has been enabled.";
+                        }
+
+                        leaf state-last-changed {
+                            type yang:date-and-time;
+                            description "Indicates the time when the time recovery process last changed state.";
+                        }
+
+                        leaf offset-from-master {
+                            type types-ptp:time-interval-type;
+                            description
+                                "The current value of the time difference between
+                                 a master clock and a slave clock as computed by the slave.";
+                        }
+
+                        leaf mean-path-delay {
+                            type types-ptp:time-interval-type;
+                            description
+                                "The current value of the mean propagation time between
+                                 a master clock and a slave clock as computed by the slave.";
+                        }
+
+                        leaf last-calc-time {
+                            type yang:date-and-time;
+                            description
+                                "The time when offset-from-master and mean-path-delay
+                                 were last calculated.";
+                        }
+
+                        container performance-monitoring {
+                            description "Enter the performance-monitoring context";
+
+                            list record {
+                                key "index";
+                                description "Enter the record list instance";
+
+                                leaf index {
+                                    type uint32 {
+                                        range "0..98 | 501..516";
+                                    }
+                                    description
+                                        "Index to specific record in the list. Values supported are:
+                                         0 : current 15 minute interval,
+                                         1..96 : completed 15 minute interval in last 24 hours,
+                                         97 : current 24 hour interval,
+                                         98 : previous 24 hour interval,
+                                         501 : current 1 minute interval,
+                                         502..516 : completed 1 minute interval in last 15 minutes";
+                                }
+
+                                leaf measurement-valid {
+                                    type boolean;
+                                    description
+                                        "This flag indicates the data can be correctly interpreted. Validity is
+                                         implementation specific and may be defined in a PTP Profile.
+                                         For SROS, as long as the clock received packets and did computations
+                                         during the period for the record, the measurement-valid flag shall
+                                         be true.  If no packets were received, the measurement-valid
+                                         flag shall be false.";
+                                }
+
+                                leaf period-complete {
+                                    type boolean;
+                                    description
+                                        "This flag is set to true when the recording period closes and measurements
+                                         were performed during the entire period (1 minute, 15 minute, or 24 hour).
+
+                                         For example, if the PTP instance is disabled for 5 minutes of
+                                         a 15 minute period, period-complete is false.
+
+                                         The period-complete flag is not related to the
+                                         validity of measurements that were performed.
+
+                                         The period-complete flag applies to all parameters for a
+                                         given measurement period.
+
+                                         A recording period closes at the next boundary for the record type
+                                         15 minute: 0, 15, 30, 45 minutes after the hour. UTC.
+                                         24 hour: 00:00. UTC.
+                                         1 minute: integral minute. UTC.";
+                                }
+
+                                leaf start-time {
+                                    type yang:date-and-time;
+                                    description "Time at which the recording started. UTC.";
+                                }
+
+                                leaf duration {
+                                    type uint32;
+                                    units "seconds";
+                                    description "The amount of time, in seconds, for which the data for this record was collected";
+                                }
+
+                                leaf average-master-slave-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Average of the MasterSlaveDelay for this interval.";
+                                }
+
+                                leaf minimum-master-slave-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Minimum of the MasterSlaveDelay for this interval.";
+                                }
+
+                                leaf maximum-master-slave-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Maximum of the MasterSlaveDelay for this interval.";
+                                }
+
+                                leaf stddev-master-slave-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Standard Deviation of the MasterSlaveDelay for this interval.";
+                                }
+
+                                leaf average-slave-master-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Average of the Slave Master Delay for this interval.";
+                                }
+
+                                leaf minimum-slave-master-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Minimum of the Slave Master Delay for this interval.";
+                                }
+
+                                leaf maximum-slave-master-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Maximum of the Slave Master Delay for this interval.";
+                                }
+
+                                leaf stddev-slave-master-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Standard Deviation of the Slave Master Delay for this interval.";
+                                }
+
+                                leaf average-mean-path-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Average of the Mean Path Delay for this interval.";
+                                }
+
+                                leaf minimum-mean-path-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Minimum of the Mean Path Delay for this interval.";
+                                }
+
+                                leaf maximum-mean-path-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Maximum of the Mean Path Delay for this interval.";
+                                }
+
+                                leaf stddev-mean-path-delay {
+                                    type types-ptp:time-interval-type;
+                                    description "Standard Deviation of the Mean Path Delay for this interval.";
+                                }
+
+                                leaf average-offset-from-master {
+                                    type types-ptp:time-interval-type;
+                                    description "Average of the Offset From Master for this interval.";
+                                }
+
+                                leaf minimum-offset-from-master {
+                                    type types-ptp:time-interval-type;
+                                    description "Minimum of the Offset From Master for this interval.";
+                                }
+
+                                leaf maximum-offset-from-master {
+                                    type types-ptp:time-interval-type;
+                                    description "Maximum of the Offset From Master for this interval.";
+                                }
+
+                                leaf stddev-offset-from-master {
+                                    type types-ptp:time-interval-type;
+                                    description "Standard Deviation of the Offset From Master for this interval.";
+                                }
+
+                            } // list record
+
+                        } // container performance-monitoring
 
                     } // list neighbor
 
