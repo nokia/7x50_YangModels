@@ -1,0 +1,734 @@
+submodule nokia-state-test-oam {
+
+    yang-version "1.1";
+
+    belongs-to nokia-state { prefix "state"; }
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-state-lag;
+    include nokia-state-router;
+    include nokia-state-testoam-service-activation-testhead;
+
+    sros-ext:sros-major-release "rel24";
+    organization "Nokia";
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+    description
+        "Nokia YANG Data model with operational state for OAM test parameters configuration on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-state-test-oam YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+    revision "2024-04-04";
+
+    grouping state-test-oam {
+        container test-oam {
+            description "Enter the test-oam context";
+
+
+            container link-measurement {
+                description "Enter the link-measurement context";
+
+                list router {
+                    key "router-instance";
+                    description "Enter the router list instance";
+
+                    leaf router-instance {
+                        type leafref {
+                            path "../../../../router/router-name";
+                        }
+                        description "Name of the virtual router on which the measurement template is configured";
+                    }
+
+                    list interface {
+                        key "interface-name";
+                        description "Enter the interface list instance";
+
+                        leaf interface-name {
+                            type leafref {
+                                path "../../../../../router[router-name=current()/../../router-instance]/interface/interface-name";
+                            }
+                            description "Name of the interface on which the measurement template is configured";
+                        }
+
+                        leaf oper-source-address {
+                            type types-sros:ip-address;
+                            description "Indicates the source IP address from which TWAMP packets are being sent";
+                        }
+
+                        leaf source-auto-assigned {
+                            type boolean;
+                            description "Indicates whether the oper-source-address was assigned (true) or configured (false)";
+                        }
+
+                        leaf oper-destination-address {
+                            type types-sros:ip-address;
+                            description "Indicates the destination IP address to which TWAMP packets are being sent";
+                        }
+
+                        leaf destination-auto-assigned {
+                            type boolean;
+                            description
+                                "Indicates whether the oper-destination-address was assigned (true) or configured
+                                 (false)";
+                        }
+
+                        leaf oper-state {
+                            type types-sros:up-down-status;
+                            description "Indicates the operational state of link measurement on this interface";
+                        }
+
+                        leaf failure-conditions {
+                            type bits {
+                                bit no-protocol                    { position 0; }
+                                bit template-admin-down            { position 1; }
+                                bit udp-port-unavailable           { position 2; }
+                                bit internal-error                 { position 3; }
+                                bit reserved4                      { position 4; }
+                            }
+                            description
+                                "Indicates the reason(s) why this interface's link measurement is operationally
+                                 disabled";
+                        }
+
+                        leaf detectable-tx-error {
+                            type enumeration {
+                                enum none                           { value 1; }
+                                enum interface-down                 { value 2; }
+                                enum unexpected-error               { value 3; }
+                                enum no-route                       { value 4; }
+                                enum source-ip-not-local            { value 5; }
+                                enum invalid-dest-ip                { value 6; }
+                                enum invalid-interface-type         { value 7; }
+                                enum same-source-ip-dest-ip         { value 8; }
+                            }
+                            description "Indicates a detectable error in delay measurement transmission";
+                        }
+
+                        leaf reporting {
+                            type boolean;
+                            description "Indicates whether the interface is currently reporting to the routing engine";
+                        }
+
+                        leaf last-reported-delay {
+                            type union {
+                                type int32 {
+                                    range "0|1..2147483647";
+                                }
+                                type enumeration {
+                                    enum none                           { value -1; }
+                                }
+                            }
+                            units "microseconds";
+                            description "Indicates the last delay measurement reported to the routing engine";
+                        }
+
+                        leaf report-timestamp {
+                            type yang:date-and-time;
+                            description
+                                "When ./last-reported-delay > 0, report-timestamp holds the time at which
+                                 ./last-reported-delay was reported to the routing engine.
+
+                                 When ./last-reported-delay = 0, report-timestamp holds the time at which
+                                 ./last-reported-delay was cleared (because its aging timer expired).
+
+                                 When ./last-reported-delay = -1, report-timestamp holds '1970-Jan-01 00:00:00.0'
+                                 UTC as a placeholder representing a delay has not yet been reported to the routing
+                                 engine.";
+                        }
+
+                        leaf triggered-by {
+                            type enumeration {
+                                enum none                           { value 1; }
+                                enum sample-threshold-absolute      { value 2; }
+                                enum sample-threshold-relative      { value 3; }
+                                enum aggregate-threshold-absolute   { value 4; }
+                                enum aggregate-threshold-relative   { value 5; }
+                                enum expired                        { value 6; }
+                                enum reporting-disabled             { value 7; }
+                            }
+                            description "Indicates the reason for the report to the routing engine";
+                        }
+
+                        leaf aggregate-newest-index {
+                            type uint32;
+                            description
+                                "Indicates the index of the newest aggregate sample window for this interface (at
+                                 /test-oam/link-measurement/results/aggregate/index)";
+                        }
+
+                        leaf sample-newest-index {
+                            type uint32;
+                            description
+                                "Indicates the index of the newest sample window for this interface (at
+                                 /test-oam/link-measurement/results/sample/index)";
+                        }
+
+                        leaf in-use-source-udp-port {
+                            type uint32;
+                            description "Indicates the source UDP port in use for the session.";
+                        }
+
+                        leaf in-use-destination-udp-port {
+                            type uint32;
+                            description "Indicates the destination UDP port in use for the session.";
+                        }
+
+                        leaf stamp-session-id {
+                            type uint32;
+                            description "Indicates the autogenerated session-ID assigned to the session.";
+                        }
+
+                        container statistics {
+                            description "Enter the statistics context";
+
+                            container aggregate-sample-window {
+                                description "Enter the aggregate-sample-window context";
+
+                                list index {
+                                    key "index";
+                                    description "Enter the index list instance";
+
+                                    leaf index {
+                                        type uint32 {
+                                            range "1..4294967295";
+                                        }
+                                        description "Specifies the index value of aggregate sample windows on the same interface";
+                                    }
+
+                                    leaf end-timestamp-utc {
+                                        type yang:date-and-time;
+                                        description "Indicates the time (UTC) at which this aggregate sample window closed";
+                                    }
+
+                                    leaf window-state {
+                                        type enumeration {
+                                            enum completed                      { value 1; }
+                                            enum in-progress                    { value 2; }
+                                            enum sw-reported                    { value 3; }
+                                            enum asw-reported                   { value 4; }
+                                            enum terminated                     { value 5; }
+                                        }
+                                        description "Indicates the state of this aggregate sample window";
+                                    }
+
+                                    leaf sample-window-count {
+                                        type uint32;
+                                        description
+                                            "Indicates the number of sample windows that have completed and met their integrity
+                                             value within this aggregate sample window";
+                                    }
+
+                                    leaf min {
+                                        type uint32;
+                                        units "microseconds";
+                                        description
+                                            "Indicates the minimum delay measurement reported to the aggregate sample window (by the
+                                             sample windows that have been open during its lifetime)";
+                                    }
+
+                                    leaf max {
+                                        type uint32;
+                                        units "microseconds";
+                                        description
+                                            "Indicates the maximum delay measurement reported to the aggregate sample window (by the
+                                             sample windows that have been open during its lifetime)";
+                                    }
+
+                                    leaf avg {
+                                        type uint32;
+                                        units "microseconds";
+                                        description
+                                            "Indicates the average delay measurement reported to the aggregate sample window (by the
+                                             sample windows that have been open during its lifetime)";
+                                    }
+
+                                    leaf integrity {
+                                        type boolean;
+                                        description
+                                            "Indicates whether a sufficient percentage of this aggregate sample window's child
+                                             sample windows met their configured integrity value";
+                                    }
+
+                                    leaf result {
+                                        type uint32;
+                                        units "microseconds";
+                                        description
+                                            "The delay that was being evaluated for report according to
+                                             /test-oam/link-measurement/measurement-template/delay when this aggregate sample window
+                                             was open";
+                                    }
+
+                                } // list index
+
+                            } // container aggregate-sample-window
+
+                            container sample-window {
+                                description "Enter the sample-window context";
+
+                                list index {
+                                    key "index";
+                                    description "Enter the index list instance";
+
+                                    leaf index {
+                                        type uint32 {
+                                            range "1..4294967295";
+                                        }
+                                        description
+                                            "Specifies an index used to differentiate sample windows on the same interface over
+                                             time";
+                                    }
+
+                                    leaf end-timestamp-utc {
+                                        type yang:date-and-time;
+                                        description "Indicates the time (UTC) at which this sample window closed";
+                                    }
+
+                                    leaf window-state {
+                                        type enumeration {
+                                            enum completed                      { value 1; }
+                                            enum in-progress                    { value 2; }
+                                            enum sw-reported                    { value 3; }
+                                            enum terminated                     { value 4; }
+                                        }
+                                        description "Indicates the state of this sample window";
+                                    }
+
+                                    leaf sent {
+                                        type uint32;
+                                        description "Indicates the number of TWAMP packets that have been sent for this sample window";
+                                    }
+
+                                    leaf received {
+                                        type uint32;
+                                        description "Indicates the number of TWAMP packets that have been received for this sample window";
+                                    }
+
+                                    leaf min {
+                                        type uint32;
+                                        units "microseconds";
+                                        description
+                                            "Indicates the minimum of the series of delay measurements that occurred during this
+                                             sample window.";
+                                    }
+
+                                    leaf max {
+                                        type uint32;
+                                        units "microseconds";
+                                        description
+                                            "Indicates the maximum of the series of delay measurements that occurred during this
+                                             sample window";
+                                    }
+
+                                    leaf avg {
+                                        type uint32;
+                                        units "microseconds";
+                                        description
+                                            "Indicates the average of the series of delay measurements that occurred during this
+                                             sample window";
+                                    }
+
+                                    leaf errors {
+                                        type yang:counter32;
+                                        description "Indicates the number of erroneous delay measurements that occurred in this sample window";
+                                    }
+
+                                    leaf integrity {
+                                        type boolean;
+                                        description
+                                            "Indicates whether the percentage of successful request-response pairs of test packets
+                                             met this sample window's configured integrity value";
+                                    }
+
+                                    leaf result {
+                                        type uint32;
+                                        units "microseconds";
+                                        description
+                                            "The delay that was being evaluated for report according to
+                                             /test-oam/link-measurement/measurement-template/delay when this sample window was open";
+                                    }
+
+                                    leaf stamp-u-flag {
+                                        type uint32;
+                                        description
+                                            "Indicates the count of packets in this sample window with the U (Unrecognized) bit set
+                                             in the flags field of the TLV.";
+                                    }
+
+                                    leaf stamp-m-flag {
+                                        type uint32;
+                                        description
+                                            "Indicates the count of packets in this sample window with the M (Malformed) bit set in
+                                             the flags field of the TLV.";
+                                    }
+
+                                    leaf zero-or-negative-delay-packets {
+                                        type uint32;
+                                        description
+                                            "Indicates the count of packets that have a zero or negative computed delay that have
+                                             arrived during this sample window.";
+                                    }
+
+                                    leaf duplicate-packets {
+                                        type uint32;
+                                        description "Indicates the count of duplicate packets that have arrived during this sample window.";
+                                    }
+
+                                } // list index
+
+                            } // container sample-window
+
+                        } // container statistics
+
+                    } // list interface
+
+                } // list router
+
+            } // container link-measurement
+
+            container twamp {
+                description "Enter the twamp context";
+
+                container server {
+                    description "Enter the server context";
+
+                    leaf capabilities {
+                        type bits {
+                            bit unauthenticated                { position 0; }
+                            bit authenticated                  { position 1; }
+                            bit encrypted                      { position 2; }
+                            bit unauth-test-encrypt-control    { position 3; }
+                            bit individual-session-control     { position 4; }
+                            bit reflect-octets                 { position 5; }
+                            bit symmetrical-size-sender-test-pkt { position 6; }
+                            bit ike-v2-derived-mode            { position 7; }
+                            bit dscp-and-ecn-monitoring        { position 8; }
+                        }
+                        description "The set of standard TWAMP protocol options supported by the TWAMP server";
+                    }
+
+                    container statistics {
+                        description "Enter the statistics context";
+
+                        leaf session-count {
+                            type uint32 {
+                                range "0..128";
+                            }
+                            description "The number of currently in-progress sessions";
+                        }
+
+                        leaf session-completed {
+                            type yang:counter32;
+                            description "The number of test sessions completed";
+                        }
+
+                        leaf session-rejected {
+                            type yang:counter32;
+                            description "The number of test sessions rejected";
+                        }
+
+                        leaf test-packet-received {
+                            type yang:counter32;
+                            description "The number of TWAMP test packets received";
+                        }
+
+                        leaf test-packet-transmitted {
+                            type yang:counter32;
+                            description "The number of TWAMP test packets sent";
+                        }
+
+                        leaf oper-state {
+                            type enumeration {
+                                enum unknown                        { value 1; }
+                                enum in-service                     { value 2; }
+                                enum out-of-service                 { value 3; }
+                                enum transition                     { value 4; }
+                            }
+                            description "State of TWAMP server";
+                        }
+
+                        leaf up-time {
+                            type uint32;
+                            units "seconds";
+                            description "Time elapsed since the most recent transition";
+                        }
+
+                        leaf connection-count {
+                            type uint32 {
+                                range "0..64";
+                            }
+                            description "Control connections currently managed by the TWAMP server";
+                        }
+
+                        leaf connections-rejected {
+                            type yang:counter32;
+                            description "Control connection requests which have been rejected by the TWAMP server";
+                        }
+
+                        leaf capabilities {
+                            status obsolete;
+                            type bits {
+                                bit unauthenticated                { position 0; }
+                                bit authenticated                  { position 1; }
+                                bit encrypted                      { position 2; }
+                                bit unauthTestEncryptControl       { position 3; }
+                                bit individualSessionControl       { position 4; }
+                                bit reflectOctets                  { position 5; }
+                                bit symmetricalSizeSenderTestPkt   { position 6; }
+                                bit ikeV2DerivedMode               { position 7; }
+                                bit dscpAndEcnMonitoring           { position 8; }
+                            }
+                            description "The set of standard TWAMP protocol options supported by the TWAMP server";
+                        }
+
+                        leaf sessions-aborted {
+                            type yang:counter32;
+                            description "Test sessions aborted by the TWAMP server";
+                        }
+
+                    } // container statistics
+
+                    list prefix {
+                        key "ip-prefix";
+                        description "Enter the prefix list instance";
+
+                        leaf ip-prefix {
+                            type types-sros:ip-unicast-prefix;
+                            description "Prefix to match against TWAMP client address";
+                        }
+
+                        container statistics {
+                            description "Enter the statistics context";
+
+                            leaf session-count {
+                                type uint32 {
+                                    range "0..128";
+                                }
+                                description "The number of currently in-progress sessions";
+                            }
+
+                            leaf session-completed {
+                                type yang:counter32;
+                                description "The number of test sessions completed";
+                            }
+
+                            leaf session-rejected {
+                                type yang:counter32;
+                                description "The number of test sessions rejected";
+                            }
+
+                            leaf test-packet-received {
+                                type yang:counter32;
+                                description "The number of TWAMP test packets received";
+                            }
+
+                            leaf test-packet-transmitted {
+                                type yang:counter32;
+                                description "The number of TWAMP test packets sent";
+                            }
+
+                            leaf sessions-aborted {
+                                type yang:counter32;
+                                description "Test sessions aborted by the TWAMP server for the prefix";
+                            }
+
+                            leaf connection-count {
+                                type uint32 {
+                                    range "0..64";
+                                }
+                                description "The number of control connections currently managed by the TWAMP server for the prefix";
+                            }
+
+                            leaf connections-rejected {
+                                type yang:counter32;
+                                description "Control connection requests which have been rejected by the TWAMP server for the prefix";
+                            }
+
+                        } // container statistics
+
+                        list connection-statistics {
+                            key "client-address sequence-number";
+                            description "Enter the connection-statistics list instance";
+
+                            leaf client-address {
+                                type types-sros:ip-address;
+                                description "The address of the specified session's TWAMP Session-Sender";
+                            }
+
+                            leaf sequence-number {
+                                type uint32 {
+                                    range "1..4294967295";
+                                }
+                                description "Control connection's sequence number";
+                            }
+
+                            leaf session-count {
+                                type uint32 {
+                                    range "0..128";
+                                }
+                                description "The number of currently in-progress sessions";
+                            }
+
+                            leaf session-completed {
+                                type yang:counter32;
+                                description "The number of test sessions completed";
+                            }
+
+                            leaf session-rejected {
+                                type yang:counter32;
+                                description "The number of test sessions rejected";
+                            }
+
+                            leaf test-packet-received {
+                                type yang:counter32;
+                                description "The number of TWAMP test packets received";
+                            }
+
+                            leaf test-packet-transmitted {
+                                type yang:counter32;
+                                description "The number of TWAMP test packets sent";
+                            }
+
+                            leaf oper-state {
+                                type enumeration {
+                                    enum setting-up                     { value 1; }
+                                    enum ready                          { value 2; }
+                                    enum running                        { value 3; }
+                                }
+                                description "State of a control connection managed by the TWAMP server";
+                            }
+
+                            leaf idle-time {
+                                type uint32;
+                                units "seconds";
+                                description "Elapsed time since a TWAMP message was received on this control connection";
+                            }
+
+                        } // list connection-statistics
+
+                    } // list prefix
+
+                    list client {
+                        key "client-address connection-sequence-number session-sequence-number";
+                        description "Enter the client list instance";
+
+                        leaf client-address {
+                            type types-sros:ip-address;
+                            description "The address of the specified session's TWAMP Session-Sender.";
+                        }
+
+                        leaf connection-sequence-number {
+                            type uint32 {
+                                range "1..4294967295";
+                            }
+                            description "Control connection's sequence number";
+                        }
+
+                        leaf session-sequence-number {
+                            type uint32 {
+                                range "1..4294967295";
+                            }
+                            description "TWAMP test session's sequence number";
+                        }
+
+                        leaf session-id {
+                            type binary {
+                                length "16";
+                            }
+                            description "The session identifier (SID) for the specified session";
+                        }
+
+                        leaf oper-state {
+                            type enumeration {
+                                enum create                         { value 1; }
+                                enum active                         { value 2; }
+                                enum stop                           { value 3; }
+                            }
+                            description "State of the specified session";
+                        }
+
+                        leaf sender-address {
+                            type types-sros:ip-unicast-address;
+                            description "The address of the specified session's TWAMP Session-Sender";
+                        }
+
+                        leaf sender-udp-port {
+                            type types-sros:tcp-udp-port;
+                            description
+                                "The source UDP port field of test packets sent by the specified
+                                 session's TWAMP Session-Sender";
+                        }
+
+                        leaf reflector-address {
+                            type types-sros:ip-unicast-address;
+                            description "The address of the specified session's TWAMP Session-Reflector";
+                        }
+
+                        leaf reflector-udp-port {
+                            type types-sros:tcp-udp-port;
+                            description "The UDP listen port of the specified session's TWAMP Session-Reflector";
+                        }
+
+                    } // list client
+
+                } // container server
+
+                container twamp-light {
+                    description "Enter the twamp-light context";
+
+                    container source-udp-port-pools {
+                        description "Enter the source-udp-port-pools context";
+
+                        list port {
+                            key "port-number";
+                            description "Enter the port list instance";
+
+                            leaf port-number {
+                                type types-sros:tcp-udp-port {
+                                    range "64374..64383";
+                                }
+                                description "Source UDP port pools port number";
+                            }
+
+                            container statistics {
+                                description "Enter the statistics context";
+
+                                leaf in-use {
+                                    type boolean;
+                                    description
+                                        "Indicates if the mapped source UDP port is in use under
+                                         the application.";
+                                }
+
+                            } // container statistics
+
+                        } // list port
+
+                    } // container source-udp-port-pools
+
+                } // container twamp-light
+
+            } // container twamp
+
+            uses state-testoam-service-activation-testhead;
+        } // container test-oam
+
+    } // grouping state-test-oam
+
+}

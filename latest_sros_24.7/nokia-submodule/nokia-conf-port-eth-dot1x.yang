@@ -1,0 +1,414 @@
+submodule nokia-conf-port-eth-dot1x {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-port               { prefix "types-port"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-aaa;
+    include nokia-conf-groups;
+    include nokia-conf-macsec;
+    include nokia-conf-system;
+    include nokia-conf-system-security;
+
+    sros-ext:sros-major-release "rel24";
+    organization "Nokia";
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+    description
+        "Nokia YANG Data model to configure ethernet ports 802.1x authentication capabilities on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-port-eth-dot1x YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+    revision "2024-05-22";
+
+    grouping conf-port-eth-dot1x {
+        container dot1x {
+            description "Enter the dot1x context";
+
+            leaf admin-state {
+                type types-sros:admin-state;
+                default "enable";
+                description "Administrative state of dot1x packet extraction to CPM";
+            }
+
+            leaf max-authentication-requests {
+                type uint32 {
+                    range "1..10";
+                }
+                default "2";
+                description "Maximum number of RADIUS retries";
+            }
+
+            leaf port-control {
+                type types-port:pae-controlled-port-control;
+                default "force-authorized";
+                description "802.1x authentication mode";
+            }
+
+            leaf quiet-period {
+                type uint32 {
+                    range "1..3600";
+                }
+                units "seconds";
+                default "60";
+                description "Time between two sessions when no EAPOL frames are sent";
+            }
+
+            leaf radius-policy {
+                type leafref {
+                    path "../../../../system/security/dot1x/radius-policy/policy-name";
+                }
+                description "RADIUS policy used for 802.1x authentication";
+            }
+
+            leaf server-timeout {
+                type uint32 {
+                    range "1..300";
+                }
+                units "seconds";
+                default "30";
+                description "Wait time for a response from the RADIUS server";
+            }
+
+            leaf supplicant-timeout {
+                type uint32 {
+                    range "1..300";
+                }
+                units "seconds";
+                default "30";
+                description "Wait time for a response to EAPOL messages";
+            }
+
+            leaf transmit-period {
+                type uint32 {
+                    range "1..3600";
+                }
+                units "seconds";
+                default "30";
+                description "Time after which a new EAPOL request message is sent";
+            }
+
+            leaf tunneling {
+                type boolean;
+                default "false";
+                description "Allow tunneling of untagged 802.1x frames";
+            }
+
+            leaf tunnel-dot1q {
+                type boolean;
+                default "true";
+                description "Enable dot1x tunneling for 802.1q tagged packets";
+            }
+
+            leaf tunnel-qinq {
+                type boolean;
+                default "true";
+                description "Enable dot1x tunneling for QinQ tagged packets";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            leaf-list apply-groups-exclude {
+                type leafref {
+                    path "../../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Exclude a configuration group at this level";
+            }
+
+            choice radius-server-policy-config {
+                case common {
+
+                    leaf radius-server-policy {
+                        type leafref {
+                            path "../../../../aaa/radius/server-policy/name";
+                        }
+                        description "RADIUS server policy name";
+                    }
+
+                }
+                case split {
+
+                    leaf radius-server-policy-auth {
+                        type leafref {
+                            path "../../../../aaa/radius/server-policy/name";
+                        }
+                        description "RADIUS server policy name for authentication";
+                    }
+
+                    leaf radius-server-policy-acct {
+                        type leafref {
+                            path "../../../../aaa/radius/server-policy/name";
+                        }
+                        description "RADIUS server policy name for accounting";
+                    }
+
+                }
+            }
+            container macsec {
+                description "Enter the macsec context";
+
+                leaf rx-must-be-encrypted {
+                    type boolean;
+                    default "false";
+                    description "Drop all port traffic that is not MACsec-secured";
+                }
+
+                leaf exclude-mac-policy {
+                    type leafref {
+                        path "../../../../../macsec/mac-policy/mac-policy-id";
+                    }
+                    description "MAC policy excluded from MACsec encryption";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                container exclude-protocol {
+                    description "Enter the exclude-protocol context";
+
+                    leaf cdp {
+                        type boolean;
+                        default "false";
+                        description "Disable MACsec for all packets on the link for CDP";
+                    }
+
+                    leaf eapol-start {
+                        type boolean;
+                        default "false";
+                        description "Disable MACsec for all packets on the link for EAPOL";
+                    }
+
+                    leaf lacp {
+                        type boolean;
+                        default "false";
+                        description "Disable MACsec for all packets on the link for LACP";
+                    }
+
+                    leaf lldp {
+                        type boolean;
+                        default "false";
+                        description "Disable MACsec for all packets on the link for LLDP";
+                    }
+
+                    leaf efm-oam {
+                        type boolean;
+                        default "false";
+                        description "Disable MACsec for all packets on the link for EFM-OAM";
+                    }
+
+                    leaf eth-cfm {
+                        type boolean;
+                        default "false";
+                        description "Disable MACsec for all packets on the link for ETH-CFM";
+                    }
+
+                    leaf ptp {
+                        type boolean;
+                        default "false";
+                        description "Disable MACsec for all packets on the link for PTP";
+                    }
+
+                    leaf ubfd {
+                        type boolean;
+                        default "false";
+                        description "Disable MACsec for all packets on the link for uBFD";
+                    }
+
+                } // container exclude-protocol
+
+                list sub-port {
+                    key "sub-port-id";
+                    description "Enter the sub-port list instance";
+
+                    leaf sub-port-id {
+                        type uint32 {
+                            range "1..1023";
+                        }
+                        description "Sub-port ID";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of MACsec on the port";
+                    }
+
+                    leaf ca-name {
+                        type leafref {
+                            path "../../../../../../macsec/connectivity-association/ca-name";
+                        }
+                        description "Connectivity association linked to the MACsec sub-port";
+                    }
+
+                    leaf eapol-destination-address {
+                        type yang:mac-address;
+                        description "EAPOL destination MAC address";
+                    }
+
+                    leaf max-peers {
+                        type uint32 {
+                            range "1..32";
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        description "Maximum number of peers supported on the port";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container encap-match {
+                        description "Enter the encap-match context";
+
+                        choice encap {
+                            default "all-match";
+                            case all-match {
+
+                                leaf all-match {
+                                    type boolean;
+                                    default "true";
+                                    description "Match and encrypt all traffic patterns";
+                                }
+
+                            }
+                            case untagged {
+
+                                leaf untagged {
+                                    type boolean;
+                                    description "Match and encrypt untagged traffic only";
+                                }
+
+                            }
+                            case single-tag {
+
+                                leaf single-tag {
+                                    type types-sros:single-vlan-encap;
+                                    description "Dot1q single tag traffic pattern to match";
+                                }
+
+                            }
+                            case double-tag {
+
+                                leaf double-tag {
+                                    type types-sros:double-vlan-encap;
+                                    description "QinQ double tag traffic pattern to match";
+                                }
+
+                            }
+                        }
+                    } // container encap-match
+
+                } // list sub-port
+
+            } // container macsec
+
+            container re-authentication {
+                presence "Enable the re-authentication context";
+                description "Enable the re-authentication context";
+
+                leaf period {
+                    type uint32 {
+                        range "1..9000";
+                    }
+                    units "seconds";
+                    default "3600";
+                    description "Delay before re-authentication is performed";
+                }
+
+            } // container re-authentication
+
+            container per-host-authentication {
+                description "Enter the per-host-authentication context";
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of per-host authentication";
+                }
+
+                leaf authenticator-init {
+                    type boolean;
+                    default "true";
+                    description "Initiate per-host authentication";
+                }
+
+                container allowed-source-macs {
+                    description "Enter the allowed-source-macs context";
+
+                    list mac-address {
+                        key "mac";
+                        description "Add a list entry for mac-address";
+
+                        leaf mac {
+                            type yang:mac-address;
+                            description "Source MAC address of a host selected for authentication";
+                        }
+
+                    } // list mac-address
+
+                } // container allowed-source-macs
+
+            } // container per-host-authentication
+
+        } // container dot1x
+
+    } // grouping conf-port-eth-dot1x
+
+}

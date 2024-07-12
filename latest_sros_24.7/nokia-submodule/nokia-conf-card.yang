@@ -1,0 +1,1502 @@
+submodule nokia-conf-card {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-card               { prefix "types-card"; }
+    import nokia-types-chassis            { prefix "types-chassis"; }
+    import nokia-types-qos                { prefix "types-qos"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-card-fp;
+    include nokia-conf-groups;
+    include nokia-conf-port;
+    include nokia-conf-qos;
+
+    sros-ext:sros-major-release "rel24";
+    organization "Nokia";
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+    description
+        "Nokia YANG Data model to configure cards on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-card YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+    revision "2024-05-31";
+
+    grouping conf-card {
+        list card {
+            key "slot-number";
+            description "Enter the card list instance";
+
+            leaf slot-number {
+                type types-card:iom-card-slot;
+                description "Slot number within the chassis";
+            }
+
+            leaf admin-state {
+                type types-sros:admin-state;
+                default "enable";
+                description "Administrative state of the card";
+            }
+
+            leaf card-type {
+                type types-card:sros-iom-type;
+                sros-ext:immutable;
+                description "Card type";
+            }
+
+            leaf fail-on-error {
+                type boolean;
+                default "false";
+                description "Set operational state of the card to Failed upon error";
+            }
+
+            leaf reset-on-recoverable-error {
+                type boolean;
+                default "false";
+                description "Reset card for fatal memory parity error on a Q-chip";
+            }
+
+            leaf level {
+                type types-card:sros-iom-level;
+                sros-ext:immutable;
+                description "License level of the card";
+            }
+
+            leaf power-save {
+                type boolean;
+                default "false";
+                description "Place card in power-save mode when not in use";
+            }
+
+            leaf filter-profile {
+                type types-card:filter-profile;
+                sros-ext:auto-restart-to-modify;
+                default "none";
+                description "Filter profile for the card";
+            }
+
+            leaf hash-seed-shift {
+                type uint32 {
+                    range "1..16";
+                }
+                default "2";
+                description "Number of bits to shift the hash seed result";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            leaf-list apply-groups-exclude {
+                type leafref {
+                    path "../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Exclude a configuration group at this level";
+            }
+
+            list upgrade {
+                key "upgrade-index";
+                description "Enter the upgrade list instance";
+
+                leaf upgrade-index {
+                    type uint32 {
+                        range "1..6";
+                    }
+                    description "Order of the upgrade value";
+                }
+
+                leaf path {
+                    type types-card:sros-iom-level-upgrade-path;
+                    sros-ext:immutable;
+                    mandatory true;
+                    description "Upgrade path of the target module for the slot";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+            } // list upgrade
+
+            list event {
+                key "type";
+                description "Enter the event list instance";
+
+                leaf type {
+                    type enumeration {
+                        enum soft-error                     { value 1; }
+                    }
+                    description "Card event type to monitor";
+                }
+
+                leaf action {
+                    type types-chassis:hw-event-action;
+                    description "Action taken when an event is detected on the card";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+            } // list event
+
+            container virtual-scheduler-adjustment {
+                description "Enter the virtual-scheduler-adjustment context";
+
+                leaf internal-scheduler-weight-mode {
+                    type types-qos:internal-scheduler-weight-mode;
+                    default "auto";
+                    description "Internal scheduler weight mode";
+                }
+
+                leaf slow-queue-threshold-rate {
+                    type uint32 {
+                        range "0..1000000";
+                    }
+                    units "kilobps";
+                    default "1000";
+                    description "Slow queue threshold rate";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                container interval {
+                    description "Enter the interval context";
+
+                    leaf scheduler-run-minimum {
+                        type decimal64 {
+                            range "0.01..1000.00";
+                            fraction-digits 2;
+                        }
+                        units "percent";
+                        default "100.00";
+                        description "Minimum time of the scheduler run";
+                    }
+
+                    leaf task-scheduling {
+                        type decimal64 {
+                            range "0.01..1000.00";
+                            fraction-digits 2;
+                        }
+                        units "percent";
+                        default "100.00";
+                        description "Task scheduling interval";
+                    }
+
+                    container rate-calculation-minimum {
+                        description "Enter the rate-calculation-minimum context";
+
+                        leaf fast-queue {
+                            type decimal64 {
+                                range "0.01..1000.00";
+                                fraction-digits 2;
+                            }
+                            units "percent";
+                            default "100.00";
+                            description "Minimum rate calculation time for fast queues";
+                        }
+
+                        leaf slow-queue {
+                            type decimal64 {
+                                range "0.01..1000.00";
+                                fraction-digits 2;
+                            }
+                            units "percent";
+                            default "100.00";
+                            description "Minimum rate calculation time for slow queues";
+                        }
+
+                    } // container rate-calculation-minimum
+
+                } // container interval
+
+
+            } // container virtual-scheduler-adjustment
+
+            list mda {
+                key "mda-slot";
+                description "Enter the mda list instance";
+
+                leaf mda-slot {
+                    type uint32 {
+                        range "1..6";
+                    }
+                    description "MDA or XMA slot";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "enable";
+                    description "Administrative state of the MDA";
+                }
+
+                leaf timestamp-freq {
+                    type uint32 {
+                        range "19440|77760";
+                    }
+                    units "kilohertz";
+                    description "DCR clocking mode timestamp frequency used on the MDA";
+                }
+
+                leaf fail-on-error {
+                    type boolean;
+                    default "false";
+                    description "Set operational state to Failed if an error is detected";
+                }
+
+                leaf mda-type {
+                    type types-card:sros-mda-type;
+                    sros-ext:immutable;
+                    description "MDA type for the slot";
+                }
+
+                leaf power-priority-level {
+                    type uint32 {
+                        range "1..200";
+                    }
+                    default "150";
+                    description "Power priority level for the MDA";
+                }
+
+                leaf reset-on-recoverable-error {
+                    type boolean;
+                    default "false";
+                    description "Reset MDA for fatal memory parity error on a Q-chip";
+                }
+
+                leaf sync-e {
+                    type enumeration {
+                        enum true                           { value 1; }
+                        enum false                          { value 2; }
+                    }
+                    description "Synchronous Ethernet capability";
+                }
+
+                leaf level {
+                    type types-card:sros-mda-level;
+                    sros-ext:immutable;
+                    description "MDA card level";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                container clock-mode {
+                    status obsolete;
+                    description "Enter the clock-mode context";
+
+                    leaf mode {
+                        status obsolete;
+                        type enumeration {
+                            enum adaptive                       { value 1; }
+                            enum differential                   { value 2; }
+                        }
+                        description "Clock mode";
+                    }
+
+                    leaf timestamp-freq {
+                        status obsolete;
+                        type uint32 {
+                            range "19440|77760|103680";
+                        }
+                        description "Differential timestamp frequency";
+                    }
+
+                } // container clock-mode
+
+                list upgrade {
+                    key "upgrade-index";
+                    description "Enter the upgrade list instance";
+
+                    leaf upgrade-index {
+                        type uint32 {
+                            range "1..6";
+                        }
+                        description "Order of the upgrade instance";
+                    }
+
+                    leaf path {
+                        type types-card:sros-mda-level-upgrade-path;
+                        sros-ext:immutable;
+                        mandatory true;
+                        description "Upgrade path of the MDA for the slot";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // list upgrade
+
+                container access {
+                    description "Enter the access context";
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container egress {
+                        description "Enter the egress context";
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        list pool {
+                            status obsolete;
+                            key "name";
+                            description "Enter the pool list instance";
+
+                            leaf name {
+                                status obsolete;
+                                type types-sros:named-item;
+                                description "MDA pool name";
+                            }
+
+                            leaf amber-alarm-threshold {
+                                status obsolete;
+                                type uint32 {
+                                    range "1..1000";
+                                }
+                                units "percent";
+                                description "Amber alarm threshold allowed on oversubscription";
+                            }
+
+                            leaf red-alarm-threshold {
+                                status obsolete;
+                                type uint32 {
+                                    range "1..1000";
+                                }
+                                units "percent";
+                                description "Red alarm threshold allowed on oversubscription";
+                            }
+
+                            leaf slope-policy {
+                                status obsolete;
+                                type leafref {
+                                    path "../../../../../../qos/slope-policy/slope-policy-name";
+                                }
+                                description "Slope policy";
+                            }
+
+                            leaf-list apply-groups {
+                                status obsolete;
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                status obsolete;
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                            container resv-cbs {
+                                status obsolete;
+                                description "Enter the resv-cbs context";
+
+                                leaf cbs {
+                                    status obsolete;
+                                    type int32 {
+                                        range "0..100";
+                                    }
+                                    units "percent";
+                                    description "Pool size reserved for CBS";
+                                }
+
+                                container amber-alarm-action {
+                                    status obsolete;
+                                    description "Enter the amber-alarm-action context";
+
+                                    leaf step {
+                                        status obsolete;
+                                        type uint32 {
+                                            range "1..100";
+                                        }
+                                        units "percent";
+                                        description "Step-size percentage for reserved CBS value of the pool";
+                                    }
+
+                                    leaf max {
+                                        status obsolete;
+                                        type uint32 {
+                                            range "1..100";
+                                        }
+                                        units "percent";
+                                        description "Maximum reserved CBS size of the pool";
+                                    }
+
+                                } // container amber-alarm-action
+
+                            } // container resv-cbs
+
+                        } // list pool
+
+                    } // container egress
+
+                    container ingress {
+                        description "Enter the ingress context";
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        list pool {
+                            status obsolete;
+                            key "name";
+                            description "Enter the pool list instance";
+
+                            leaf name {
+                                status obsolete;
+                                type types-sros:named-item;
+                                description "MDA pool name";
+                            }
+
+                            leaf amber-alarm-threshold {
+                                status obsolete;
+                                type uint32 {
+                                    range "1..1000";
+                                }
+                                units "percent";
+                                description "Amber alarm threshold allowed on oversubscription";
+                            }
+
+                            leaf red-alarm-threshold {
+                                status obsolete;
+                                type uint32 {
+                                    range "1..1000";
+                                }
+                                units "percent";
+                                description "Red alarm threshold allowed on oversubscription";
+                            }
+
+                            leaf slope-policy {
+                                status obsolete;
+                                type leafref {
+                                    path "../../../../../../qos/slope-policy/slope-policy-name";
+                                }
+                                description "Slope policy";
+                            }
+
+                            leaf-list apply-groups {
+                                status obsolete;
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                status obsolete;
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                            container resv-cbs {
+                                status obsolete;
+                                description "Enter the resv-cbs context";
+
+                                leaf cbs {
+                                    status obsolete;
+                                    type int32 {
+                                        range "0..100";
+                                    }
+                                    units "percent";
+                                    description "Pool size reserved for CBS";
+                                }
+
+                                container amber-alarm-action {
+                                    status obsolete;
+                                    description "Enter the amber-alarm-action context";
+
+                                    leaf step {
+                                        status obsolete;
+                                        type uint32 {
+                                            range "1..100";
+                                        }
+                                        units "percent";
+                                        description "Step-size percentage for reserved CBS size of the pool";
+                                    }
+
+                                    leaf max {
+                                        status obsolete;
+                                        type uint32 {
+                                            range "1..100";
+                                        }
+                                        units "percent";
+                                        description "Maximum reserved CBS size of the pool";
+                                    }
+
+                                } // container amber-alarm-action
+
+                            } // container resv-cbs
+
+                            container monitor-pool-depth {
+                                status obsolete;
+                                description "Enter the monitor-pool-depth context";
+
+                                leaf admin-state {
+                                    status obsolete;
+                                    type types-sros:admin-state;
+                                    default "disable";
+                                    description "Administrative state of pool-depth monitoring";
+                                }
+
+                                container alarm-thresholds {
+                                    status obsolete;
+                                    description "Enter the alarm-thresholds context";
+
+                                    leaf total-pool-in-use {
+                                        status obsolete;
+                                        type decimal64 {
+                                            range "0.00..100.00";
+                                            fraction-digits 2;
+                                        }
+                                        units "centipercent";
+                                        default "0.00";
+                                        description "Alarm threshold for usage of total buffer pool";
+                                    }
+
+                                    leaf shared-pool-in-use {
+                                        status obsolete;
+                                        type decimal64 {
+                                            range "0.00..100.00";
+                                            fraction-digits 2;
+                                        }
+                                        units "centipercent";
+                                        default "0.00";
+                                        description "Alarm threshold for shared of buffer pool usage";
+                                    }
+
+                                    leaf reserved-pool-in-use {
+                                        status obsolete;
+                                        type decimal64 {
+                                            range "0.00..100.00";
+                                            fraction-digits 2;
+                                        }
+                                        units "centipercent";
+                                        default "0.00";
+                                        description "Alarm threshold for reserved buffer pool usage";
+                                    }
+
+                                } // container alarm-thresholds
+
+                            } // container monitor-pool-depth
+
+                        } // list pool
+
+                    } // container ingress
+
+                } // container access
+
+                container egress-xpl {
+                    description "Enter the egress-xpl context";
+
+                    leaf threshold {
+                        type uint32 {
+                            range "1..1000000";
+                        }
+                        units "xpl errors";
+                        default "1000";
+                        description "Threshold value for XPL errors";
+                    }
+
+                    leaf window {
+                        type uint32 {
+                            range "1..1440";
+                        }
+                        units "minutes";
+                        default "60";
+                        description "Time interval to measure XPL error frequency";
+                    }
+
+                } // container egress-xpl
+
+                list event {
+                    key "type";
+                    description "Enter the event list instance";
+
+                    leaf type {
+                        type enumeration {
+                            enum soft-error                     { value 1; }
+                            enum internal-frame-loss            { value 2; }
+                            enum memory-error                   { value 3; }
+                            enum datapath-link-error            { value 4; }
+                        }
+                        description "MDA event type being monitored";
+                    }
+
+                    leaf action {
+                        type types-chassis:hw-event-action;
+                        description "Action when a specific hardware error event is raised";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // list event
+
+                container ingress-xpl {
+                    description "Enter the ingress-xpl context";
+
+                    leaf threshold {
+                        type uint32 {
+                            range "1..1000000";
+                        }
+                        units "xpl errors";
+                        default "1000";
+                        description "Threshold value for XPL errors";
+                    }
+
+                    leaf window {
+                        type uint32 {
+                            range "1..1440";
+                        }
+                        units "minutes";
+                        default "60";
+                        description "Time interval to measure XPL error frequency";
+                    }
+
+                } // container ingress-xpl
+
+                container network {
+                    description "Enter the network context";
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container egress {
+                        description "Enter the egress context";
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        list pool {
+                            status obsolete;
+                            key "name";
+                            description "Enter the pool list instance";
+
+                            leaf name {
+                                status obsolete;
+                                type types-sros:named-item;
+                                description "MDA pool name";
+                            }
+
+                            leaf amber-alarm-threshold {
+                                status obsolete;
+                                type uint32 {
+                                    range "1..1000";
+                                }
+                                units "percent";
+                                description "Amber alarm threshold allowed on oversubscription";
+                            }
+
+                            leaf red-alarm-threshold {
+                                status obsolete;
+                                type uint32 {
+                                    range "1..1000";
+                                }
+                                units "percent";
+                                description "Red alarm threshold allowed on oversubscription";
+                            }
+
+                            leaf slope-policy {
+                                status obsolete;
+                                type leafref {
+                                    path "../../../../../../qos/slope-policy/slope-policy-name";
+                                }
+                                description "Slope policy";
+                            }
+
+                            leaf-list apply-groups {
+                                status obsolete;
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                status obsolete;
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                            container resv-cbs {
+                                status obsolete;
+                                description "Enter the resv-cbs context";
+
+                                leaf cbs {
+                                    status obsolete;
+                                    type int32 {
+                                        range "0..100";
+                                    }
+                                    units "percent";
+                                    description "Pool size reserved for CBS";
+                                }
+
+                                container amber-alarm-action {
+                                    status obsolete;
+                                    description "Enter the amber-alarm-action context";
+
+                                    leaf step {
+                                        status obsolete;
+                                        type uint32 {
+                                            range "1..100";
+                                        }
+                                        units "percent";
+                                        description "Step-size percentage for reserved CBS value of the pool";
+                                    }
+
+                                    leaf max {
+                                        status obsolete;
+                                        type uint32 {
+                                            range "1..100";
+                                        }
+                                        units "percent";
+                                        description "Maximum reserved CBS size of the pool";
+                                    }
+
+                                } // container amber-alarm-action
+
+                            } // container resv-cbs
+
+                        } // list pool
+
+                    } // container egress
+
+                    container ingress {
+                        description "Enter the ingress context";
+
+                        leaf queue-policy {
+                            status obsolete;
+                            type leafref {
+                                path "../../../../../qos/network-queue/network-queue-policy";
+                            }
+                            description "Network-queue policy";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        list pool {
+                            status obsolete;
+                            key "name";
+                            description "Enter the pool list instance";
+
+                            leaf name {
+                                status obsolete;
+                                type types-sros:named-item;
+                                description "MDA pool name";
+                            }
+
+                            leaf amber-alarm-threshold {
+                                status obsolete;
+                                type uint32 {
+                                    range "1..1000";
+                                }
+                                units "percent";
+                                description "Amber alarm threshold allowed on oversubscription";
+                            }
+
+                            leaf red-alarm-threshold {
+                                status obsolete;
+                                type uint32 {
+                                    range "1..1000";
+                                }
+                                units "percent";
+                                description "Red alarm threshold allowed on oversubscription";
+                            }
+
+                            leaf slope-policy {
+                                status obsolete;
+                                type leafref {
+                                    path "../../../../../../qos/slope-policy/slope-policy-name";
+                                }
+                                description "Slope policy";
+                            }
+
+                            leaf-list apply-groups {
+                                status obsolete;
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                status obsolete;
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                            container resv-cbs {
+                                status obsolete;
+                                description "Enter the resv-cbs context";
+
+                                leaf cbs {
+                                    status obsolete;
+                                    type int32 {
+                                        range "0..100";
+                                    }
+                                    units "percent";
+                                    description "Pool size reserved for CBS";
+                                }
+
+                                container amber-alarm-action {
+                                    status obsolete;
+                                    description "Enter the amber-alarm-action context";
+
+                                    leaf step {
+                                        status obsolete;
+                                        type uint32 {
+                                            range "1..100";
+                                        }
+                                        units "percent";
+                                        description "Step-size percentage for reserved CBS size of the pool";
+                                    }
+
+                                    leaf max {
+                                        status obsolete;
+                                        type uint32 {
+                                            range "1..100";
+                                        }
+                                        units "percent";
+                                        description "Maximum reserved CBS size of the pool";
+                                    }
+
+                                } // container amber-alarm-action
+
+                            } // container resv-cbs
+
+                            container monitor-pool-depth {
+                                status obsolete;
+                                description "Enter the monitor-pool-depth context";
+
+                                leaf admin-state {
+                                    status obsolete;
+                                    type types-sros:admin-state;
+                                    default "disable";
+                                    description "Administrative state of pool-depth monitoring";
+                                }
+
+                                container alarm-thresholds {
+                                    status obsolete;
+                                    description "Enter the alarm-thresholds context";
+
+                                    leaf total-pool-in-use {
+                                        status obsolete;
+                                        type decimal64 {
+                                            range "0.00..100.00";
+                                            fraction-digits 2;
+                                        }
+                                        units "centipercent";
+                                        default "0.00";
+                                        description "Alarm threshold for usage of total buffer pool";
+                                    }
+
+                                    leaf shared-pool-in-use {
+                                        status obsolete;
+                                        type decimal64 {
+                                            range "0.00..100.00";
+                                            fraction-digits 2;
+                                        }
+                                        units "centipercent";
+                                        default "0.00";
+                                        description "Alarm threshold for shared of buffer pool usage";
+                                    }
+
+                                    leaf reserved-pool-in-use {
+                                        status obsolete;
+                                        type decimal64 {
+                                            range "0.00..100.00";
+                                            fraction-digits 2;
+                                        }
+                                        units "centipercent";
+                                        default "0.00";
+                                        description "Alarm threshold for reserved buffer pool usage";
+                                    }
+
+                                } // container alarm-thresholds
+
+                            } // container monitor-pool-depth
+
+                        } // list pool
+
+                    } // container ingress
+
+                } // container network
+
+
+                container xconnect {
+                    description "Enter the xconnect context";
+
+                    list mac {
+                        key "mac-id";
+                        description "Enter the mac list instance";
+
+                        leaf mac-id {
+                            type uint32 {
+                                range "1..12";
+                            }
+                            description "MAC ID for the MDA cross-connect";
+                        }
+
+                        leaf description {
+                            type types-sros:very-long-description-or-empty;
+                            description "Text description";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        list loopback {
+                            key "loopback-id";
+                            description "Enter the loopback list instance";
+
+                            leaf loopback-id {
+                                type uint32 {
+                                    range "1..2";
+                                }
+                                description "Loopback ID for the MDA cross-connect";
+                            }
+
+                            leaf bandwidth {
+                                type uint32 {
+                                    range "10|25|40|100|400|800";
+                                }
+                                units "gigabps";
+                                sros-ext:immutable;
+                                default "100";
+                                description "Maximum bandwidth for a Layer 2 rate for MAC loopback";
+                            }
+
+                            leaf description {
+                                type types-sros:very-long-description-or-empty;
+                                description "Text description";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                        } // list loopback
+
+                    } // list mac
+
+                } // container xconnect
+
+            } // list mda
+
+            list xiom {
+                key "xiom-slot";
+                description "Enter the xiom list instance";
+
+                leaf xiom-slot {
+                    type string {
+                        length "2";
+                        pattern "x[1-2]" {
+                            error-message "Invalid xiom-slot.";
+                        }
+                    }
+                    description "XIOM slot ID";
+                }
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "enable";
+                    description "Administrative state of the XIOM";
+                }
+
+                leaf fail-on-error {
+                    type boolean;
+                    default "false";
+                    description "Set operational state of the card to failed on error";
+                }
+
+                leaf level {
+                    type types-card:sros-xiom-level;
+                    sros-ext:immutable;
+                    description "License level of the XIOM";
+                }
+
+                leaf reset-on-recoverable-error {
+                    type boolean;
+                    default "false";
+                    description "Reset XIOM for fatal memory parity error on a Q-chip";
+                }
+
+                leaf xiom-type {
+                    type types-card:sros-xiom-type;
+                    sros-ext:immutable;
+                    description "XIOM type";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+
+                list mda {
+                    key "mda-slot";
+                    description "Enter the mda list instance";
+
+                    leaf mda-slot {
+                        type uint32 {
+                            range "1..2";
+                        }
+                        description "MDA slot number";
+                    }
+
+                    leaf mda-type {
+                        type types-card:sros-xiom-mda-type;
+                        sros-ext:immutable;
+                        description "MDA-s type provisioned for the XIOM slot";
+                    }
+
+                    leaf power-priority-level {
+                        type uint32 {
+                            range "1..200";
+                        }
+                        default "150";
+                        description "Power priority level for the XIOM MDA-s";
+                    }
+
+                    leaf sync-e {
+                        type enumeration {
+                            enum true                           { value 1; }
+                            enum false                          { value 2; }
+                        }
+                        description "Synchronous Ethernet capability";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "enable";
+                        description "Administrative state of the MDA";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+
+                    container xconnect {
+                        description "Enter the xconnect context";
+
+                        list mac {
+                            key "mac-id";
+                            description "Enter the mac list instance";
+
+                            leaf mac-id {
+                                type uint32 {
+                                    range "1..12";
+                                }
+                                description "MAC ID for the MDA cross-connect";
+                            }
+
+                            leaf description {
+                                type types-sros:very-long-description-or-empty;
+                                description "Text description";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                            list loopback {
+                                key "loopback-id";
+                                description "Enter the loopback list instance";
+
+                                leaf loopback-id {
+                                    type uint32 {
+                                        range "1..2";
+                                    }
+                                    description "Loopback ID for the MDA cross-connect";
+                                }
+
+                                leaf bandwidth {
+                                    type uint32 {
+                                        range "10|25|40|100|400|800";
+                                    }
+                                    units "gigabps";
+                                    sros-ext:immutable;
+                                    default "100";
+                                    description "Maximum bandwidth for a Layer 2 rate for MAC loopback";
+                                }
+
+                                leaf description {
+                                    type types-sros:very-long-description-or-empty;
+                                    description "Text description";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                leaf-list apply-groups-exclude {
+                                    type leafref {
+                                        path "../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Exclude a configuration group at this level";
+                                }
+
+                            } // list loopback
+
+                        } // list mac
+
+                    } // container xconnect
+
+
+                } // list mda
+
+                list upgrade {
+                    key "upgrade-index";
+                    description "Enter the upgrade list instance";
+
+                    leaf upgrade-index {
+                        type uint32 {
+                            range "1..6";
+                        }
+                        description "Order of the upgrade value";
+                    }
+
+                    leaf path {
+                        type types-card:sros-xiom-level-upgrade-path;
+                        sros-ext:immutable;
+                        mandatory true;
+                        description "Upgrade name";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // list upgrade
+
+            } // list xiom
+
+            uses conf-card-fp;
+        } // list card
+
+    } // grouping conf-card
+
+}

@@ -1,0 +1,1733 @@
+submodule nokia-state-submgt-vrgw {
+
+    yang-version "1.1";
+
+    belongs-to nokia-state { prefix "state"; }
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-isa                { prefix "types-isa"; }
+    import nokia-types-nat                { prefix "types-nat"; }
+    import nokia-types-qos                { prefix "types-qos"; }
+    import nokia-types-services           { prefix "types-services"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+    import nokia-types-subscriber-mgmt    { prefix "types-submgt"; }
+
+    sros-ext:sros-major-release "rel24";
+    organization "Nokia";
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+    description
+        "Nokia YANG Data model with operational state for subscriber management Virtual Residential Gateway on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-state-submgt-vrgw YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+    revision "2021-11-05";
+
+    grouping state-submgt-vrgw {
+        container vrgw {
+            description "Enter the vrgw context";
+
+            list brg {
+                key "id";
+                description "Enter the brg list instance";
+
+                leaf id {
+                    type types-sros:named-item-64;
+                    description "The BRG identifier";
+                }
+
+                leaf ip-address {
+                    type types-sros:ip-address;
+                    description "The IP address of the BRG, as learned from radius-proxy or from the tunnel source";
+                }
+
+                leaf state {
+                    type enumeration {
+                        enum initialized {
+                            value 1;
+                            description "The BRG is authenticated by the proxy but no devices have connected yet";
+                        }
+                        enum operational {
+                            value 2;
+                            description "The BRG is authenticated and devices are connected";
+                        }
+                        enum connectivity-verification {
+                            value 3;
+                            description "No dynamic devices are connected and the connectivity-verification is active to verify the BRG itself is still alive";
+                        }
+                        enum hold {
+                            value 4;
+                            description "No dynamic devices are connected and connectivity verification is either not active or failed. Upon expiry of the hold-timer the BRG will be removed.";
+                        }
+                    }
+                    description "The BRG state";
+                }
+
+                leaf connectivity-verification {
+                    type boolean;
+                    description "Indicates if periodic connectivity verification is done for this BRG while no dynamic sessions are active";
+                }
+
+                leaf last-connectivity-verification {
+                    type types-sros:date-time;
+                    description "Indicates the time that the last connectivity verification test started";
+                }
+
+                leaf proxy-authenticated {
+                    type boolean;
+                    description "Whether the BRG was authenticated by a Radius proxy";
+                }
+
+                leaf remaining-initial-hold-time {
+                    type uint32;
+                    description "The time interval until the initial hold timer expires";
+                }
+
+                leaf remaining-hold-time {
+                    type uint32;
+                    description "The time interval until the hold timer expires";
+                }
+
+                leaf remaining-uplink-initial-hold-time {
+                    type uint32;
+                    description "The time interval until the uplink initial hold timer expires";
+                }
+
+                leaf profile {
+                    type types-sros:named-item;
+                    description "The BRG profile";
+                }
+
+                leaf dmz-address {
+                    type types-sros:ipv4-address;
+                    description "The De-Militarized Zone (DMZ) address";
+                }
+
+                leaf dmz-address-in-use {
+                    type boolean;
+                    description "Whether the DMZ address is currently in use";
+                }
+
+                container home-pool {
+                    description "Enter the home-pool context";
+
+                    leaf subnet {
+                        type types-sros:ipv4-unicast-prefix;
+                        description "Subnet";
+                    }
+
+                    leaf gateway {
+                        type types-sros:ipv4-unicast-address;
+                        description "Gateway";
+                    }
+
+                    container range {
+                        description "Enter the range context";
+
+                        leaf start {
+                            type types-sros:ipv4-unicast-address;
+                            description "Start address";
+                        }
+
+                        leaf end {
+                            type types-sros:ipv4-unicast-address;
+                            description "End address";
+                        }
+
+                    } // container range
+
+                    container standby {
+                        description "Enter the standby context";
+
+                        leaf remaining-time {
+                            type uint32;
+                            units "seconds";
+                            description
+                                "Remaining time after which the standby IPs expire and
+                                 can be allocated to new connections";
+                        }
+
+                        list ip {
+                            key "ip-address";
+                            description "Enter the ip list instance";
+
+                            leaf ip-address {
+                                type types-sros:ipv4-unicast-address;
+                                description "IP address";
+                            }
+
+                        } // list ip
+
+                    } // container standby
+
+                    list binding {
+                        key "mac-address";
+                        description "Enter the binding list instance";
+
+                        leaf mac-address {
+                            type types-sros:mac-unicast-address;
+                            description "MAC address";
+                        }
+
+                        leaf ip-address {
+                            type types-sros:ipv4-unicast-address;
+                            description "IP address";
+                        }
+
+                        leaf allocation-type {
+                            type enumeration {
+                                enum dynamic {
+                                    value 1;
+                                    description "A non-sticky device is using the binding";
+                                }
+                                enum static {
+                                    value 2;
+                                    description "Reserved static binding";
+                                }
+                                enum sticky {
+                                    value 3;
+                                    description "Reserved sticky binding";
+                                }
+                                enum offered {
+                                    value 4;
+                                    description "The binding has been sent in a DHCP OFFER";
+                                }
+                            }
+                            description "Indicates what type of binding this is";
+                        }
+
+                        leaf remaining-lease-time {
+                            type uint32;
+                            units "seconds";
+                            description "Remaining lease time for a DHCP binding.";
+                        }
+
+                        container session {
+                            description "Enter the session context";
+
+                            leaf sla-profile-instance {
+                                type types-submgt:sla-profile-instance-id;
+                                description "SLA profile instance identifier";
+                            }
+
+                            leaf type {
+                                type types-submgt:session-type;
+                                description "Session type";
+                            }
+
+                            leaf id {
+                                type types-submgt:session-id;
+                                description "Session identifier";
+                            }
+
+                        } // container session
+
+                    } // list binding
+
+                } // container home-pool
+
+                list public-static-device {
+                    key "mac-address";
+                    description "Enter the public-static-device list instance";
+
+                    leaf mac-address {
+                        type types-sros:mac-unicast-address;
+                        description "MAC address";
+                    }
+
+                    leaf ip-address {
+                        type types-sros:ipv4-unicast-address;
+                        description "IP address";
+                    }
+
+                    container session {
+                        description "Enter the session context";
+
+                        leaf sla-profile-instance {
+                            type types-submgt:sla-profile-instance-id;
+                            description "SLA profile instance identifier";
+                        }
+
+                        leaf type {
+                            type types-submgt:session-type;
+                            description "Session type";
+                        }
+
+                        leaf id {
+                            type types-submgt:session-id;
+                            description "Session identifier";
+                        }
+
+                    } // container session
+
+                } // list public-static-device
+
+                container subscriber-parameters {
+                    description "Enter the subscriber-parameters context";
+
+                    leaf router-advertisement-policy {
+                        type types-sros:named-item;
+                        description "The router advertisement policy";
+                    }
+
+                    leaf sub-profile {
+                        type types-sros:named-item;
+                        description "The subscriber profile string";
+                    }
+
+                    leaf sla-profile {
+                        type types-sros:named-item;
+                        description "The SLA profile string";
+                    }
+
+                    leaf per-host-port-range-size {
+                        type uint32;
+                        description "The outside port block size for each NAT host";
+                    }
+
+                    leaf upnp-policy {
+                        type types-sros:named-item;
+                        description "The UPnP policy";
+                    }
+
+                    container ipv4 {
+                        description "Enter the ipv4 context";
+
+                        leaf-list dns {
+                            type types-sros:ipv4-address;
+                            description "The IPv4 Domain Name Servers";
+                        }
+
+                        leaf-list nbns {
+                            type types-sros:ipv4-address;
+                            description "The IPv4 NetBios Name Servers";
+                        }
+
+                        leaf lease-time {
+                            type uint32;
+                            units "seconds";
+                            description "The lease time of the hosts";
+                        }
+
+                    } // container ipv4
+
+                    container ipv6 {
+                        description "Enter the ipv6 context";
+
+                        leaf slaac-prefix {
+                            type types-sros:ipv6-prefix;
+                            description "The SLAAC prefix";
+                        }
+
+                        leaf slaac-prefix-valid {
+                            type boolean;
+                            description "In case SLAAC is learned from the uplink (e.g. PPPoE), indicates the slaac-prefix can be used to setup new hosts or renew existing hosts";
+                        }
+
+                        leaf slaac-pool {
+                            type types-sros:named-item;
+                            description "The SLAAC pool used for local address assignment";
+                        }
+
+                        leaf-list dns {
+                            type types-sros:ipv6-address;
+                            description "The IPv6 Domain Name Servers";
+                        }
+
+                    } // container ipv6
+
+                    container value-added-service {
+                        description "Enter the value-added-service context";
+
+                        leaf ipv4-filter {
+                            type types-sros:named-item;
+                            description "The value added service IPv4 filter";
+                        }
+
+                    } // container value-added-service
+
+                    container application-assurance {
+                        description "Enter the application-assurance context";
+
+                        leaf profile {
+                            type types-sros:named-item;
+                            description "The Application Assurance profile";
+                        }
+
+                        leaf scope {
+                            type enumeration {
+                                enum subscriber {
+                                    value 1;
+                                    description "One Application Assurance subscriber per home";
+                                }
+                                enum device {
+                                    value 2;
+                                    description "One Application Assurance subscriber per device in the home";
+                                }
+                            }
+                            description "The scope of the Application Assurance subscriber";
+                        }
+
+                    } // container application-assurance
+
+                    container ingress {
+                        description "Enter the ingress context";
+
+                        container filter {
+                            description "Enter the filter context";
+
+                            container overrides {
+                                description "Enter the overrides context";
+
+                                container ipv4 {
+                                    description "Enter the ipv4 context";
+
+                                    leaf filter {
+                                        type types-submgt:overrule-filter-name;
+                                        description "The ingress IPv4 filter";
+                                    }
+
+                                    leaf http-redirect-url {
+                                        type types-sros:http-redirect-url;
+                                        description "The URL of the IPv4 web portal";
+                                    }
+
+                                } // container ipv4
+
+                                container ipv6 {
+                                    description "Enter the ipv6 context";
+
+                                    leaf filter {
+                                        type types-submgt:overrule-filter-name;
+                                        description "The ingress IPv6 filter";
+                                    }
+
+                                    leaf http-redirect-url {
+                                        type types-sros:http-redirect-url;
+                                        description "The URL of the IPv6 web portal";
+                                    }
+
+                                } // container ipv6
+
+                            } // container overrides
+
+                            list shared-rule {
+                                key "index";
+                                description "Enter the shared-rule list instance";
+
+                                leaf index {
+                                    type uint32;
+                                    description "A BRG filter rule index.";
+                                }
+
+                                leaf action {
+                                    type enumeration {
+                                        enum forward                        { value 1; }
+                                        enum drop                           { value 2; }
+                                    }
+                                    description "Action taken.";
+                                }
+
+                                container match {
+                                    description "Enter the match context";
+
+                                    leaf protocol-next-header {
+                                        type types-submgt:match-protocol-next-header;
+                                        description "IPv4 protocol or IPv6 next-header";
+                                    }
+
+                                    leaf fragment {
+                                        type boolean;
+                                        description "Indicates if this filter applies to fragmented or unfragmented packets only";
+                                    }
+
+                                    container src-ip {
+                                        description "Enter the src-ip context";
+
+                                        leaf address {
+                                            type types-sros:ip-prefix-with-host-bits;
+                                            description "Source IP address and mask";
+                                        }
+
+                                    } // container src-ip
+
+                                    container src-port {
+                                        description "Enter the src-port context";
+
+                                        container range {
+                                            description "Enter the range context";
+
+                                            leaf start {
+                                                type types-sros:tcp-udp-port;
+                                                description "Lower bound of source port range";
+                                            }
+
+                                            leaf end {
+                                                type types-sros:tcp-udp-port;
+                                                description "Upper bound of source port range";
+                                            }
+
+                                        } // container range
+
+                                    } // container src-port
+
+                                    container dst-ip {
+                                        description "Enter the dst-ip context";
+
+                                        leaf address {
+                                            type types-sros:ip-prefix-with-host-bits;
+                                            description "Destination IP address and mask";
+                                        }
+
+                                    } // container dst-ip
+
+                                    container dst-port {
+                                        description "Enter the dst-port context";
+
+                                        container range {
+                                            description "Enter the range context";
+
+                                            leaf start {
+                                                type types-sros:tcp-udp-port;
+                                                description "Lower bound of destination port range";
+                                            }
+
+                                            leaf end {
+                                                type types-sros:tcp-udp-port;
+                                                description "Upper bound of destination port range";
+                                            }
+
+                                        } // container range
+
+                                    } // container dst-port
+
+                                    container ip-option {
+                                        description "Enter the ip-option context";
+
+                                        leaf type {
+                                            type types-sros:ip-option;
+                                            description "Indicates ";
+                                        }
+
+                                    } // container ip-option
+
+                                    container tcp-flags {
+                                        description "Enter the tcp-flags context";
+
+                                        leaf ack {
+                                            type boolean;
+                                            description "Indicates if the control bits of the TCP header must contain the ACK bit";
+                                        }
+
+                                        leaf syn {
+                                            type boolean;
+                                            description "Indicates ";
+                                        }
+
+                                    } // container tcp-flags
+
+                                    container icmp {
+                                        description "Enter the icmp context";
+
+                                        leaf type {
+                                            type types-submgt:match-icmp-type;
+                                            description "Indicates the ICMP type to be matched";
+                                        }
+
+                                    } // container icmp
+
+                                } // container match
+
+                            } // list shared-rule
+
+                            list host-specific-rule {
+                                key "index";
+                                description "Enter the host-specific-rule list instance";
+
+                                leaf index {
+                                    type uint32;
+                                    description "A BRG filter rule index.";
+                                }
+
+                                leaf action {
+                                    type enumeration {
+                                        enum forward                        { value 1; }
+                                        enum drop                           { value 2; }
+                                    }
+                                    description "Action taken.";
+                                }
+
+                                container match {
+                                    description "Enter the match context";
+
+                                    leaf protocol-next-header {
+                                        type types-submgt:match-protocol-next-header;
+                                        description "IPv4 protocol or IPv6 next-header";
+                                    }
+
+                                    leaf fragment {
+                                        type boolean;
+                                        description "Indicates if this filter applies to fragmented or unfragmented packets only";
+                                    }
+
+                                    container src-port {
+                                        description "Enter the src-port context";
+
+                                        container range {
+                                            description "Enter the range context";
+
+                                            leaf start {
+                                                type types-sros:tcp-udp-port;
+                                                description "Lower bound of source port range";
+                                            }
+
+                                            leaf end {
+                                                type types-sros:tcp-udp-port;
+                                                description "Upper bound of source port range";
+                                            }
+
+                                        } // container range
+
+                                    } // container src-port
+
+                                    container dst-ip {
+                                        description "Enter the dst-ip context";
+
+                                        leaf address {
+                                            type types-sros:ip-prefix-with-host-bits;
+                                            description "Destination IP address and mask";
+                                        }
+
+                                    } // container dst-ip
+
+                                    container dst-port {
+                                        description "Enter the dst-port context";
+
+                                        container range {
+                                            description "Enter the range context";
+
+                                            leaf start {
+                                                type types-sros:tcp-udp-port;
+                                                description "Lower bound of destination port range";
+                                            }
+
+                                            leaf end {
+                                                type types-sros:tcp-udp-port;
+                                                description "Upper bound of destination port range";
+                                            }
+
+                                        } // container range
+
+                                    } // container dst-port
+
+                                    container ip-option {
+                                        description "Enter the ip-option context";
+
+                                        leaf type {
+                                            type types-sros:ip-option;
+                                            description "Indicates ";
+                                        }
+
+                                    } // container ip-option
+
+                                    container tcp-flags {
+                                        description "Enter the tcp-flags context";
+
+                                        leaf ack {
+                                            type boolean;
+                                            description "Indicates if the control bits of the TCP header must contain the ACK bit";
+                                        }
+
+                                        leaf syn {
+                                            type boolean;
+                                            description "Indicates ";
+                                        }
+
+                                    } // container tcp-flags
+
+                                    container icmp {
+                                        description "Enter the icmp context";
+
+                                        leaf type {
+                                            type types-submgt:match-icmp-type;
+                                            description "Indicates the ICMP type to be matched";
+                                        }
+
+                                    } // container icmp
+
+                                } // container match
+
+                            } // list host-specific-rule
+
+                        } // container filter
+
+                        container qos {
+                            description "Enter the qos context";
+
+                            container overrides {
+                                description "Enter the overrides context";
+
+                                list arbiter {
+                                    key "arbiter-name";
+                                    description "Enter the arbiter list instance";
+
+                                    leaf arbiter-name {
+                                        type types-sros:named-item;
+                                        description "Name of overridden arbiter";
+                                    }
+
+                                    leaf pir {
+                                        type types-qos:policer-pir-rate-override;
+                                        units "kilobps";
+                                        description "PIR rate";
+                                    }
+
+                                } // list arbiter
+
+                                list policer {
+                                    key "policer-id";
+                                    description "Enter the policer list instance";
+
+                                    leaf policer-id {
+                                        type types-qos:ingress-policer-id;
+                                        description "The unique identifier for the policer.";
+                                    }
+
+                                    leaf pir {
+                                        type types-qos:policer-pir-rate-override;
+                                        units "kilobps";
+                                        description "PIR rate";
+                                    }
+
+                                    leaf cir {
+                                        type types-qos:policer-cir-rate-override;
+                                        units "kilobps";
+                                        description "CIR rate";
+                                    }
+
+                                    leaf mbs {
+                                        type types-qos:policer-burst-size-override-max;
+                                        units "bytes";
+                                        description "The maximum reserved buffer space";
+                                    }
+
+                                    leaf cbs {
+                                        type types-qos:policer-burst-size-override-max;
+                                        units "bytes";
+                                        description "The committed buffer size";
+                                    }
+
+                                    leaf parent-weight {
+                                        type types-qos:weight-override;
+                                        description "The weight that needs to be used by the scheduler to which this policer would be feeding to.";
+                                    }
+
+                                    leaf parent-cir-weight {
+                                        type types-qos:weight-override;
+                                        description "The weight that needs to be used until the committed rate by the scheduler to which this policer would be feeding to.";
+                                    }
+
+                                } // list policer
+
+                                list queue {
+                                    key "queue-id";
+                                    description "Enter the queue list instance";
+
+                                    leaf queue-id {
+                                        type types-qos:ingress-queue-id;
+                                        description "The unique identifier for the queue.";
+                                    }
+
+                                    leaf pir {
+                                        type types-qos:queue-pir-rate-override;
+                                        units "kilobps";
+                                        description "PIR rate";
+                                    }
+
+                                    leaf cir {
+                                        type types-qos:queue-cir-rate-override;
+                                        units "kilobps";
+                                        description "CIR rate";
+                                    }
+
+                                    leaf mbs {
+                                        type types-qos:queue-burst-size-override;
+                                        units "bytes";
+                                        description "The maximum reserved buffer space";
+                                    }
+
+                                    leaf cbs {
+                                        type types-qos:queue-burst-size-override;
+                                        units "bytes";
+                                        description "The committed buffer size";
+                                    }
+
+                                    leaf burst-limit {
+                                        type types-qos:burst-limit-override-numeric;
+                                        description "The explicit shaping burst size of a queue.";
+                                    }
+
+                                    leaf parent-weight {
+                                        type types-qos:weight-override;
+                                        description "The weight that needs to be used by the scheduler to which this queue would be feeding to.";
+                                    }
+
+                                    leaf parent-cir-weight {
+                                        type types-qos:weight-override;
+                                        description "The weight that needs to be used until the committed rate by the scheduler to which this queue would be feeding to.";
+                                    }
+
+                                } // list queue
+
+                                list scheduler {
+                                    key "scheduler-name";
+                                    description "Enter the scheduler list instance";
+
+                                    leaf scheduler-name {
+                                        type types-sros:named-item;
+                                        description "Name of overridden scheduler";
+                                    }
+
+                                    leaf pir {
+                                        type types-qos:scheduler-cir-rate;
+                                        units "kilobps";
+                                        description "PIR rate";
+                                    }
+
+                                    leaf cir {
+                                        type types-qos:scheduler-cir-rate-override;
+                                        units "kilobps";
+                                        description "CIR rate";
+                                    }
+
+                                } // list scheduler
+
+                            } // container overrides
+
+                        } // container qos
+
+                    } // container ingress
+
+                    container egress {
+                        description "Enter the egress context";
+
+                        container filter {
+                            description "Enter the filter context";
+
+                            container overrides {
+                                description "Enter the overrides context";
+
+                                container ipv4 {
+                                    description "Enter the ipv4 context";
+
+                                    leaf filter {
+                                        type types-submgt:overrule-filter-name;
+                                        description "The egress IPv4 filter";
+                                    }
+
+                                } // container ipv4
+
+                                container ipv6 {
+                                    description "Enter the ipv6 context";
+
+                                    leaf filter {
+                                        type types-submgt:overrule-filter-name;
+                                        description "The egress IPv6 filter";
+                                    }
+
+                                } // container ipv6
+
+                            } // container overrides
+
+                            list shared-rule {
+                                key "index";
+                                description "Enter the shared-rule list instance";
+
+                                leaf index {
+                                    type uint32;
+                                    description "A BRG filter rule index.";
+                                }
+
+                                leaf action {
+                                    type enumeration {
+                                        enum forward                        { value 1; }
+                                        enum drop                           { value 2; }
+                                    }
+                                    description "Action taken.";
+                                }
+
+                                container match {
+                                    description "Enter the match context";
+
+                                    leaf protocol-next-header {
+                                        type types-submgt:match-protocol-next-header;
+                                        description "IPv4 protocol or IPv6 next-header";
+                                    }
+
+                                    leaf fragment {
+                                        type boolean;
+                                        description "Indicates if this filter applies to fragmented or unfragmented packets only";
+                                    }
+
+                                    container src-ip {
+                                        description "Enter the src-ip context";
+
+                                        leaf address {
+                                            type types-sros:ip-prefix-with-host-bits;
+                                            description "Source IP address and mask";
+                                        }
+
+                                    } // container src-ip
+
+                                    container src-port {
+                                        description "Enter the src-port context";
+
+                                        container range {
+                                            description "Enter the range context";
+
+                                            leaf start {
+                                                type types-sros:tcp-udp-port;
+                                                description "Lower bound of source port range";
+                                            }
+
+                                            leaf end {
+                                                type types-sros:tcp-udp-port;
+                                                description "Upper bound of source port range";
+                                            }
+
+                                        } // container range
+
+                                    } // container src-port
+
+                                    container dst-ip {
+                                        description "Enter the dst-ip context";
+
+                                        leaf address {
+                                            type types-sros:ip-prefix-with-host-bits;
+                                            description "Destination IP address and mask";
+                                        }
+
+                                    } // container dst-ip
+
+                                    container dst-port {
+                                        description "Enter the dst-port context";
+
+                                        container range {
+                                            description "Enter the range context";
+
+                                            leaf start {
+                                                type types-sros:tcp-udp-port;
+                                                description "Lower bound of destination port range";
+                                            }
+
+                                            leaf end {
+                                                type types-sros:tcp-udp-port;
+                                                description "Upper bound of destination port range";
+                                            }
+
+                                        } // container range
+
+                                    } // container dst-port
+
+                                    container ip-option {
+                                        description "Enter the ip-option context";
+
+                                        leaf type {
+                                            type types-sros:ip-option;
+                                            description "Indicates ";
+                                        }
+
+                                    } // container ip-option
+
+                                    container tcp-flags {
+                                        description "Enter the tcp-flags context";
+
+                                        leaf ack {
+                                            type boolean;
+                                            description "Indicates if the control bits of the TCP header must contain the ACK bit";
+                                        }
+
+                                        leaf syn {
+                                            type boolean;
+                                            description "Indicates ";
+                                        }
+
+                                    } // container tcp-flags
+
+                                    container icmp {
+                                        description "Enter the icmp context";
+
+                                        leaf type {
+                                            type types-submgt:match-icmp-type;
+                                            description "Indicates the ICMP type to be matched";
+                                        }
+
+                                    } // container icmp
+
+                                } // container match
+
+                            } // list shared-rule
+
+                            list host-specific-rule {
+                                key "index";
+                                description "Enter the host-specific-rule list instance";
+
+                                leaf index {
+                                    type uint32;
+                                    description "A BRG filter rule index.";
+                                }
+
+                                leaf action {
+                                    type enumeration {
+                                        enum forward                        { value 1; }
+                                        enum drop                           { value 2; }
+                                    }
+                                    description "Action taken.";
+                                }
+
+                                container match {
+                                    description "Enter the match context";
+
+                                    leaf protocol-next-header {
+                                        type types-submgt:match-protocol-next-header;
+                                        description "IPv4 protocol or IPv6 next-header";
+                                    }
+
+                                    leaf fragment {
+                                        type boolean;
+                                        description "Indicates if this filter applies to fragmented or unfragmented packets only";
+                                    }
+
+                                    container src-ip {
+                                        description "Enter the src-ip context";
+
+                                        leaf address {
+                                            type types-sros:ip-prefix-with-host-bits;
+                                            description "Source IP address and mask";
+                                        }
+
+                                    } // container src-ip
+
+                                    container src-port {
+                                        description "Enter the src-port context";
+
+                                        container range {
+                                            description "Enter the range context";
+
+                                            leaf start {
+                                                type types-sros:tcp-udp-port;
+                                                description "Lower bound of source port range";
+                                            }
+
+                                            leaf end {
+                                                type types-sros:tcp-udp-port;
+                                                description "Upper bound of source port range";
+                                            }
+
+                                        } // container range
+
+                                    } // container src-port
+
+                                    container dst-port {
+                                        description "Enter the dst-port context";
+
+                                        container range {
+                                            description "Enter the range context";
+
+                                            leaf start {
+                                                type types-sros:tcp-udp-port;
+                                                description "Lower bound of destination port range";
+                                            }
+
+                                            leaf end {
+                                                type types-sros:tcp-udp-port;
+                                                description "Upper bound of destination port range";
+                                            }
+
+                                        } // container range
+
+                                    } // container dst-port
+
+                                    container ip-option {
+                                        description "Enter the ip-option context";
+
+                                        leaf type {
+                                            type types-sros:ip-option;
+                                            description "Indicates ";
+                                        }
+
+                                    } // container ip-option
+
+                                    container tcp-flags {
+                                        description "Enter the tcp-flags context";
+
+                                        leaf ack {
+                                            type boolean;
+                                            description "Indicates if the control bits of the TCP header must contain the ACK bit";
+                                        }
+
+                                        leaf syn {
+                                            type boolean;
+                                            description "Indicates ";
+                                        }
+
+                                    } // container tcp-flags
+
+                                    container icmp {
+                                        description "Enter the icmp context";
+
+                                        leaf type {
+                                            type types-submgt:match-icmp-type;
+                                            description "Indicates the ICMP type to be matched";
+                                        }
+
+                                    } // container icmp
+
+                                } // container match
+
+                            } // list host-specific-rule
+
+                        } // container filter
+
+                        container qos {
+                            description "Enter the qos context";
+
+                            container overrides {
+                                description "Enter the overrides context";
+
+                                leaf sub-aggregate-rate {
+                                    type types-qos:rate-limit;
+                                    units "kilobps";
+                                    description "The maximum total rate of all egress queues of the subscriber.";
+                                }
+
+                                leaf sla-aggregate-rate {
+                                    type types-qos:rate-limit;
+                                    units "kilobps";
+                                    description "The maximum rate of all egress queues of the SLA profile instance.";
+                                }
+
+                                list arbiter {
+                                    key "arbiter-name";
+                                    description "Enter the arbiter list instance";
+
+                                    leaf arbiter-name {
+                                        type types-sros:named-item;
+                                        description "Name of overridden arbiter";
+                                    }
+
+                                    leaf pir {
+                                        type types-qos:policer-pir-rate-override;
+                                        units "kilobps";
+                                        description "PIR rate";
+                                    }
+
+                                } // list arbiter
+
+                                list policer {
+                                    key "policer-id";
+                                    description "Enter the policer list instance";
+
+                                    leaf policer-id {
+                                        type types-qos:sap-egress-policer-id;
+                                        description "The unique identifier for the policer.";
+                                    }
+
+                                    leaf pir {
+                                        type types-qos:policer-pir-rate-override;
+                                        units "kilobps";
+                                        description "PIR rate";
+                                    }
+
+                                    leaf cir {
+                                        type types-qos:policer-cir-rate-override;
+                                        units "kilobps";
+                                        description "CIR rate";
+                                    }
+
+                                    leaf mbs {
+                                        type types-qos:policer-burst-size-override-max;
+                                        units "bytes";
+                                        description "The maximum reserved buffer space";
+                                    }
+
+                                    leaf cbs {
+                                        type types-qos:policer-burst-size-override-max;
+                                        units "bytes";
+                                        description "The committed buffer size";
+                                    }
+
+                                    leaf parent-weight {
+                                        type types-qos:weight-override;
+                                        description "The weight that needs to be used by the scheduler to which this policer would be feeding to.";
+                                    }
+
+                                    leaf parent-cir-weight {
+                                        type types-qos:weight-override;
+                                        description "The weight that needs to be used until the committed rate by the scheduler to which this policer would be feeding to.";
+                                    }
+
+                                } // list policer
+
+                                list queue {
+                                    key "queue-id";
+                                    description "Enter the queue list instance";
+
+                                    leaf queue-id {
+                                        type types-qos:egress-queue-id;
+                                        description "The unique identifier for the queue.";
+                                    }
+
+                                    leaf pir {
+                                        type types-qos:queue-pir-rate-override;
+                                        units "kilobps";
+                                        description "PIR rate";
+                                    }
+
+                                    leaf cir {
+                                        type types-qos:queue-cir-rate-override;
+                                        units "kilobps";
+                                        description "CIR rate";
+                                    }
+
+                                    leaf mbs {
+                                        type types-qos:queue-burst-size-override;
+                                        units "bytes";
+                                        description "The maximum reserved buffer space";
+                                    }
+
+                                    leaf cbs {
+                                        type types-qos:queue-burst-size-override;
+                                        units "bytes";
+                                        description "The committed buffer size";
+                                    }
+
+                                    leaf wrr-weight {
+                                        type types-qos:hs-wrr-weight-override;
+                                        description
+                                            "The Weighted Round Robin (WRR) weight with which
+                                             this queue should parent into the scheduler.";
+                                    }
+
+                                    leaf class-weight {
+                                        type types-qos:hs-class-weight-override;
+                                        description "The scheduling class weight.";
+                                    }
+
+                                    leaf burst-limit {
+                                        type types-qos:burst-limit-override-numeric;
+                                        description "The explicit shaping burst size of a queue.";
+                                    }
+
+                                    leaf parent-weight {
+                                        type types-qos:weight-override;
+                                        description "The weight that needs to be used by the scheduler to which this queue would be feeding to.";
+                                    }
+
+                                    leaf parent-cir-weight {
+                                        type types-qos:weight-override;
+                                        description "The weight that needs to be used until the committed rate by the scheduler to which this queue would be feeding to.";
+                                    }
+
+                                } // list queue
+
+                                list scheduler {
+                                    key "scheduler-name";
+                                    description "Enter the scheduler list instance";
+
+                                    leaf scheduler-name {
+                                        type types-sros:named-item;
+                                        description "Name of overridden scheduler";
+                                    }
+
+                                    leaf pir {
+                                        type types-qos:scheduler-cir-rate;
+                                        units "kilobps";
+                                        description "PIR rate";
+                                    }
+
+                                    leaf cir {
+                                        type types-qos:scheduler-cir-rate-override;
+                                        units "kilobps";
+                                        description "CIR rate";
+                                    }
+
+                                } // list scheduler
+
+                                list wrr-group {
+                                    key "group-id";
+                                    description "Enter the wrr-group list instance";
+
+                                    leaf group-id {
+                                        type types-qos:hs-wrr-group-id;
+                                        description "HS WRR group identifier";
+                                    }
+
+                                    leaf pir {
+                                        type types-qos:hs-wrr-rate-override;
+                                        units "kilobps";
+                                        description "The rate (PIR) override for WRR group.";
+                                    }
+
+                                    leaf class-weight {
+                                        type types-qos:hs-class-weight-override;
+                                        description "The class weight override for WRR group.";
+                                    }
+
+                                } // list wrr-group
+
+                            } // container overrides
+
+                        } // container qos
+
+                    } // container egress
+
+
+                } // container subscriber-parameters
+
+                container pppoe-client {
+                    description "Enter the pppoe-client context";
+
+                    leaf service {
+                        type types-services:service-name;
+                        description "The L2 service where the PPPoE client is initiated";
+                    }
+
+                    leaf mac {
+                        type types-sros:mac-unicast-address;
+                        description "The source MAC address used for the client";
+                    }
+
+                    leaf up-time {
+                        type uint32;
+                        description "How long the PPPoE session has been active";
+                    }
+
+                    leaf policy {
+                        type types-sros:named-item;
+                        description "The PPPoE client policy";
+                    }
+
+                    leaf service-name {
+                        type string;
+                        description "The service-name";
+                    }
+
+                    leaf session-id {
+                        type uint16;
+                        description "The PPPoE session ID";
+                    }
+
+                    leaf access-concentrator-mac {
+                        type types-sros:mac-unicast-address;
+                        description "The access concentrator MAC address";
+                    }
+
+                    leaf access-concentrator-name {
+                        type string {
+                            length "0..64";
+                        }
+                        description "The access concentrator name";
+                    }
+
+                    container lcp {
+                        description "Enter the lcp context";
+
+                        leaf state {
+                            type enumeration {
+                                enum initial                        { value 1; }
+                                enum starting                       { value 2; }
+                                enum closed                         { value 3; }
+                                enum stopped                        { value 4; }
+                                enum closing                        { value 5; }
+                                enum stopping                       { value 6; }
+                                enum request-sent                   { value 7; }
+                                enum ack-received                   { value 8; }
+                                enum ack-sent                       { value 9; }
+                                enum opened                         { value 10; }
+                            }
+                            description "The LCP state, as defined in RFC 1661";
+                        }
+
+                        leaf local-magic-number {
+                            type uint32;
+                            description "The magic number of the client";
+                        }
+
+                        leaf remote-magic-number {
+                            type uint32;
+                            description "The magic number sent by the access concentrator";
+                        }
+
+                        leaf remote-mru {
+                            type uint32;
+                            description "The MRU sent by the Access Concentrator";
+                        }
+
+                    } // container lcp
+
+                    container authentication {
+                        description "Enter the authentication context";
+
+                        leaf user-name {
+                            type string;
+                            description "The PPP user name";
+                        }
+
+                        leaf protocol {
+                            type enumeration {
+                                enum none {
+                                    value 0;
+                                    description "No authentication is performed, NCP is started immediately after LCP is finished";
+                                }
+                                enum pap {
+                                    value 1;
+                                    description "The PPPoE client authenticates itself using PAP";
+                                }
+                                enum chap {
+                                    value 2;
+                                    description "The PPPoE client authenticates itself using CHAP";
+                                }
+                            }
+                            description "The PPP authentication protocol";
+                        }
+
+                    } // container authentication
+
+                    container ipcp {
+                        description "Enter the ipcp context";
+
+                        leaf state {
+                            type enumeration {
+                                enum initial                        { value 1; }
+                                enum starting                       { value 2; }
+                                enum closed                         { value 3; }
+                                enum stopped                        { value 4; }
+                                enum closing                        { value 5; }
+                                enum stopping                       { value 6; }
+                                enum request-sent                   { value 7; }
+                                enum ack-received                   { value 8; }
+                                enum ack-sent                       { value 9; }
+                                enum opened                         { value 10; }
+                            }
+                            description "The IPCP state, as defined in RFC 1661";
+                        }
+
+                        leaf address {
+                            type types-sros:ipv4-address;
+                            description "The IPv4 address";
+                        }
+
+                        leaf-list dns {
+                            type types-sros:ipv4-address;
+                            description "The IPv4 Domain Name Servers";
+                        }
+
+                        leaf-list nbns {
+                            type types-sros:ipv4-address;
+                            description "The IPv4 NetBios Name Servers";
+                        }
+
+                    } // container ipcp
+
+                    container ipv6cp {
+                        description "Enter the ipv6cp context";
+
+                        leaf state {
+                            type enumeration {
+                                enum initial                        { value 1; }
+                                enum starting                       { value 2; }
+                                enum closed                         { value 3; }
+                                enum stopped                        { value 4; }
+                                enum closing                        { value 5; }
+                                enum stopping                       { value 6; }
+                                enum request-sent                   { value 7; }
+                                enum ack-received                   { value 8; }
+                                enum ack-sent                       { value 9; }
+                                enum opened                         { value 10; }
+                            }
+                            description "The IPv6CP state, as defined in RFC 1661";
+                        }
+
+                        leaf interface-id {
+                            type string;
+                            description "The client IPv6 Interface Identifier used for link-local addressing";
+                        }
+
+                        leaf-list dns {
+                            type types-sros:ipv6-address;
+                            description "The IPv6 Domain Name Servers";
+                        }
+
+                        container slaac {
+                            description "Enter the slaac context";
+
+                            leaf prefix {
+                                type types-sros:ipv6-prefix;
+                                description "The SLAAC prefix";
+                            }
+
+                            leaf prefix-timeout {
+                                type uint32;
+                                description "Timeout after which the SLAAC prefix is no longer considered valid. Will be updated when an RA is received.";
+                            }
+
+                        } // container slaac
+
+                    } // container ipv6cp
+
+                    container statistics {
+                        description "Enter the statistics context";
+
+                        leaf tx-padi {
+                            type yang:counter32;
+                            description "PADI packets transmitted by this PPPoE client";
+                        }
+
+                        leaf tx-padr {
+                            type yang:counter32;
+                            description "PADR (PPPoE Active Discovery Request) packets transmitted by this PPPoE client";
+                        }
+
+                        leaf tx-padt {
+                            type yang:counter32;
+                            description "PADT (PPPoE Active Discovery Terminate) packets transmitted by this PPPoE client";
+                        }
+
+                        leaf tx-session {
+                            type yang:counter32;
+                            description "PPP session stage packets transmitted by this PPPoE client";
+                        }
+
+                        leaf tx-lcp-echo-request {
+                            type yang:counter32;
+                            description "LCP echo request packets transmitted by this PPPoE client";
+                        }
+
+                        leaf tx-lcp-echo-reply {
+                            type yang:counter32;
+                            description "LCP echo reply packets transmitted by this PPPoE client";
+                        }
+
+                        leaf tx-icmpv6-router-solicit {
+                            type yang:counter32;
+                            description "ICMPv6 Router-Solicit packets transmitted by this PPPoE client";
+                        }
+
+                        leaf tx-dhcpv6-info {
+                            type yang:counter32;
+                            description "DHCPv6 Info-Request packets transmitted by this PPPoE client";
+                        }
+
+                        leaf rx-pado {
+                            type yang:counter32;
+                            description "PADO packets received by this PPPoE client";
+                        }
+
+                        leaf rx-pads {
+                            type yang:counter32;
+                            description "PADS packets received by this PPPoE client";
+                        }
+
+                        leaf rx-padt {
+                            type yang:counter32;
+                            description "PADT packets received by this PPPoE client";
+                        }
+
+                        leaf rx-session {
+                            type yang:counter32;
+                            description "PPP session stage packets received by this PPPoE client";
+                        }
+
+                        leaf rx-lcp-echo-request {
+                            type yang:counter32;
+                            description "LCP echo request packets received by this PPPoE client";
+                        }
+
+                        leaf rx-lcp-echo-reply {
+                            type yang:counter32;
+                            description "LCP echo reply packets received by this PPPoE client";
+                        }
+
+                        leaf rx-icmpv6-router-advertisement {
+                            type yang:counter32;
+                            description "ICMPv6 Router-Advertisement packets received by this PPPoE client";
+                        }
+
+                        leaf rx-dhcpv6-reply {
+                            type yang:counter32;
+                            description "DHCPv6 Reply packets received by this PPPoE client";
+                        }
+
+                        leaf rx-dropped {
+                            type yang:counter32;
+                            description "packets dropped by this PPPoE client";
+                        }
+
+                    } // container statistics
+
+                } // container pppoe-client
+
+                container bridge-domain {
+                    description "Enter the bridge-domain context";
+
+                    leaf id {
+                        type uint32;
+                        description "Bridge domain identifier";
+                    }
+
+                    leaf vni {
+                        type uint32;
+                        description "VXLAN Network Identifier (VNI) of this bridge domain";
+                    }
+
+                    leaf route-target {
+                        type types-services:route-target;
+                        description "EVPN route-target of this bridge domain";
+                    }
+
+                    leaf route-distinguisher {
+                        type types-services:vpn-route-distinguisher;
+                        description "EVPN route-distinguisher of this bridge domain";
+                    }
+
+                    leaf wlan-gw-group {
+                        type types-isa:wlan-gw-group-id;
+                        description "WLAN Gateway ISA group associated with this bridge domain";
+                    }
+
+                    leaf wlan-gw-group-member {
+                        type types-nat:bb-group-member;
+                        description "WLAN Gateway ISA Group member associated with this bridge domain";
+                    }
+
+                    leaf mdu-vlan-tag {
+                        type types-sros:qtag-full-range;
+                        description "VLAN tag associated with this bridge domain";
+                    }
+
+                    leaf service {
+                        type types-services:service-name;
+                        description "Service of the ESM SAP associated with this bridge domain";
+                    }
+
+                    leaf group-interface {
+                        type types-sros:interface-name;
+                        description "Group interface associated with this bridge domain";
+                    }
+
+                    leaf assistive-address-resolution {
+                        type boolean;
+                        description "Use ARP/ND assist for this bridge domain";
+                    }
+
+                    leaf network {
+                        type boolean;
+                        description "Allow network side connections";
+                    }
+
+                    container mac-translation {
+                        description "Enter the mac-translation context";
+
+                        leaf oper-state {
+                            type types-sros:oper-state;
+                            description "Operational state of MAC translation for this bridge domain";
+                        }
+
+                        leaf mac {
+                            type types-sros:mac-unicast-address;
+                            description "Translated MAC address of home users towards datacenter";
+                        }
+
+                    } // container mac-translation
+
+                    container max-macs {
+                        description "Enter the max-macs context";
+
+                        leaf access {
+                            type int32;
+                            description "Maximum number of MAC entries over access connection";
+                        }
+
+                        leaf network {
+                            type int32;
+                            description "Maximum number of MAC entries over network side connection";
+                        }
+
+                    } // container max-macs
+
+                    container ingress {
+                        description "Enter the ingress context";
+
+                        leaf access-policer {
+                            type types-sros:named-item;
+                            description "Bridge domain policer for ingress access traffic";
+                        }
+
+                        leaf network-policer {
+                            type types-sros:named-item;
+                            description "Bridge domain policer for ingress network traffic";
+                        }
+
+                    } // container ingress
+
+                } // container bridge-domain
+
+
+            } // list brg
+
+            container statistics {
+                description "Enter the statistics context";
+
+                container brg {
+                    description "Enter the brg context";
+
+                    leaf initialized {
+                        type yang:counter32;
+                        description "Number of initialized BRGs";
+                    }
+
+                    leaf operational {
+                        type yang:counter32;
+                        description "Number of operational BRGs";
+                    }
+
+                    leaf connectivity-verification {
+                        type yang:counter32;
+                        description "Number of BRGs running connectivity verification";
+                    }
+
+                    leaf hold {
+                        type yang:counter32;
+                        description "Number of held BRGs";
+                    }
+
+                    leaf proxy-authenticated {
+                        type yang:counter32;
+                        description "Number of proxy-authenticated BRGs";
+                    }
+
+                } // container brg
+
+            } // container statistics
+
+        } // container vrgw
+
+    } // grouping state-submgt-vrgw
+
+}
