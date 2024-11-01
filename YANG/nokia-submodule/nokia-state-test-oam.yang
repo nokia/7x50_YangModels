@@ -35,12 +35,314 @@ submodule nokia-state-test-oam {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2024-04-04";
+    revision "2024-10-07";
 
     grouping state-test-oam {
         container test-oam {
             description "Enter the test-oam context";
 
+            container lag-ip-measurement {
+                description "Enter the lag-ip-measurement context";
+
+                list router {
+                    key "router-instance";
+                    description "Enter the router list instance";
+
+                    leaf router-instance {
+                        type leafref {
+                            path "../../../../router/router-name";
+                        }
+                        description "Router hosting the LAG IP Measurement test";
+                    }
+
+                    list interface {
+                        key "interface-name";
+                        description "Enter the interface list instance";
+
+                        leaf interface-name {
+                            type leafref {
+                                path "../../../../../router[router-name=current()/../../router-instance]/interface/interface-name";
+                            }
+                            description "Interface hosting the LAG IP Measurement test";
+                        }
+
+                        leaf oper-state {
+                            type types-sros:up-down-status;
+                            description "Operational state of LAG IP Measurement on this interface";
+                        }
+
+                        leaf failure-conditions {
+                            type bits {
+                                bit no-protocol                    { position 0; }
+                                bit template-admin-down            { position 1; }
+                                bit udp-port-unavailable           { position 2; }
+                                bit internal-error                 { position 3; }
+                                bit interface-not-lag              { position 4; }
+                            }
+                            description "Reason(s) (if any) for the operationally-down state of LAG IP Measurement on the interface";
+                        }
+
+                        leaf detectable-tx-error {
+                            type enumeration {
+                                enum none                           { value 1; }
+                                enum interface-down                 { value 2; }
+                                enum unexpected-error               { value 3; }
+                                enum no-route                       { value 4; }
+                                enum source-ip-not-local            { value 5; }
+                                enum invalid-dest-ip                { value 6; }
+                                enum invalid-interface-type         { value 7; }
+                                enum same-source-ip-dest-ip         { value 8; }
+                            }
+                            description "Reason (if any) for the failure to transmit the test's most recent TWAMP-Light packet";
+                        }
+
+                        leaf oper-source-address {
+                            type types-sros:ip-address;
+                            description "In-use source IP address for the test";
+                        }
+
+                        leaf source-auto-assigned {
+                            type boolean;
+                            description "Source IP address was assigned by the system";
+                        }
+
+                        leaf oper-destination-address {
+                            type types-sros:ip-address;
+                            description "In-use destination IP address for the test";
+                        }
+
+                        leaf destination-auto-assigned {
+                            type boolean;
+                            description "Destination IP address was assigned by the system";
+                        }
+
+                        leaf in-use-source-udp-port {
+                            type types-sros:tcp-udp-port;
+                            description "In-use source UDP port for the test";
+                        }
+
+                        list lag {
+                            key "lag-name";
+                            description "Enter the lag list instance";
+
+                            leaf lag-name {
+                                type leafref {
+                                    path "../../../../../../lag/lag-name";
+                                }
+                                description "Name of the tested LAG";
+                            }
+
+                            list port {
+                                key "port-id";
+                                description "Enter the port list instance";
+
+                                leaf port-id {
+                                    type leafref {
+                                        path "../../../../../../../lag[lag-name=current()/../../lag-name]/port/port-id";
+                                    }
+                                    description "Port name of a LAG member";
+                                }
+
+                                leaf sample-newest-index {
+                                    type uint32;
+                                    description "Index of the newest sample window for this port";
+                                }
+
+                                leaf detectable-tx-error {
+                                    type enumeration {
+                                        enum none                           { value 1; }
+                                        enum unexpected-error               { value 2; }
+                                        enum port-down                      { value 3; }
+                                    }
+                                    description "Reason (if any) for the failure to transmit the test's most recent TWAMP-Light packet";
+                                }
+
+                                leaf sender-micro-session-id {
+                                    type uint32 {
+                                        range "0..65535";
+                                    }
+                                    description "Local-node identifier for the tested LAG member port";
+                                }
+
+                                leaf reflector-micro-session-id {
+                                    type uint32 {
+                                        range "0..65535";
+                                    }
+                                    description "Remote-node identifier for the tested LAG member port";
+                                }
+
+                                leaf reflector-micro-session-id-change-count {
+                                    type yang:counter32;
+                                    description "Number of changes to reflector-micro-session-id during the life of the test";
+                                }
+
+                                container frame-discard-errors {
+                                    description "Enter the frame-discard-errors context";
+
+                                    leaf sender-micro-session-id-mismatch {
+                                        type yang:counter32;
+                                        units "frames";
+                                        description "Number of frames discarded because of a mismatch in the Sender Micro Session-ID field";
+                                    }
+
+                                    leaf sender-micro-session-id-zero {
+                                        type yang:counter32;
+                                        units "frames";
+                                        description "Number of frames discarded because the Sender Micro Session-ID field is zero";
+                                    }
+
+                                    leaf reflector-micro-session-id-zero {
+                                        type yang:counter32;
+                                        units "frames";
+                                        description "Number of frames discarded because the Reflector Micro Session-ID field is zero";
+                                    }
+
+                                } // container frame-discard-errors
+
+                                container sample-windows {
+                                    description "Enter the sample-windows context";
+
+                                    list sample-window {
+                                        key "index";
+                                        description "Enter the sample-window list instance";
+
+                                        leaf index {
+                                            type uint32 {
+                                                range "1..4294967295";
+                                            }
+                                            description "Index of the sample window";
+                                        }
+
+                                        leaf window-state {
+                                            type enumeration {
+                                                enum completed                      { value 1; }
+                                                enum in-progress                    { value 2; }
+                                                enum discard                        { value 4; }
+                                            }
+                                            description "Operational state of the sample window";
+                                        }
+
+                                        leaf end-timestamp {
+                                            type yang:date-and-time;
+                                            description "Closing time for the sample window";
+                                        }
+
+                                        leaf frames-sent {
+                                            type yang:counter32;
+                                            units "frames";
+                                            description "Number of frames sent during the sample window";
+                                        }
+
+                                        leaf frames-received {
+                                            type yang:counter32;
+                                            units "frames";
+                                            description "Number of frames received during the sample window";
+                                        }
+
+                                        container frame-delay {
+                                            description "Enter the frame-delay context";
+
+                                            container round-trip {
+                                                description "Enter the round-trip context";
+
+                                                leaf average {
+                                                    type uint32;
+                                                    units "microseconds";
+                                                    description "Average round trip frame delay for the sample window";
+                                                }
+
+                                                leaf minimum {
+                                                    type uint32;
+                                                    units "microseconds";
+                                                    description "Minimum round trip frame delay for the sample window";
+                                                }
+
+                                                leaf maximum {
+                                                    type uint32;
+                                                    units "microseconds";
+                                                    description "Maximum round trip frame delay for the sample window";
+                                                }
+
+                                            } // container round-trip
+
+                                        } // container frame-delay
+
+                                        container inter-frame-delay-variation {
+                                            description "Enter the inter-frame-delay-variation context";
+
+                                            container round-trip {
+                                                description "Enter the round-trip context";
+
+                                                leaf average {
+                                                    type int32 {
+                                                        range "-1|0..2147483647";
+                                                    }
+                                                    units "microseconds";
+                                                    description "Average round trip IFDV for the sample window";
+                                                }
+
+                                                leaf minimum {
+                                                    type int32 {
+                                                        range "-1|0..2147483647";
+                                                    }
+                                                    units "microseconds";
+                                                    description "Minimum round trip IFDV for the sample window";
+                                                }
+
+                                                leaf maximum {
+                                                    type int32 {
+                                                        range "-1|0..2147483647";
+                                                    }
+                                                    units "microseconds";
+                                                    description "Maximum round trip IFDV for the sample window";
+                                                }
+
+                                            } // container round-trip
+
+                                        } // container inter-frame-delay-variation
+
+                                        container invalid-delay-results {
+                                            description "Enter the invalid-delay-results context";
+
+                                            leaf round-trip {
+                                                type boolean;
+                                                description "Negative or zero round trip frame delay calculated from one or more response packets in this sample window";
+                                            }
+
+                                        } // container invalid-delay-results
+
+                                        container loss {
+                                            description "Enter the loss context";
+
+                                            container round-trip {
+                                                description "Enter the round-trip context";
+
+                                                leaf frame-loss-ratio {
+                                                    type decimal64 {
+                                                        range "-0.001|0.000..100.000";
+                                                        fraction-digits 3;
+                                                    }
+                                                    units "percent";
+                                                    description "Round trip Frame Loss Ratio (FLR) for the sample window";
+                                                }
+
+                                            } // container round-trip
+
+                                        } // container loss
+
+                                    } // list sample-window
+
+                                } // container sample-windows
+
+                            } // list port
+
+                        } // list lag
+
+                    } // list interface
+
+                } // list router
+
+            } // container lag-ip-measurement
 
             container link-measurement {
                 description "Enter the link-measurement context";
@@ -69,29 +371,27 @@ submodule nokia-state-test-oam {
 
                         leaf oper-source-address {
                             type types-sros:ip-address;
-                            description "Indicates the source IP address from which TWAMP packets are being sent";
+                            description "Source IP address from which TWAMP packets are being sent";
                         }
 
                         leaf source-auto-assigned {
                             type boolean;
-                            description "Indicates whether the oper-source-address was assigned (true) or configured (false)";
+                            description "Operational source address was assigned (true) or configured (false)";
                         }
 
                         leaf oper-destination-address {
                             type types-sros:ip-address;
-                            description "Indicates the destination IP address to which TWAMP packets are being sent";
+                            description "Destination IP address to which TWAMP packets are being sent";
                         }
 
                         leaf destination-auto-assigned {
                             type boolean;
-                            description
-                                "Indicates whether the oper-destination-address was assigned (true) or configured
-                                 (false)";
+                            description "Operational destination address was assigned (true) or configured (false)";
                         }
 
                         leaf oper-state {
                             type types-sros:up-down-status;
-                            description "Indicates the operational state of link measurement on this interface";
+                            description "Operational state of link measurement on this interface";
                         }
 
                         leaf failure-conditions {
@@ -102,9 +402,7 @@ submodule nokia-state-test-oam {
                                 bit internal-error                 { position 3; }
                                 bit reserved4                      { position 4; }
                             }
-                            description
-                                "Indicates the reason(s) why this interface's link measurement is operationally
-                                 disabled";
+                            description "Reason(s) why this interface's link measurement is operationally down";
                         }
 
                         leaf detectable-tx-error {
@@ -118,12 +416,12 @@ submodule nokia-state-test-oam {
                                 enum invalid-interface-type         { value 7; }
                                 enum same-source-ip-dest-ip         { value 8; }
                             }
-                            description "Indicates a detectable error in delay measurement transmission";
+                            description "Detectable error in link measurement transmission (if any)";
                         }
 
                         leaf reporting {
                             type boolean;
-                            description "Indicates whether the interface is currently reporting to the routing engine";
+                            description "Interface is currently reporting to the routing engine";
                         }
 
                         leaf last-reported-delay {
@@ -136,21 +434,12 @@ submodule nokia-state-test-oam {
                                 }
                             }
                             units "microseconds";
-                            description "Indicates the last delay measurement reported to the routing engine";
+                            description "Most recent delay measurement reported to the routing engine";
                         }
 
                         leaf report-timestamp {
                             type yang:date-and-time;
-                            description
-                                "When ./last-reported-delay > 0, report-timestamp holds the time at which
-                                 ./last-reported-delay was reported to the routing engine.
-
-                                 When ./last-reported-delay = 0, report-timestamp holds the time at which
-                                 ./last-reported-delay was cleared (because its aging timer expired).
-
-                                 When ./last-reported-delay = -1, report-timestamp holds '1970-Jan-01 00:00:00.0'
-                                 UTC as a placeholder representing a delay has not yet been reported to the routing
-                                 engine.";
+                            description "Timestamp of the most recent report to the routing engine";
                         }
 
                         leaf triggered-by {
@@ -163,36 +452,32 @@ submodule nokia-state-test-oam {
                                 enum expired                        { value 6; }
                                 enum reporting-disabled             { value 7; }
                             }
-                            description "Indicates the reason for the report to the routing engine";
+                            description "Reason for the report to the routing engine (if any)";
                         }
 
                         leaf aggregate-newest-index {
                             type uint32;
-                            description
-                                "Indicates the index of the newest aggregate sample window for this interface (at
-                                 /test-oam/link-measurement/results/aggregate/index)";
+                            description "Index of the newest aggregate sample window for this interface";
                         }
 
                         leaf sample-newest-index {
                             type uint32;
-                            description
-                                "Indicates the index of the newest sample window for this interface (at
-                                 /test-oam/link-measurement/results/sample/index)";
+                            description "Index of the newest sample window for this interface";
                         }
 
                         leaf in-use-source-udp-port {
                             type uint32;
-                            description "Indicates the source UDP port in use for the session.";
+                            description "Source UDP port in use for the session";
                         }
 
                         leaf in-use-destination-udp-port {
                             type uint32;
-                            description "Indicates the destination UDP port in use for the session.";
+                            description "Destination UDP port in use for the session";
                         }
 
                         leaf stamp-session-id {
                             type uint32;
-                            description "Indicates the autogenerated session-ID assigned to the session.";
+                            description "Auto-generated session-ID assigned to the session";
                         }
 
                         container statistics {
@@ -209,12 +494,12 @@ submodule nokia-state-test-oam {
                                         type uint32 {
                                             range "1..4294967295";
                                         }
-                                        description "Specifies the index value of aggregate sample windows on the same interface";
+                                        description "Index of an aggregate sample window";
                                     }
 
                                     leaf end-timestamp-utc {
                                         type yang:date-and-time;
-                                        description "Indicates the time (UTC) at which this aggregate sample window closed";
+                                        description "Timestamp when this aggregate sample window closed";
                                     }
 
                                     leaf window-state {
@@ -225,13 +510,13 @@ submodule nokia-state-test-oam {
                                             enum asw-reported                   { value 4; }
                                             enum terminated                     { value 5; }
                                         }
-                                        description "Indicates the state of this aggregate sample window";
+                                        description "Operational state of this aggregate sample window";
                                     }
 
                                     leaf sample-window-count {
                                         type uint32;
                                         description
-                                            "Indicates the number of sample windows that have completed and met their integrity
+                                            "Number of sample windows that have completed and met their integrity
                                              value within this aggregate sample window";
                                     }
 
@@ -239,7 +524,7 @@ submodule nokia-state-test-oam {
                                         type uint32;
                                         units "microseconds";
                                         description
-                                            "Indicates the minimum delay measurement reported to the aggregate sample window (by the
+                                            "Minimum delay measurement reported to the aggregate sample window (by the
                                              sample windows that have been open during its lifetime)";
                                     }
 
@@ -247,7 +532,7 @@ submodule nokia-state-test-oam {
                                         type uint32;
                                         units "microseconds";
                                         description
-                                            "Indicates the maximum delay measurement reported to the aggregate sample window (by the
+                                            "Maximum delay measurement reported to the aggregate sample window (by the
                                              sample windows that have been open during its lifetime)";
                                     }
 
@@ -255,24 +540,21 @@ submodule nokia-state-test-oam {
                                         type uint32;
                                         units "microseconds";
                                         description
-                                            "Indicates the average delay measurement reported to the aggregate sample window (by the
+                                            "Average delay measurement reported to the aggregate sample window (by the
                                              sample windows that have been open during its lifetime)";
                                     }
 
                                     leaf integrity {
                                         type boolean;
                                         description
-                                            "Indicates whether a sufficient percentage of this aggregate sample window's child
-                                             sample windows met their configured integrity value";
+                                            "True when a sufficient percentage of this aggregate sample window's
+                                             sample windows met their configured integrity target";
                                     }
 
                                     leaf result {
                                         type uint32;
                                         units "microseconds";
-                                        description
-                                            "The delay that was being evaluated for report according to
-                                             /test-oam/link-measurement/measurement-template/delay when this aggregate sample window
-                                             was open";
+                                        description "Delay that was being evaluated for report when this aggregate sample window was open";
                                     }
 
                                 } // list index
@@ -290,14 +572,12 @@ submodule nokia-state-test-oam {
                                         type uint32 {
                                             range "1..4294967295";
                                         }
-                                        description
-                                            "Specifies an index used to differentiate sample windows on the same interface over
-                                             time";
+                                        description "Sample window index";
                                     }
 
                                     leaf end-timestamp-utc {
                                         type yang:date-and-time;
-                                        description "Indicates the time (UTC) at which this sample window closed";
+                                        description "Timestamp when this sample window closed";
                                     }
 
                                     leaf window-state {
@@ -307,87 +587,79 @@ submodule nokia-state-test-oam {
                                             enum sw-reported                    { value 3; }
                                             enum terminated                     { value 4; }
                                         }
-                                        description "Indicates the state of this sample window";
+                                        description "Operational state of this sample window";
                                     }
 
                                     leaf sent {
                                         type uint32;
-                                        description "Indicates the number of TWAMP packets that have been sent for this sample window";
+                                        description "Number of TWAMP packets that have been sent for this sample window";
                                     }
 
                                     leaf received {
                                         type uint32;
-                                        description "Indicates the number of TWAMP packets that have been received for this sample window";
+                                        description "Number of TWAMP packets that have been received for this sample window";
                                     }
 
                                     leaf min {
                                         type uint32;
                                         units "microseconds";
-                                        description
-                                            "Indicates the minimum of the series of delay measurements that occurred during this
-                                             sample window.";
+                                        description "Minimum of the series of delay measurements that occurred during this sample window";
                                     }
 
                                     leaf max {
                                         type uint32;
                                         units "microseconds";
-                                        description
-                                            "Indicates the maximum of the series of delay measurements that occurred during this
-                                             sample window";
+                                        description "Maximum of the series of delay measurements that occurred during this sample window";
                                     }
 
                                     leaf avg {
                                         type uint32;
                                         units "microseconds";
-                                        description
-                                            "Indicates the average of the series of delay measurements that occurred during this
-                                             sample window";
+                                        description "Average of the series of delay measurements that occurred during this sample window";
                                     }
 
                                     leaf errors {
                                         type yang:counter32;
-                                        description "Indicates the number of erroneous delay measurements that occurred in this sample window";
+                                        description "Number of erroneous delay measurements that occurred during this sample window";
                                     }
 
                                     leaf integrity {
                                         type boolean;
                                         description
-                                            "Indicates whether the percentage of successful request-response pairs of test packets
-                                             met this sample window's configured integrity value";
+                                            "True when the percentage of successful request-response pairs
+                                             meets this sample window's configured window integrity target";
                                     }
 
                                     leaf result {
                                         type uint32;
                                         units "microseconds";
-                                        description
-                                            "The delay that was being evaluated for report according to
-                                             /test-oam/link-measurement/measurement-template/delay when this sample window was open";
+                                        description "Delay that was being evaluated for report when this sample window was open";
                                     }
 
                                     leaf stamp-u-flag {
                                         type uint32;
                                         description
-                                            "Indicates the count of packets in this sample window with the U (Unrecognized) bit set
-                                             in the flags field of the TLV.";
+                                            "Count of packets in this sample window with the U (Unrecognized) bit set
+                                             in the flags field of the TLV";
                                     }
 
                                     leaf stamp-m-flag {
                                         type uint32;
                                         description
-                                            "Indicates the count of packets in this sample window with the M (Malformed) bit set in
-                                             the flags field of the TLV.";
+                                            "Count of packets in this sample window with the M (Malformed) bit set in
+                                             the flags field of the TLV";
                                     }
 
                                     leaf zero-or-negative-delay-packets {
                                         type uint32;
                                         description
-                                            "Indicates the count of packets that have a zero or negative computed delay that have
-                                             arrived during this sample window.";
+                                            "Count of packets that have a zero or negative computed delay that have
+                                             arrived during this sample window";
                                     }
 
                                     leaf duplicate-packets {
                                         type uint32;
-                                        description "Indicates the count of duplicate packets that have arrived during this sample window.";
+                                        description "Count of duplicate packets that have arrived during this sample window";
                                     }
 
                                 } // list index
@@ -420,7 +692,7 @@ submodule nokia-state-test-oam {
                             bit ike-v2-derived-mode            { position 7; }
                             bit dscp-and-ecn-monitoring        { position 8; }
                         }
-                        description "The set of standard TWAMP protocol options supported by the TWAMP server";
+                        description "Set of standard TWAMP protocol options supported by the TWAMP server";
                     }
 
                     container statistics {
@@ -430,27 +702,27 @@ submodule nokia-state-test-oam {
                             type uint32 {
                                 range "0..128";
                             }
-                            description "The number of currently in-progress sessions";
+                            description "Number of currently in-progress sessions";
                         }
 
                         leaf session-completed {
                             type yang:counter32;
-                            description "The number of test sessions completed";
+                            description "Number of test sessions completed";
                         }
 
                         leaf session-rejected {
                             type yang:counter32;
-                            description "The number of test sessions rejected";
+                            description "Number of test sessions rejected";
                         }
 
                         leaf test-packet-received {
                             type yang:counter32;
-                            description "The number of TWAMP test packets received";
+                            description "Number of TWAMP test packets received";
                         }
 
                         leaf test-packet-transmitted {
                             type yang:counter32;
-                            description "The number of TWAMP test packets sent";
+                            description "Number of TWAMP test packets sent";
                         }
 
                         leaf oper-state {
@@ -460,7 +732,7 @@ submodule nokia-state-test-oam {
                                 enum out-of-service                 { value 3; }
                                 enum transition                     { value 4; }
                             }
-                            description "State of TWAMP server";
+                            description "Operational state of the TWAMP server";
                         }
 
                         leaf up-time {
@@ -494,12 +766,12 @@ submodule nokia-state-test-oam {
                                 bit ikeV2DerivedMode               { position 7; }
                                 bit dscpAndEcnMonitoring           { position 8; }
                             }
-                            description "The set of standard TWAMP protocol options supported by the TWAMP server";
+                            description "Set of standard TWAMP protocol options supported by the TWAMP server";
                         }
 
                         leaf sessions-aborted {
                             type yang:counter32;
-                            description "Test sessions aborted by the TWAMP server";
+                            description "Number of test sessions aborted";
                         }
 
                     } // container statistics
@@ -510,7 +782,7 @@ submodule nokia-state-test-oam {
 
                         leaf ip-prefix {
                             type types-sros:ip-unicast-prefix;
-                            description "Prefix to match against TWAMP client address";
+                            description "Prefix to be (best-fit) matched against a TWAMP client address";
                         }
 
                         container statistics {
@@ -520,27 +792,27 @@ submodule nokia-state-test-oam {
                                 type uint32 {
                                     range "0..128";
                                 }
-                                description "The number of currently in-progress sessions";
+                                description "Number of currently in-progress sessions";
                             }
 
                             leaf session-completed {
                                 type yang:counter32;
-                                description "The number of test sessions completed";
+                                description "Number of test sessions completed";
                             }
 
                             leaf session-rejected {
                                 type yang:counter32;
-                                description "The number of test sessions rejected";
+                                description "Number of test sessions rejected";
                             }
 
                             leaf test-packet-received {
                                 type yang:counter32;
-                                description "The number of TWAMP test packets received";
+                                description "Number of TWAMP test packets received";
                             }
 
                             leaf test-packet-transmitted {
                                 type yang:counter32;
-                                description "The number of TWAMP test packets sent";
+                                description "Number of TWAMP test packets sent";
                             }
 
                             leaf sessions-aborted {
@@ -552,7 +824,7 @@ submodule nokia-state-test-oam {
                                 type uint32 {
                                     range "0..64";
                                 }
-                                description "The number of control connections currently managed by the TWAMP server for the prefix";
+                                description "Number of control connections currently managed by the TWAMP server for the prefix";
                             }
 
                             leaf connections-rejected {
@@ -568,7 +840,7 @@ submodule nokia-state-test-oam {
 
                             leaf client-address {
                                 type types-sros:ip-address;
-                                description "The address of the specified session's TWAMP Session-Sender";
+                                description "Address of the specified session's TWAMP Session-Sender";
                             }
 
                             leaf sequence-number {
@@ -582,27 +854,27 @@ submodule nokia-state-test-oam {
                                 type uint32 {
                                     range "0..128";
                                 }
-                                description "The number of currently in-progress sessions";
+                                description "Number of currently in-progress sessions";
                             }
 
                             leaf session-completed {
                                 type yang:counter32;
-                                description "The number of test sessions completed";
+                                description "Number of test sessions completed";
                             }
 
                             leaf session-rejected {
                                 type yang:counter32;
-                                description "The number of test sessions rejected";
+                                description "Number of test sessions rejected";
                             }
 
                             leaf test-packet-received {
                                 type yang:counter32;
-                                description "The number of TWAMP test packets received";
+                                description "Number of TWAMP test packets received";
                             }
 
                             leaf test-packet-transmitted {
                                 type yang:counter32;
-                                description "The number of TWAMP test packets sent";
+                                description "Number of TWAMP test packets sent";
                             }
 
                             leaf oper-state {
@@ -611,7 +883,7 @@ submodule nokia-state-test-oam {
                                     enum ready                          { value 2; }
                                     enum running                        { value 3; }
                                 }
-                                description "State of a control connection managed by the TWAMP server";
+                                description "Operational state of a control connection managed by the TWAMP server";
                             }
 
                             leaf idle-time {
@@ -630,7 +902,7 @@ submodule nokia-state-test-oam {
 
                         leaf client-address {
                             type types-sros:ip-address;
-                            description "The address of the specified session's TWAMP Session-Sender.";
+                            description "Address of the specified session's TWAMP Session-Sender";
                         }
 
                         leaf connection-sequence-number {
@@ -651,7 +923,7 @@ submodule nokia-state-test-oam {
                             type binary {
                                 length "16";
                             }
-                            description "The session identifier (SID) for the specified session";
+                            description "Session identifier (SID) for the specified session";
                         }
 
                         leaf oper-state {
@@ -660,29 +932,29 @@ submodule nokia-state-test-oam {
                                 enum active                         { value 2; }
                                 enum stop                           { value 3; }
                             }
-                            description "State of the specified session";
+                            description "Operational state of the specified session";
                         }
 
                         leaf sender-address {
                             type types-sros:ip-unicast-address;
-                            description "The address of the specified session's TWAMP Session-Sender";
+                            description "Address of the specified session's TWAMP Session-Sender";
                         }
 
                         leaf sender-udp-port {
                             type types-sros:tcp-udp-port;
                             description
-                                "The source UDP port field of test packets sent by the specified
+                                "Source UDP port field of test packets sent by the specified
                                  session's TWAMP Session-Sender";
                         }
 
                         leaf reflector-address {
                             type types-sros:ip-unicast-address;
-                            description "The address of the specified session's TWAMP Session-Reflector";
+                            description "Address of the specified session's TWAMP Session-Reflector";
                         }
 
                         leaf reflector-udp-port {
                             type types-sros:tcp-udp-port;
-                            description "The UDP listen port of the specified session's TWAMP Session-Reflector";
+                            description "UDP listen port of the specified session's TWAMP Session-Reflector";
                         }
 
                     } // list client
@@ -703,7 +975,9 @@ submodule nokia-state-test-oam {
                                 type types-sros:tcp-udp-port {
                                     range "64374..64383";
                                 }
-                                description "Source UDP port pools port number";
+                                description
+                                    "Source UDP port (in the reserved range
+                                     64374..64383) to be assigned to oam-pm or link-measurement";
                             }
 
                             container statistics {
@@ -711,9 +985,7 @@ submodule nokia-state-test-oam {
 
                                 leaf in-use {
                                     type boolean;
-                                    description
-                                        "Indicates if the mapped source UDP port is in use under
-                                         the application.";
+                                    description "Source UDP port is in use for this application";
                                 }
 
                             } // container statistics

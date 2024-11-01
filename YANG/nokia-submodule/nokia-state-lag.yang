@@ -38,7 +38,7 @@ submodule nokia-state-lag {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2024-04-17";
+    revision "2024-10-11";
 
     grouping state-lag {
         list lag {
@@ -47,7 +47,7 @@ submodule nokia-state-lag {
 
             leaf lag-name {
                 type types-sros:lag-interface;
-                description "LAG name";
+                description "LAG Name always to start with lag-";
             }
 
             leaf lag-id {
@@ -259,6 +259,16 @@ submodule nokia-state-lag {
                 description "This value indicates the diff in percentage between the most and least loaded link.";
             }
 
+            leaf lacp-fallback-time-remaining {
+                type int32;
+                units "seconds";
+                description
+                    "The value indicates the time remaining for LACP
+                     fallback mode to become active.
+                     It is reset to the configured fallback timeout value
+                     whenever a LACP PDU is received.";
+            }
+
             container network {
                 description "Enter the network context";
 
@@ -429,19 +439,23 @@ submodule nokia-state-lag {
                         type leafref {
                             path "../../../../eth-cfm/domain/md-admin-name";
                         }
-                        description "Maintenance Domain (MD) name";
+                        description "A unique administratively assigned name used to identify a domain.";
                     }
 
                     leaf ma-admin-name {
                         type leafref {
                             path "../../../../eth-cfm/domain[md-admin-name=current()/../md-admin-name]/association/ma-admin-name";
                         }
-                        description "Maintenance Association (MA) name";
+                        description "A unique administratively assigned name used to identify an association.";
                     }
 
                     leaf mep-id {
                         type types-eth-cfm:mep-id-type;
-                        description "Maintenance Endpoint (MEP) ID";
+                        description
+                            "A CFM Virtual Maintenance Endpoint
+
+                             Specifies a local Maintenance association End Point identifier unique
+                             over a given maintanance association.";
                     }
 
                     leaf if-index {
@@ -455,7 +469,7 @@ submodule nokia-state-lag {
                     }
 
                     container ais {
-                        description "Enable the ais context";
+                        description "Enter the ais context";
 
                         container received {
                             description "Enter the received context";
@@ -492,7 +506,7 @@ submodule nokia-state-lag {
                     } // container ais
 
                     container csf {
-                        description "Enable the csf context";
+                        description "Enter the csf context";
 
                         container received {
                             description "Enter the received context";
@@ -768,7 +782,7 @@ submodule nokia-state-lag {
                     type leafref {
                         path "../../../port/port-id";
                     }
-                    description "Identifier to uniquely identify the port in the LAG";
+                    description "The identifier which uniquely identifies the port in the LAG.";
                 }
 
                 leaf active-standby {
@@ -846,6 +860,11 @@ submodule nokia-state-lag {
                     description "egress rate in kilobps";
                 }
 
+                leaf lacp-fallback-active {
+                    type boolean;
+                    description "LACP fallback port is active.";
+                }
+
                 container bfd {
                     description "Enter the bfd context";
 
@@ -911,7 +930,7 @@ submodule nokia-state-lag {
                     type int32 {
                         range "1..64";
                     }
-                    description "Link map profile to control LAG ports";
+                    description "The LAG link map profile identifier.";
                 }
 
                 leaf active-link {
@@ -1308,6 +1327,66 @@ submodule nokia-state-lag {
                          counter-discontinuity-time.";
                 }
 
+                container aggregate-queue {
+                    description "Enter the aggregate-queue context";
+
+                    leaf ingress-forward-packets {
+                        type yang:counter64;
+                        description
+                            "Indicates the total number of ingress packets forwarded by all queues on
+                             the member ports.";
+                    }
+
+                    leaf ingress-forward-octets {
+                        type yang:counter64;
+                        description
+                            "Indicates the total number of ingress octets forwarded by all queues on
+                             the member ports.";
+                    }
+
+                    leaf egress-forward-packets {
+                        type yang:counter64;
+                        description
+                            "Indicates the total number of egress packets forwarded by all queues on
+                             the member ports.";
+                    }
+
+                    leaf egress-forward-octets {
+                        type yang:counter64;
+                        description
+                            "Indicates the total number of egress octets forwarded by all queues on
+                             the member ports.";
+                    }
+
+                    leaf ingress-drop-packets {
+                        type yang:counter64;
+                        description
+                            "Indicates the total number of dropped ingress packets by all queues on
+                             the member ports.";
+                    }
+
+                    leaf ingress-drop-octets {
+                        type yang:counter64;
+                        description
+                            "Indicates the total number of dropped ingress octets by all queues on
+                             the member ports.";
+                    }
+
+                    leaf egress-drop-packets {
+                        type yang:counter64;
+                        description
+                            "Indicates the total number of dropped egress packets by all queues on
+                             the member ports.";
+                    }
+
+                    leaf egress-drop-octets {
+                        type yang:counter64;
+                        description
+                            "Indicates the total number of dropped egress octets by all queues on
+                             the member ports.";
+                    }
+
+                } // container aggregate-queue
 
             } // container statistics
 
@@ -1388,7 +1467,7 @@ submodule nokia-state-lag {
 
                     leaf mac-type {
                         type types-lldp:mac-addr-type;
-                        description "Destination MAC address type";
+                        description "The identifier which uniquely identifies the MAC address type.";
                     }
 
                     list tx-mgmt-address {
@@ -1397,24 +1476,12 @@ submodule nokia-state-lag {
 
                         leaf mgmt-address-system-type {
                             type enumeration {
-                                enum oob {
-                                    value 0;
-                                    description "Transmit out-of-band IPv4 address for active CPM";
-                                }
-                                enum system {
-                                    value 1;
-                                    description "Transmit the system IP address";
-                                }
-                                enum system-ipv6 {
-                                    value 2;
-                                    description "Transmit the system IPv6 address";
-                                }
-                                enum oob-ipv6 {
-                                    value 3;
-                                    description "Transmit the out-of-band IPv6 address for active CPM";
-                                }
+                                enum oob                            { value 0; }
+                                enum system                         { value 1; }
+                                enum system-ipv6                    { value 2; }
+                                enum oob-ipv6                       { value 3; }
                             }
-                            description "Management address to transmit";
+                            description "The identifier which uniquely identifies the management address.";
                         }
 
                         leaf mgmt-address {

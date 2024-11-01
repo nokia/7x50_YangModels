@@ -39,7 +39,7 @@ submodule nokia-conf-ipsec {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2024-04-19";
+    revision "2024-08-02";
 
     grouping conf-ipsec {
         container ipsec {
@@ -609,6 +609,12 @@ submodule nokia-conf-ipsec {
                                 description "Send IDr payload in last IKE authentication response";
                             }
 
+                            leaf ppk-required {
+                                type boolean;
+                                default "false";
+                                description "Force the use of PPK";
+                            }
+
                             container ikev2-fragment {
                                 presence "Enable the ikev2-fragment context";
                                 description "Enable the ikev2-fragment context";
@@ -944,6 +950,94 @@ submodule nokia-conf-ipsec {
 
             } // list ipsec-transform
 
+            list ppk-list {
+                key "name";
+                max-elements 128;
+                description "Enter the ppk-list list instance";
+
+                leaf name {
+                    type types-sros:named-item;
+                    description "PPK list instance name";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                list ppk {
+                    key "ppk-id";
+                    max-elements 128;
+                    description "Enter the ppk list instance";
+
+                    leaf ppk-id {
+                        type types-sros:named-item-64;
+                        description "PPK ID";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container value {
+                        presence "Enable the value context";
+                        description "Enable the value context";
+
+                        choice value {
+                            mandatory true;
+                            case ascii {
+
+                                leaf ascii {
+                                    type types-sros:encrypted-leaf {
+                                        length "1..115";
+                                    }
+                                    description "PPK value as an ASCII string";
+                                }
+
+                            }
+                            case hex {
+
+                                leaf hex {
+                                    type types-sros:encrypted-leaf-hex {
+                                        length "1..115";
+                                    }
+                                    description "PPK value as a hexadecimal string with prefix 0x";
+                                }
+
+                            }
+                        }
+                    } // container value
+
+                } // list ppk
+
+            } // list ppk-list
 
             list static-sa {
                 key "name";
@@ -1979,6 +2073,13 @@ submodule nokia-conf-ipsec {
                     description "Enable traffic class copy upon decapsulation";
                 }
 
+                leaf ppk-list {
+                    type leafref {
+                        path "../../ppk-list/name";
+                    }
+                    description "PPK list to use in the tunnel template";
+                }
+
                 leaf propagate-pmtu-v4 {
                     type boolean;
                     default "true";
@@ -2051,6 +2152,26 @@ submodule nokia-conf-ipsec {
 
                 } // container icmp6-generation
 
+                container reverse-route {
+                    description "Enter the reverse-route context";
+
+                    leaf metric {
+                        type uint32 {
+                            range "0..65535";
+                        }
+                        default "0";
+                        description "Metric used for DL2L tunnel reverse routes";
+                    }
+
+                    leaf preference {
+                        type uint32 {
+                            range "0..255";
+                        }
+                        default "0";
+                        description "Preference used for DL2L tunnel reverse routes";
+                    }
+
+                } // container reverse-route
 
                 container icmp-generation {
                     description "Enter the icmp-generation context";
@@ -2281,6 +2402,24 @@ submodule nokia-conf-ipsec {
                             }
                         } // container id
 
+                        container ppk {
+                            description "Enter the ppk context";
+
+                            leaf list {
+                                type leafref {
+                                    path "../../../../../ppk-list/name";
+                                }
+                                description "PPK list instance name";
+                            }
+
+                            leaf id {
+                                type leafref {
+                                    path "../../../../../ppk-list[name=current()/../list]/ppk/ppk-id";
+                                }
+                                description "PPK ID";
+                            }
+
+                        } // container ppk
 
                     } // container dynamic
 

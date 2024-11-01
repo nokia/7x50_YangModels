@@ -67,7 +67,7 @@ submodule nokia-conf-svc-ies {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2024-05-31";
+    revision "2024-10-02";
 
     grouping conf-svc-ies {
         list ies {
@@ -701,9 +701,15 @@ submodule nokia-conf-svc-ies {
                     description "Enable/disable tunnel interface";
                 }
 
+                leaf ip-tunnel-interface {
+                    type boolean;
+                    sros-ext:immutable;
+                    default "false";
+                    description "Enable IP tunnel interface";
+                }
+
                 leaf loopback {
                     type boolean;
-                    default "false";
                     description "Use interface as a loopback interface";
                 }
 
@@ -854,6 +860,36 @@ submodule nokia-conf-svc-ies {
 
                 } // container ptp-hw-assist
 
+                container egress {
+                    when "../ip-tunnel-interface = 'true'" {
+                        description "only allowed in ip-tunnel interface";
+                    }
+                    description "Enter the egress context";
+
+                    container filter {
+                        when "../../ip-tunnel-interface = 'true'" {
+                            description "only allowed in ip-tunnel interface";
+                        }
+                        description "Enter the filter context";
+
+                        leaf ip {
+                            type leafref {
+                                path "../../../../../../filter/ip-filter/filter-name";
+                            }
+                            description "IP filter name";
+                        }
+
+                        leaf ipv6 {
+                            type leafref {
+                                path "../../../../../../filter/ipv6-filter/filter-name";
+                            }
+                            description "IPv6 filter name";
+                        }
+
+                    } // container filter
+
+                } // container egress
+
                 container ingress {
                     description "Enter the ingress context";
 
@@ -869,6 +905,28 @@ submodule nokia-conf-svc-ies {
                         default "false";
                         description "Enable BGP destination class lookup";
                     }
+
+                    container filter {
+                        when "../../ip-tunnel-interface = 'true'" {
+                            description "only allowed in ip-tunnel interface";
+                        }
+                        description "Enter the filter context";
+
+                        leaf ip {
+                            type leafref {
+                                path "../../../../../../filter/ip-filter/filter-name";
+                            }
+                            description "IP filter name";
+                        }
+
+                        leaf ipv6 {
+                            type leafref {
+                                path "../../../../../../filter/ipv6-filter/filter-name";
+                            }
+                            description "IPv6 filter name";
+                        }
+
+                    } // container filter
 
                 } // container ingress
 
@@ -900,6 +958,7 @@ submodule nokia-conf-svc-ies {
                     }
 
                 } // container load-balancing
+
 
                 container ping-template {
                     presence "Enable the ping-template context";
@@ -1372,6 +1431,27 @@ submodule nokia-conf-svc-ies {
                                             }
                                         } // container id
 
+                                        container ppk {
+                                            sros-ext:auto-restart-to-modify;
+                                            description "Enter the ppk context";
+
+                                            leaf list {
+                                                type leafref {
+                                                    path "../../../../../../../../../ipsec/ppk-list/name";
+                                                }
+                                                sros-ext:auto-restart-to-modify;
+                                                description "PPK list instance name";
+                                            }
+
+                                            leaf id {
+                                                type leafref {
+                                                    path "../../../../../../../../../ipsec/ppk-list[name=current()/../list]/ppk/ppk-id";
+                                                }
+                                                sros-ext:auto-restart-to-modify;
+                                                description "PPK ID";
+                                            }
+
+                                        } // container ppk
 
                                     } // container dynamic
 
@@ -4087,6 +4167,13 @@ submodule nokia-conf-svc-ies {
                                 description "Enable the generation and the reception of AIS messages";
                             }
 
+                            leaf monitor-oper-group {
+                                type leafref {
+                                    path "../../../../../../oper-group/name";
+                                }
+                                description "Operational group to monitor";
+                            }
+
                             leaf-list apply-groups {
                                 type leafref {
                                     path "../../../../../../../groups/group/name";
@@ -5306,9 +5393,6 @@ submodule nokia-conf-svc-ies {
                 } // list vpls
 
                 container hold-time {
-                    when "../tunnel = 'false' or not(../loopback = 'false')" {
-                        description "not allowed in a tunnel interface unless it is a loopback interface";
-                    }
                     description "Enter the hold-time context";
 
                     container ipv4 {
@@ -5790,7 +5874,7 @@ submodule nokia-conf-svc-ies {
                     } // container addresses
 
                     container neighbor-discovery {
-                        when "../../tunnel = 'false'" {
+                        when "../../tunnel = 'false' and ../../ip-tunnel-interface = 'false'" {
                             description "not allowed in a tunnel interface";
                         }
                         description "Enter the neighbor-discovery context";
@@ -5991,6 +6075,9 @@ submodule nokia-conf-svc-ies {
                     } // container neighbor-discovery
 
                     container dhcp {
+                        when "../../ip-tunnel-interface = 'false'" {
+                            description "not allowed in a tunnel interface";
+                        }
                         description "Enter the dhcp context";
 
                         leaf admin-state {
@@ -6826,7 +6913,7 @@ submodule nokia-conf-svc-ies {
                     } // list address
 
                     container dhcp6 {
-                        when "../../tunnel = 'false'" {
+                        when "../../tunnel = 'false' and ../../ip-tunnel-interface = 'false'" {
                             description "not allowed in a tunnel interface";
                         }
                         description "Enter the dhcp6 context";
@@ -7139,7 +7226,7 @@ submodule nokia-conf-svc-ies {
                     } // container dhcp6
 
                     container neighbor-discovery {
-                        when "../../tunnel = 'false'" {
+                        when "../../tunnel = 'false' and ../../ip-tunnel-interface = 'false'" {
                             description "not allowed in a tunnel interface";
                         }
                         description "Enter the neighbor-discovery context";
@@ -7554,6 +7641,90 @@ submodule nokia-conf-svc-ies {
 
                 } // container if-attribute
 
+                list ip-tunnel {
+                    when "../ip-tunnel-interface = 'true'" {
+                        description "only allowed in ip-tunnel interface";
+                    }
+                    key "tunnel-name";
+                    max-elements 1;
+                    description "Enter the ip-tunnel list instance";
+
+                    leaf tunnel-name {
+                        type types-sros:interface-name;
+                        description "IP tunnel name";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of the tunnel";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf delivery-routing-instance {
+                        type string;
+                        sros-ext:auto-restart-to-modify;
+                        description "Delivery routing instance";
+                    }
+
+                    leaf remote-ip-address {
+                        type types-sros:ip-address;
+                        sros-ext:auto-restart-to-modify;
+                        description "Remote IP address of the tunnel";
+                    }
+
+                    leaf local-ip-address {
+                        type types-sros:ip-address;
+                        sros-ext:auto-restart-to-modify;
+                        description "Local IP address of the tunnel";
+                    }
+
+                    leaf ingress-stats {
+                        type boolean;
+                        default "false";
+                        description "Gather ingress statistics for the tunnel";
+                    }
+
+                    leaf egress-stats {
+                        type boolean;
+                        default "false";
+                        description "Gather egress statistics for the tunnel";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container gre-header {
+                        description "Enter the gre-header context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of the GRE header in the tunnel";
+                        }
+
+                    } // container gre-header
+
+                } // list ip-tunnel
 
             } // list interface
 

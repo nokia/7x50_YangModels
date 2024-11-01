@@ -98,7 +98,7 @@ submodule nokia-conf-svc-vprn {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2024-05-31";
+    revision "2024-10-07";
 
     grouping conf-svc-vprn {
         list vprn {
@@ -4367,6 +4367,12 @@ submodule nokia-conf-svc-vprn {
                     description "System behavior for new reverse route";
                 }
 
+                leaf overlapping-reverse-route {
+                    type boolean;
+                    default "false";
+                    description "Accept overlapping DL2L tunnel reverse routes";
+                }
+
                 list security-policy {
                     key "id";
                     description "Enter the security-policy list instance";
@@ -7324,6 +7330,13 @@ submodule nokia-conf-svc-vprn {
                                         description "Administrative state for P2MP SR";
                                     }
 
+                                    leaf static-policy-srv6 {
+                                        type leafref {
+                                            path "../../../../../../../router/p2mp-sr-tree/p2mp-policy/p2mp-policy-name";
+                                        }
+                                        description "Static policy for inclusive SRV6 MVPN provider tunnel";
+                                    }
+
                                     container bfd-root {
                                         presence "Enable the bfd-root context";
                                         description "Enable the bfd-root context";
@@ -7371,7 +7384,7 @@ submodule nokia-conf-svc-vprn {
                                 type leafref {
                                     path "../../../../../../../fwd-path-ext/fpe/fpe-id";
                                 }
-                                description "Forward path extension (FPE) ID for the entry";
+                                description "FPE ID for LAG interface of redundant monitoring IOMs";
                             }
 
                         } // container umh-rate-monitoring
@@ -7547,6 +7560,13 @@ submodule nokia-conf-svc-vprn {
                                         description "Administrative state of P2MP SR";
                                     }
 
+                                    leaf static-policy-srv6 {
+                                        type leafref {
+                                            path "../../../../../../../router/p2mp-sr-tree/p2mp-policy/p2mp-policy-name";
+                                        }
+                                        description "Static policy for inclusive SRv6 MVPN provider tunnel";
+                                    }
+
                                 } // container p2mp-sr
 
                             }
@@ -7711,6 +7731,13 @@ submodule nokia-conf-svc-vprn {
                                             description "Use P2MP policy for multistream MVPN provider tunnel";
                                         }
 
+                                        leaf static-policy-srv6 {
+                                            type leafref {
+                                                path "../../../../../../../../router/p2mp-sr-tree/p2mp-policy/p2mp-policy-name";
+                                            }
+                                            description "Static policy for multistream MVPN provider tunnel";
+                                        }
+
                                     } // container p2mp-sr
 
                                 }
@@ -7768,7 +7795,7 @@ submodule nokia-conf-svc-vprn {
                                     type leafref {
                                         path "../../../../../../../../fwd-path-ext/fpe/fpe-id";
                                     }
-                                    description "Forward path extension (FPE) ID for the entry";
+                                    description "FPE ID for LAG interface of redundant monitoring IOMs";
                                 }
 
                                 leaf-list apply-groups {
@@ -8357,6 +8384,12 @@ submodule nokia-conf-svc-vprn {
                             description "Enable flexible algorithm fallback";
                         }
 
+                        leaf enforce-untagged-route {
+                            type types-sros:untagged-route-type;
+                            default "none";
+                            description "Untagged route type enforcement";
+                        }
+
                         container resolution-filter {
                             description "Enter the resolution-filter context";
 
@@ -8514,7 +8547,7 @@ submodule nokia-conf-svc-vprn {
                             range "1..16777215";
                         }
                         sros-ext:auto-restart-to-modify;
-                        description "EVI information";
+                        description "EVPN instance ID";
                     }
 
                     leaf resolution {
@@ -8698,6 +8731,211 @@ submodule nokia-conf-svc-vprn {
 
                 } // list segment-routing-v6
 
+                list vxlan {
+                    key "bgp-instance";
+                    description "Enter the vxlan list instance";
+
+                    leaf bgp-instance {
+                        type int32 {
+                            range "1";
+                        }
+                        description "BGP instance";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of the BGP EVPN VXLAN";
+                    }
+
+                    leaf default-route-tag {
+                        type types-services:one-byte-value;
+                        sros-ext:auto-restart-to-modify;
+                        description "Default route tag";
+                    }
+
+                    leaf route-distinguisher {
+                        type types-services:vpn-rd-or-auto-rd;
+                        description "Route distinguisher";
+                    }
+
+                    leaf domain-id {
+                        type types-services:domain-id;
+                        sros-ext:auto-restart-to-modify;
+                        description "Domain ID of received BGP route before readvertisement";
+                    }
+
+                    leaf evi {
+                        type uint32 {
+                            range "1..16777215";
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        description "EVPN instance ID";
+                    }
+
+                    leaf vxlan-instance {
+                        type leafref {
+                            path "../../../../vprn/vxlan/instance/vxlan-instance";
+                        }
+                        mandatory true;
+                        description "VXLAN source instance";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container vrf-target {
+                        description "Enter the vrf-target context";
+
+                        choice vrf-target {
+                            case vrf-both-target {
+
+                                leaf community {
+                                    type types-services:route-target;
+                                    description "Extended BGP community";
+                                }
+
+                            }
+                            case vrf-ovr-target {
+
+                                leaf import-community {
+                                    type types-services:route-target;
+                                    description "Communities accepted from remote PE neighbors";
+                                }
+
+                                leaf export-community {
+                                    type types-services:route-target;
+                                    description "Communities sent to remote PE neighbors";
+                                }
+
+                            }
+                        }
+                    } // container vrf-target
+
+                    container vrf-import {
+                        presence "Enable the vrf-import context";
+                        description "Enable the vrf-import context";
+
+                        leaf-list policy {
+                            type union {
+                                type types-sros:policy-expr-string;
+                                type string;
+                            }
+                            min-elements 1;
+                            max-elements 15;
+                            ordered-by user;
+                            description "Policy name";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // container vrf-import
+
+                    container vrf-export {
+                        presence "Enable the vrf-export context";
+                        description "Enable the vrf-export context";
+
+                        leaf-list policy {
+                            type union {
+                                type types-sros:policy-expr-string;
+                                type string;
+                            }
+                            min-elements 1;
+                            max-elements 15;
+                            ordered-by user;
+                            description "Policy name";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // container vrf-export
+
+                    container evpn-link-bandwidth {
+                        description "Enter the evpn-link-bandwidth context";
+
+                        leaf weighted-ecmp {
+                            type boolean;
+                            default "false";
+                            description "Enable weighted ECMP";
+                        }
+
+                        container advertise {
+                            presence "Enable the advertise context";
+                            description "Enable the advertise context";
+
+                            leaf weight {
+                                type union {
+                                    type uint32 {
+                                        range "1..128";
+                                    }
+                                    type enumeration {
+                                        enum dynamic                        { value 0; }
+                                    }
+                                }
+                                default "dynamic";
+                                description "Weight of the route";
+                            }
+
+                            leaf max-dynamic-weight {
+                                type uint32 {
+                                    range "1..128";
+                                }
+                                default "128";
+                                description "Maximum dynamic weight of the route";
+                            }
+
+                        } // container advertise
+
+                    } // container evpn-link-bandwidth
+
+                } // list vxlan
 
             } // container bgp-evpn
 
@@ -8848,6 +9086,12 @@ submodule nokia-conf-svc-vprn {
                             description "Resolution method for tunnel selection";
                         }
 
+                        leaf enforce-untagged-route {
+                            type types-sros:untagged-route-type;
+                            default "none";
+                            description "Untagged route type enforcement";
+                        }
+
                         leaf enforce-strict-tunnel-tagging {
                             type boolean;
                             default "false";
@@ -8858,6 +9102,12 @@ submodule nokia-conf-svc-vprn {
                             type boolean;
                             default "false";
                             description "Enable flexible algorithm fallback";
+                        }
+
+                        leaf static-blackhole-first {
+                            type boolean;
+                            default "false";
+                            description "Check for static blackhole route to resolve next hop";
                         }
 
                         leaf-list apply-groups {
@@ -9309,6 +9559,35 @@ submodule nokia-conf-svc-vprn {
                             } // list priv-lvl
 
                         } // container priv-lvl-map
+
+                        container service-request {
+                            description "Services to be requested from TACACS+ server.";
+
+                            leaf nokia-netconf-base-op-authorization {
+                                type boolean;
+                                default "false";
+                                description
+                                    "Specifies whether the service 'nokia-user' will be requested from TACACS+ server
+                                     after successfull authentication.";
+                            }
+
+                            leaf nokia-user {
+                                type boolean;
+                                default "false";
+                                description
+                                    "Specifies whether the service 'nokia-netconf-base-op-authorization' will be requested from TACACS+ server
+                                     after successfull authentication.";
+                            }
+
+                            leaf nokia-grpc-rpc-authorization {
+                                type boolean;
+                                default "false";
+                                description
+                                    "Specifies whether the service 'nokia-grpc-rpc-authorization' will be requested from TACACS+ server
+                                     after successfull authentication.";
+                            }
+
+                        } // container service-request
 
                         list server {
                             key "index";
@@ -9920,6 +10199,13 @@ submodule nokia-conf-svc-vprn {
                     type types-services:resolve-status;
                     default "none";
                     description "Resolution method for tunnel selection";
+                }
+
+                leaf enforce-untagged-route {
+                    status obsolete;
+                    type types-sros:untagged-route-type;
+                    default "none";
+                    description "Untagged route type enforcement";
                 }
 
                 leaf enforce-strict-tunnel-tagging {
@@ -14514,9 +14800,15 @@ submodule nokia-conf-svc-vprn {
                     description "Enable/disable tunnel interface";
                 }
 
+                leaf ip-tunnel-interface {
+                    type boolean;
+                    sros-ext:immutable;
+                    default "false";
+                    description "Enable IP tunnel interface";
+                }
+
                 leaf loopback {
                     type boolean;
-                    default "false";
                     description "Use interface as a loopback interface";
                 }
 
@@ -14660,6 +14952,36 @@ submodule nokia-conf-svc-vprn {
 
                 } // container ptp-hw-assist
 
+                container egress {
+                    when "../ip-tunnel-interface = 'true'" {
+                        description "only allowed in ip-tunnel interface";
+                    }
+                    description "Enter the egress context";
+
+                    container filter {
+                        when "../../ip-tunnel-interface = 'true'" {
+                            description "only allowed in ip-tunnel interface";
+                        }
+                        description "Enter the filter context";
+
+                        leaf ip {
+                            type leafref {
+                                path "../../../../../../filter/ip-filter/filter-name";
+                            }
+                            description "IP filter name";
+                        }
+
+                        leaf ipv6 {
+                            type leafref {
+                                path "../../../../../../filter/ipv6-filter/filter-name";
+                            }
+                            description "IPv6 filter name";
+                        }
+
+                    } // container filter
+
+                } // container egress
+
                 container ingress {
                     description "Enter the ingress context";
 
@@ -14675,6 +14997,28 @@ submodule nokia-conf-svc-vprn {
                         default "false";
                         description "Enable BGP destination class lookup";
                     }
+
+                    container filter {
+                        when "../../ip-tunnel-interface = 'true'" {
+                            description "only allowed in ip-tunnel interface";
+                        }
+                        description "Enter the filter context";
+
+                        leaf ip {
+                            type leafref {
+                                path "../../../../../../filter/ip-filter/filter-name";
+                            }
+                            description "IP filter name";
+                        }
+
+                        leaf ipv6 {
+                            type leafref {
+                                path "../../../../../../filter/ipv6-filter/filter-name";
+                            }
+                            description "IPv6 filter name";
+                        }
+
+                    } // container filter
 
                 } // container ingress
 
@@ -14707,10 +15051,8 @@ submodule nokia-conf-svc-vprn {
 
                 } // container load-balancing
 
+
                 container hold-time {
-                    when "../tunnel = 'false' or not(../loopback = 'false')" {
-                        description "not allowed in a tunnel interface unless it is a loopback interface";
-                    }
                     description "Enter the hold-time context";
 
                     container ipv4 {
@@ -15252,6 +15594,27 @@ submodule nokia-conf-svc-vprn {
                                             }
                                         } // container id
 
+                                        container ppk {
+                                            sros-ext:auto-restart-to-modify;
+                                            description "Enter the ppk context";
+
+                                            leaf list {
+                                                type leafref {
+                                                    path "../../../../../../../../../ipsec/ppk-list/name";
+                                                }
+                                                sros-ext:auto-restart-to-modify;
+                                                description "PPK list instance name";
+                                            }
+
+                                            leaf id {
+                                                type leafref {
+                                                    path "../../../../../../../../../ipsec/ppk-list[name=current()/../list]/ppk/ppk-id";
+                                                }
+                                                sros-ext:auto-restart-to-modify;
+                                                description "PPK ID";
+                                            }
+
+                                        } // container ppk
 
                                     } // container dynamic
 
@@ -15893,7 +16256,7 @@ submodule nokia-conf-svc-vprn {
                     } // container addresses
 
                     container neighbor-discovery {
-                        when "../../tunnel = 'false'" {
+                        when "../../tunnel = 'false' and ../../ip-tunnel-interface = 'false'" {
                             description "not allowed in a tunnel interface";
                         }
                         description "Enter the neighbor-discovery context";
@@ -16094,6 +16457,9 @@ submodule nokia-conf-svc-vprn {
                     } // container neighbor-discovery
 
                     container dhcp {
+                        when "../../ip-tunnel-interface = 'false'" {
+                            description "not allowed in a tunnel interface";
+                        }
                         description "Enter the dhcp context";
 
                         leaf admin-state {
@@ -19075,6 +19441,13 @@ submodule nokia-conf-svc-vprn {
                                 description "Enable the generation and the reception of AIS messages";
                             }
 
+                            leaf monitor-oper-group {
+                                type leafref {
+                                    path "../../../../../../oper-group/name";
+                                }
+                                description "Operational group to monitor";
+                            }
+
                             leaf-list apply-groups {
                                 type leafref {
                                     path "../../../../../../../groups/group/name";
@@ -20317,6 +20690,27 @@ submodule nokia-conf-svc-vprn {
                                             }
                                         } // container id
 
+                                        container ppk {
+                                            sros-ext:auto-restart-to-modify;
+                                            description "Enter the ppk context";
+
+                                            leaf list {
+                                                type leafref {
+                                                    path "../../../../../../../../../ipsec/ppk-list/name";
+                                                }
+                                                sros-ext:auto-restart-to-modify;
+                                                description "PPK list instance name";
+                                            }
+
+                                            leaf id {
+                                                type leafref {
+                                                    path "../../../../../../../../../ipsec/ppk-list[name=current()/../list]/ppk/ppk-id";
+                                                }
+                                                sros-ext:auto-restart-to-modify;
+                                                description "PPK ID";
+                                            }
+
+                                        } // container ppk
 
                                     } // container dynamic
 
@@ -20729,6 +21123,20 @@ submodule nokia-conf-svc-vprn {
                                     description "Exclude a configuration group at this level";
                                 }
 
+                                container interface-less-routing {
+                                    presence "Enable the interface-less-routing context";
+                                    description "Enable the interface-less-routing context";
+
+                                    leaf bgp-evpn-instance {
+                                        type int32 {
+                                            range "1";
+                                        }
+                                        default "1";
+                                        description "EVPN interface-less VPRN instance";
+                                    }
+
+                                } // container interface-less-routing
+
                             } // list advertise
 
                         } // container arp
@@ -20779,6 +21187,20 @@ submodule nokia-conf-svc-vprn {
                                     ordered-by user;
                                     description "Exclude a configuration group at this level";
                                 }
+
+                                container interface-less-routing {
+                                    presence "Enable the interface-less-routing context";
+                                    description "Enable the interface-less-routing context";
+
+                                    leaf bgp-evpn-instance {
+                                        type int32 {
+                                            range "1";
+                                        }
+                                        default "1";
+                                        description "EVPN interface-less VPRN instance";
+                                    }
+
+                                } // container interface-less-routing
 
                             } // list advertise
 
@@ -21201,7 +21623,7 @@ submodule nokia-conf-svc-vprn {
                     } // list address
 
                     container dhcp6 {
-                        when "../../tunnel = 'false'" {
+                        when "../../tunnel = 'false' and ../../ip-tunnel-interface = 'false'" {
                             description "not allowed in a tunnel interface";
                         }
                         description "Enter the dhcp6 context";
@@ -21514,7 +21936,7 @@ submodule nokia-conf-svc-vprn {
                     } // container dhcp6
 
                     container neighbor-discovery {
-                        when "../../tunnel = 'false'" {
+                        when "../../tunnel = 'false' and ../../ip-tunnel-interface = 'false'" {
                             description "not allowed in a tunnel interface";
                         }
                         description "Enter the neighbor-discovery context";
@@ -21946,6 +22368,90 @@ submodule nokia-conf-svc-vprn {
 
                 } // container external-reference
 
+                list ip-tunnel {
+                    when "../ip-tunnel-interface = 'true'" {
+                        description "only allowed in ip-tunnel interface";
+                    }
+                    key "tunnel-name";
+                    max-elements 1;
+                    description "Enter the ip-tunnel list instance";
+
+                    leaf tunnel-name {
+                        type types-sros:interface-name;
+                        description "IP tunnel name";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of the tunnel";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf delivery-routing-instance {
+                        type string;
+                        sros-ext:auto-restart-to-modify;
+                        description "Delivery routing instance";
+                    }
+
+                    leaf remote-ip-address {
+                        type types-sros:ip-address;
+                        sros-ext:auto-restart-to-modify;
+                        description "Remote IP address of the tunnel";
+                    }
+
+                    leaf local-ip-address {
+                        type types-sros:ip-address;
+                        sros-ext:auto-restart-to-modify;
+                        description "Local IP address of the tunnel";
+                    }
+
+                    leaf ingress-stats {
+                        type boolean;
+                        default "false";
+                        description "Gather ingress statistics for the tunnel";
+                    }
+
+                    leaf egress-stats {
+                        type boolean;
+                        default "false";
+                        description "Gather egress statistics for the tunnel";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container gre-header {
+                        description "Enter the gre-header context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of the GRE header in the tunnel";
+                        }
+
+                    } // container gre-header
+
+                } // list ip-tunnel
 
             } // list interface
 
@@ -26061,6 +26567,13 @@ submodule nokia-conf-svc-vprn {
             container vxlan {
                 description "Enter the vxlan context";
 
+                leaf source-vtep {
+                    type leafref {
+                        path "../../../system/vxlan/tunnel-termination/ip-address";
+                    }
+                    description "VXLAN source termination end point";
+                }
+
                 list tunnel-termination {
                     key "ip-address";
                     description "Enter the tunnel-termination list instance";
@@ -26099,6 +26612,93 @@ submodule nokia-conf-svc-vprn {
 
                 } // list tunnel-termination
 
+                list instance {
+                    key "vxlan-instance";
+                    description "Enter the instance list instance";
+
+                    leaf vxlan-instance {
+                        type uint32 {
+                            range "1";
+                        }
+                        description "VXLAN instance";
+                    }
+
+                    leaf vni {
+                        type types-services:vxlan-vni;
+                        sros-ext:immutable;
+                        mandatory true;
+                        description "Ingress VXLAN network ID of the VXLAN instance";
+                    }
+
+                    leaf source-vtep-security {
+                        type boolean;
+                        default "false";
+                        description "Enable source VTEP security";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container network {
+                        description "Enter the network context";
+
+                        container ingress {
+                            description "Enter the ingress context";
+
+                            container qos {
+                                description "Enter the qos context";
+
+                                container network {
+                                    description "Enter the network context";
+
+                                    leaf policy-name {
+                                        type leafref {
+                                            path "../../../../../../../../../qos/network/network-policy-name";
+                                        }
+                                        description "Ingress network policy name applied to this SDP binding";
+                                    }
+
+                                    container fp-redirect-group {
+                                        description "Enter the fp-redirect-group context";
+
+                                        leaf group-name {
+                                            type leafref {
+                                                path "../../../../../../../../../../qos/queue-group-templates/ingress/queue-group/ingress-queue-group-name";
+                                            }
+                                            description "Forwarding plane queue group template name";
+                                        }
+
+                                        leaf instance {
+                                            type types-services:qos-qgrp-instance-id;
+                                            description "Forwarding plane ingress queue group instance";
+                                        }
+
+                                    } // container fp-redirect-group
+
+                                } // container network
+
+                            } // container qos
+
+                        } // container ingress
+
+                    } // container network
+
+                } // list instance
 
             } // container vxlan
 

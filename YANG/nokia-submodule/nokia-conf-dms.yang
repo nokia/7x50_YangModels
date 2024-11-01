@@ -42,7 +42,7 @@ submodule nokia-conf-dms {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2024-07-15";
+    revision "2024-10-09";
 
     grouping conf-dms-defender-mitigation-system {
         container defender-mitigation-system {
@@ -164,8 +164,11 @@ submodule nokia-conf-dms {
                 }
 
                 leaf refresh-period {
-                    type uint32;
+                    type uint32 {
+                        range "0..200";
+                    }
                     units "hours";
+                    default "0";
                     description "Refresh period to update Genome lists";
                 }
 
@@ -201,6 +204,62 @@ submodule nokia-conf-dms {
 
             } // container genome-list-import
 
+            container user-list-import {
+                description "Enter the user-list-import context";
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of user-list import";
+                }
+
+                leaf http-client-profile {
+                    type leafref {
+                        path "../../../system/transmission-profile/name";
+                    }
+                    description "HTTP client profile used to import user lists";
+                }
+
+                leaf refresh-period {
+                    type uint32 {
+                        range "0..200";
+                    }
+                    units "hours";
+                    default "0";
+                    description "Refresh period to update imported user lists";
+                }
+
+                leaf tls-client-profile {
+                    type leafref {
+                        path "../../../system/security/tls/client-tls-profile/client-profile-name";
+                    }
+                    description "TLS client profile used to import user lists";
+                }
+
+                leaf url {
+                    type types-sros:http-or-https-url-loose;
+                    description "HTTP or HTTPS URL from which to import the user lists";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+            } // container user-list-import
 
             list protected-object {
                 key "id";
@@ -250,6 +309,29 @@ submodule nokia-conf-dms {
                     ordered-by user;
                     description "Exclude a configuration group at this level";
                 }
+
+                container dynamic-block {
+                    description "Enter the dynamic-block context";
+
+                    leaf initial-time {
+                        type uint32 {
+                            range "30..3600";
+                        }
+                        units "seconds";
+                        default "60";
+                        description "Dynamic block state duration after the initial violation";
+                    }
+
+                    leaf repeat-time {
+                        type uint32 {
+                            range "30..3600";
+                        }
+                        units "seconds";
+                        default "300";
+                        description "Duration to block the source after a repeat violation";
+                    }
+
+                } // container dynamic-block
 
                 container traffic {
                     description "Enter the traffic context";
@@ -463,6 +545,51 @@ submodule nokia-conf-dms {
                 container policer {
                     description "Enter the policer context";
 
+                    list source-event-count {
+                        key "name";
+                        max-elements 4;
+                        description "Enter the source-event-count list instance";
+
+                        leaf name {
+                            type types-sros:named-item;
+                            description "Policer name";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf dynamic-block {
+                            type boolean;
+                            default "false";
+                            description "Drop packet and block source when policer is violated";
+                        }
+
+                        leaf peak {
+                            type types-dms:policer-event-count;
+                            description "Peak event count limit";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // list source-event-count
 
                     list source-event-rate {
                         key "name";
@@ -477,6 +604,12 @@ submodule nokia-conf-dms {
                         leaf description {
                             type types-sros:description;
                             description "Text description";
+                        }
+
+                        leaf dynamic-block {
+                            type boolean;
+                            default "false";
+                            description "Drop packet and block source when policer is violated";
                         }
 
                         leaf burst-size {
@@ -524,6 +657,12 @@ submodule nokia-conf-dms {
                             description "Text description";
                         }
 
+                        leaf dynamic-block {
+                            type boolean;
+                            default "false";
+                            description "Drop packet and block source when policer is violated";
+                        }
+
                         leaf peak {
                             type types-dms:policer-flow-count;
                             description "Peak flow count limit";
@@ -564,6 +703,12 @@ submodule nokia-conf-dms {
                             description "Text description";
                         }
 
+                        leaf dynamic-block {
+                            type boolean;
+                            default "false";
+                            description "Drop packet and block source when policer is violated";
+                        }
+
                         leaf burst-size {
                             type types-dms:policer-flow-burst-size;
                             description "Maximum flow-setup-rate burst size";
@@ -594,6 +739,45 @@ submodule nokia-conf-dms {
 
                     } // list source-flow-setup-rate
 
+                    list event-count {
+                        key "name";
+                        max-elements 4;
+                        description "Enter the event-count list instance";
+
+                        leaf name {
+                            type types-sros:named-item;
+                            description "Policer name";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf peak {
+                            type types-dms:policer-event-count;
+                            description "Peak event count limit";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // list event-count
 
                     list event-rate {
                         key "name";
@@ -747,6 +931,12 @@ submodule nokia-conf-dms {
                     container tcp {
                         description "Enter the tcp context";
 
+                        leaf dynamic-block {
+                            type boolean;
+                            default "false";
+                            description "Block the tracked source upon a TCP flow discard";
+                        }
+
                         leaf flow-inactivity-timeout {
                             type uint32 {
                                 range "1..3600";
@@ -756,8 +946,46 @@ submodule nokia-conf-dms {
                             description "Inactivity timeout for TCP flows";
                         }
 
+                        leaf flow-protected-object-reset {
+                            type enumeration {
+                                enum none                           { value 0; }
+                                enum authenticated-sources {
+                                    value 1;
+                                    description "RST for tcp-authenticated tracked-sources only.";
+                                }
+                                enum all-sources {
+                                    value 2;
+                                    description "RST for any tracked-source.";
+                                }
+                            }
+                            default "none";
+                            description "Whether to send a TCP RST to the PO if flow ends early";
+                        }
+
+                        leaf flow-start-guard-time {
+                            type uint32 {
+                                range "1..120";
+                            }
+                            units "seconds";
+                            default "25";
+                            description "Maximum time to receive payload after a TCP handshake";
+                        }
+
                     } // container tcp
 
+                    container other {
+                        description "Enter the other context";
+
+                        leaf flow-inactivity-timeout {
+                            type uint32 {
+                                range "1..600";
+                            }
+                            units "seconds";
+                            default "5";
+                            description "Inactivity timeout for non-TCP and non-UDP flows";
+                        }
+
+                    } // container other
 
                     list dns-validate {
                         key "name";
@@ -772,6 +1000,12 @@ submodule nokia-conf-dms {
                         leaf description {
                             type types-sros:description;
                             description "Text description";
+                        }
+
+                        leaf dynamic-block {
+                            type boolean;
+                            default "false";
+                            description "Block the tracked source upon a DNS validator discard";
                         }
 
                         leaf message-size-limit {
@@ -813,6 +1047,156 @@ submodule nokia-conf-dms {
                             description "Exclude a configuration group at this level";
                         }
 
+                        container dns-filter {
+                            presence "Enable the dns-filter context";
+                            description "Enable the dns-filter context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "disable";
+                                description "Administrative state of the DNS filter";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                            container default-action {
+                                description "Enter the default-action context";
+
+                                leaf drop {
+                                    type boolean;
+                                    default "false";
+                                    description "Drop traffic not matching any DNS filter entries";
+                                }
+
+                            } // container default-action
+
+                            list entry {
+                                key "id";
+                                max-elements 16;
+                                description "Enter the entry list instance";
+
+                                leaf id {
+                                    type uint32 {
+                                        range "1..16";
+                                    }
+                                    description "Unique ID for the DNS filter entry";
+                                }
+
+                                leaf description {
+                                    type types-sros:description;
+                                    description "Text description";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                leaf-list apply-groups-exclude {
+                                    type leafref {
+                                        path "../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Exclude a configuration group at this level";
+                                }
+
+                                container action {
+                                    description "Enter the action context";
+
+                                    leaf drop {
+                                        type boolean;
+                                        default "false";
+                                        description "Drop traffic matching the DNS filter entry";
+                                    }
+
+                                    leaf request-rate-policer {
+                                        type leafref {
+                                            path "../../../../../../policer/event-rate/name";
+                                        }
+                                        description "PO-granularity event-rate policer for DNS requests";
+                                    }
+
+                                    leaf source-request-rate-policer {
+                                        type leafref {
+                                            path "../../../../../../policer/source-event-rate/name";
+                                        }
+                                        description "Source-granularity event-rate policer for DNS requests";
+                                    }
+
+                                    container query-name-entropy-range {
+                                        presence "Enable the query-name-entropy-range context";
+                                        description "Enable the query-name-entropy-range context";
+
+                                        leaf minimum {
+                                            type decimal64 {
+                                                range "0.00..9.99";
+                                                fraction-digits 2;
+                                            }
+                                            mandatory true;
+                                            description "Minimum entropy of the DNS query name";
+                                        }
+
+                                        leaf maximum {
+                                            type decimal64 {
+                                                range "0.01..10.00";
+                                                fraction-digits 2;
+                                            }
+                                            mandatory true;
+                                            description "Maximum entropy of the DNS query name";
+                                        }
+
+                                    } // container query-name-entropy-range
+
+                                } // container action
+
+                                container match {
+                                    description "Enter the match context";
+
+
+                                    container query-name {
+                                        description "Enter the query-name context";
+
+                                        list dns-list {
+                                            key "list-name";
+                                            max-elements 10;
+                                            description "Add a list entry for dns-list";
+
+                                            leaf list-name {
+                                                type types-sros:named-item;
+                                                description "DNS domain list name";
+                                            }
+
+                                        } // list dns-list
+
+
+                                    } // container query-name
+
+                                } // container match
+
+                            } // list entry
+
+                        } // container dns-filter
 
                         container query-name-entropy-range {
                             presence "Enable the query-name-entropy-range context";
@@ -840,6 +1224,7 @@ submodule nokia-conf-dms {
 
                     } // list dns-validate
 
+
                     list http-tracker {
                         key "http-tracker-name";
                         max-elements 2;
@@ -855,6 +1240,12 @@ submodule nokia-conf-dms {
                             description "Text description";
                         }
 
+                        leaf dynamic-block {
+                            type boolean;
+                            default "false";
+                            description "Block the tracked source upon an HTTP tracker discard";
+                        }
+
                         leaf inactivity-timeout {
                             type uint32 {
                                 range "1..3600";
@@ -863,9 +1254,17 @@ submodule nokia-conf-dms {
                             description "Inactivity timeout for HTTP flows";
                         }
 
+                        leaf start-guard-time {
+                            type uint32 {
+                                range "1..120";
+                            }
+                            units "seconds";
+                            description "Max time to receive HTTP request after TCP handshake";
+                        }
+
                         leaf request-guard-time {
                             type uint32 {
-                                range "1..100";
+                                range "1..120";
                             }
                             units "seconds";
                             description "Maximum time to complete an HTTP request";
@@ -920,6 +1319,12 @@ submodule nokia-conf-dms {
                             description "Text description";
                         }
 
+                        leaf dynamic-block {
+                            type boolean;
+                            default "false";
+                            description "Block the tracked source upon ICMP validator discard";
+                        }
+
                         leaf echo-rate-policer {
                             type leafref {
                                 path "../../../policer/event-rate/name";
@@ -955,6 +1360,106 @@ submodule nokia-conf-dms {
                     } // list icmp-validate
 
 
+                    list tls-tracker {
+                        key "tls-tracker-name";
+                        max-elements 2;
+                        description "Enter the tls-tracker list instance";
+
+                        leaf tls-tracker-name {
+                            type types-sros:named-item;
+                            description "TLS flow tracker instance name";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf dynamic-block {
+                            type boolean;
+                            default "false";
+                            description "Block the tracked source upon TLS tracker discard";
+                        }
+
+                        leaf inactivity-timeout {
+                            type uint32 {
+                                range "1..3600";
+                            }
+                            units "seconds";
+                            description "Inactivity timeout for TLS flows";
+                        }
+
+                        leaf client-cipher-limit {
+                            type uint32 {
+                                range "1..255";
+                            }
+                            description "Maximum number of cipher suites in the client Hello";
+                        }
+
+                        leaf client-extension-limit {
+                            type uint32 {
+                                range "1..31";
+                            }
+                            description "Maximum number of TLS extensions in the client Hello";
+                        }
+
+                        leaf concurrent-handshake-limit {
+                            type leafref {
+                                path "../../../policer/event-count/name";
+                            }
+                            description "PO-level event-count policer to limit TLS sessions";
+                        }
+
+                        leaf source-concurrent-handshake-limit {
+                            type leafref {
+                                path "../../../policer/source-event-count/name";
+                            }
+                            description "Source-level event-count policer to limit TLS sessions";
+                        }
+
+                        leaf start-guard-time {
+                            type uint32 {
+                                range "1..120";
+                            }
+                            units "seconds";
+                            description "Max time to receive client Hello after TCP handshake";
+                        }
+
+                        leaf handshake-guard-time {
+                            type uint32 {
+                                range "1..120";
+                            }
+                            units "seconds";
+                            description "Maximum time to complete the TLS security handshake";
+                        }
+
+                        leaf application-data-guard-time {
+                            type uint32 {
+                                range "1..120";
+                            }
+                            units "seconds";
+                            description "Maximum time to send data after the TLS handshake";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // list tls-tracker
 
                 } // container protocol-handlers
 
@@ -971,6 +1476,11 @@ submodule nokia-conf-dms {
                                 range "1..65535";
                             }
                             description "Mitigation-rule entry ID";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
                         }
 
                         leaf admin-state {
@@ -1034,6 +1544,36 @@ submodule nokia-conf-dms {
                                 description "Source flow-setup-rate policer to apply to traffic";
                             }
 
+                            leaf dns-client-authentication {
+                                type enumeration {
+                                    enum none {
+                                        value 0;
+                                        description "No DNS authentication.";
+                                    }
+                                    enum active-ns-redirect {
+                                        value 1;
+                                        description "Actively challenge with redirect using custom NS redirect.";
+                                    }
+                                }
+                                default "none";
+                                description "DNS client authentication for DNS requests";
+                            }
+
+                            leaf tcp-client-authentication {
+                                type enumeration {
+                                    enum none {
+                                        value 0;
+                                        description "No TCP authentication.";
+                                    }
+                                    enum active-challenge {
+                                        value 1;
+                                        description "Actively challenge the TCP client.";
+                                    }
+                                }
+                                default "none";
+                                description "TCP client authentication for TCP flow creation";
+                            }
+
                             container protocol-tracker {
                                 description "Enter the protocol-tracker context";
 
@@ -1053,6 +1593,16 @@ submodule nokia-conf-dms {
                                                 path "../../../../../protocol-handlers/http-tracker/http-tracker-name";
                                             }
                                             description "Flow tracker used to analyze matching HTTP traffic";
+                                        }
+
+                                    }
+                                    case tls {
+
+                                        leaf tls {
+                                            type leafref {
+                                                path "../../../../../protocol-handlers/tls-tracker/tls-tracker-name";
+                                            }
+                                            description "Flow tracker used to analyze matching TLS traffic";
                                         }
 
                                     }

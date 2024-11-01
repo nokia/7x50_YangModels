@@ -250,6 +250,12 @@ submodule nokia-conf-router-mpls {
                 description "Resolves RSVP-TE LSP ERO to local and host routes only";
             }
 
+            leaf resignal-on-igp-event {
+                type boolean;
+                default "false";
+                description "Reoptimize RSVP LSP paths upon IGP events";
+            }
+
             leaf p2mp-ttl-propagate {
                 type boolean;
                 default "true";
@@ -1117,10 +1123,23 @@ submodule nokia-conf-router-mpls {
                     type enumeration {
                         enum igp                            { value 1; }
                         enum te                             { value 2; }
+                        enum delay                          { value 3; }
                     }
                     sros-ext:auto-restart-to-modify;
                     default "igp";
                     description "Metric type used for LSP path computation";
+                }
+
+                leaf delay-metric-limit {
+                    when "not(../type) or ../type = 'p2p-sr-te-one-hop' or ../type = 'p2p-sr-te-mesh' or ../type = 'p2p-sr-te-on-demand'" {
+                        description "not allowed for this LSP template type";
+                    }
+                    type uint32 {
+                        range "1..16777215";
+                    }
+                    units "microseconds";
+                    sros-ext:auto-restart-to-modify;
+                    description "Delay metric limit";
                 }
 
                 leaf local-sr-protection {
@@ -1830,6 +1849,15 @@ submodule nokia-conf-router-mpls {
                         description "S-BFD return-path label";
                     }
 
+                    leaf source-address {
+                        when "not(../../type) or ../../type = 'p2p-sr-te-one-hop' or ../../type = 'p2p-sr-te-mesh' or ../../type = 'p2p-sr-te-pce-init' or ../../type = 'p2p-sr-te-on-demand'" {
+                            description "not allowed for this LSP template type";
+                        }
+                        type types-sros:ip-unicast-address;
+                        sros-ext:auto-restart-to-modify;
+                        description "Source address for S-BFD packets";
+                    }
+
                 } // container bfd
 
                 container pce-associations {
@@ -2178,6 +2206,7 @@ submodule nokia-conf-router-mpls {
                     type enumeration {
                         enum igp                            { value 1; }
                         enum te                             { value 2; }
+                        enum delay                          { value 3; }
                     }
                     default "igp";
                     description "Metric type used for LSP path computation";
@@ -2810,6 +2839,14 @@ submodule nokia-conf-router-mpls {
                         description "S-BFD return-path label";
                     }
 
+                    leaf source-address {
+                        when "not(../../type) or ../../type = 'p2p-sr-te'" {
+                            description "not allowed for this LSP type";
+                        }
+                        type types-sros:ip-unicast-address;
+                        description "Source address for the S-BFD packets";
+                    }
+
                 } // container bfd
 
                 list path-profile {
@@ -2966,6 +3003,17 @@ submodule nokia-conf-router-mpls {
                         description "Class-type";
                     }
 
+                    leaf delay-metric-limit {
+                        when "not(../../type) or ../../type = 'p2p-sr-te'" {
+                            description "not allowed for this LSP type";
+                        }
+                        type uint32 {
+                            range "1..16777215";
+                        }
+                        units "microseconds";
+                        description "Delay metric limit";
+                    }
+
                     leaf backup-class-type {
                         when "not(../../type) or ../../type = 'p2p-rsvp'" {
                             description "not allowed for this LSP type";
@@ -3106,6 +3154,14 @@ submodule nokia-conf-router-mpls {
                             description "S-BFD return-path label";
                         }
 
+                        leaf source-address {
+                            when "not(../../../type) or ../../../type = 'p2p-sr-te'" {
+                                description "not allowed for this LSP type";
+                            }
+                            type types-sros:ip-unicast-address;
+                            description "Source address for S-BFD packets";
+                        }
+
                     } // container bfd
 
                 } // list primary
@@ -3182,6 +3238,17 @@ submodule nokia-conf-router-mpls {
                         }
                         type types-mpls:class-type;
                         description "Class-type";
+                    }
+
+                    leaf delay-metric-limit {
+                        when "not(../../type) or ../../type = 'p2p-sr-te'" {
+                            description "not allowed for this LSP type";
+                        }
+                        type uint32 {
+                            range "1..16777215";
+                        }
+                        units "microseconds";
+                        description "Delay metric limit";
                     }
 
                     leaf path-preference {
@@ -3343,6 +3410,14 @@ submodule nokia-conf-router-mpls {
                                 range "32..1048575";
                             }
                             description "S-BFD return-path label";
+                        }
+
+                        leaf source-address {
+                            when "not(../../../type) or ../../../type = 'p2p-sr-te'" {
+                                description "not allowed for this LSP type";
+                            }
+                            type types-sros:ip-unicast-address;
+                            description "Source address for S-BFD packets";
                         }
 
                     } // container bfd
@@ -4337,7 +4412,7 @@ submodule nokia-conf-router-mpls {
                 leaf resignal-on-igp-event {
                     type boolean;
                     default "false";
-                    description "Re-optimize SR-TE LSPs upon IGP link events";
+                    description "Reoptimize SR-TE LSPs upon IGP link events";
                 }
 
                 leaf resignal-on-igp-overload {

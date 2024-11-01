@@ -34,7 +34,7 @@ submodule nokia-state-port-eth-access {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2024-05-24";
+    revision "2024-07-25";
 
     grouping state-port-eth-access {
         container access {
@@ -63,21 +63,155 @@ submodule nokia-state-port-eth-access {
                         type leafref {
                             path "../../../../../../qos/queue-group-templates/egress/queue-group/egress-queue-group-name";
                         }
-                        description "Queue group name";
+                        description "Specifies the queue-group name.";
                     }
 
                     leaf instance-id {
                         type uint16 {
                             range "1..65535";
                         }
-                        description "Instance ID for the egress queue group";
+                        description "Specifies the instance identifier.";
                     }
 
                     container aggregate-rate {
                         description "Enter the aggregate-rate context";
 
+                        leaf operational-rate {
+                            type uint32;
+                            description "Operational rate information for SAP when using classic port scheduling";
+                        }
+
+                        container agg-shaper {
+                            description "Enter the agg-shaper context";
+
+                            leaf oper-burst-limit {
+                                type int32;
+                                description "Burst-Limit information for hardware aggregate shapers";
+                            }
+
+                            leaf oper-agg-shaper-rate {
+                                type uint32;
+                                description "Operational rate information for hardware aggregate shapers";
+                            }
+
+                        } // container agg-shaper
 
                     } // container aggregate-rate
+
+                    container aggregate-shapers {
+                        description "Enter the aggregate-shapers context";
+
+                        leaf burst-limit {
+                            type int32;
+                            units "bytes";
+                            description "Operational burst";
+                        }
+
+                        leaf depth {
+                            type uint32;
+                            units "bytes";
+                            description "Leaky-bucket depth of the aggregate shaper PIR";
+                        }
+
+                        leaf packet-mode {
+                            type types-qos:packet-mode;
+                            description "Packet-mode";
+                        }
+
+                        leaf out-of-date {
+                            type boolean;
+                            description
+                                "Info is out-of-date with respect to the latest config; the
+                                 shaper-algorithm still needs to re-calculate the implemented
+                                 rate.";
+                        }
+
+                        leaf queue-set-size {
+                            type int32;
+                            description "Queue set size";
+                        }
+
+                        leaf queue-set-size-overridden {
+                            type boolean;
+                            description
+                                "Info queue-set-size-overridden is set to true when the shaper is created by
+                                 the override configured for sap egress qos policy. When it is set to false,
+                                 it indicates that fp-resource-policy default-size setting is used to create 
+                                 this shaper.";
+                        }
+
+                        container rate {
+                            description "Enter the rate context";
+
+                            leaf assigned {
+                                type uint32;
+                                units "kilobps";
+                                description "Rate assigned by a hw-agg-shaper-scheduler";
+                            }
+
+                            leaf implemented {
+                                type uint32;
+                                units "kilobps";
+                                description
+                                    "Implemented rate (based on hardware restrictions and based
+                                     on avg-frame-overhead and ATM adjustments)";
+                            }
+
+                            leaf consumed {
+                                type uint32;
+                                units "kilobps";
+                                description
+                                    "Sum of the rates of the queues feeding into the aggregate
+                                     shaper";
+                            }
+
+                        } // container rate
+
+                        container avg-frame-overhead {
+                            description "Enter the avg-frame-overhead context";
+
+                            leaf overhead {
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                units "percent";
+                                description "Percentage average frame overhead";
+                            }
+
+                            leaf real-time {
+                                type boolean;
+                                description "Is it real-time?";
+                            }
+
+                        } // container avg-frame-overhead
+
+                        container hw-agg-shaper-scheduler {
+                            description "Enter the hw-agg-shaper-scheduler context";
+
+                            leaf active {
+                                type boolean;
+                                description
+                                    "The aggregate shaper is controlled by a
+                                     hw-agg-shaper-scheduler";
+                            }
+
+                            leaf running {
+                                type boolean;
+                                description
+                                    "The hw-agg-shaper-scheduler is currently running and
+                                     updating the aggregate shaper rates";
+                            }
+
+                            leaf invalid-class-usage {
+                                type boolean;
+                                description
+                                    "The aggregate shaper has queues in multiple classes in the
+                                     same group in the hw-agg-shaper-scheduler";
+                            }
+
+                        } // container hw-agg-shaper-scheduler
+
+                    } // container aggregate-shapers
 
                     container scheduler-policy {
                         description "Enter the scheduler-policy context";
@@ -88,7 +222,7 @@ submodule nokia-state-port-eth-access {
 
                             leaf scheduler-name {
                                 type types-sros:named-item;
-                                description "Scheduler name";
+                                description "Specifies the scheduler name.";
                             }
 
                             container statistics {
@@ -270,6 +404,16 @@ submodule nokia-state-port-eth-access {
                                 description "Oper max transmit data size.";
                             }
 
+                            leaf orphan {
+                                type boolean;
+                                description "Orphan queue";
+                            }
+
+                            leaf operational-burst-fir {
+                                type types-qos:int64-max;
+                                description "Oper burst FIR.";
+                            }
+
                             container exceed-slope {
                                 description "Enter the exceed-slope context";
 
@@ -423,7 +567,7 @@ submodule nokia-state-port-eth-access {
 
                     leaf vport-name {
                         type types-sros:named-item;
-                        description "Vport scheduling node name";
+                        description "Specifies the name of the virtual port on the port.";
                     }
 
                     leaf multicast-hqos-adjustment-delta {
@@ -435,9 +579,421 @@ submodule nokia-state-port-eth-access {
                     container aggregate-rate {
                         description "Enter the aggregate-rate context";
 
+                        container state {
+                            description "Enter the state context";
+
+                            leaf rate {
+                                type types-qos:kbps;
+                                units "kilobps";
+                                description "Rate";
+                            }
+
+                            leaf limit-unused-bandwidth {
+                                type boolean;
+                                description "Aggregate rate limit-unused-bandwidth";
+                            }
+
+                            leaf on-the-wire {
+                                type types-qos:on-the-wire;
+                                description "On the wire";
+                            }
+
+                        } // container state
 
                     } // container aggregate-rate
 
+                    container port-scheduler {
+                        description "Enter the port-scheduler context";
+
+                        leaf max-rate {
+                            type types-qos:kbps;
+                            units "kilobps";
+                            description "Max rate";
+                        }
+
+                        leaf port-bandwidth {
+                            type types-qos:kbps;
+                            units "kilobps";
+                            description "Port Bandwidth";
+                        }
+
+                        leaf consumed-rate {
+                            type types-qos:kbps;
+                            units "kilobps";
+                            description "Consumed rate";
+                        }
+
+                        leaf offered-rate {
+                            type types-qos:kbps;
+                            units "kilobps";
+                            description "Offered rate";
+                        }
+
+                        list group {
+                            key "group-name";
+                            description "Enter the group list instance";
+
+                            leaf group-name {
+                                type string;
+                                description "Name";
+                            }
+
+                            container sched-hierarchy {
+                                description "Enter the sched-hierarchy context";
+
+                                list level {
+                                    key "level-index";
+                                    description "Enter the level list instance";
+
+                                    leaf level-index {
+                                        type int32 {
+                                            range "0..8";
+                                        }
+                                    }
+
+                                } // list level
+
+                            } // container sched-hierarchy
+
+                            container within-cir {
+                                description "Enter the within-cir context";
+
+                                leaf rate {
+                                    type types-qos:kbps;
+                                    units "kilobps";
+                                    description "Rate";
+                                }
+
+                                leaf consumed {
+                                    type types-qos:kbps;
+                                    units "kilobps";
+                                    description "Consumed";
+                                }
+
+                                leaf offered {
+                                    type types-qos:kbps;
+                                    units "kilobps";
+                                    description "Offered";
+                                }
+
+                            } // container within-cir
+
+                            container above-cir {
+                                description "Enter the above-cir context";
+
+                                leaf rate {
+                                    type types-qos:kbps;
+                                    units "kilobps";
+                                    description "Rate";
+                                }
+
+                                leaf consumed {
+                                    type types-qos:kbps;
+                                    units "kilobps";
+                                    description "Consumed";
+                                }
+
+                                leaf offered {
+                                    type types-qos:kbps;
+                                    units "kilobps";
+                                    description "Offered";
+                                }
+
+                            } // container above-cir
+
+                        } // list group
+
+                        list level {
+                            key "level-index";
+                            description "Enter the level list instance";
+
+                            leaf level-index {
+                                type int32 {
+                                    range "0..8";
+                                }
+                            }
+
+                            container within-cir {
+                                description "Enter the within-cir context";
+
+                                leaf rate {
+                                    type types-qos:kbps;
+                                    units "kilobps";
+                                    description "Rate";
+                                }
+
+                                leaf consumed {
+                                    type types-qos:kbps;
+                                    units "kilobps";
+                                    description "Consumed";
+                                }
+
+                                leaf offered {
+                                    type types-qos:kbps;
+                                    units "kilobps";
+                                    description "Offered";
+                                }
+
+                                container sched-hierarchy {
+                                    description "Enter the sched-hierarchy context";
+
+                                    container queue {
+                                        description "Enter the queue context";
+
+                                        container port-queue-group {
+                                            description "Enter the port-queue-group context";
+
+                                            list queue {
+                                                key "member";
+                                                description "Enter the queue list instance";
+
+                                                leaf member {
+                                                    type uint32;
+                                                    description "Member information";
+                                                }
+
+                                                leaf queue-id {
+                                                    type int32;
+                                                    description "Queue identifier";
+                                                }
+
+                                                leaf port {
+                                                    type types-sros:port;
+                                                    description "Port identifier";
+                                                }
+
+                                                leaf port-mode {
+                                                    type enumeration {
+                                                        enum access                         { value 1; }
+                                                        enum network                        { value 2; }
+                                                    }
+                                                    description "Port mode";
+                                                }
+
+                                                leaf queue-group-template {
+                                                    type string;
+                                                    description "Queue group template";
+                                                }
+
+                                                leaf queue-group-instance {
+                                                    type int32;
+                                                    description "Queue group instance";
+                                                }
+
+                                            } // list queue
+
+                                        } // container port-queue-group
+
+                                        container sap {
+                                            description "Enter the sap context";
+
+                                            list queue {
+                                                key "member";
+                                                description "Enter the queue list instance";
+
+                                                leaf member {
+                                                    type uint32;
+                                                    description "Member information";
+                                                }
+
+                                                leaf queue-id {
+                                                    type int32;
+                                                    description "Queue identifier";
+                                                }
+
+                                                leaf sap-id {
+                                                    type types-sros:sap;
+                                                    description "SAP identifier";
+                                                }
+
+                                                leaf port {
+                                                    type types-sros:port;
+                                                    description "Port identifier";
+                                                }
+
+                                            } // list queue
+
+                                        } // container sap
+
+                                    } // container queue
+
+                                    container scheduler {
+                                        description "Enter the scheduler context";
+
+                                        container sap {
+                                            description "Enter the sap context";
+
+                                            list scheduler {
+                                                key "member";
+                                                description "Enter the scheduler list instance";
+
+                                                leaf member {
+                                                    type uint32;
+                                                    description "Member information";
+                                                }
+
+                                                leaf scheduler-name {
+                                                    type string;
+                                                    description "Name";
+                                                }
+
+                                                leaf sap-id {
+                                                    type types-sros:sap;
+                                                    description "SAP identifier";
+                                                }
+
+                                            } // list scheduler
+
+                                        } // container sap
+
+                                    } // container scheduler
+
+                                } // container sched-hierarchy
+
+                            } // container within-cir
+
+                            container above-cir {
+                                description "Enter the above-cir context";
+
+                                leaf rate {
+                                    type types-qos:kbps;
+                                    units "kilobps";
+                                    description "Rate";
+                                }
+
+                                leaf consumed {
+                                    type types-qos:kbps;
+                                    units "kilobps";
+                                    description "Consumed";
+                                }
+
+                                leaf offered {
+                                    type types-qos:kbps;
+                                    units "kilobps";
+                                    description "Offered";
+                                }
+
+                                container sched-hierarchy {
+                                    description "Enter the sched-hierarchy context";
+
+                                    container queue {
+                                        description "Enter the queue context";
+
+                                        container port-queue-group {
+                                            description "Enter the port-queue-group context";
+
+                                            list queue {
+                                                key "member";
+                                                description "Enter the queue list instance";
+
+                                                leaf member {
+                                                    type uint32;
+                                                    description "Member information";
+                                                }
+
+                                                leaf queue-id {
+                                                    type int32;
+                                                    description "Queue identifier";
+                                                }
+
+                                                leaf port {
+                                                    type types-sros:port;
+                                                    description "Port identifier";
+                                                }
+
+                                                leaf port-mode {
+                                                    type enumeration {
+                                                        enum access                         { value 1; }
+                                                        enum network                        { value 2; }
+                                                    }
+                                                    description "Port mode";
+                                                }
+
+                                                leaf queue-group-template {
+                                                    type string;
+                                                    description "Queue group template";
+                                                }
+
+                                                leaf queue-group-instance {
+                                                    type int32;
+                                                    description "Queue group instance";
+                                                }
+
+                                            } // list queue
+
+                                        } // container port-queue-group
+
+                                        container sap {
+                                            description "Enter the sap context";
+
+                                            list queue {
+                                                key "member";
+                                                description "Enter the queue list instance";
+
+                                                leaf member {
+                                                    type uint32;
+                                                    description "Member information";
+                                                }
+
+                                                leaf queue-id {
+                                                    type int32;
+                                                    description "Queue identifier";
+                                                }
+
+                                                leaf sap-id {
+                                                    type types-sros:sap;
+                                                    description "SAP identifier";
+                                                }
+
+                                                leaf port {
+                                                    type types-sros:port;
+                                                    description "Port identifier";
+                                                }
+
+                                            } // list queue
+
+                                        } // container sap
+
+                                    } // container queue
+
+                                    container scheduler {
+                                        description "Enter the scheduler context";
+
+                                        container sap {
+                                            description "Enter the sap context";
+
+                                            list scheduler {
+                                                key "member";
+                                                description "Enter the scheduler list instance";
+
+                                                leaf member {
+                                                    type uint32;
+                                                    description "Member information";
+                                                }
+
+                                                leaf scheduler-name {
+                                                    type string;
+                                                    description "Name";
+                                                }
+
+                                                leaf sap-id {
+                                                    type types-sros:sap;
+                                                    description "SAP identifier";
+                                                }
+
+                                            } // list scheduler
+
+                                        } // container sap
+
+                                    } // container scheduler
+
+                                } // container sched-hierarchy
+
+                            } // container above-cir
+
+                        } // list level
+
+                    } // container port-scheduler
 
                     container scheduler-policy {
                         description "Enter the scheduler-policy context";
@@ -448,7 +1004,7 @@ submodule nokia-state-port-eth-access {
 
                             leaf scheduler-name {
                                 type types-sros:named-item;
-                                description "Scheduler name";
+                                description "Specifies the scheduler name.";
                             }
 
                             container statistics {
@@ -466,6 +1022,375 @@ submodule nokia-state-port-eth-access {
 
                             } // container statistics
 
+                            container qos-scheduler {
+                                description "Enter the qos-scheduler context";
+
+                                leaf members {
+                                    type uint32;
+                                    description "Members";
+                                }
+
+                                leaf max-pir {
+                                    type types-qos:sched-pir;
+                                    description "Max PIR rate";
+                                }
+
+                                leaf oper-pir {
+                                    type types-qos:sched-pir;
+                                    description "Operational PIR rate";
+                                }
+
+                                leaf parent-limit-unused-bandwidth {
+                                    type boolean;
+                                    description "Parent limit unused bandwidth";
+                                }
+
+                                leaf orphan {
+                                    type boolean;
+                                    description "Orphan";
+                                }
+
+                                list level {
+                                    key "level-index";
+                                    description "Enter the level list instance";
+
+                                    leaf level-index {
+                                        type int32 {
+                                            range "0..8";
+                                        }
+                                    }
+
+                                    container within-cir {
+                                        description "Enter the within-cir context";
+
+                                        leaf members {
+                                            type uint32;
+                                            description "Members";
+                                        }
+
+                                        leaf consumed {
+                                            type types-qos:kbps;
+                                            units "kilobps";
+                                            description "Consumed";
+                                        }
+
+                                        leaf offered {
+                                            type types-qos:kbps;
+                                            units "kilobps";
+                                            description "Offered";
+                                        }
+
+                                        container sched-hierarchy {
+                                            description "Enter the sched-hierarchy context";
+
+                                            container queue {
+                                                description "Enter the queue context";
+
+                                                container port-queue-group {
+                                                    description "Enter the port-queue-group context";
+
+                                                    list queue {
+                                                        key "member";
+                                                        description "Enter the queue list instance";
+
+                                                        leaf member {
+                                                            type uint32;
+                                                            description "Member information";
+                                                        }
+
+                                                        leaf queue-id {
+                                                            type int32;
+                                                            description "Queue identifier";
+                                                        }
+
+                                                        leaf port {
+                                                            type types-sros:port;
+                                                            description "Port identifier";
+                                                        }
+
+                                                        leaf port-mode {
+                                                            type enumeration {
+                                                                enum access                         { value 1; }
+                                                                enum network                        { value 2; }
+                                                            }
+                                                            description "Port mode";
+                                                        }
+
+                                                        leaf queue-group-template {
+                                                            type string;
+                                                            description "Queue group template";
+                                                        }
+
+                                                        leaf queue-group-instance {
+                                                            type int32;
+                                                            description "Queue group instance";
+                                                        }
+
+                                                    } // list queue
+
+                                                } // container port-queue-group
+
+                                                container sap {
+                                                    description "Enter the sap context";
+
+                                                    list queue {
+                                                        key "member";
+                                                        description "Enter the queue list instance";
+
+                                                        leaf member {
+                                                            type uint32;
+                                                            description "Member information";
+                                                        }
+
+                                                        leaf queue-id {
+                                                            type int32;
+                                                            description "Queue identifier";
+                                                        }
+
+                                                        leaf sap-id {
+                                                            type types-sros:sap;
+                                                            description "SAP identifier";
+                                                        }
+
+                                                        leaf port {
+                                                            type types-sros:port;
+                                                            description "Port identifier";
+                                                        }
+
+                                                    } // list queue
+
+                                                } // container sap
+
+                                            } // container queue
+
+                                            container scheduler {
+                                                description "Enter the scheduler context";
+
+                                                container sap {
+                                                    description "Enter the sap context";
+
+                                                    list scheduler {
+                                                        key "member";
+                                                        description "Enter the scheduler list instance";
+
+                                                        leaf member {
+                                                            type uint32;
+                                                            description "Member information";
+                                                        }
+
+                                                        leaf scheduler-name {
+                                                            type string;
+                                                            description "Name";
+                                                        }
+
+                                                        leaf sap-id {
+                                                            type types-sros:sap;
+                                                            description "SAP identifier";
+                                                        }
+
+                                                    } // list scheduler
+
+                                                } // container sap
+
+                                                container vport {
+                                                    description "Enter the vport context";
+
+                                                    list scheduler {
+                                                        key "member";
+                                                        description "Enter the scheduler list instance";
+
+                                                        leaf member {
+                                                            type uint32;
+                                                            description "Member information";
+                                                        }
+
+                                                        leaf scheduler-name {
+                                                            type string;
+                                                            description "Name";
+                                                        }
+
+                                                        leaf vport-name {
+                                                            type types-sros:named-item-or-empty;
+                                                            description "Virtual port name";
+                                                        }
+
+                                                    } // list scheduler
+
+                                                } // container vport
+
+                                            } // container scheduler
+
+                                        } // container sched-hierarchy
+
+                                    } // container within-cir
+
+                                    container above-cir {
+                                        description "Enter the above-cir context";
+
+                                        leaf members {
+                                            type uint32;
+                                            description "Members";
+                                        }
+
+                                        leaf consumed {
+                                            type types-qos:kbps;
+                                            units "kilobps";
+                                            description "Consumed";
+                                        }
+
+                                        leaf offered {
+                                            type types-qos:kbps;
+                                            units "kilobps";
+                                            description "Offered";
+                                        }
+
+                                        container sched-hierarchy {
+                                            description "Enter the sched-hierarchy context";
+
+                                            container queue {
+                                                description "Enter the queue context";
+
+                                                container port-queue-group {
+                                                    description "Enter the port-queue-group context";
+
+                                                    list queue {
+                                                        key "member";
+                                                        description "Enter the queue list instance";
+
+                                                        leaf member {
+                                                            type uint32;
+                                                            description "Member information";
+                                                        }
+
+                                                        leaf queue-id {
+                                                            type int32;
+                                                            description "Queue identifier";
+                                                        }
+
+                                                        leaf port {
+                                                            type types-sros:port;
+                                                            description "Port identifier";
+                                                        }
+
+                                                        leaf port-mode {
+                                                            type enumeration {
+                                                                enum access                         { value 1; }
+                                                                enum network                        { value 2; }
+                                                            }
+                                                            description "Port mode";
+                                                        }
+
+                                                        leaf queue-group-template {
+                                                            type string;
+                                                            description "Queue group template";
+                                                        }
+
+                                                        leaf queue-group-instance {
+                                                            type int32;
+                                                            description "Queue group instance";
+                                                        }
+
+                                                    } // list queue
+
+                                                } // container port-queue-group
+
+                                                container sap {
+                                                    description "Enter the sap context";
+
+                                                    list queue {
+                                                        key "member";
+                                                        description "Enter the queue list instance";
+
+                                                        leaf member {
+                                                            type uint32;
+                                                            description "Member information";
+                                                        }
+
+                                                        leaf queue-id {
+                                                            type int32;
+                                                            description "Queue identifier";
+                                                        }
+
+                                                        leaf sap-id {
+                                                            type types-sros:sap;
+                                                            description "SAP identifier";
+                                                        }
+
+                                                        leaf port {
+                                                            type types-sros:port;
+                                                            description "Port identifier";
+                                                        }
+
+                                                    } // list queue
+
+                                                } // container sap
+
+                                            } // container queue
+
+                                            container scheduler {
+                                                description "Enter the scheduler context";
+
+                                                container sap {
+                                                    description "Enter the sap context";
+
+                                                    list scheduler {
+                                                        key "member";
+                                                        description "Enter the scheduler list instance";
+
+                                                        leaf member {
+                                                            type uint32;
+                                                            description "Member information";
+                                                        }
+
+                                                        leaf scheduler-name {
+                                                            type string;
+                                                            description "Name";
+                                                        }
+
+                                                        leaf sap-id {
+                                                            type types-sros:sap;
+                                                            description "SAP identifier";
+                                                        }
+
+                                                    } // list scheduler
+
+                                                } // container sap
+
+                                                container vport {
+                                                    description "Enter the vport context";
+
+                                                    list scheduler {
+                                                        key "member";
+                                                        description "Enter the scheduler list instance";
+
+                                                        leaf member {
+                                                            type uint32;
+                                                            description "Member information";
+                                                        }
+
+                                                        leaf scheduler-name {
+                                                            type string;
+                                                            description "Name";
+                                                        }
+
+                                                        leaf vport-name {
+                                                            type types-sros:named-item-or-empty;
+                                                            description "Virtual port name";
+                                                        }
+
+                                                    } // list scheduler
+
+                                                } // container vport
+
+                                            } // container scheduler
+
+                                        } // container sched-hierarchy
+
+                                    } // container above-cir
+
+                                } // list level
+
+                            } // container qos-scheduler
 
                         } // list scheduler
 
@@ -612,7 +1537,7 @@ submodule nokia-state-port-eth-access {
                         type leafref {
                             path "../../../../../../qos/queue-group-templates/ingress/queue-group/ingress-queue-group-name";
                         }
-                        description "Queue group name";
+                        description "Specifies the queue-group name.";
                     }
 
                     container scheduler-policy {
@@ -624,7 +1549,7 @@ submodule nokia-state-port-eth-access {
 
                             leaf scheduler-name {
                                 type types-sros:named-item;
-                                description "Scheduler name";
+                                description "Specifies the scheduler name.";
                             }
 
                             container statistics {
@@ -1227,6 +2152,11 @@ submodule nokia-state-port-eth-access {
                             leaf operational-max-transmit-data-size {
                                 type types-qos:int64-max;
                                 description "Oper max transmit data size.";
+                            }
+
+                            leaf operational-burst-fir {
+                                type types-qos:int64-max;
+                                description "Oper burst FIR.";
                             }
 
                         } // list hardware-queue

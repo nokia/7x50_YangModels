@@ -70,7 +70,7 @@ submodule nokia-conf-subscriber-mgmt {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2024-07-31";
+    revision "2024-09-23";
 
     grouping conf-subscriber-mgmt {
         container subscriber-mgmt {
@@ -2587,6 +2587,13 @@ submodule nokia-conf-subscriber-mgmt {
                         description "Time to wait for a response to a release request";
                     }
 
+                    leaf default-calltrace-profile {
+                        type leafref {
+                            path "../../../../call-trace/trace-profile/name";
+                        }
+                        description "Default profile when the CP-provided profile is unknown";
+                    }
+
                     leaf path-restoration-time {
                         type types-sros:time-duration {
                             range "1..11520";
@@ -2683,6 +2690,35 @@ submodule nokia-conf-subscriber-mgmt {
 
                             }
                         }
+                        container node-id {
+                            description "Enter the node-id context";
+
+                            choice format {
+                                default "use-ip-address";
+                                case fqdn {
+
+                                    leaf fully-qualified-domain-name {
+                                        type types-sros:fully-qualified-domain-name {
+                                            pattern "(([a-z0-9_\\-]){1,63}\\.)*([a-z0-9_\\-]){1,63}" {
+                                                error-message "The given string is not valid";
+                                            }
+                                        }
+                                        sros-ext:auto-restart-to-modify;
+                                        description "FQDN used to identify the Node ID";
+                                    }
+
+                                }
+                                case use-ip-address {
+
+                                    leaf use-ip-address {
+                                        type empty;
+                                        sros-ext:auto-restart-to-modify;
+                                        description "Use the configured peer IP address to match the Node ID";
+                                    }
+
+                                }
+                            }
+                        } // container node-id
 
                     } // container peer
 
@@ -2934,6 +2970,13 @@ submodule nokia-conf-subscriber-mgmt {
                     type boolean;
                     default "false";
                     description "Include LAG hashing on Vport";
+                }
+
+                leaf alternate-sub-profile {
+                    type leafref {
+                        path "../../sub-profile/name";
+                    }
+                    description "Alternate subscriber profile to use if threshold is hit";
                 }
 
                 leaf-list apply-groups {
@@ -3765,6 +3808,13 @@ submodule nokia-conf-subscriber-mgmt {
                     }
                     default "per-sap";
                     description "Default SPI sharing method for IPoE or PPPoE sessions";
+                }
+
+                leaf alternate-sla-profile {
+                    type leafref {
+                        path "../../sla-profile/name";
+                    }
+                    description "Alternate SLA profile to use if threshold is hit";
                 }
 
                 leaf-list apply-groups {
@@ -4860,6 +4910,68 @@ submodule nokia-conf-subscriber-mgmt {
 
 
                 } // container aggregate-qos-statistics
+
+                list custom-statistics-group {
+                    key "group-name";
+                    max-elements 1;
+                    description "Enter the custom-statistics-group list instance";
+
+                    leaf group-name {
+                        type types-sros:named-item;
+                        description "Name of the custom statistics group";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container egress {
+                        description "Enter the egress context";
+
+                        container policers {
+                            description "Enter the policers context";
+
+                            choice policer-selection {
+                                default "none";
+                                case none {
+
+                                    leaf none {
+                                        type empty;
+                                        description "Ignore all dynamic and static policers for this group";
+                                    }
+
+                                }
+                                case policer {
+
+                                    leaf-list policer {
+                                        type leafref {
+                                            path "../../../../../../qos/sap-egress[sap-egress-policy-name=current()/../../../../egress/qos/sap-egress/policy-name]/policer/policer-id";
+                                        }
+                                        max-elements 63;
+                                        description "Static policer ID to include for custom statistics";
+                                    }
+
+                                }
+                            }
+                        } // container policers
+
+                    } // container egress
+
+                } // list custom-statistics-group
 
                 container one-time-http-redirection {
                     description "Enter the one-time-http-redirection context";
@@ -10289,6 +10401,7 @@ submodule nokia-conf-subscriber-mgmt {
 
             } // list credit-control-policy
 
+
             list router-advertisement-policy {
                 key "name";
                 max-elements 16;
@@ -10970,6 +11083,41 @@ submodule nokia-conf-subscriber-mgmt {
 
             } // container group-interface-statistics
 
+            container alternate-profile-threshold {
+                description "Enter the alternate-profile-threshold context";
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                choice threshold-type {
+                    case subscriber-count {
+
+                        leaf subscriber-count {
+                            type uint32 {
+                                range "0..500000";
+                            }
+                            default "0";
+                            description "Apply alternate profiles based on subscriber threshold";
+                        }
+
+                    }
+                }
+            } // container alternate-profile-threshold
 
             uses conf-submgt-ancp;
             uses conf-submgt-gtp;

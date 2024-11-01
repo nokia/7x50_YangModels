@@ -36,7 +36,7 @@ submodule nokia-conf-qos {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2024-06-21";
+    revision "2024-09-19";
 
     grouping conf-qos {
         container qos {
@@ -3039,6 +3039,7 @@ submodule nokia-conf-qos {
                         }
 
                         leaf sample-interval {
+                            status deprecated;
                             type uint32 {
                                 range "1..8";
                             }
@@ -4196,6 +4197,40 @@ submodule nokia-conf-qos {
                                 description "Target queue delay for forwarding packets through queue";
                             }
 
+                            leaf agg-shaper-weight {
+                                type types-qos:weight {
+                                    range "1..100";
+                                }
+                                default "1";
+                                description "Aggregate shaper weight of the queue-group queue";
+                            }
+
+                            leaf sched-class {
+                                type union {
+                                    type uint32 {
+                                        range "1..6";
+                                    }
+                                    type enumeration {
+                                        enum auto                           { value 0; }
+                                    }
+                                }
+                                default "auto";
+                                description "Scheduling class for the queue-group queue";
+                            }
+
+                            leaf fir-burst-limit {
+                                type union {
+                                    type types-qos:bytes {
+                                        range "1..102400";
+                                    }
+                                    type enumeration {
+                                        enum auto                           { value -1; }
+                                    }
+                                }
+                                default "auto";
+                                description "Burst limit for the FIR";
+                            }
+
                             leaf hs-alt-port-class-pool {
                                 type boolean;
                                 default "false";
@@ -4460,6 +4495,49 @@ submodule nokia-conf-qos {
 
                         } // list queue
 
+                        container sched-class-elevation {
+                            description "Enter the sched-class-elevation context";
+
+                            list sched-class {
+                                key "class-id";
+                                description "Enter the sched-class list instance";
+
+                                leaf class-id {
+                                    type uint32 {
+                                        range "1..6";
+                                    }
+                                    description "Scheduling class ID";
+                                }
+
+                                leaf weight {
+                                    type uint32 {
+                                        range "1..8";
+                                    }
+                                    default "1";
+                                    description "Weight of the schedule class";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                leaf-list apply-groups-exclude {
+                                    type leafref {
+                                        path "../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Exclude a configuration group at this level";
+                                }
+
+                            } // list sched-class
+
+                        } // container sched-class-elevation
 
                         list policer {
                             key "policer-id";
@@ -4718,6 +4796,22 @@ submodule nokia-conf-qos {
 
                         } // list hs-wrr-group
 
+                        container hw-agg-shaper-queues {
+                            description "Enter the hw-agg-shaper-queues context";
+
+                            leaf queue-set-size {
+                                type union {
+                                    type int32 {
+                                        range "2..8";
+                                    }
+                                    type enumeration {
+                                        enum non-shaper-queues              { value 0; }
+                                    }
+                                }
+                                description "Queue-set size override for the FP resource policy";
+                            }
+
+                        } // container hw-agg-shaper-queues
 
                     } // list queue-group
 
@@ -6639,6 +6733,16 @@ submodule nokia-conf-qos {
                     }
                     default "no-stats";
                     description "Statistics mode of the VLAN QoS policy";
+                }
+
+                leaf queue-allocation {
+                    type enumeration {
+                        enum four-queue                     { value 1; }
+                        enum eight-queue                    { value 2; }
+                    }
+                    sros-ext:immutable;
+                    default "eight-queue";
+                    description "Queue allocation mode for the policy";
                 }
 
                 leaf-list apply-groups {
@@ -9780,7 +9884,7 @@ submodule nokia-conf-qos {
                             type uint32 {
                                 range "1..6";
                             }
-                            description "Scheduling class associated with this SAP egress";
+                            description "Scheduling class ID";
                         }
 
                         leaf weight {
@@ -11714,6 +11818,13 @@ submodule nokia-conf-qos {
                             sros-ext:card-auto-reset-on-modify;
                             default "false";
                             description "Enable hardware aggregate shapers for SAPs";
+                        }
+
+                        leaf queue-groups {
+                            type boolean;
+                            sros-ext:card-auto-reset-on-modify;
+                            default "false";
+                            description "Enable hardware aggregate shapers for queue-groups";
                         }
 
                     } // container hw-agg-shapers

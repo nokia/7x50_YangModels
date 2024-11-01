@@ -34,7 +34,7 @@ submodule nokia-state-port-eth-network {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2023-08-10";
+    revision "2024-06-20";
 
     grouping state-port-eth-network {
         container network {
@@ -51,21 +51,155 @@ submodule nokia-state-port-eth-network {
                         type leafref {
                             path "../../../../../../qos/queue-group-templates/egress/queue-group/egress-queue-group-name";
                         }
-                        description "Queue group name";
+                        description "Specifies the queue-group name.";
                     }
 
                     leaf instance-id {
                         type uint16 {
                             range "1..65535";
                         }
-                        description "Instance ID for the egress queue group";
+                        description "Specifies the instance identifier.";
                     }
 
                     container aggregate-rate {
                         description "Enter the aggregate-rate context";
 
+                        leaf operational-rate {
+                            type uint32;
+                            description "Operational rate information for SAP when using classic port scheduling";
+                        }
+
+                        container agg-shaper {
+                            description "Enter the agg-shaper context";
+
+                            leaf oper-burst-limit {
+                                type int32;
+                                description "Burst-Limit information for hardware aggregate shapers";
+                            }
+
+                            leaf oper-agg-shaper-rate {
+                                type uint32;
+                                description "Operational rate information for hardware aggregate shapers";
+                            }
+
+                        } // container agg-shaper
 
                     } // container aggregate-rate
+
+                    container aggregate-shapers {
+                        description "Enter the aggregate-shapers context";
+
+                        leaf burst-limit {
+                            type int32;
+                            units "bytes";
+                            description "Operational burst";
+                        }
+
+                        leaf depth {
+                            type uint32;
+                            units "bytes";
+                            description "Leaky-bucket depth of the aggregate shaper PIR";
+                        }
+
+                        leaf packet-mode {
+                            type types-qos:packet-mode;
+                            description "Packet-mode";
+                        }
+
+                        leaf out-of-date {
+                            type boolean;
+                            description
+                                "Info is out-of-date with respect to the latest config; the
+                                 shaper-algorithm still needs to re-calculate the implemented
+                                 rate.";
+                        }
+
+                        leaf queue-set-size {
+                            type int32;
+                            description "Queue set size";
+                        }
+
+                        leaf queue-set-size-overridden {
+                            type boolean;
+                            description
+                                "Info queue-set-size-overridden is set to true when the shaper is created by
+                                 the override configured for sap egress qos policy. When it is set to false,
+                                 it indicates that fp-resource-policy default-size setting is used to create 
+                                 this shaper.";
+                        }
+
+                        container rate {
+                            description "Enter the rate context";
+
+                            leaf assigned {
+                                type uint32;
+                                units "kilobps";
+                                description "Rate assigned by a hw-agg-shaper-scheduler";
+                            }
+
+                            leaf implemented {
+                                type uint32;
+                                units "kilobps";
+                                description
+                                    "Implemented rate (based on hardware restrictions and based
+                                     on avg-frame-overhead and ATM adjustments)";
+                            }
+
+                            leaf consumed {
+                                type uint32;
+                                units "kilobps";
+                                description
+                                    "Sum of the rates of the queues feeding into the aggregate
+                                     shaper";
+                            }
+
+                        } // container rate
+
+                        container avg-frame-overhead {
+                            description "Enter the avg-frame-overhead context";
+
+                            leaf overhead {
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                units "percent";
+                                description "Percentage average frame overhead";
+                            }
+
+                            leaf real-time {
+                                type boolean;
+                                description "Is it real-time?";
+                            }
+
+                        } // container avg-frame-overhead
+
+                        container hw-agg-shaper-scheduler {
+                            description "Enter the hw-agg-shaper-scheduler context";
+
+                            leaf active {
+                                type boolean;
+                                description
+                                    "The aggregate shaper is controlled by a
+                                     hw-agg-shaper-scheduler";
+                            }
+
+                            leaf running {
+                                type boolean;
+                                description
+                                    "The hw-agg-shaper-scheduler is currently running and
+                                     updating the aggregate shaper rates";
+                            }
+
+                            leaf invalid-class-usage {
+                                type boolean;
+                                description
+                                    "The aggregate shaper has queues in multiple classes in the
+                                     same group in the hw-agg-shaper-scheduler";
+                            }
+
+                        } // container hw-agg-shaper-scheduler
+
+                    } // container aggregate-shapers
 
                     list queue {
                         key "queue-id";
@@ -326,6 +460,16 @@ submodule nokia-state-port-eth-network {
                             leaf operational-max-transmit-data-size {
                                 type types-qos:int64-max;
                                 description "Oper max transmit data size.";
+                            }
+
+                            leaf orphan {
+                                type boolean;
+                                description "Orphan queue";
+                            }
+
+                            leaf operational-burst-fir {
+                                type types-qos:int64-max;
+                                description "Oper burst FIR.";
                             }
 
                             container exceed-slope {
@@ -1135,7 +1279,7 @@ submodule nokia-state-port-eth-network {
 
                             leaf scheduler-name {
                                 type types-sros:named-item;
-                                description "Scheduler name";
+                                description "Specifies the scheduler name.";
                             }
 
                             container statistics {
@@ -1163,7 +1307,7 @@ submodule nokia-state-port-eth-network {
 
                         leaf arbiter-name {
                             type types-sros:named-item;
-                            description "Arbiter name";
+                            description "Specifies the arbiter name.";
                         }
 
                         container statistics {
