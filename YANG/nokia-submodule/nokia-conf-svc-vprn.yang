@@ -75,7 +75,7 @@ submodule nokia-conf-svc-vprn {
     include nokia-conf-test-oam;
     include nokia-conf-vrrp;
 
-    sros-ext:sros-major-release "rel24";
+    sros-ext:sros-major-release "rel25";
     organization "Nokia";
     contact
         "Nokia SR OS Support
@@ -98,7 +98,7 @@ submodule nokia-conf-svc-vprn {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2025-01-17";
+    revision "2025-03-12";
 
     grouping conf-svc-vprn {
         list vprn {
@@ -1879,6 +1879,7 @@ submodule nokia-conf-svc-vprn {
                                 description "Exclude a configuration group at this level";
                             }
 
+
                         } // list address-range
 
                     } // list pool
@@ -2464,6 +2465,26 @@ submodule nokia-conf-svc-vprn {
                         default "%S %s";
                         description "Calling Number AVP for L2TP control messages";
                     }
+
+                    container fragmentation {
+                        presence "Enable the fragmentation context";
+                        description "Enable the fragmentation context";
+
+                        leaf default-action {
+                            type types-l2tp:lac-fragmentation-action;
+                            default "deny";
+                            description "Default action for L2TP sessions";
+                        }
+
+                        leaf fpe {
+                            type leafref {
+                                path "../../../../../../fwd-path-ext/fpe/fpe-id";
+                            }
+                            mandatory true;
+                            description "FPE that constructs the data endpoints";
+                        }
+
+                    } // container fragmentation
 
                     container cisco-nas-port {
                         description "Enter the cisco-nas-port context";
@@ -4414,7 +4435,7 @@ submodule nokia-conf-svc-vprn {
 
                         leaf entry-id {
                             type uint32 {
-                                range "1..16";
+                                range "1..32";
                             }
                             description "IPsec security policy entry ID";
                         }
@@ -6814,6 +6835,11 @@ submodule nokia-conf-svc-vprn {
                     description "UMH selection mechanism";
                 }
 
+                leaf service-reserved-label {
+                    type types-sros:mpls-label-or-zero;
+                    description "Common service label for the MVPN";
+                }
+
                 leaf-list apply-groups {
                     type leafref {
                         path "../../../../groups/group/name";
@@ -7528,7 +7554,7 @@ submodule nokia-conf-svc-vprn {
                                             range "1..4000";
                                         }
                                         default "10";
-                                        description "Specify the maximum number of p2mp s-pmsi tunnels for the mvpn.";
+                                        description "Maximum number of P2MP S-PMSI tunnels for the MVPN";
                                     }
 
                                 } // container bier
@@ -7586,7 +7612,7 @@ submodule nokia-conf-svc-vprn {
                                             range "1..4000";
                                         }
                                         default "10";
-                                        description "Specify the maximum number of p2mp s-pmsi tunnels for the mvpn.";
+                                        description "Maximum number of P2MP S-PMSI tunnels for the MVPN";
                                     }
 
                                 } // container p2mp-sr
@@ -8751,6 +8777,7 @@ submodule nokia-conf-svc-vprn {
 
                     } // container evpn-link-bandwidth
 
+
                 } // list segment-routing-v6
 
                 list vxlan {
@@ -9474,10 +9501,33 @@ submodule nokia-conf-svc-vprn {
                             description "Time to wait for a response from the TACACS+ server";
                         }
 
+                        leaf server-retry-timeout {
+                            type union {
+                                type types-sros:time-duration {
+                                    range "1..300";
+                                }
+                                type enumeration {
+                                    enum none {
+                                        value 0;
+                                        description "Disable retry timeout and send requests immediately";
+                                    }
+                                }
+                            }
+                            units "seconds";
+                            default "300";
+                            description "Time before retrying requests when health checks are disabled";
+                        }
+
                         leaf use-default-template {
                             type boolean;
                             default "true";
                             description "Apply TACACS+ default user-template to TACACS+ user";
+                        }
+
+                        leaf ignore-unknown-mandatory-vsas {
+                            type boolean;
+                            default "false";
+                            description "Ignore unknown mandatory VSAs and fail authentication";
                         }
 
                         leaf-list apply-groups {
@@ -9588,7 +9638,7 @@ submodule nokia-conf-svc-vprn {
                             leaf nokia-grpc-rpc-authorization {
                                 type boolean;
                                 default "false";
-                                description "Request nokia-user service VSAs";
+                                description "Request nokia-grpc-rpc-authorization service VSAs";
                             }
 
                             leaf nokia-netconf-base-op-authorization {
@@ -9601,6 +9651,12 @@ submodule nokia-conf-svc-vprn {
                                 type boolean;
                                 default "false";
                                 description "Request nokia-user service VSAs";
+                            }
+
+                            leaf nokia-user-profile {
+                                type boolean;
+                                default "false";
+                                description "Request nokia-user-profile service VSAs";
                             }
 
                         } // container service-request
@@ -10645,6 +10701,7 @@ submodule nokia-conf-svc-vprn {
                 }
 
                 leaf domain-id {
+                    status obsolete;
                     type types-services:domain-id;
                     description "Domain ID of received BGP route before readvertisement";
                 }
@@ -10941,6 +10998,7 @@ submodule nokia-conf-svc-vprn {
                     }
 
                     leaf d-path-length-ignore {
+                        status obsolete;
                         type boolean;
                         default "false";
                         description "Enable D-PATH length ignore";
@@ -15067,6 +15125,26 @@ submodule nokia-conf-svc-vprn {
 
                 } // container load-balancing
 
+                container urpf-check {
+                    when "../ip-tunnel-interface = 'false'" {
+                        description "not allowed in a tunnel interface";
+                    }
+                    presence "Enable the urpf-check context";
+                    description "Enable the urpf-check context";
+
+                    leaf ignore-default {
+                        type boolean;
+                        default "false";
+                        description "Ignore default route when performing a uRPF check";
+                    }
+
+                    leaf mode {
+                        type types-router:urpf-check-mode;
+                        default "strict";
+                        description "uRPF check mode";
+                    }
+
+                } // container urpf-check
 
                 container hold-time {
                     description "Enter the hold-time context";
@@ -18352,6 +18430,7 @@ submodule nokia-conf-svc-vprn {
                             }
 
                             leaf burst {
+                                status obsolete;
                                 type types-qos:aggr-policer-burst;
                                 default "default";
                                 description "Aggregate policer burst";
@@ -18367,6 +18446,21 @@ submodule nokia-conf-svc-vprn {
                                 type types-qos:aggr-policer-cbs;
                                 units "kilobytes";
                                 description "Aggregate policer CBS";
+                            }
+
+                            leaf mbs {
+                                type types-qos:aggr-policer-mbs;
+                                default "default";
+                                description "Aggregate policer mbs";
+                            }
+
+                            leaf algorithm-type {
+                                type enumeration {
+                                    enum trtcm-ds                       { value 1; }
+                                    enum trtcm-ds-coupled               { value 2; }
+                                }
+                                default "trtcm-ds-coupled";
+                                description "Policer algorithm type";
                             }
 
                         } // container aggregate-policer
@@ -22441,7 +22535,7 @@ submodule nokia-conf-svc-vprn {
                     leaf encapsulated-ip-mtu {
                         type types-router:ip-mtu-ext;
                         units "bytes";
-                        description "Configure the encapsulated IP MTU for this tunnel.";
+                        description "Encapsulated IP MTU size for the tunnel";
                     }
 
                     leaf-list apply-groups {
@@ -23408,6 +23502,13 @@ submodule nokia-conf-svc-vprn {
                     } // container primary
 
                 } // container ipv4
+
+                container ipv6 {
+                    presence "Enable the ipv6 context";
+                    description "Enable the ipv6 context";
+
+
+                } // container ipv6
 
             } // list redundant-interface
 
@@ -26971,6 +27072,12 @@ submodule nokia-conf-svc-vprn {
                             path "../../../../../qos/ingress-classification-policy/ingress-classification-policy-name";
                         }
                         description "Short-pipe mode for CoS propagation";
+                    }
+
+                    leaf urpf-check-mpls {
+                        type boolean;
+                        default "false";
+                        description "Enable uRPF check for the network interface";
                     }
 
                     container qos {

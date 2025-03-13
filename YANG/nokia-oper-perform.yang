@@ -6,6 +6,7 @@ module nokia-oper-perform {
 
     prefix "oper-perform";
 
+    import ietf-yang-types                { prefix "yang"; }
     import nokia-sros-yang-extensions     { prefix "sros-ext"; }
     import nokia-state                    { prefix "state"; }
     import nokia-types-card               { prefix "types-card"; }
@@ -14,7 +15,7 @@ module nokia-oper-perform {
     import nokia-types-services           { prefix "types-services"; }
     import nokia-types-sros               { prefix "types-sros"; }
 
-    sros-ext:sros-major-release "rel24";
+    sros-ext:sros-major-release "rel25";
     organization "Nokia";
     contact
         "Nokia SR OS Support
@@ -37,7 +38,7 @@ module nokia-oper-perform {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2016-01-01";
+    revision "2025-03-12";
 
     container perform {
         config false;
@@ -855,11 +856,76 @@ module nokia-oper-perform {
         container defender-mitigation-system {
             description "Enter the defender-mitigation-system context";
 
+            action dynamic-block-clear {
+                description "Clear the dynamic-block state for a tracked source IP";
+
+                input {
+
+                    leaf protected-object {
+                        type leafref {
+                            path "/state:state/state:defender-mitigation-system/state:protected-object/state:id";
+                        }
+                        mandatory true;
+                        description "PO within which to clear the dynamic-block state";
+                    }
+
+                    leaf src-ip-address {
+                        type types-sros:ip-address;
+                        mandatory true;
+                        description "Tracked-source IP address to clear dynamic-block state";
+                    }
+
+                }
+                output {
+
+                    leaf operation-id {
+                        type types-operation:operation-id;
+                        description "ID assigned to the operation.";
+                    }
+
+                    leaf start-time {
+                        type types-operation:operation-timestamp;
+                        description "Time when the operation started its execution.";
+                    }
+
+                    leaf results-path {
+                        type types-operation:operation-path;
+                        description "Path to the results of the operation formatted as xpath.";
+                    }
+
+                    leaf status {
+                        type types-operation:operation-status;
+                        description "Status of the operation";
+                    }
+
+                    leaf-list error-message {
+                        type types-operation:operation-message;
+                        description "Error messages reported during execution of the operation.";
+                    }
+
+                    leaf-list warning-message {
+                        type types-operation:operation-message;
+                        description "Warning messages reported during execution of the operation.";
+                    }
+
+                    leaf-list info-message {
+                        type types-operation:operation-message;
+                        description "Info messages reported during execution of the operation.";
+                    }
+
+                    leaf end-time {
+                        type types-operation:operation-timestamp;
+                        description "Time when the operation ended its execution.";
+                    }
+
+                }
+            } // action dynamic-block-clear
+
             container user-list-import {
                 description "Enter the user-list-import context";
 
                 action force-import {
-                    description "Force DMS to attempt to import a new user-list file";
+                    description "Force system to attempt to import a new user-list file";
 
                     output {
 
@@ -1046,7 +1112,7 @@ module nokia-oper-perform {
                 } // container user-list-import
 
                 action resources {
-                    description "Display DMS resources";
+                    description "Display Defender Mitigation System resources";
 
                     input {
 
@@ -1126,7 +1192,7 @@ module nokia-oper-perform {
                         }
 
                         action flow-search {
-                            description "Display DMS flow records";
+                            description "Display Defender Mitigation System flow records";
 
                             input {
 
@@ -1305,6 +1371,12 @@ module nokia-oper-perform {
                                     description "Minimum amount of dropped traffic for tracked source";
                                 }
 
+                                leaf dynamic-block-count {
+                                    type uint32;
+                                    default "0";
+                                    description "Minimum dynamic-block occurrences for tracked sources";
+                                }
+
                                 leaf search-type {
                                     type enumeration {
                                         enum standard {
@@ -1337,6 +1409,107 @@ module nokia-oper-perform {
                                     type types-operation:operation-path;
                                     description "Path to the results of the operation formatted as xpath.";
                                 }
+
+                                list tracked-source {
+                                    description "Enter the tracked-source list instance";
+
+                                    leaf source-id {
+                                        type uint32;
+                                        description "The tracked source identifier.";
+                                    }
+
+                                    leaf protected-object-id {
+                                        type uint32;
+                                        description "The identifier for the protected-object which the tracked source was created for.";
+                                    }
+
+                                    leaf source-state {
+                                        type enumeration {
+                                            enum active {
+                                                value 0;
+                                                description "The tracked source is active.";
+                                            }
+                                            enum closed {
+                                                value 1;
+                                                description "The tracked source is closed (inactive).";
+                                            }
+                                            enum dynamic-block {
+                                                value 2;
+                                                description "The tracked source is under dynamic block.";
+                                            }
+                                        }
+                                        description "The current status of the tracked source.";
+                                    }
+
+                                    leaf authentication {
+                                        type string;
+                                        description "The authentication method(s) used on the tracked source.";
+                                    }
+
+                                    leaf ip-address {
+                                        type types-sros:ip-address;
+                                        description "The tracked source IP address.";
+                                    }
+
+                                    leaf admitted-packets {
+                                        type yang:counter64;
+                                        units "packets";
+                                        description "The number of admitted packets recorded for the tracked source.";
+                                    }
+
+                                    leaf admitted-bytes {
+                                        type yang:counter64;
+                                        units "bytes";
+                                        description "The number of admitted bytes recorded for the tracked source.";
+                                    }
+
+                                    leaf discarded-packets {
+                                        type yang:counter64;
+                                        units "packets";
+                                        description "The number of discarded packets recorded for the tracked source.";
+                                    }
+
+                                    leaf discarded-bytes {
+                                        type yang:counter64;
+                                        units "bytes";
+                                        description "The number of discarded bytes recorded for the tracked source.";
+                                    }
+
+                                    leaf active-flows {
+                                        type yang:counter64;
+                                        units "flows";
+                                        description "The number of active flow records for the tracked source.";
+                                    }
+
+                                    leaf closed-flows {
+                                        type yang:counter64;
+                                        units "flows";
+                                        description "The number of closed flow records for the tracked source.";
+                                    }
+
+                                    leaf first-packet-time {
+                                        type yang:date-and-time;
+                                        description "Date and time of the first packet recorded for the tracked source.";
+                                    }
+
+                                    leaf last-packet-time {
+                                        type yang:date-and-time;
+                                        description "Date and time of the last packet recorded for the tracked source.";
+                                    }
+
+                                    leaf dynamic-block-count {
+                                        type yang:counter64;
+                                        description "The number of times the tracked source has transitioned to the dynamic-block state.";
+                                    }
+
+                                    leaf last-dynamic-block-time {
+                                        type yang:date-and-time;
+                                        description
+                                            "Expiration date and time for the last dynamic-block penalty applied to the tracked source.
+                                             Only available if dynamic-block-count is greater than 0.";
+                                    }
+
+                                } // list tracked-source
 
                                 leaf status {
                                     type types-operation:operation-status;
@@ -2454,6 +2627,7 @@ module nokia-oper-perform {
         container system {
             description "Enter the system context";
 
+
             container script-control {
                 description "Enter the script-control context";
 
@@ -3515,6 +3689,7 @@ module nokia-oper-perform {
             } // container mcast-umh-red
 
         } // list router
+
 
     } // container perform
 

@@ -19,7 +19,7 @@ submodule nokia-conf-dms {
     include nokia-conf-system-security;
     include nokia-conf-system-security-tls;
 
-    sros-ext:sros-major-release "rel24";
+    sros-ext:sros-major-release "rel25";
     organization "Nokia";
     contact
         "Nokia SR OS Support
@@ -42,7 +42,7 @@ submodule nokia-conf-dms {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2024-10-09";
+    revision "2025-03-12";
 
     grouping conf-dms-defender-mitigation-system {
         container defender-mitigation-system {
@@ -263,7 +263,7 @@ submodule nokia-conf-dms {
 
             list protected-object {
                 key "id";
-                max-elements 128;
+                max-elements 250;
                 description "Enter the protected-object list instance";
 
                 leaf id {
@@ -1192,6 +1192,19 @@ submodule nokia-conf-dms {
 
                                         } // list dns-list
 
+                                        list expression {
+                                            key "expression-string";
+                                            max-elements 5;
+                                            description "Add a list entry for expression";
+
+                                            leaf expression-string {
+                                                type string {
+                                                    length "1..80";
+                                                }
+                                                description "DNS domain expression";
+                                            }
+
+                                        } // list expression
 
                                     } // container query-name
 
@@ -1362,6 +1375,152 @@ submodule nokia-conf-dms {
 
                     } // list icmp-validate
 
+                    list quic-tracker {
+                        key "quic-tracker-name";
+                        max-elements 2;
+                        description "Enter the quic-tracker list instance";
+
+                        leaf quic-tracker-name {
+                            type types-sros:named-item;
+                            description "QUIC flow tracker instance name";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf dynamic-block {
+                            type boolean;
+                            default "false";
+                            description "Block the tracked source upon QUIC tracker discard";
+                        }
+
+                        leaf fragment-limit {
+                            type uint32 {
+                                range "1..31";
+                            }
+                            description "Maximum number of QUIC message fragments in handshake";
+                        }
+
+                        leaf application-data-guard-time {
+                            type uint32 {
+                                range "1..120";
+                            }
+                            units "seconds";
+                            description "Maximum time to send data after flow initialization";
+                        }
+
+                        leaf inactivity-timeout {
+                            type uint32 {
+                                range "1..3600";
+                            }
+                            units "seconds";
+                            description "Inactivity timeout for QUIC flows";
+                        }
+
+                        leaf concurrent-handshake-limit {
+                            type leafref {
+                                path "../../../policer/event-count/name";
+                            }
+                            description "PO-level event-count policer to limit QUIC sessions";
+                        }
+
+                        leaf source-concurrent-handshake-limit {
+                            type leafref {
+                                path "../../../policer/source-event-count/name";
+                            }
+                            description "Source-level policer to limit number of QUIC sessions";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // list quic-tracker
+
+                    list sip-tracker {
+                        key "sip-tracker-name";
+                        max-elements 2;
+                        description "Enter the sip-tracker list instance";
+
+                        leaf sip-tracker-name {
+                            type types-sros:named-item;
+                            description "SIP flow tracker instance name";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf dynamic-block {
+                            type boolean;
+                            default "false";
+                            description "Block the tracked source upon SIP tracker discard";
+                        }
+
+                        leaf request-rate-policer {
+                            type leafref {
+                                path "../../../policer/event-rate/name";
+                            }
+                            description "PO-level event-rate policer to use for SIP requests";
+                        }
+
+                        leaf source-request-rate-policer {
+                            type leafref {
+                                path "../../../policer/source-event-rate/name";
+                            }
+                            description "Source-level event-rate policer to use for SIP requests";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container udp {
+                            description "Enter the udp context";
+
+                            leaf inactivity-timeout {
+                                type uint32 {
+                                    range "1..3600";
+                                }
+                                units "seconds";
+                                description "Inactivity timeout for SIP over UDP flows";
+                            }
+
+                        } // container udp
+
+
+                    } // list sip-tracker
 
                     list tls-tracker {
                         key "tls-tracker-name";
@@ -1570,7 +1729,11 @@ submodule nokia-conf-dms {
                                     }
                                     enum active-challenge {
                                         value 1;
-                                        description "Actively challenge the TCP client";
+                                        description "Actively challenge session with a SynAck cookie";
+                                    }
+                                    enum active-invalid-ack {
+                                        value 2;
+                                        description "Actively interrupt session with an out of sequence Ack";
                                     }
                                 }
                                 default "none";
@@ -1596,6 +1759,26 @@ submodule nokia-conf-dms {
                                                 path "../../../../../protocol-handlers/http-tracker/http-tracker-name";
                                             }
                                             description "Flow tracker used to analyze matching HTTP traffic";
+                                        }
+
+                                    }
+                                    case quic {
+
+                                        leaf quic {
+                                            type leafref {
+                                                path "../../../../../protocol-handlers/quic-tracker/quic-tracker-name";
+                                            }
+                                            description "Flow tracker used to analyze matching QUIC traffic";
+                                        }
+
+                                    }
+                                    case sip {
+
+                                        leaf sip {
+                                            type leafref {
+                                                path "../../../../../protocol-handlers/sip-tracker/sip-tracker-name";
+                                            }
+                                            description "Flow tracker used to analyze matching SIP traffic";
                                         }
 
                                     }

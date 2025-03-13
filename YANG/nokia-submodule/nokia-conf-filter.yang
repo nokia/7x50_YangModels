@@ -23,7 +23,7 @@ submodule nokia-conf-filter {
     include nokia-conf-svc-vpls;
     include nokia-conf-svc-vprn;
 
-    sros-ext:sros-major-release "rel24";
+    sros-ext:sros-major-release "rel25";
     organization "Nokia";
     contact
         "Nokia SR OS Support
@@ -46,7 +46,7 @@ submodule nokia-conf-filter {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2024-09-05";
+    revision "2025-03-12";
 
     grouping conf-filter {
         container filter {
@@ -1270,7 +1270,7 @@ submodule nokia-conf-filter {
 
                         leaf option-present {
                             type boolean;
-                            description "Match on the presence of any IP option in the packet";
+                            description "Match on any IP option present in the packet";
                         }
 
                         leaf src-route-option {
@@ -1704,7 +1704,7 @@ submodule nokia-conf-filter {
                             leaf type {
                                 type types-filter:filter-match-ip-option;
                                 mandatory true;
-                                description "Specific IP option to match";
+                                description "IP option to match";
                             }
 
                             leaf mask {
@@ -1712,7 +1712,7 @@ submodule nokia-conf-filter {
                                     range "1..255";
                                 }
                                 default "255";
-                                description "Mask that is ANDed with ip-option value in the packet header";
+                                description "Mask used with the IP option value in the packet header";
                             }
 
                         } // container ip-option
@@ -2406,6 +2406,16 @@ submodule nokia-conf-filter {
                                         type types-filter:rate-limit-pir-pps;
                                         units "packets per second";
                                         description "Peak information rate";
+                                    }
+
+                                }
+                                case policer-case {
+
+                                    leaf policer {
+                                        type leafref {
+                                            path "../../../../../policer/policer-name";
+                                        }
+                                        description "Policer name to use for rate limiting traffic";
                                     }
 
                                 }
@@ -4641,6 +4651,16 @@ submodule nokia-conf-filter {
                                     }
 
                                 }
+                                case policer-case {
+
+                                    leaf policer {
+                                        type leafref {
+                                            path "../../../../../policer/policer-name";
+                                        }
+                                        description "Policer name to use for rate limiting traffic";
+                                    }
+
+                                }
                             }
                             choice criterion-1 {
                                 case hop-limit {
@@ -6270,6 +6290,95 @@ submodule nokia-conf-filter {
 
             } // container md-auto-id
 
+            list policer {
+                key "policer-name";
+                max-elements 8192;
+                description "Enter the policer list instance";
+
+                leaf policer-name {
+                    type types-sros:named-item;
+                    description "Name of the policer for use in a filter policy";
+                }
+
+                leaf description {
+                    type types-sros:description;
+                    description "Text description";
+                }
+
+                leaf scope {
+                    type enumeration {
+                        enum filter {
+                            value 0;
+                            description "Policer shared by entries in same filter policer";
+                        }
+                        enum system {
+                            value 1;
+                            description "Single policer shared by the system";
+                        }
+                    }
+                    sros-ext:immutable;
+                    default "filter";
+                    description "Policer scope";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                choice pir-choice {
+                    default "pir-case";
+                    case pir-case {
+
+                        leaf pir {
+                            type int32 {
+                                range "0..2000000000";
+                            }
+                            units "kilobps";
+                            description "Peak information rate";
+                        }
+
+                        leaf mbs {
+                            type union {
+                                type uint32 {
+                                    range "0..268435456";
+                                }
+                                type enumeration {
+                                    enum auto                           { value -1; }
+                                }
+                            }
+                            units "bytes";
+                            default "auto";
+                            description "Maximum burst size";
+                        }
+
+                    }
+                    case pps-pir-case {
+
+                        leaf pps-pir {
+                            type int32 {
+                                range "0..100000000";
+                            }
+                            units "packets per second";
+                            description "Peak information rate";
+                        }
+
+                    }
+                }
+            } // list policer
 
             uses conf-filter-dhcp-dhcp-filter;
             uses conf-filter-dhcp-dhcp6-filter;

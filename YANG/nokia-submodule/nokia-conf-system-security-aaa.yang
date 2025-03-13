@@ -16,8 +16,9 @@ submodule nokia-conf-system-security-aaa {
     include nokia-conf-system;
     include nokia-conf-system-security;
     include nokia-conf-system-security-tls;
+    include nokia-conf-system-security-user-parameters;
 
-    sros-ext:sros-major-release "rel24";
+    sros-ext:sros-major-release "rel25";
     organization "Nokia";
     contact
         "Nokia SR OS Support
@@ -40,7 +41,7 @@ submodule nokia-conf-system-security-aaa {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2024-10-11";
+    revision "2025-03-12";
 
     grouping conf-system-security-aaa {
         container aaa {
@@ -468,10 +469,33 @@ submodule nokia-conf-system-security-aaa {
                         description "Time to wait for a response from the TACACS+ server";
                     }
 
+                    leaf server-retry-timeout {
+                        type union {
+                            type types-sros:time-duration {
+                                range "1..300";
+                            }
+                            type enumeration {
+                                enum none {
+                                    value 0;
+                                    description "Disable retry timeout and send requests immediately";
+                                }
+                            }
+                        }
+                        units "seconds";
+                        default "300";
+                        description "Time before retrying requests when health checks are disabled";
+                    }
+
                     leaf use-default-template {
                         type boolean;
                         default "true";
                         description "Apply TACACS+ default user-template to TACACS+ user";
+                    }
+
+                    leaf ignore-unknown-mandatory-vsas {
+                        type boolean;
+                        default "false";
+                        description "Ignore unknown mandatory VSAs and fail authentication";
                     }
 
                     leaf route-preference {
@@ -618,7 +642,7 @@ submodule nokia-conf-system-security-aaa {
                         leaf nokia-grpc-rpc-authorization {
                             type boolean;
                             default "false";
-                            description "Request nokia-user service VSAs";
+                            description "Request nokia-grpc-rpc-authorization service VSAs";
                         }
 
                         leaf nokia-netconf-base-op-authorization {
@@ -631,6 +655,12 @@ submodule nokia-conf-system-security-aaa {
                             type boolean;
                             default "false";
                             description "Request nokia-user service VSAs";
+                        }
+
+                        leaf nokia-user-profile {
+                            type boolean;
+                            default "false";
+                            description "Request nokia-user-profile service VSAs";
                         }
 
                     } // container service-request
@@ -1354,6 +1384,7 @@ submodule nokia-conf-system-security-aaa {
                     description "Exclude a configuration group at this level";
                 }
 
+
                 container output-authorization {
                     description "Enter the output-authorization context";
 
@@ -1367,6 +1398,13 @@ submodule nokia-conf-system-security-aaa {
                         type boolean;
                         default "false";
                         description "Authorize dial-in telemetry output";
+                    }
+
+                    leaf telemetry-default-user {
+                        type leafref {
+                            path "../../../../user-params/local-user/user/user-name";
+                        }
+                        description "Local user for dial-out telemetry output authorization";
                     }
 
                 } // container output-authorization
