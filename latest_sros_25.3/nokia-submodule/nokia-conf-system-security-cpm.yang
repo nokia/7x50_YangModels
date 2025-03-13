@@ -1,0 +1,1309 @@
+submodule nokia-conf-system-security-cpm {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-filter             { prefix "types-filter"; }
+    import nokia-types-qos                { prefix "types-qos"; }
+    import nokia-types-security           { prefix "types-security"; }
+    import nokia-types-services           { prefix "types-services"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+    import nokia-types-system             { prefix "types-system"; }
+
+    include nokia-conf-filter;
+    include nokia-conf-groups;
+    include nokia-conf-service;
+    include nokia-conf-svc-vpls;
+
+    sros-ext:sros-major-release "rel25";
+    organization "Nokia";
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+    description
+        "Nokia YANG Data model to configure System security cpm-filter and cpm-queue configuration. on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-system-security-cpm YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+    revision "2025-03-12";
+
+    grouping conf-system-security-cpm-cpm-filter {
+        container cpm-filter {
+            description "Enter the cpm-filter context";
+
+            leaf default-action {
+                type enumeration {
+                    enum drop                           { value 1; }
+                    enum accept                         { value 2; }
+                }
+                default "accept";
+                description "Action for packets that do not match any filter entries";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            leaf-list apply-groups-exclude {
+                type leafref {
+                    path "../../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Exclude a configuration group at this level";
+            }
+
+            container ip-filter {
+                description "Enter the ip-filter context";
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of the CPM filter";
+                }
+
+                list entry {
+                    key "entry-id";
+                    description "Enter the entry list instance";
+
+                    leaf entry-id {
+                        type uint32 {
+                            range "1..131072";
+                        }
+                        description "Filter entry ID";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf log {
+                        type leafref {
+                            path "../../../../../../filter/log/log-id";
+                        }
+                        description "Log ID where matching packets are entered";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container match {
+                        description "Enter the match context";
+
+                        leaf router-instance {
+                            type types-sros:named-item-64;
+                            description "Router instance as the match criteria";
+                        }
+
+                        leaf protocol {
+                            type types-sros:match-ip-protocol;
+                            description "IP protocol as the match criterion";
+                        }
+
+                        leaf dscp {
+                            type types-qos:dscp-name;
+                            description "DSCP used as the match criterion on the packet";
+                        }
+
+                        leaf fragment {
+                            type enumeration {
+                                enum false                          { value 2; }
+                                enum true                           { value 3; }
+                            }
+                            description "Match criterion based on presence of fragmented packets";
+                        }
+
+                        leaf multiple-option {
+                            type boolean;
+                            description "Match on packets containing multiple option fields";
+                        }
+
+                        leaf option-present {
+                            type boolean;
+                            description "Match on packets with option field present";
+                        }
+
+                        choice port-selector {
+                            case src-dst-port {
+
+                                container src-port {
+                                    description "Enter the src-port context";
+
+                                    choice port {
+                                        case eq {
+
+                                            leaf eq {
+                                                type uint16 {
+                                                    range "0..65535";
+                                                }
+                                                description "Port number as the match criterion";
+                                            }
+
+                                            leaf mask {
+                                                type uint16 {
+                                                    range "1..65535";
+                                                }
+                                                default "65535";
+                                                description "Port mask as the match criterion";
+                                            }
+
+                                        }
+                                        case range {
+
+                                            container range {
+                                                presence "Enable the range context";
+                                                description "Enable the range context";
+
+                                                leaf start {
+                                                    type uint16 {
+                                                        range "0..65535";
+                                                    }
+                                                    mandatory true;
+                                                    description "Lower bound of the port number to match";
+                                                }
+
+                                                leaf end {
+                                                    type uint16 {
+                                                        range "0..65535";
+                                                    }
+                                                    mandatory true;
+                                                    description "Upper bound of the port number to match";
+                                                }
+
+                                            } // container range
+
+                                        }
+                                        case port-list {
+
+                                            leaf port-list {
+                                                type leafref {
+                                                    path "../../../../../../../../filter/match-list/port-list/port-list-name";
+                                                }
+                                                description "Port list as the match criterion";
+                                            }
+
+                                        }
+                                    }
+                                } // container src-port
+
+                                container dst-port {
+                                    description "Enter the dst-port context";
+
+                                    choice port {
+                                        case eq {
+
+                                            leaf eq {
+                                                type uint16 {
+                                                    range "0..65535";
+                                                }
+                                                description "Port number as the match criterion";
+                                            }
+
+                                            leaf mask {
+                                                type uint16 {
+                                                    range "1..65535";
+                                                }
+                                                default "65535";
+                                                description "Port mask as the match criterion";
+                                            }
+
+                                        }
+                                        case range {
+
+                                            container range {
+                                                presence "Enable the range context";
+                                                description "Enable the range context";
+
+                                                leaf start {
+                                                    type uint16 {
+                                                        range "0..65535";
+                                                    }
+                                                    mandatory true;
+                                                    description "Lower bound of the port number to match";
+                                                }
+
+                                                leaf end {
+                                                    type uint16 {
+                                                        range "0..65535";
+                                                    }
+                                                    mandatory true;
+                                                    description "Upper bound of the port number to match";
+                                                }
+
+                                            } // container range
+
+                                        }
+                                        case port-list {
+
+                                            leaf port-list {
+                                                type leafref {
+                                                    path "../../../../../../../../filter/match-list/port-list/port-list-name";
+                                                }
+                                                description "Port list as the match criterion";
+                                            }
+
+                                        }
+                                    }
+                                } // container dst-port
+
+                            }
+                            case port {
+
+                                container port {
+                                    description "Enter the port context";
+
+                                    choice port {
+                                        case eq {
+
+                                            leaf eq {
+                                                type uint16 {
+                                                    range "0..65535";
+                                                }
+                                                description "Port number as the match criterion";
+                                            }
+
+                                            leaf mask {
+                                                type uint16 {
+                                                    range "1..65535";
+                                                }
+                                                default "65535";
+                                                description "Port mask as the match criterion";
+                                            }
+
+                                        }
+                                        case range {
+
+                                            container range {
+                                                presence "Enable the range context";
+                                                description "Enable the range context";
+
+                                                leaf start {
+                                                    type uint16 {
+                                                        range "0..65535";
+                                                    }
+                                                    mandatory true;
+                                                    description "Lower bound of the port number to match";
+                                                }
+
+                                                leaf end {
+                                                    type uint16 {
+                                                        range "0..65535";
+                                                    }
+                                                    mandatory true;
+                                                    description "Upper bound of the port number to match";
+                                                }
+
+                                            } // container range
+
+                                        }
+                                        case port-list {
+
+                                            leaf port-list {
+                                                type leafref {
+                                                    path "../../../../../../../../filter/match-list/port-list/port-list-name";
+                                                }
+                                                description "Port list as the match criterion";
+                                            }
+
+                                        }
+                                    }
+                                } // container port
+
+                            }
+                        }
+                        container ip-option {
+                            presence "Enable the ip-option context";
+                            description "Enable the ip-option context";
+
+                            leaf type {
+                                type types-filter:filter-match-ip-option;
+                                mandatory true;
+                                description "Specific IP option to match";
+                            }
+
+                            leaf mask {
+                                type types-filter:filter-match-ip-option {
+                                    range "1..255";
+                                }
+                                default "255";
+                                description "Range of option numbers for the mask match criterion";
+                            }
+
+                        } // container ip-option
+
+                        container src-ip {
+                            description "Enter the src-ip context";
+
+                            choice match-address-choice {
+                                case address-and-prefix-or-mask {
+
+                                    leaf address {
+                                        type union {
+                                            type types-sros:ipv4-prefix-with-host-bits;
+                                            type types-sros:ipv4-address;
+                                        }
+                                        description "IPv4 address used as the match criterion";
+                                    }
+
+                                    leaf mask {
+                                        type types-sros:ipv4-address;
+                                        description "IPv4 address mask used as the match criterion";
+                                    }
+
+                                }
+                                case ip-prefix-list {
+
+                                    leaf ip-prefix-list {
+                                        type leafref {
+                                            path "../../../../../../../../filter/match-list/ip-prefix-list/prefix-list-name";
+                                        }
+                                        description "IPv4 address prefix list used as match criterion";
+                                    }
+
+                                }
+                            }
+                        } // container src-ip
+
+                        container dst-ip {
+                            description "Enter the dst-ip context";
+
+                            choice match-address-choice {
+                                case address-and-prefix-or-mask {
+
+                                    leaf address {
+                                        type union {
+                                            type types-sros:ipv4-prefix-with-host-bits;
+                                            type types-sros:ipv4-address;
+                                        }
+                                        description "IPv4 address used as the match criterion";
+                                    }
+
+                                    leaf mask {
+                                        type types-sros:ipv4-address;
+                                        description "IPv4 address mask used as the match criterion";
+                                    }
+
+                                }
+                                case ip-prefix-list {
+
+                                    leaf ip-prefix-list {
+                                        type leafref {
+                                            path "../../../../../../../../filter/match-list/ip-prefix-list/prefix-list-name";
+                                        }
+                                        description "IPv4 address prefix list used as match criterion";
+                                    }
+
+                                }
+                            }
+                        } // container dst-ip
+
+                        container icmp {
+                            description "Enter the icmp context";
+
+                            choice icmp-code {
+                                case code {
+
+                                    leaf code {
+                                        type types-filter:ipv4-match-icmp-codes;
+                                        description "ICMP code to match";
+                                    }
+
+                                }
+                            }
+                            choice icmp-type {
+                                case type {
+
+                                    leaf type {
+                                        type types-filter:ipv4-match-icmp-types;
+                                        description "ICMP type to match";
+                                    }
+
+                                }
+                            }
+                        } // container icmp
+
+                        container tcp-flags {
+                            description "Enter the tcp-flags context";
+
+                            leaf ack {
+                                type boolean;
+                                description "ACK bit in TCP header control bits as match criterion";
+                            }
+
+                            leaf syn {
+                                type boolean;
+                                description "SYN bit in TCP header control bits as match criterion";
+                            }
+
+                        } // container tcp-flags
+
+                    } // container match
+
+                    container action {
+                        description "Enter the action context";
+
+                        choice action-choice {
+                            default "case-drop";
+                            case case-drop {
+
+                                leaf drop {
+                                    type empty;
+                                    description "Drop matching packets";
+                                }
+
+                            }
+                            case case-accept {
+
+                                leaf accept {
+                                    type empty;
+                                    description "Forward matching packets";
+                                }
+
+                            }
+                            case case-default {
+
+                                leaf default {
+                                    type empty;
+                                    description "Use default action for matching packets";
+                                }
+
+                            }
+                            case case-queue {
+
+                                leaf queue {
+                                    type leafref {
+                                        path "../../../../../cpm-queue/queue/queue-id";
+                                    }
+                                    description "Forward matching packets to the CPM hardware queue";
+                                }
+
+                            }
+                        }
+                    } // container action
+
+                } // list entry
+
+            } // container ip-filter
+
+            container ipv6-filter {
+                description "Enter the ipv6-filter context";
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of the CPM filter";
+                }
+
+                list entry {
+                    key "entry-id";
+                    description "Enter the entry list instance";
+
+                    leaf entry-id {
+                        type uint32 {
+                            range "1..131072";
+                        }
+                        description "Filter entry ID";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf log {
+                        type leafref {
+                            path "../../../../../../filter/log/log-id";
+                        }
+                        description "Log ID where matching packets are entered";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container match {
+                        description "Enter the match context";
+
+                        leaf router-instance {
+                            type types-sros:named-item-64;
+                            description "Router instance as the match criteria";
+                        }
+
+                        leaf next-header {
+                            type types-sros:match-ip-protocol;
+                            description "IP protocol to match";
+                        }
+
+                        leaf dscp {
+                            type types-qos:dscp-name;
+                            description "DSCP used as the match criterion on the packet";
+                        }
+
+                        leaf flow-label {
+                            type types-filter:filter-match-flow-label;
+                            description "Flow label in the IPv6 header as the match criterion";
+                        }
+
+                        leaf fragment {
+                            type enumeration {
+                                enum false                          { value 2; }
+                                enum true                           { value 3; }
+                            }
+                            description "Match criterion based on presence of fragmented packets";
+                        }
+
+                        choice port-selector {
+                            case src-dst-port {
+
+                                container src-port {
+                                    description "Enter the src-port context";
+
+                                    choice port {
+                                        case eq {
+
+                                            leaf eq {
+                                                type uint16 {
+                                                    range "0..65535";
+                                                }
+                                                description "Port number as the match criterion";
+                                            }
+
+                                            leaf mask {
+                                                type uint16 {
+                                                    range "1..65535";
+                                                }
+                                                default "65535";
+                                                description "Port mask as the match criterion";
+                                            }
+
+                                        }
+                                        case range {
+
+                                            container range {
+                                                presence "Enable the range context";
+                                                description "Enable the range context";
+
+                                                leaf start {
+                                                    type uint16 {
+                                                        range "0..65535";
+                                                    }
+                                                    mandatory true;
+                                                    description "Lower bound of the port number to match";
+                                                }
+
+                                                leaf end {
+                                                    type uint16 {
+                                                        range "0..65535";
+                                                    }
+                                                    mandatory true;
+                                                    description "Upper bound of the port number to match";
+                                                }
+
+                                            } // container range
+
+                                        }
+                                        case port-list {
+
+                                            leaf port-list {
+                                                type leafref {
+                                                    path "../../../../../../../../filter/match-list/port-list/port-list-name";
+                                                }
+                                                description "Port list as the match criterion";
+                                            }
+
+                                        }
+                                    }
+                                } // container src-port
+
+                                container dst-port {
+                                    description "Enter the dst-port context";
+
+                                    choice port {
+                                        case eq {
+
+                                            leaf eq {
+                                                type uint16 {
+                                                    range "0..65535";
+                                                }
+                                                description "Port number as the match criterion";
+                                            }
+
+                                            leaf mask {
+                                                type uint16 {
+                                                    range "1..65535";
+                                                }
+                                                default "65535";
+                                                description "Port mask as the match criterion";
+                                            }
+
+                                        }
+                                        case range {
+
+                                            container range {
+                                                presence "Enable the range context";
+                                                description "Enable the range context";
+
+                                                leaf start {
+                                                    type uint16 {
+                                                        range "0..65535";
+                                                    }
+                                                    mandatory true;
+                                                    description "Lower bound of the port number to match";
+                                                }
+
+                                                leaf end {
+                                                    type uint16 {
+                                                        range "0..65535";
+                                                    }
+                                                    mandatory true;
+                                                    description "Upper bound of the port number to match";
+                                                }
+
+                                            } // container range
+
+                                        }
+                                        case port-list {
+
+                                            leaf port-list {
+                                                type leafref {
+                                                    path "../../../../../../../../filter/match-list/port-list/port-list-name";
+                                                }
+                                                description "Port list as the match criterion";
+                                            }
+
+                                        }
+                                    }
+                                } // container dst-port
+
+                            }
+                            case port {
+
+                                container port {
+                                    description "Enter the port context";
+
+                                    choice port {
+                                        case eq {
+
+                                            leaf eq {
+                                                type uint16 {
+                                                    range "0..65535";
+                                                }
+                                                description "Port number as the match criterion";
+                                            }
+
+                                            leaf mask {
+                                                type uint16 {
+                                                    range "1..65535";
+                                                }
+                                                default "65535";
+                                                description "Port mask as the match criterion";
+                                            }
+
+                                        }
+                                        case range {
+
+                                            container range {
+                                                presence "Enable the range context";
+                                                description "Enable the range context";
+
+                                                leaf start {
+                                                    type uint16 {
+                                                        range "0..65535";
+                                                    }
+                                                    mandatory true;
+                                                    description "Lower bound of the port number to match";
+                                                }
+
+                                                leaf end {
+                                                    type uint16 {
+                                                        range "0..65535";
+                                                    }
+                                                    mandatory true;
+                                                    description "Upper bound of the port number to match";
+                                                }
+
+                                            } // container range
+
+                                        }
+                                        case port-list {
+
+                                            leaf port-list {
+                                                type leafref {
+                                                    path "../../../../../../../../filter/match-list/port-list/port-list-name";
+                                                }
+                                                description "Port list as the match criterion";
+                                            }
+
+                                        }
+                                    }
+                                } // container port
+
+                            }
+                        }
+                        container src-ip {
+                            description "Enter the src-ip context";
+
+                            choice match-address-choice {
+                                case address-and-prefix-or-mask {
+
+                                    leaf address {
+                                        type union {
+                                            type types-sros:ipv6-prefix-with-host-bits;
+                                            type types-sros:ipv6-address;
+                                        }
+                                        description "IPv6 address used as the match criterion";
+                                    }
+
+                                    leaf mask {
+                                        type types-sros:ipv6-address;
+                                        description "IPv6 address mask used as the match criterion";
+                                    }
+
+                                }
+                                case ipv6-prefix-list {
+
+                                    leaf ipv6-prefix-list {
+                                        type leafref {
+                                            path "../../../../../../../../filter/match-list/ipv6-prefix-list/prefix-list-name";
+                                        }
+                                        description "IPv6 address prefix list used as match criterion";
+                                    }
+
+                                }
+                            }
+                        } // container src-ip
+
+                        container dst-ip {
+                            description "Enter the dst-ip context";
+
+                            choice match-address-choice {
+                                case address-and-prefix-or-mask {
+
+                                    leaf address {
+                                        type union {
+                                            type types-sros:ipv6-prefix-with-host-bits;
+                                            type types-sros:ipv6-address;
+                                        }
+                                        description "IPv6 address used as the match criterion";
+                                    }
+
+                                    leaf mask {
+                                        type types-sros:ipv6-address;
+                                        description "IPv6 address mask used as the match criterion";
+                                    }
+
+                                }
+                                case ipv6-prefix-list {
+
+                                    leaf ipv6-prefix-list {
+                                        type leafref {
+                                            path "../../../../../../../../filter/match-list/ipv6-prefix-list/prefix-list-name";
+                                        }
+                                        description "IPv6 address prefix list used as match criterion";
+                                    }
+
+                                }
+                            }
+                        } // container dst-ip
+
+                        container extension-header {
+                            description "Enter the extension-header context";
+
+                            leaf hop-by-hop {
+                                type boolean;
+                                description "Match on existence of Hop-By-Hop Options Header";
+                            }
+
+                        } // container extension-header
+
+                        container icmp {
+                            description "Enter the icmp context";
+
+                            choice icmp-code {
+                                case code {
+
+                                    leaf code {
+                                        type types-filter:ipv6-match-icmp-codes;
+                                        description "ICMP code as the match criterion";
+                                    }
+
+                                }
+                            }
+                            choice icmp-type {
+                                case type {
+
+                                    leaf type {
+                                        type types-filter:ipv6-match-icmp-types;
+                                        description "ICMP type as the match criterion";
+                                    }
+
+                                }
+                            }
+                        } // container icmp
+
+                        container tcp-flags {
+                            description "Enter the tcp-flags context";
+
+                            leaf ack {
+                                type boolean;
+                                description "ACK bit in TCP header control bits as match criterion";
+                            }
+
+                            leaf syn {
+                                type boolean;
+                                description "SYN bit in TCP header control bits as match criterion";
+                            }
+
+                        } // container tcp-flags
+
+                    } // container match
+
+                    container action {
+                        description "Enter the action context";
+
+                        choice action-choice {
+                            default "case-drop";
+                            case case-drop {
+
+                                leaf drop {
+                                    type empty;
+                                    description "Drop matching packets";
+                                }
+
+                            }
+                            case case-accept {
+
+                                leaf accept {
+                                    type empty;
+                                    description "Forward matching packets";
+                                }
+
+                            }
+                            case case-default {
+
+                                leaf default {
+                                    type empty;
+                                    description "Use default action for matching packets";
+                                }
+
+                            }
+                            case case-queue {
+
+                                leaf queue {
+                                    type leafref {
+                                        path "../../../../../cpm-queue/queue/queue-id";
+                                    }
+                                    description "Forward matching packets to the CPM hardware queue";
+                                }
+
+                            }
+                        }
+                    } // container action
+
+                } // list entry
+
+            } // container ipv6-filter
+
+            container mac-filter {
+                description "Enter the mac-filter context";
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of the CPM filter";
+                }
+
+                list entry {
+                    key "entry-id";
+                    description "Enter the entry list instance";
+
+                    leaf entry-id {
+                        type uint32 {
+                            range "1..131072";
+                        }
+                        description "Filter entry ID";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf log {
+                        type leafref {
+                            path "../../../../../../filter/log/log-id";
+                        }
+                        description "Log ID where matching packets are entered";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container match {
+                        description "Enter the match context";
+
+                        leaf service {
+                            type leafref {
+                                path "../../../../../../../service/vpls/service-name";
+                            }
+                            description "Service ID used as the match condition";
+                        }
+
+                        leaf frame-type {
+                            type enumeration {
+                                enum 802dot2-llc                    { value 1; }
+                                enum ethernet-ii                    { value 3; }
+                            }
+                            description "MAC frame type as the match criterion";
+                        }
+
+                        leaf etype {
+                            type types-services:etype-value;
+                            description "Ethernet type as the match criterion";
+                        }
+
+                        container src-mac {
+                            presence "Enable the src-mac context";
+                            description "Enable the src-mac context";
+
+                            leaf address {
+                                type yang:mac-address;
+                                mandatory true;
+                                description "MAC address used as the match criterion";
+                            }
+
+                            leaf mask {
+                                type yang:mac-address;
+                                default "ff:ff:ff:ff:ff:ff";
+                                description "MAC address mask as the match criterion";
+                            }
+
+                        } // container src-mac
+
+                        container dst-mac {
+                            presence "Enable the dst-mac context";
+                            description "Enable the dst-mac context";
+
+                            leaf address {
+                                type yang:mac-address;
+                                mandatory true;
+                                description "MAC address used as the match criterion";
+                            }
+
+                            leaf mask {
+                                type yang:mac-address;
+                                default "ff:ff:ff:ff:ff:ff";
+                                description "MAC address mask as the match criterion";
+                            }
+
+                        } // container dst-mac
+
+                        container llc-ssap {
+                            presence "Enable the llc-ssap context";
+                            description "Enable the llc-ssap context";
+
+                            leaf ssap {
+                                type types-qos:service-access-point;
+                                mandatory true;
+                                description "8-bit SSAP as the match criterion";
+                            }
+
+                            leaf mask {
+                                type types-qos:service-access-point {
+                                    range "1..255";
+                                }
+                                default "255";
+                                description "Mask for SSAP value as the match criterion";
+                            }
+
+                        } // container llc-ssap
+
+                        container llc-dsap {
+                            presence "Enable the llc-dsap context";
+                            description "Enable the llc-dsap context";
+
+                            leaf dsap {
+                                type types-qos:service-access-point;
+                                mandatory true;
+                                description "8-bit DSAP as the match criterion";
+                            }
+
+                            leaf mask {
+                                type types-qos:service-access-point {
+                                    range "1..255";
+                                }
+                                default "255";
+                                description "Mask for DSAP value as the match criterion";
+                            }
+
+                        } // container llc-dsap
+
+                        container cfm-opcode {
+                            description "Enter the cfm-opcode context";
+
+                            choice cfm-opcode {
+                                case eq {
+
+                                    leaf eq {
+                                        type uint32 {
+                                            range "0..255";
+                                        }
+                                        description "Equal to comparison operator for the CFM opcode";
+                                    }
+
+                                }
+                                case lt {
+
+                                    leaf lt {
+                                        type uint32 {
+                                            range "1..255";
+                                        }
+                                        description "Less than comparison operator for the CFM opcode";
+                                    }
+
+                                }
+                                case gt {
+
+                                    leaf gt {
+                                        type uint32 {
+                                            range "0..254";
+                                        }
+                                        description "Greater than comparison operator for the CFM opcode";
+                                    }
+
+                                }
+                                case range {
+
+                                    container range {
+                                        presence "Enable the range context";
+                                        description "Enable the range context";
+
+                                        leaf start {
+                                            type uint32 {
+                                                range "0..254";
+                                            }
+                                            mandatory true;
+                                            description "Lower bound of the OpCode range to match";
+                                        }
+
+                                        leaf end {
+                                            type uint32 {
+                                                range "1..255";
+                                            }
+                                            mandatory true;
+                                            description "Upper bound of the Opcode range to match";
+                                        }
+
+                                    } // container range
+
+                                }
+                            }
+                        } // container cfm-opcode
+
+                    } // container match
+
+                    container action {
+                        description "Enter the action context";
+
+                        choice action-choice {
+                            default "case-drop";
+                            case case-drop {
+
+                                leaf drop {
+                                    type empty;
+                                    description "Drop matching packets";
+                                }
+
+                            }
+                            case case-accept {
+
+                                leaf accept {
+                                    type empty;
+                                    description "Forward matching packets";
+                                }
+
+                            }
+                            case case-default {
+
+                                leaf default {
+                                    type empty;
+                                    description "Use default action for matching packets";
+                                }
+
+                            }
+                            case case-queue {
+
+                                leaf queue {
+                                    type leafref {
+                                        path "../../../../../cpm-queue/queue/queue-id";
+                                    }
+                                    description "Forward matching packets to the CPM hardware queue";
+                                }
+
+                            }
+                        }
+                    } // container action
+
+                } // list entry
+
+            } // container mac-filter
+
+        } // container cpm-filter
+
+    } // grouping conf-system-security-cpm-cpm-filter
+
+    grouping conf-system-security-cpm-cpm-queue {
+        container cpm-queue {
+            description "Enter the cpm-queue context";
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            leaf-list apply-groups-exclude {
+                type leafref {
+                    path "../../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Exclude a configuration group at this level";
+            }
+
+            list queue {
+                key "queue-id";
+                description "Enter the queue list instance";
+
+                leaf queue-id {
+                    type uint32 {
+                        range "33..2000";
+                    }
+                    description "CPM queue ID";
+                }
+
+                leaf cbs {
+                    type types-security:burst-size;
+                    units "kilobps";
+                    description "Buffer size that can be drawn from queue buffer pool";
+                }
+
+                leaf mbs {
+                    type types-security:burst-size;
+                    units "kilobps";
+                    description "Maximum queue depth to which the queue can grow";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                container rate {
+                    description "Enter the rate context";
+
+                    leaf pir {
+                        type types-system:pir-rate;
+                        units "kilobps";
+                        default "max";
+                        description "Peak Information Rate for the queue";
+                    }
+
+                    leaf cir {
+                        type types-system:cir-rate;
+                        units "kilobps";
+                        default "max";
+                        description "Amount of bandwidth committed to the queue";
+                    }
+
+                } // container rate
+
+            } // list queue
+
+        } // container cpm-queue
+
+    } // grouping conf-system-security-cpm-cpm-queue
+
+}

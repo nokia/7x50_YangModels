@@ -1,0 +1,1473 @@
+submodule nokia-state-port-eth-network {
+
+    yang-version "1.1";
+
+    belongs-to nokia-state { prefix "state"; }
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-qos                { prefix "types-qos"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-state-qos;
+
+    sros-ext:sros-major-release "rel25";
+    organization "Nokia";
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+    description
+        "Nokia YANG Data model with operational state for network capabilities for ethernet ports on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-state-port-eth-network YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+    revision "2025-03-12";
+
+    grouping state-port-eth-network {
+        container network {
+            description "Enter the network context";
+
+            container egress {
+                description "Enter the egress context";
+
+                list queue-group {
+                    key "queue-group-name instance-id";
+                    description "Enter the queue-group list instance";
+
+                    leaf queue-group-name {
+                        type leafref {
+                            path "../../../../../../qos/queue-group-templates/egress/queue-group/egress-queue-group-name";
+                        }
+                        description "Specifies the queue-group name.";
+                    }
+
+                    leaf instance-id {
+                        type uint16 {
+                            range "1..65535";
+                        }
+                        description "Specifies the instance identifier.";
+                    }
+
+                    container aggregate-rate {
+                        description "Enter the aggregate-rate context";
+
+                        leaf operational-rate {
+                            type uint32;
+                            description "Operational rate information for SAP when using classic port scheduling";
+                        }
+
+                        container agg-shaper {
+                            description "Enter the agg-shaper context";
+
+                            leaf oper-burst-limit {
+                                type int32;
+                                description "Burst-Limit information for hardware aggregate shapers";
+                            }
+
+                            leaf oper-agg-shaper-rate {
+                                type uint32;
+                                description "Operational rate information for hardware aggregate shapers";
+                            }
+
+                        } // container agg-shaper
+
+                    } // container aggregate-rate
+
+                    container aggregate-shapers {
+                        description "Enter the aggregate-shapers context";
+
+                        leaf burst-limit {
+                            type int32;
+                            units "bytes";
+                            description "Operational burst";
+                        }
+
+                        leaf depth {
+                            type uint32;
+                            units "bytes";
+                            description "Leaky-bucket depth of the aggregate shaper PIR";
+                        }
+
+                        leaf packet-mode {
+                            type types-qos:packet-mode;
+                            description "Packet-mode";
+                        }
+
+                        leaf out-of-date {
+                            type boolean;
+                            description
+                                "Info is out-of-date with respect to the latest config; the
+                                 shaper-algorithm still needs to re-calculate the implemented
+                                 rate.";
+                        }
+
+                        leaf queue-set-size {
+                            type int32;
+                            description "Queue set size";
+                        }
+
+                        leaf queue-set-size-overridden {
+                            type boolean;
+                            description
+                                "Info queue-set-size-overridden is set to true when the shaper is created by
+                                 the override configured for sap egress qos policy. When it is set to false,
+                                 it indicates that fp-resource-policy default-size setting is used to create 
+                                 this shaper.";
+                        }
+
+                        container rate {
+                            description "Enter the rate context";
+
+                            leaf assigned {
+                                type uint32;
+                                units "kilobps";
+                                description "Rate assigned by a hw-agg-shaper-scheduler";
+                            }
+
+                            leaf implemented {
+                                type uint32;
+                                units "kilobps";
+                                description
+                                    "Implemented rate (based on hardware restrictions and based
+                                     on avg-frame-overhead and ATM adjustments)";
+                            }
+
+                            leaf consumed {
+                                type uint32;
+                                units "kilobps";
+                                description
+                                    "Sum of the rates of the queues feeding into the aggregate
+                                     shaper";
+                            }
+
+                        } // container rate
+
+                        container avg-frame-overhead {
+                            description "Enter the avg-frame-overhead context";
+
+                            leaf overhead {
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                units "percent";
+                                description "Percentage average frame overhead";
+                            }
+
+                            leaf real-time {
+                                type boolean;
+                                description "Is it real-time?";
+                            }
+
+                        } // container avg-frame-overhead
+
+                        container hw-agg-shaper-scheduler {
+                            description "Enter the hw-agg-shaper-scheduler context";
+
+                            leaf active {
+                                type boolean;
+                                description
+                                    "The aggregate shaper is controlled by a
+                                     hw-agg-shaper-scheduler";
+                            }
+
+                            leaf running {
+                                type boolean;
+                                description
+                                    "The hw-agg-shaper-scheduler is currently running and
+                                     updating the aggregate shaper rates";
+                            }
+
+                            leaf invalid-class-usage {
+                                type boolean;
+                                description
+                                    "The aggregate shaper has queues in multiple classes in the
+                                     same group in the hw-agg-shaper-scheduler";
+                            }
+
+                        } // container hw-agg-shaper-scheduler
+
+                    } // container aggregate-shapers
+
+                    list queue {
+                        key "queue-id";
+                        description "Enter the queue list instance";
+
+                        leaf queue-id {
+                            type leafref {
+                                path "../../../../../../../qos/queue-group-templates/egress/queue-group[egress-queue-group-name=current()/../../queue-group-name]/queue/queue-id";
+                            }
+                            description "Specifies the queue overrides queue identifier.";
+                        }
+
+                        container queue-depth {
+                            description "Enter the queue-depth context";
+
+                            leaf elapsed-time {
+                                type types-sros:time-interval;
+                                description "Indicated the elapsed time.";
+                            }
+
+                            leaf depth-0-to-10-percent {
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                description "Indicated the depth 0 to 10 percent.";
+                            }
+
+                            leaf depth-11-to-20-percent {
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                description "Indicated the depth 0 to 20 percent.";
+                            }
+
+                            leaf depth-21-to-30-percent {
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                description "Indicated the depth 0 to 30 percent.";
+                            }
+
+                            leaf depth-31-to-40-percent {
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                description "Indicated the depth 0 to 40 percent.";
+                            }
+
+                            leaf depth-41-to-50-percent {
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                description "Indicated the depth 0 to 50 percent.";
+                            }
+
+                            leaf depth-51-to-60-percent {
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                description "Indicated the depth 0 to 60 percent.";
+                            }
+
+                            leaf depth-61-to-70-percent {
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                description "Indicated the depth 0 to 70 percent.";
+                            }
+
+                            leaf depth-71-to-80-percent {
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                description "Indicated the depth 0 to 80 percent.";
+                            }
+
+                            leaf depth-81-to-90-percent {
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                description "Indicated the depth 0 to 90 percent.";
+                            }
+
+                            leaf depth-91-to-100-percent {
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                description "Indicated the depth 0 to 100 percent.";
+                            }
+
+                            leaf queue-polling-interval {
+                                type types-sros:time-interval;
+                                description "Indicates the queue polling interval.";
+                            }
+
+                            leaf last-violation {
+                                type yang:date-and-time;
+                                description "Indicates the last violation time.";
+                            }
+
+                            leaf total-threshold-violations {
+                                type yang:counter32;
+                                description "Indicates the total threshold violations.";
+                            }
+
+                            leaf high-water-mark-polling-interval {
+                                type types-sros:time-duration;
+                                units "microseconds";
+                                description "Indicates the high water mark polling interval.";
+                            }
+
+                        } // container queue-depth
+
+                        container statistics {
+                            description "Enter the statistics context";
+
+                            choice stat-mode {
+                                case profile {
+
+                                    container profile {
+                                        description "Enter the profile context";
+
+                                        leaf in-inplus-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description
+                                                "The number of in-profile/in-plus-profile packets
+                                                 (rate below CIR) forwarded.";
+                                        }
+
+                                        leaf in-inplus-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description
+                                                "The number of in-profile/in-plus-profile octets
+                                                 (rate below CIR) forwarded.";
+                                        }
+
+                                        leaf in-inplus-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description
+                                                "The number of in-profile/in-plus-profile packets
+                                                 discarded.";
+                                        }
+
+                                        leaf in-inplus-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description
+                                                "The number of in-profile/in-plus-profile octets
+                                                 discarded.";
+                                        }
+
+                                        leaf out-exceed-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description
+                                                "The number of out-profile/exceed-profile packets
+                                                 (rate above CIR) forwarded.";
+                                        }
+
+                                        leaf out-exceed-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description
+                                                "The number of out-profile/exceed-profile octets
+                                                 (rate above CIR) forwarded.";
+                                        }
+
+                                        leaf out-exceed-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description
+                                                "The number of out-profile/exceed-profile packets
+                                                 discarded.";
+                                        }
+
+                                        leaf out-exceed-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description
+                                                "The number of out-profile/exceed-profile octets
+                                                 discarded.";
+                                        }
+
+                                    } // container profile
+
+                                }
+                            }
+                        } // container statistics
+
+                        container hardware-queue {
+                            description "Enter the hardware-queue context";
+
+                            leaf adapted-admin-mbs {
+                                type types-qos:bytes;
+                                units "bytes";
+                                description "Admin MBS.";
+                            }
+
+                            leaf exceed-droptail {
+                                type types-qos:queue-burst-size-64-override-max;
+                                description "Exceed droptail.";
+                            }
+
+                            leaf high-droptail {
+                                type types-qos:queue-burst-size-64-override-max;
+                                description "High droptail.";
+                            }
+
+                            leaf high-plus-droptail {
+                                type union {
+                                    type int64 {
+                                        range "0..max";
+                                    }
+                                    type enumeration {
+                                        enum auto                           { value -1; }
+                                    }
+                                }
+                                description "Highplus droptail.";
+                            }
+
+                            leaf low-droptail {
+                                type types-qos:queue-burst-size-64-override-max;
+                                description "Low droptail.";
+                            }
+
+                            leaf operational-cbs {
+                                type types-qos:bytes;
+                                units "bytes";
+                                description "Oper CBS.";
+                            }
+
+                            leaf operational-cir {
+                                type types-qos:int-max;
+                                description "Oper CIR.";
+                            }
+
+                            leaf operational-mbs {
+                                type types-qos:bytes;
+                                units "bytes";
+                                description "Oper MBS.";
+                            }
+
+                            leaf operational-pir {
+                                type types-qos:int-max;
+                                description "Oper PIR.";
+                            }
+
+                            leaf burst-limit {
+                                type union {
+                                    type int32;
+                                    type enumeration {
+                                        enum auto                           { value -1; }
+                                    }
+                                }
+                                description "Oper burst limit.";
+                            }
+
+                            leaf operational-exceed-burst {
+                                type types-qos:int64-max;
+                                description "Oper burst exceed.";
+                            }
+
+                            leaf operational-max-transmit-data-size {
+                                type types-qos:int64-max;
+                                description "Oper max transmit data size.";
+                            }
+
+                            leaf orphan {
+                                type boolean;
+                                description "Orphan queue";
+                            }
+
+                            leaf operational-burst-fir {
+                                type types-qos:int64-max;
+                                description "Oper burst FIR.";
+                            }
+
+                            container exceed-slope {
+                                description "Enter the exceed-slope context";
+
+                                leaf current-probability {
+                                    type types-sros:percent;
+                                    description "Specifies the current probability in percentage";
+                                }
+
+                            } // container exceed-slope
+
+                            container high-slope {
+                                description "Enter the high-slope context";
+
+                                leaf current-probability {
+                                    type types-sros:percent;
+                                    description "Specifies the current probability in percentage";
+                                }
+
+                            } // container high-slope
+
+                            container high-plus-slope {
+                                description "Enter the high-plus-slope context";
+
+                                leaf current-probability {
+                                    type types-sros:percent;
+                                    description "Specifies the current probability in percentage";
+                                }
+
+                            } // container high-plus-slope
+
+                            container low-slope {
+                                description "Enter the low-slope context";
+
+                                leaf current-probability {
+                                    type types-sros:percent;
+                                    description "Specifies the current probability in percentage";
+                                }
+
+                            } // container low-slope
+
+                        } // container hardware-queue
+
+                    } // list queue
+
+                    list policer {
+                        key "policer-id";
+                        description "Enter the policer list instance";
+
+                        leaf policer-id {
+                            type types-qos:sap-egress-policer-id;
+                            description "The unique identifier for the policer.";
+                        }
+
+                        container statistics {
+                            description "Enter the statistics context";
+
+                            choice stat-mode {
+                                case minimal {
+
+                                    container minimal {
+                                        description "Enter the minimal context";
+
+                                        leaf all-offered-packets {
+                                            type yang:counter64;
+                                            description "The number of all the priority packets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf all-offered-octets {
+                                            type yang:counter64;
+                                            description "The number of all the priority octets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf all-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of all the priority packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf all-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of all the priority octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf all-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of all the priority packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf all-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of all the priority octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                    } // container minimal
+
+                                }
+                                case offered-profile-no-cir {
+
+                                    container offered-profile-no-cir {
+                                        description "Enter the offered-profile-no-cir context";
+
+                                        leaf in-profile-offered-packets {
+                                            type yang:counter64;
+                                            description "The number of in-profile packets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-offered-octets {
+                                            type yang:counter64;
+                                            description "The number of in-profile octets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-offered-packets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile packets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-offered-octets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile octets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of in-profile packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of in-profile octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of in-profile packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of in-profile octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                    } // container offered-profile-no-cir
+
+                                }
+                                case offered-profile-cir {
+
+                                    container offered-profile-cir {
+                                        description "Enter the offered-profile-cir context";
+
+                                        leaf in-profile-offered-packets {
+                                            type yang:counter64;
+                                            description "The number of in-profile packets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-offered-octets {
+                                            type yang:counter64;
+                                            description "The number of in-profile octets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-offered-packets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile packets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-offered-octets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile octets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf uncolor-offered-packets {
+                                            type yang:counter64;
+                                            description "The number of uncolor packets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf uncolor-offered-octets {
+                                            type yang:counter64;
+                                            description "The number of uncolor octets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of in-profile packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of in-profile octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of in-profile packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of in-profile octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                    } // container offered-profile-cir
+
+                                }
+                                case offered-total-cir {
+
+                                    container offered-total-cir {
+                                        description "Enter the offered-total-cir context";
+
+                                        leaf all-offered-packets {
+                                            type yang:counter64;
+                                            description "The number of all the priority packets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf all-offered-octets {
+                                            type yang:counter64;
+                                            description "The number of all the priority octets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of in-profile packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of in-profile octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of in-profile packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of in-profile octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                    } // container offered-total-cir
+
+                                }
+                                case offered-limited-capped-cir {
+
+                                    container offered-limited-capped-cir {
+                                        description "Enter the offered-limited-capped-cir context";
+
+                                        leaf in-profile-offered-packets {
+                                            type yang:counter64;
+                                            description "The number of in-profile packets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-offered-octets {
+                                            type yang:counter64;
+                                            description "The number of in-profile octets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of in-profile packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of in-profile octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of in-profile packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of in-profile octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-offered-packets {
+                                            type yang:counter64;
+                                            description "The number of out-of-rofile packets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-offered-octets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile octets offered by the packet processor to traffic manager";
+                                        }
+
+                                    } // container offered-limited-capped-cir
+
+                                }
+                                case offered-profile-capped-cir {
+
+                                    container offered-profile-capped-cir {
+                                        description "Enter the offered-profile-capped-cir context";
+
+                                        leaf in-profile-offered-packets {
+                                            type yang:counter64;
+                                            description "The number of in-profile packets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-offered-octets {
+                                            type yang:counter64;
+                                            description "The number of in-profile octets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-offered-packets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile packets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-offered-octets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile octets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf uncolor-offered-packets {
+                                            type yang:counter64;
+                                            description "The number of uncolor packets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf uncolor-offered-octets {
+                                            type yang:counter64;
+                                            description "The number of uncolor octets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of in-profile packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of in-profile octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of in-profile packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of in-profile octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                    } // container offered-profile-capped-cir
+
+                                }
+                                case offered-total-cir-exceed {
+
+                                    container offered-total-cir-exceed {
+                                        description "Enter the offered-total-cir-exceed context";
+
+                                        leaf all-offered-packets {
+                                            type yang:counter64;
+                                            description "The number of all the priority packets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf all-offered-octets {
+                                            type yang:counter64;
+                                            description "The number of all the priority octets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of in-profile packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of in-profile octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf exceed-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of exceed-profile packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf exceed-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of exceed-profile octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of in-profile packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of in-profile octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf exceed-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of exceed-profile packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf exceed-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of exceed-profile octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                    } // container offered-total-cir-exceed
+
+                                }
+                                case offered-four-profile-no-cir {
+
+                                    container offered-four-profile-no-cir {
+                                        description "Enter the offered-four-profile-no-cir context";
+
+                                        leaf inplus-profile-offered-packets {
+                                            type yang:counter64;
+                                            description "The number of inplus-profile packets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf inplus-profile-offered-octets {
+                                            type yang:counter64;
+                                            description "The number of inplus-profile octets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-offered-packets {
+                                            type yang:counter64;
+                                            description "The number of in-profile packets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-offered-octets {
+                                            type yang:counter64;
+                                            description "The number of in-profile octets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-offered-packets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile packets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-offered-octets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile octets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf exceed-profile-offered-packets {
+                                            type yang:counter64;
+                                            description "The number of exceed-profile packets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf exceed-profile-offered-octets {
+                                            type yang:counter64;
+                                            description "The number of exceed-profile octets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf inplus-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of inplus-profile packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf inplus-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of inplus-profile octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of in-profile packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of in-profile octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf exceed-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of exceed-profile packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf exceed-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of exceed-profile octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf inplus-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of inplus-profile packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf inplus-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of inplus-profile octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of in-profile packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of in-profile octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf exceed-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of exceed-profile packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf exceed-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of exceed-profile octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                    } // container offered-four-profile-no-cir
+
+                                }
+                                case offered-total-cir-four-profile {
+
+                                    container offered-total-cir-four-profile {
+                                        description "Enter the offered-total-cir-four-profile context";
+
+                                        leaf all-offered-packets {
+                                            type yang:counter64;
+                                            description "The number of all the priority packets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf all-offered-octets {
+                                            type yang:counter64;
+                                            description "The number of all the priority octets offered by the packet processor to traffic manager";
+                                        }
+
+                                        leaf inplus-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of inplus-profile packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf inplus-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of inplus-profile octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of in-profile packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of in-profile octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf exceed-profile-dropped-packets {
+                                            type yang:counter64;
+                                            description "The number of exceed-profile packets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf exceed-profile-dropped-octets {
+                                            type yang:counter64;
+                                            description "The number of exceed-profile octets dropped by the packet processor to traffic manager";
+                                        }
+
+                                        leaf inplus-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of inplus-profile packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf inplus-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of inplus-profile octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of in-profile packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf in-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of in-profile octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf out-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of out-of-profile octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf exceed-profile-forwarded-packets {
+                                            type yang:counter64;
+                                            description "The number of exceed-profile packets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                        leaf exceed-profile-forwarded-octets {
+                                            type yang:counter64;
+                                            description "The number of exceed-profile octets forwarded by the packet processor to traffic manager";
+                                        }
+
+                                    } // container offered-total-cir-four-profile
+
+                                }
+                            }
+                        } // container statistics
+
+                        container hardware-policer {
+                            description "Enter the hardware-policer context";
+
+                            leaf adapted-admin-cbs {
+                                type int64;
+                                units "bytes";
+                                description "Admin CBS.";
+                            }
+
+                            leaf adapted-admin-mbs {
+                                type int64;
+                                units "bytes";
+                                description "Admin MBS.";
+                            }
+
+                            leaf adapted-hp-only {
+                                type int64;
+                                units "bytes";
+                                description "Hi Prio Only.";
+                            }
+
+                            leaf depth {
+                                type int64;
+                                units "bytes";
+                                description "Depth.";
+                            }
+
+                            leaf operational-cir {
+                                type types-qos:int32-max;
+                                description "Oper CIR.";
+                            }
+
+                            leaf operational-fir {
+                                type types-qos:int32-max;
+                                description "Oper FIR.";
+                            }
+
+                            leaf operational-pir {
+                                type types-qos:int32-max;
+                                description "Oper PIR.";
+                            }
+
+                        } // container hardware-policer
+
+                    } // list policer
+
+                    container scheduler-policy {
+                        description "Enter the scheduler-policy context";
+
+                        list scheduler {
+                            key "scheduler-name";
+                            description "Enter the scheduler list instance";
+
+                            leaf scheduler-name {
+                                type types-sros:named-item;
+                                description "Specifies the scheduler name.";
+                            }
+
+                            container statistics {
+                                description "Enter the statistics context";
+
+                                leaf forwarded-packets {
+                                    type yang:counter64;
+                                    description "The number of forwarded packets.";
+                                }
+
+                                leaf forwarded-octets {
+                                    type yang:counter64;
+                                    description "The number of forwarded octets.";
+                                }
+
+                            } // container statistics
+
+                        } // list scheduler
+
+                    } // container scheduler-policy
+
+                    list arbiter {
+                        key "arbiter-name";
+                        description "Enter the arbiter list instance";
+
+                        leaf arbiter-name {
+                            type types-sros:named-item;
+                            description "Specifies the arbiter name.";
+                        }
+
+                        container statistics {
+                            description "Enter the statistics context";
+
+                            leaf forwarded-packets {
+                                type yang:counter64;
+                                description "The number of forwarded packets.";
+                            }
+
+                            leaf forwarded-octets {
+                                type yang:counter64;
+                                description "The number of forwarded octets.";
+                            }
+
+                        } // container statistics
+
+                    } // list arbiter
+
+                } // list queue-group
+
+                container port-queues {
+                    description "Enter the port-queues context";
+
+                    list queue {
+                        status obsolete;
+                        key "queue-id";
+                        description "Enter the queue list instance";
+
+                        leaf queue-id {
+                            status obsolete;
+                            type types-qos:ingress-queue-id;
+                            description "Specifies the queue group queue identifier.";
+                        }
+
+                        container queue-depth {
+                            status obsolete;
+                            description "Enter the queue-depth context";
+
+                            leaf elapsed-time {
+                                status obsolete;
+                                type types-sros:time-interval;
+                                description "Indicated the elapsed time.";
+                            }
+
+                            leaf depth-0-to-10-percent {
+                                status obsolete;
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                description "Indicated the depth 0 to 10 percent.";
+                            }
+
+                            leaf depth-11-to-20-percent {
+                                status obsolete;
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                description "Indicated the depth 0 to 20 percent.";
+                            }
+
+                            leaf depth-21-to-30-percent {
+                                status obsolete;
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                description "Indicated the depth 0 to 30 percent.";
+                            }
+
+                            leaf depth-31-to-40-percent {
+                                status obsolete;
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                description "Indicated the depth 0 to 40 percent.";
+                            }
+
+                            leaf depth-41-to-50-percent {
+                                status obsolete;
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                description "Indicated the depth 0 to 50 percent.";
+                            }
+
+                            leaf depth-51-to-60-percent {
+                                status obsolete;
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                description "Indicated the depth 0 to 60 percent.";
+                            }
+
+                            leaf depth-61-to-70-percent {
+                                status obsolete;
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                description "Indicated the depth 0 to 70 percent.";
+                            }
+
+                            leaf depth-71-to-80-percent {
+                                status obsolete;
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                description "Indicated the depth 0 to 80 percent.";
+                            }
+
+                            leaf depth-81-to-90-percent {
+                                status obsolete;
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                description "Indicated the depth 0 to 90 percent.";
+                            }
+
+                            leaf depth-91-to-100-percent {
+                                status obsolete;
+                                type decimal64 {
+                                    fraction-digits 2;
+                                }
+                                description "Indicated the depth 0 to 100 percent.";
+                            }
+
+                            leaf queue-polling-interval {
+                                status obsolete;
+                                type types-sros:time-interval;
+                                description "Indicates the queue polling interval.";
+                            }
+
+                            leaf last-violation {
+                                status obsolete;
+                                type yang:date-and-time;
+                                description "Indicates the last violation time.";
+                            }
+
+                            leaf total-threshold-violations {
+                                status obsolete;
+                                type yang:counter32;
+                                description "Indicates the total threshold violations.";
+                            }
+
+                            leaf high-water-mark-polling-interval {
+                                status obsolete;
+                                type types-sros:time-duration;
+                                units "microseconds";
+                                description "Indicates the high water mark polling interval.";
+                            }
+
+                        } // container queue-depth
+
+                    } // list queue
+
+                } // container port-queues
+
+            } // container egress
+
+        } // container network
+
+    } // grouping state-port-eth-network
+
+}
