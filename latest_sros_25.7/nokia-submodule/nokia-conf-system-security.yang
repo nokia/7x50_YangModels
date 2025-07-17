@@ -1,0 +1,1824 @@
+submodule nokia-conf-system-security {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-security           { prefix "types-security"; }
+    import nokia-types-services           { prefix "types-services"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+    import nokia-types-system             { prefix "types-system"; }
+
+    include nokia-conf-groups;
+    include nokia-conf-qos;
+    include nokia-conf-system-security-aaa;
+    include nokia-conf-system-security-cli-script;
+    include nokia-conf-system-security-cpm;
+    include nokia-conf-system-security-management-access-filter;
+    include nokia-conf-system-security-pki;
+    include nokia-conf-system-security-python-script;
+    include nokia-conf-system-security-snmp;
+    include nokia-conf-system-security-ssh;
+    include nokia-conf-system-security-tls;
+    include nokia-conf-system-security-user-parameters;
+
+    sros-ext:sros-major-release "rel25";
+    organization "Nokia";
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+    description
+        "Nokia YANG Data model to configure system security parameters. on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-system-security YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+    revision "2025-07-16";
+
+    grouping conf-system-security {
+        container security {
+            description "Enter the security context";
+
+            leaf telnet-server {
+                type boolean;
+                default "false";
+                description "Enable Telnet servers running on the system";
+            }
+
+            leaf telnet6-server {
+                type boolean;
+                default "false";
+                description "Enable Telnet IPv6 servers running on the system";
+            }
+
+            leaf ftp-server {
+                type boolean;
+                default "false";
+                description "Enable FTP servers running on the system";
+            }
+
+            leaf per-peer-queuing {
+                type boolean;
+                description "Allow CPM hardware queuing per peer";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            leaf-list apply-groups-exclude {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Exclude a configuration group at this level";
+            }
+
+            container telnet {
+                description "Enter the telnet context";
+
+                leaf listening-port {
+                    type types-sros:tcp-udp-port-non-zero {
+                        range "23|1024..49151";
+                    }
+                    default "23";
+                    description "TCP port for Telnet connections for VPRN or base routing";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+            } // container telnet
+
+            container vprn-network-exceptions {
+                presence "Enable the vprn-network-exceptions context";
+                description "Enable the vprn-network-exceptions context";
+
+                leaf count {
+                    type uint32 {
+                        range "10..1000";
+                    }
+                    default "100";
+                    description "Limit of exception messages received";
+                }
+
+                leaf window {
+                    type uint32 {
+                        range "1..60";
+                    }
+                    units "seconds";
+                    default "10";
+                    description "Time interval to measure exception messages";
+                }
+
+            } // container vprn-network-exceptions
+
+            container cpu-protection {
+                description "Enter the cpu-protection context";
+
+                leaf link-specific-rate {
+                    type types-security:cpm-packet-rate-limit;
+                    units "packets per second";
+                    description "Packet arrival rate limit for link level protocols";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                container port-overall-rate {
+                    description "Enter the port-overall-rate context";
+
+                    leaf pir {
+                        type types-security:cpm-packet-rate-limit;
+                        units "packets per second";
+                        description "Per-port packet arrival rate limit";
+                    }
+
+                    leaf action-low-priority {
+                        type boolean;
+                        default "false";
+                        description "Mark packets that exceed the rate as low-priority";
+                    }
+
+                } // container port-overall-rate
+
+                container protocol-protection {
+                    presence "Enable the protocol-protection context";
+                    description "Enable the protocol-protection context";
+
+                    leaf allow-sham-links {
+                        type boolean;
+                        default "false";
+                        description "Allow OSPF sham link traffic";
+                    }
+
+                    leaf block-pim-tunneled {
+                        type boolean;
+                        default "false";
+                        description "Block extraction and processing of PIM packets";
+                    }
+
+                } // container protocol-protection
+
+                container ip-src-monitoring {
+                    description "Enter the ip-src-monitoring context";
+
+                    container included-protocols {
+                        description "Enter the included-protocols context";
+
+                        leaf dhcp {
+                            type boolean;
+                            default "true";
+                            description "Include extracted DHCP packets for IP source monitoring";
+                        }
+
+                        leaf gtp {
+                            type boolean;
+                            default "false";
+                            description "Include extracted GTP packets for IP source monitoring";
+                        }
+
+                        leaf icmp {
+                            type boolean;
+                            default "false";
+                            description "Include extracted ICMP packets for IP source monitoring";
+                        }
+
+                        leaf igmp {
+                            type boolean;
+                            default "false";
+                            description "Include extracted IGMP packets for IP source monitoring";
+                        }
+
+                    } // container included-protocols
+
+                } // container ip-src-monitoring
+
+                list policy {
+                    key "policy-id";
+                    description "Enter the policy list instance";
+
+                    leaf policy-id {
+                        type types-services:cpm-prot-policy-id;
+                        description "Policy ID";
+                    }
+
+                    leaf alarm {
+                        type boolean;
+                        default "true";
+                        description "Generate an event when the rate is exceeded";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf overall-rate {
+                        type types-security:cpm-policy-packet-rate-limit;
+                        units "packets per second";
+                        description "Packet arrival rate limit for all packets";
+                    }
+
+                    leaf per-source-rate {
+                        type types-security:cpm-policy-packet-rate-limit;
+                        units "packets per second";
+                        default "max";
+                        description "Per-source packet arrival rate limit";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container out-profile-rate {
+                        description "Enter the out-profile-rate context";
+
+                        leaf pir {
+                            type types-security:cpm-policy-packet-rate-limit;
+                            units "packets per second";
+                            description "Packet arrival rate limit";
+                        }
+
+                        leaf log-events {
+                            type boolean;
+                            default "false";
+                            description "Generate a log event when the packet rate is exceeded";
+                        }
+
+                    } // container out-profile-rate
+
+                    container per-source-parameters {
+                        description "Enter the per-source-parameters context";
+
+                        container ip-src-monitoring {
+                            description "Enter the ip-src-monitoring context";
+
+                            leaf limit-dhcp-ci-addr-zero {
+                                type boolean;
+                                default "false";
+                                description "Apply rate limiting to packets with client IP address 0";
+                            }
+
+                        } // container ip-src-monitoring
+
+                    } // container per-source-parameters
+
+                    container eth-cfm {
+                        description "Enter the eth-cfm context";
+
+                        list entry {
+                            key "id";
+                            max-elements 10;
+                            description "Enter the entry list instance";
+
+                            leaf id {
+                                type uint32 {
+                                    range "1..100";
+                                }
+                                description "Entry ID";
+                            }
+
+                            leaf pir {
+                                type union {
+                                    type int32 {
+                                        range "0..65534";
+                                    }
+                                    type enumeration {
+                                        enum max                            { value -1; }
+                                    }
+                                }
+                                units "packets per second";
+                                default "max";
+                                description "Packet arrival rate limit";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                            list level {
+                                key "start end";
+                                min-elements 1;
+                                description "Add a list entry for level";
+
+                                leaf start {
+                                    type uint32 {
+                                        range "0..7";
+                                    }
+                                    description "Lower bound of the level range";
+                                }
+
+                                leaf end {
+                                    type uint32 {
+                                        range "0..7";
+                                    }
+                                    description "Upper bound of the level range";
+                                }
+
+                            } // list level
+
+                            list opcode {
+                                key "start end";
+                                min-elements 1;
+                                description "Add a list entry for opcode";
+
+                                leaf start {
+                                    type uint32 {
+                                        range "0..255";
+                                    }
+                                    description "Lower bound of the OpCode range";
+                                }
+
+                                leaf end {
+                                    type uint32 {
+                                        range "0..255";
+                                    }
+                                    description "Upper bound of the OpCode range";
+                                }
+
+                            } // list opcode
+
+                        } // list entry
+
+                    } // container eth-cfm
+
+                } // list policy
+
+            } // container cpu-protection
+
+            container dist-cpu-protection {
+                description "Enter the dist-cpu-protection context";
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                list policy {
+                    key "policy-name";
+                    max-elements 130;
+                    description "Enter the policy list instance";
+
+                    leaf policy-name {
+                        type types-sros:named-item;
+                        description "Policy name";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf type {
+                        type types-system:dcpu-policy-type;
+                        sros-ext:immutable;
+                        description "Policy type";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    list protocol {
+                        key "protocol-name";
+                        description "Enter the protocol list instance";
+
+                        leaf protocol-name {
+                            type types-system:dist-cpu-protocol-id;
+                            description "Protocol name";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container enforcement {
+                            description "Enter the enforcement context";
+
+                            choice type {
+                                default "dynamic-local-mon-bypass";
+                                case static {
+
+                                    container static {
+                                        description "Enter the static context";
+
+                                        leaf policer-name {
+                                            type leafref {
+                                                path "../../../../static-policer/policer-name";
+                                            }
+                                            description "Static policer enforced by the protocol";
+                                        }
+
+                                    } // container static
+
+                                }
+                                case dynamic {
+
+                                    container dynamic {
+                                        description "Enter the dynamic context";
+
+                                        leaf mon-policer-name {
+                                            type leafref {
+                                                path "../../../../local-monitoring-policer/policer-name";
+                                            }
+                                            description "Dynamic enforcement policer for the protocol";
+                                        }
+
+                                    } // container dynamic
+
+                                }
+                                case dynamic-local-mon-bypass {
+
+                                    leaf dynamic-local-mon-bypass {
+                                        type empty;
+                                        description "Do not include packets in the local monitoring function";
+                                    }
+
+                                }
+                                case shared {
+
+                                    container shared {
+                                        description "Enter the shared context";
+
+                                        leaf shared-policer-name {
+                                            type leafref {
+                                                path "../../../../../../../../qos/shared-policers/policer/shared-policer-name";
+                                            }
+                                            description "Shared enforcement policer name";
+                                        }
+
+                                    } // container shared
+
+                                }
+                            }
+                        } // container enforcement
+
+                        container dynamic-parameters {
+                            description "Enter the dynamic-parameters context";
+
+                            leaf detection-time {
+                                type uint32 {
+                                    range "1..128000";
+                                }
+                                units "seconds";
+                                default "30";
+                                description "Minimum time the dynamic policer remains allocated";
+                            }
+
+                            leaf log-events {
+                                type enumeration {
+                                    enum false                          { value 0; }
+                                    enum true                           { value 1; }
+                                    enum verbose                        { value 2; }
+                                }
+                                default "true";
+                                description "Control of log events creation for status and activity";
+                            }
+
+                            container exceed-action {
+                                description "Enter the exceed-action context";
+
+                                leaf action {
+                                    type types-system:dcp-exceed-action;
+                                    description "Action taken on control packets when rates are exceeded";
+                                }
+
+                                leaf hold-down {
+                                    type union {
+                                        type enumeration {
+                                            enum indefinite                     { value -1; }
+                                            enum none                           { value 0; }
+                                        }
+                                        type uint32 {
+                                            range "1..10080";
+                                        }
+                                    }
+                                    units "seconds";
+                                    default "none";
+                                    description "Hold down behavior";
+                                }
+
+                            } // container exceed-action
+
+                            container rate {
+                                description "Enter the rate context";
+
+                                choice type {
+                                    default "packets";
+                                    case kbps {
+
+                                        container kbps {
+                                            description "Enter the kbps context";
+
+                                            leaf limit {
+                                                type union {
+                                                    type enumeration {
+                                                        enum max                            { value -1; }
+                                                    }
+                                                    type uint32 {
+                                                        range "1..20000000";
+                                                    }
+                                                }
+                                                units "kilobps";
+                                                default "max";
+                                                description "Rate limit";
+                                            }
+
+                                            leaf mbs {
+                                                type int32 {
+                                                    range "0..4194304";
+                                                }
+                                                units "bytes";
+                                                description "Tolerance for the rate";
+                                            }
+
+                                        } // container kbps
+
+                                    }
+                                    case packets {
+
+                                        container packets {
+                                            description "Enter the packets context";
+
+                                            leaf limit {
+                                                type union {
+                                                    type enumeration {
+                                                        enum max                            { value -1; }
+                                                    }
+                                                    type uint32 {
+                                                        range "0..8000";
+                                                    }
+                                                }
+                                                units "packets per interval";
+                                                default "max";
+                                                description "Packets per interval limit";
+                                            }
+
+                                            leaf within {
+                                                type uint32 {
+                                                    range "1..32767";
+                                                }
+                                                units "seconds";
+                                                default "1";
+                                                description "Measurement interval for packets rate";
+                                            }
+
+                                            leaf initial-delay {
+                                                type uint32 {
+                                                    range "0..255";
+                                                }
+                                                units "packets";
+                                                default "0";
+                                                description "Additional packets allowed in an initial burst";
+                                            }
+
+                                        } // container packets
+
+                                    }
+                                }
+                            } // container rate
+
+                        } // container dynamic-parameters
+
+                    } // list protocol
+
+                    list local-monitoring-policer {
+                        key "policer-name";
+                        max-elements 1;
+                        description "Enter the local-monitoring-policer list instance";
+
+                        leaf policer-name {
+                            type types-sros:named-item;
+                            description "Local monitoring policer name";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf exceed-action {
+                            type types-system:dcp-exceed-action;
+                            description "Action taken when policer rates are exceeded";
+                        }
+
+                        leaf log-events {
+                            type enumeration {
+                                enum false                          { value 0; }
+                                enum true                           { value 1; }
+                                enum verbose                        { value 2; }
+                            }
+                            default "true";
+                            description "Control of log events creation for status and activity";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container rate {
+                            description "Enter the rate context";
+
+                            choice type {
+                                default "packets";
+                                case kbps {
+
+                                    container kbps {
+                                        description "Enter the kbps context";
+
+                                        leaf limit {
+                                            type union {
+                                                type enumeration {
+                                                    enum max                            { value -1; }
+                                                }
+                                                type uint32 {
+                                                    range "1..20000000";
+                                                }
+                                            }
+                                            units "kilobps";
+                                            default "max";
+                                            description "Rate limit";
+                                        }
+
+                                        leaf mbs {
+                                            type int32 {
+                                                range "0..4194304";
+                                            }
+                                            units "bytes";
+                                            description "Tolerance for the rate";
+                                        }
+
+                                    } // container kbps
+
+                                }
+                                case packets {
+
+                                    container packets {
+                                        description "Enter the packets context";
+
+                                        leaf limit {
+                                            type union {
+                                                type enumeration {
+                                                    enum max                            { value -1; }
+                                                }
+                                                type uint32 {
+                                                    range "0..8000";
+                                                }
+                                            }
+                                            units "packets per interval";
+                                            default "max";
+                                            description "Packets per interval limit";
+                                        }
+
+                                        leaf within {
+                                            type uint32 {
+                                                range "1..32767";
+                                            }
+                                            units "seconds";
+                                            default "1";
+                                            description "Measurement interval for packets rate";
+                                        }
+
+                                        leaf initial-delay {
+                                            type uint32 {
+                                                range "0..255";
+                                            }
+                                            units "packets";
+                                            default "0";
+                                            description "Additional packets allowed in an initial burst";
+                                        }
+
+                                    } // container packets
+
+                                }
+                            }
+                        } // container rate
+
+                    } // list local-monitoring-policer
+
+                    list static-policer {
+                        key "policer-name";
+                        max-elements 26;
+                        description "Enter the static-policer list instance";
+
+                        leaf policer-name {
+                            type types-sros:named-item;
+                            description "Static policer name";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf detection-time {
+                            type uint32 {
+                                range "1..128000";
+                            }
+                            units "seconds";
+                            default "30";
+                            description "Minimum time the dynamic policer remains allocated";
+                        }
+
+                        leaf log-events {
+                            type enumeration {
+                                enum false                          { value 0; }
+                                enum true                           { value 1; }
+                                enum verbose                        { value 2; }
+                            }
+                            default "true";
+                            description "Control of log events creation for status and activity";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container exceed-action {
+                            description "Enter the exceed-action context";
+
+                            leaf action {
+                                type types-system:dcp-exceed-action;
+                                description "Action taken on control packets when rates are exceeded";
+                            }
+
+                            leaf hold-down {
+                                type union {
+                                    type enumeration {
+                                        enum indefinite                     { value -1; }
+                                        enum none                           { value 0; }
+                                    }
+                                    type uint32 {
+                                        range "1..10080";
+                                    }
+                                }
+                                units "seconds";
+                                default "none";
+                                description "Hold down behavior";
+                            }
+
+                        } // container exceed-action
+
+                        container rate {
+                            description "Enter the rate context";
+
+                            choice type {
+                                default "packets";
+                                case kbps {
+
+                                    container kbps {
+                                        description "Enter the kbps context";
+
+                                        leaf limit {
+                                            type union {
+                                                type enumeration {
+                                                    enum max                            { value -1; }
+                                                }
+                                                type uint32 {
+                                                    range "1..20000000";
+                                                }
+                                            }
+                                            units "kilobps";
+                                            default "max";
+                                            description "Rate limit";
+                                        }
+
+                                        leaf mbs {
+                                            type int32 {
+                                                range "0..4194304";
+                                            }
+                                            units "bytes";
+                                            description "Tolerance for the rate";
+                                        }
+
+                                    } // container kbps
+
+                                }
+                                case packets {
+
+                                    container packets {
+                                        description "Enter the packets context";
+
+                                        leaf limit {
+                                            type union {
+                                                type enumeration {
+                                                    enum max                            { value -1; }
+                                                }
+                                                type uint32 {
+                                                    range "0..8000";
+                                                }
+                                            }
+                                            units "packets per interval";
+                                            description "Packets per interval limit";
+                                        }
+
+                                        leaf within {
+                                            type uint32 {
+                                                range "1..32767";
+                                            }
+                                            units "seconds";
+                                            default "1";
+                                            description "Measurement interval for packets rate";
+                                        }
+
+                                        leaf initial-delay {
+                                            type uint32 {
+                                                range "0..255";
+                                            }
+                                            units "packets";
+                                            default "0";
+                                            description "Additional packets allowed in an initial burst";
+                                        }
+
+                                    } // container packets
+
+                                }
+                            }
+                        } // container rate
+
+                    } // list static-policer
+
+                } // list policy
+
+            } // container dist-cpu-protection
+
+            container dot1x {
+                description "Enter the dot1x context";
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of 802.1x network access control";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                list radius-policy {
+                    key "policy-name";
+                    description "Enter the radius-policy list instance";
+
+                    leaf policy-name {
+                        type types-sros:named-item;
+                        description "RADIUS server policy name for 802.1X authentication";
+                    }
+
+                    leaf source-address {
+                        type types-sros:ipv4-unicast-address;
+                        description "Source address of the RADIUS packet";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of the server for authentication";
+                    }
+
+                    leaf retry {
+                        type uint32 {
+                            range "1..10";
+                        }
+                        default "3";
+                        description "Number of RADIUS requests toward the same RADIUS server";
+                    }
+
+                    leaf timeout {
+                        type uint32 {
+                            range "1..90";
+                        }
+                        units "seconds";
+                        default "5";
+                        description "Time to wait for a response from the RADIUS server";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    list server {
+                        key "server-index";
+                        max-elements 5;
+                        description "Enter the server list instance";
+
+                        leaf server-index {
+                            type uint32 {
+                                range "1..5";
+                            }
+                            description "RADIUS server index";
+                        }
+
+                        leaf address {
+                            type types-sros:ipv4-unicast-address;
+                            mandatory true;
+                            description "IP address of the RADIUS dot1x server";
+                        }
+
+                        leaf secret {
+                            type types-sros:encrypted-leaf {
+                                length "1..54";
+                            }
+                            mandatory true;
+                            description "Secret key associated with the RADIUS server";
+                        }
+
+                        leaf authentication-port {
+                            type types-sros:tcp-udp-port-non-zero;
+                            default "1812";
+                            description "UDP port to contact RADIUS server for authentication";
+                        }
+
+                        leaf accounting-port {
+                            type types-sros:tcp-udp-port-non-zero;
+                            default "1813";
+                            description "UDP port to contact the RADIUS server for accounting";
+                        }
+
+                        leaf type {
+                            type enumeration {
+                                enum authorization                  { value 0; }
+                                enum accounting                     { value 1; }
+                                enum combined                       { value 2; }
+                            }
+                            default "authorization";
+                            description "RADIUS server type";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // list server
+
+                } // list radius-policy
+
+            } // container dot1x
+
+            container keychains {
+                description "Enter the keychains context";
+
+                list keychain {
+                    key "keychain-name";
+                    max-elements 256;
+                    description "Enter the keychain list instance";
+
+                    leaf keychain-name {
+                        type types-sros:named-item;
+                        description "Keychain name";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "enable";
+                        description "Administrative state of the keychain";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container tcp-option-number {
+                        description "Enter the tcp-option-number context";
+
+                        leaf receive {
+                            type enumeration {
+                                enum option-253                     { value 1; }
+                                enum option-254                     { value 2; }
+                                enum both                           { value 3; }
+                                enum tcp-ao                         { value 4; }
+                            }
+                            default "option-254";
+                            description "TCP option accepted in received TCP packets";
+                        }
+
+                        leaf send {
+                            type enumeration {
+                                enum option-253                     { value 1; }
+                                enum option-254                     { value 2; }
+                                enum tcp-ao                         { value 4; }
+                            }
+                            default "option-254";
+                            description "TCP option accepted in sent TCP packets";
+                        }
+
+                    } // container tcp-option-number
+
+                    container bidirectional {
+                        description "Enter the bidirectional context";
+
+                        list entry {
+                            key "keychain-entry-index";
+                            description "Enter the entry list instance";
+
+                            leaf keychain-entry-index {
+                                type uint32 {
+                                    range "0..63|255";
+                                }
+                                description "Keychain ID";
+                            }
+
+                            leaf authentication-key {
+                                when "not(../keychain-entry-index = 255)" {
+                                    description "must not be used with entry 255 (null-entry)";
+                                }
+                                type types-sros:encrypted-leaf {
+                                    length "1..54";
+                                }
+                                sros-ext:immutable;
+                                description "Authentication key used by the encryption algorithm";
+                            }
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "enable";
+                                description "Administrative state of the keychain entry";
+                            }
+
+                            leaf begin-time {
+                                type yang:date-and-time;
+                                description "Calendar date and time to start using the key";
+                            }
+
+                            leaf algorithm {
+                                when "not(../keychain-entry-index = 255)" {
+                                    description "must not be used with entry 255 (null-entry)";
+                                }
+                                type types-security:keychain-algo;
+                                sros-ext:immutable;
+                                description "Encryption algorithm used by the keychain key";
+                            }
+
+                            leaf option {
+                                type enumeration {
+                                    enum none                           { value 0; }
+                                    enum basic                          { value 1; }
+                                    enum isis-enhanced                  { value 2; }
+                                }
+                                default "none";
+                                description "Keychain key option";
+                            }
+
+                            leaf tolerance {
+                                type union {
+                                    type types-sros:time-duration {
+                                        range "0..4294967294";
+                                    }
+                                    type enumeration {
+                                        enum infinite                       { value -1; }
+                                    }
+                                }
+                                default "300";
+                                description "Time eligible receive key overlaps with active send key";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                        } // list entry
+
+                    } // container bidirectional
+
+                    container receive {
+                        description "Enter the receive context";
+
+                        list entry {
+                            key "keychain-entry-index";
+                            description "Enter the entry list instance";
+
+                            leaf keychain-entry-index {
+                                type uint32 {
+                                    range "0..63|255";
+                                }
+                                description "Keychain ID";
+                            }
+
+                            leaf authentication-key {
+                                when "not(../keychain-entry-index = 255)" {
+                                    description "must not be used with entry 255 (null-entry)";
+                                }
+                                type types-sros:encrypted-leaf {
+                                    length "1..54";
+                                }
+                                sros-ext:immutable;
+                                description "Authentication key used by the encryption algorithm";
+                            }
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "enable";
+                                description "Administrative state of the keychain entry";
+                            }
+
+                            leaf begin-time {
+                                type yang:date-and-time;
+                                description "Calendar date and time to start using the key";
+                            }
+
+                            leaf algorithm {
+                                when "not(../keychain-entry-index = 255)" {
+                                    description "must not be used with entry 255 (null-entry)";
+                                }
+                                type types-security:keychain-algo;
+                                sros-ext:immutable;
+                                description "Encryption algorithm used by the keychain key";
+                            }
+
+                            leaf end-time {
+                                type yang:date-and-time;
+                                description "Calendar date and time when system stops using the key";
+                            }
+
+                            leaf tolerance {
+                                type union {
+                                    type types-sros:time-duration {
+                                        range "0..4294967294";
+                                    }
+                                    type enumeration {
+                                        enum infinite                       { value -1; }
+                                    }
+                                }
+                                default "300";
+                                description "Time eligible receive key overlaps with active send key";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                        } // list entry
+
+                    } // container receive
+
+                    container send {
+                        description "Enter the send context";
+
+                        list entry {
+                            key "keychain-entry-index";
+                            description "Enter the entry list instance";
+
+                            leaf keychain-entry-index {
+                                type uint32 {
+                                    range "0..63|255";
+                                }
+                                description "Keychain ID";
+                            }
+
+                            leaf authentication-key {
+                                when "not(../keychain-entry-index = 255)" {
+                                    description "must not be used with entry 255 (null-entry)";
+                                }
+                                type types-sros:encrypted-leaf {
+                                    length "1..54";
+                                }
+                                sros-ext:immutable;
+                                description "Authentication key used by the encryption algorithm";
+                            }
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "enable";
+                                description "Administrative state of the keychain entry";
+                            }
+
+                            leaf begin-time {
+                                type yang:date-and-time;
+                                description "Calendar date and time to start using the key";
+                            }
+
+                            leaf algorithm {
+                                when "not(../keychain-entry-index = 255)" {
+                                    description "must not be used with entry 255 (null-entry)";
+                                }
+                                type types-security:keychain-algo;
+                                sros-ext:immutable;
+                                description "Encryption algorithm used by the keychain key";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                        } // list entry
+
+                    } // container send
+
+
+                } // list keychain
+
+            } // container keychains
+
+            container source-address {
+                description "Enter the source-address context";
+
+                list ipv4 {
+                    key "application";
+                    description "Enter the ipv4 list instance";
+
+                    leaf application {
+                        type enumeration {
+                            enum telnet                         { value 1; }
+                            enum ftp                            { value 2; }
+                            enum ssh                            { value 3; }
+                            enum radius                         { value 4; }
+                            enum tacplus                        { value 5; }
+                            enum snmptrap                       { value 6; }
+                            enum syslog                         { value 7; }
+                            enum ping                           { value 8; }
+                            enum traceroute                     { value 9; }
+                            enum dns                            { value 10; }
+                            enum sntp                           { value 11; }
+                            enum ntp                            { value 12; }
+                            enum cflowd                         { value 13; }
+                            enum ptp                            { value 23; }
+                            enum mcreporter                     { value 24; }
+                            enum sflow                          { value 27; }
+                            enum icmp-error                     { value 29; }
+                            enum ldap                           { value 31; }
+                        }
+                        description "Application that uses the source IP address";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    choice source {
+                        mandatory true;
+                        case interface-name {
+
+                            leaf interface-name {
+                                type types-sros:interface-name;
+                                sros-ext:immutable;
+                                description "IP interface name";
+                            }
+
+                        }
+                        case address {
+
+                            leaf address {
+                                type types-sros:ipv4-address;
+                                sros-ext:immutable;
+                                description "Source IPv4 address";
+                            }
+
+                        }
+                    }
+                } // list ipv4
+
+                list ipv6 {
+                    key "application";
+                    description "Enter the ipv6 list instance";
+
+                    leaf application {
+                        type enumeration {
+                            enum telnet                         { value 14; }
+                            enum ftp                            { value 15; }
+                            enum radius                         { value 16; }
+                            enum tacplus                        { value 17; }
+                            enum snmptrap                       { value 18; }
+                            enum syslog                         { value 19; }
+                            enum ping                           { value 20; }
+                            enum traceroute                     { value 21; }
+                            enum dns                            { value 22; }
+                            enum cflowd                         { value 25; }
+                            enum ntp                            { value 26; }
+                            enum sflow                          { value 28; }
+                            enum icmp6-error                    { value 30; }
+                            enum ldap                           { value 32; }
+                            enum ssh                            { value 33; }
+                            enum ptp                            { value 34; }
+                        }
+                        description "Application which uses the source IPv6 address";
+                    }
+
+                    leaf address {
+                        type types-sros:ipv6-address;
+                        sros-ext:immutable;
+                        mandatory true;
+                        description "Source IPv6 address";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // list ipv6
+
+            } // container source-address
+
+            container system-passwords {
+                description "Enter the system-passwords context";
+
+                leaf admin-password {
+                    type types-sros:hashed-leaf {
+                        length "3..136";
+                    }
+                    description "Administrative password for the enable command";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+            } // container system-passwords
+
+            container tech-support {
+                description "Enter the tech-support context";
+
+                leaf ts-location {
+                    type types-sros:ts-url-string;
+                    description "Default file path for generated tech-support files";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+            } // container tech-support
+
+            container hash-control {
+                description "Enter the hash-control context";
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+                container management-interface {
+                    description "Enter the management-interface context";
+
+                    container classic-cli {
+                        description "Enter the classic-cli context";
+
+                        leaf read-algorithm {
+                            type enumeration {
+                                enum all-hash                       { value 0; }
+                                enum hash                           { value 1; }
+                                enum hash2                          { value 2; }
+                                enum custom                         { value 3; }
+                            }
+                            default "all-hash";
+                            description "Input encryption algorithm for configuration secrets";
+                        }
+
+                        leaf write-algorithm {
+                            type enumeration {
+                                enum cleartext                      { value 0; }
+                                enum hash                           { value 1; }
+                                enum hash2                          { value 2; }
+                                enum custom                         { value 3; }
+                            }
+                            default "hash2";
+                            description "Output encryption algorithm for configuration secrets";
+                        }
+
+                    } // container classic-cli
+
+                    container md-cli {
+                        description "Enter the md-cli context";
+
+                        leaf hash-algorithm {
+                            type enumeration {
+                                enum cleartext                      { value 0; }
+                                enum hash                           { value 1; }
+                                enum hash2                          { value 2; }
+                                enum custom                         { value 3; }
+                            }
+                            default "hash2";
+                            description "Encryption algorithm for configuration secrets";
+                        }
+
+                    } // container md-cli
+
+                    container netconf {
+                        description "Enter the netconf context";
+
+                        leaf hash-algorithm {
+                            type enumeration {
+                                enum cleartext                      { value 0; }
+                                enum hash                           { value 1; }
+                                enum hash2                          { value 2; }
+                                enum custom                         { value 3; }
+                            }
+                            default "hash2";
+                            description "Encryption algorithm for configuration secrets";
+                        }
+
+                    } // container netconf
+
+                    container grpc {
+                        description "Enter the grpc context";
+
+                        leaf hash-algorithm {
+                            type enumeration {
+                                enum cleartext                      { value 0; }
+                                enum hash                           { value 1; }
+                                enum hash2                          { value 2; }
+                                enum custom                         { value 3; }
+                            }
+                            default "hash2";
+                            description "Encryption algorithm for configuration secrets";
+                        }
+
+                    } // container grpc
+
+                } // container management-interface
+
+            } // container hash-control
+
+            container management {
+                description "Enter the management context";
+
+                leaf allow-telnet {
+                    type boolean;
+                    default "true";
+                    description "Allow access to the IPv4 Telnet server";
+                }
+
+                leaf allow-telnet6 {
+                    type boolean;
+                    default "true";
+                    description "Allow access to the Telnet IPv6 server";
+                }
+
+                leaf allow-ftp {
+                    type boolean;
+                    default "true";
+                    description "Allow access to the FTP server";
+                }
+
+                leaf allow-ssh {
+                    type boolean;
+                    default "true";
+                    description "Allow access to the SSH server";
+                }
+
+                leaf allow-netconf {
+                    type boolean;
+                    default "true";
+                    description "Allow access to the NETCONF server";
+                }
+
+                leaf allow-grpc {
+                    type boolean;
+                    default "true";
+                    description "Allow access to the gRPC server";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+            } // container management
+
+            uses conf-system-security-aaa;
+            uses conf-system-security-cli-script;
+            uses conf-system-security-cpm-cpm-filter;
+            uses conf-system-security-cpm-cpm-queue;
+            uses conf-system-security-management-access-filter;
+            uses conf-system-security-pki;
+            uses conf-system-security-python-script;
+            uses conf-system-security-snmp;
+            uses conf-system-security-ssh;
+            uses conf-system-security-tls;
+            uses conf-system-security-user-parameters-user-params;
+        } // container security
+
+    } // grouping conf-system-security
+
+}
