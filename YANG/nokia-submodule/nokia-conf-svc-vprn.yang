@@ -25,6 +25,7 @@ submodule nokia-conf-svc-vprn {
 
     include nokia-conf-aa-group;
     include nokia-conf-aaa;
+    include nokia-conf-anysec;
     include nokia-conf-application-assurance;
     include nokia-conf-bfd;
     include nokia-conf-bmp;
@@ -98,7 +99,7 @@ submodule nokia-conf-svc-vprn {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2025-04-23";
+    revision "2025-07-16";
 
     grouping conf-svc-vprn {
         list vprn {
@@ -1491,6 +1492,17 @@ submodule nokia-conf-svc-vprn {
                                 description "Allocates individual ports per subscriber in a pool";
                             }
 
+                            leaf use-interface-ip {
+                                when "../../type = 'large-scale'" {
+                                    description "type must be large-scale";
+                                }
+                                type boolean;
+                                sros-ext:immutable;
+                                sros-ext:isa-auto-clear-on-modify;
+                                default "false";
+                                description "Use an IPv4 interface for NAT";
+                            }
+
                         } // container applications
 
                         container port-forwarding {
@@ -1633,6 +1645,23 @@ submodule nokia-conf-svc-vprn {
                                     }
                                 }
                             } // container redundancy
+
+                            container use-interface-ip {
+                                when "../../applications/use-interface-ip = 'true'" {
+                                    description "application must be use-interface-ip";
+                                }
+                                description "Enter the use-interface-ip context";
+
+                                leaf cpm-reserved-ports {
+                                    type uint32 {
+                                        range "0..65535";
+                                    }
+                                    sros-ext:auto-restart-to-modify;
+                                    default "10";
+                                    description "Number of ports per protocol reserved for CPM traffic";
+                                }
+
+                            } // container use-interface-ip
 
                             container flexible-port-allocation {
                                 when "../../applications/flexible-port-allocation = 'true'" {
@@ -1879,6 +1908,25 @@ submodule nokia-conf-svc-vprn {
                                 description "Exclude a configuration group at this level";
                             }
 
+                            list exclude {
+                                when "../../type = 'large-scale'" {
+                                    description "pool type must be large-scale";
+                                }
+                                key "start-address end-address";
+                                max-elements 1024;
+                                description "Add a list entry for exclude";
+
+                                leaf start-address {
+                                    type types-sros:ipv4-unicast-address;
+                                    description "Lower bound of IPv4 address range in NAT pool exclusion";
+                                }
+
+                                leaf end-address {
+                                    type types-sros:ipv4-unicast-address;
+                                    description "Upper bound of IPv4 address range in NAT pool exclusion";
+                                }
+
+                            } // list exclude
 
                         } // list address-range
 
@@ -8549,6 +8597,25 @@ submodule nokia-conf-svc-vprn {
 
                     } // container evpn-link-bandwidth
 
+                    container gateway-ip {
+                        description "Enter the gateway-ip context";
+
+                        leaf advertise {
+                            type boolean;
+                            sros-ext:auto-restart-to-modify;
+                            default "false";
+                            description "Enable the advertisement of GW-IP in IP prefix routes";
+                        }
+
+                        leaf resolve {
+                            type boolean;
+                            sros-ext:auto-restart-to-modify;
+                            default "false";
+                            description "Enable the resolution of GW-IP in IP prefix routes";
+                        }
+
+                    } // container gateway-ip
+
                 } // list mpls
 
                 list segment-routing-v6 {
@@ -8777,6 +8844,16 @@ submodule nokia-conf-svc-vprn {
 
                     } // container evpn-link-bandwidth
 
+                    container upa-trigger {
+                        description "Enter the upa-trigger context";
+
+                        leaf next-hop {
+                            type types-bgp:upa-trigger-next-hop;
+                            description "Action when a UPA is received for a next hop";
+                        }
+
+                    } // container upa-trigger
+
 
                 } // list segment-routing-v6
 
@@ -8983,6 +9060,25 @@ submodule nokia-conf-svc-vprn {
                         } // container advertise
 
                     } // container evpn-link-bandwidth
+
+                    container gateway-ip {
+                        description "Enter the gateway-ip context";
+
+                        leaf advertise {
+                            type boolean;
+                            sros-ext:auto-restart-to-modify;
+                            default "false";
+                            description "Enable the advertisement of GW-IP in IP prefix routes";
+                        }
+
+                        leaf resolve {
+                            type boolean;
+                            sros-ext:auto-restart-to-modify;
+                            default "false";
+                            description "Enable the resolution of GW-IP in IP prefix routes";
+                        }
+
+                    } // container gateway-ip
 
                 } // list vxlan
 
@@ -11169,6 +11265,7 @@ submodule nokia-conf-svc-vprn {
                     } // container idle-hold-time
 
                 } // container damp-peer-oscillations
+
 
                 container backup-path {
                     description "Enter the backup-path context";
@@ -15146,6 +15243,173 @@ submodule nokia-conf-svc-vprn {
 
                 } // container urpf-check
 
+                container autoconfigure {
+                    description "Enter the autoconfigure context";
+
+                    container ipv4 {
+                        when "../../tunnel = 'false' and ../../ip-tunnel-interface = 'false'" {
+                            description "not allowed in a tunnel interface";
+                        }
+                        description "Enter the ipv4 context";
+
+                        container dhcp-client {
+                            presence "Enable the dhcp-client context";
+                            description "Enable the dhcp-client context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "disable";
+                                description "Administrative state of the DHCP client";
+                            }
+
+                            leaf lease-time {
+                                type union {
+                                    type types-sros:time-duration {
+                                        range "10..315446399";
+                                    }
+                                    type enumeration {
+                                        enum infinite {
+                                            value -1;
+                                            description "Request an infinite lease with no expiry";
+                                        }
+                                    }
+                                }
+                                sros-ext:auto-restart-to-modify;
+                                default "86400";
+                                description "Lease time the DHCP client requests";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                sros-ext:auto-restart-to-modify;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                sros-ext:auto-restart-to-modify;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                            container class-id {
+                                sros-ext:auto-restart-to-modify;
+                                description "Enter the class-id context";
+
+                                choice format {
+                                    case ascii-string {
+
+                                        leaf ascii-string {
+                                            type string {
+                                                length "1..127";
+                                            }
+                                            sros-ext:auto-restart-to-modify;
+                                            description "Vendor class ID as an ASCII string";
+                                        }
+
+                                    }
+                                    case hex-string {
+
+                                        leaf hex-string {
+                                            type types-sros:hex-string {
+                                                length "1..256";
+                                            }
+                                            sros-ext:auto-restart-to-modify;
+                                            description "Vendor class ID as a hexadecimal string";
+                                        }
+
+                                    }
+                                }
+                            } // container class-id
+
+                            container client-id {
+                                sros-ext:auto-restart-to-modify;
+                                description "Enter the client-id context";
+
+                                choice format {
+                                    case mac {
+
+                                        leaf mac {
+                                            type empty;
+                                            sros-ext:auto-restart-to-modify;
+                                            description "MAC address as the client ID";
+                                        }
+
+                                    }
+                                    case interface {
+
+                                        leaf interface {
+                                            type empty;
+                                            sros-ext:auto-restart-to-modify;
+                                            description "Interface name as the client ID";
+                                        }
+
+                                    }
+                                    case ascii-string {
+
+                                        leaf ascii-string {
+                                            type string {
+                                                length "1..127";
+                                            }
+                                            sros-ext:auto-restart-to-modify;
+                                            description "Client ID as an ASCII string";
+                                        }
+
+                                    }
+                                    case hex-string {
+
+                                        leaf hex-string {
+                                            type types-sros:hex-string {
+                                                length "1..256";
+                                            }
+                                            sros-ext:auto-restart-to-modify;
+                                            description "Client ID as a hexadecimal string";
+                                        }
+
+                                    }
+                                }
+                            } // container client-id
+
+                            container request-options {
+                                sros-ext:auto-restart-to-modify;
+                                description "Enter the request-options context";
+
+                                leaf dns-server {
+                                    type boolean;
+                                    sros-ext:auto-restart-to-modify;
+                                    default "false";
+                                    description "Include the DNS server option";
+                                }
+
+                                leaf router {
+                                    type boolean;
+                                    sros-ext:auto-restart-to-modify;
+                                    default "false";
+                                    description "Include the router option";
+                                }
+
+                                leaf static-route {
+                                    type boolean;
+                                    sros-ext:auto-restart-to-modify;
+                                    default "false";
+                                    description "Include the static route option";
+                                }
+
+                            } // container request-options
+
+                        } // container dhcp-client
+
+                    } // container ipv4
+
+                } // container autoconfigure
+
                 container hold-time {
                     description "Enter the hold-time context";
 
@@ -16348,6 +16612,44 @@ submodule nokia-conf-svc-vprn {
                         } // list address
 
                     } // container addresses
+
+                    container nat {
+                        presence "Enable the nat context";
+                        description "Enable the nat context";
+
+                        leaf cpm-nat-policy {
+                            type leafref {
+                                path "../../../../../nat/cpm-nat-policy/name";
+                            }
+                            description "CPM NAT policy association with public IPv4 interface";
+                        }
+
+                        leaf cpm-spf-nat-policy {
+                            type leafref {
+                                path "../../../../../nat/cpm-nat-policy/name";
+                            }
+                            description "CPM NAT policy for static port forwards";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // container nat
 
                     container neighbor-discovery {
                         when "../../tunnel = 'false' and ../../ip-tunnel-interface = 'false'" {
@@ -18456,8 +18758,14 @@ submodule nokia-conf-svc-vprn {
 
                             leaf algorithm-type {
                                 type enumeration {
-                                    enum trtcm-ds                       { value 1; }
-                                    enum trtcm-ds-coupled               { value 2; }
+                                    enum trtcm-ds {
+                                        value 1;
+                                        description "Use the TRTCM non-coupled mode";
+                                    }
+                                    enum trtcm-ds-coupled {
+                                        value 2;
+                                        description "Use the TRTCM coupled mode";
+                                    }
                                 }
                                 default "trtcm-ds-coupled";
                                 description "Policer algorithm type";
@@ -20460,6 +20768,13 @@ submodule nokia-conf-svc-vprn {
                             }
 
                         } // container max-history-key-records
+
+                        container mixed-tunnel-mode {
+                            presence "Enable the mixed-tunnel-mode context";
+                            sros-ext:auto-restart-to-modify;
+                            description "Enable the mixed-tunnel-mode context";
+
+                        } // container mixed-tunnel-mode
 
                     } // list ipsec-gateway
 
@@ -23383,6 +23698,13 @@ submodule nokia-conf-svc-vprn {
                         description "Administrative state of the SDP binding to the service";
                     }
 
+                    leaf vc-type {
+                        type types-services:ies-sdp-bind-vc-type;
+                        sros-ext:immutable;
+                        default "ether";
+                        description "Encapsulation and pseudowire type";
+                    }
+
                     leaf control-word {
                         type boolean;
                         default "false";
@@ -23507,6 +23829,57 @@ submodule nokia-conf-svc-vprn {
                     presence "Enable the ipv6 context";
                     description "Enable the ipv6 context";
 
+                    list address {
+                        key "ipv6-address";
+                        max-elements 1;
+                        description "Enter the address list instance";
+
+                        leaf ipv6-address {
+                            type types-sros:ipv6-address;
+                            description "IPv6 address assigned to the interface";
+                        }
+
+                        leaf prefix-length {
+                            type uint32 {
+                                range "4..128";
+                            }
+                            mandatory true;
+                            description "IPv6 address prefix length";
+                        }
+
+                        leaf eui-64 {
+                            type boolean;
+                            sros-ext:immutable;
+                            default "false";
+                            description "Form IPv6 address from prefix and 64-bit interface ID";
+                        }
+
+                        leaf duplicate-address-detection {
+                            type boolean;
+                            sros-ext:immutable;
+                            default "true";
+                            description "Enable Duplicate Address Detection";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // list address
 
                 } // container ipv6
 
@@ -27186,6 +27559,7 @@ submodule nokia-conf-svc-vprn {
                 }
 
             } // container management
+
 
             uses conf-svc-vprn-dhcp-server;
             uses conf-svc-vprn-isis;

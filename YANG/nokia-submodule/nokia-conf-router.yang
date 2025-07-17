@@ -90,7 +90,7 @@ submodule nokia-conf-router {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2025-04-23";
+    revision "2025-07-16";
 
     grouping conf-router {
         list router {
@@ -878,6 +878,9 @@ submodule nokia-conf-router {
             } // container vrgw
 
             container wlan-gw {
+                when "../router-name = 'Base'" {
+                    description "only allowed in the Base router";
+                }
                 presence "Enable the wlan-gw context";
                 description "Enable the wlan-gw context";
 
@@ -1747,7 +1750,10 @@ submodule nokia-conf-router {
                                         range "10..315446399";
                                     }
                                     type enumeration {
-                                        enum infinite                       { value -1; }
+                                        enum infinite {
+                                            value -1;
+                                            description "Request an infinite lease with no expiry";
+                                        }
                                     }
                                 }
                                 sros-ext:auto-restart-to-modify;
@@ -1787,7 +1793,7 @@ submodule nokia-conf-router {
                                                 length "1..127";
                                             }
                                             sros-ext:auto-restart-to-modify;
-                                            description "Vendor class identifier as an ASCII string";
+                                            description "Vendor class ID as an ASCII string";
                                         }
 
                                     }
@@ -1798,7 +1804,7 @@ submodule nokia-conf-router {
                                                 length "1..256";
                                             }
                                             sros-ext:auto-restart-to-modify;
-                                            description "Vendor class identifier as a hexadecimal string";
+                                            description "Vendor class ID as a hexadecimal string";
                                         }
 
                                     }
@@ -1815,7 +1821,7 @@ submodule nokia-conf-router {
                                         leaf mac {
                                             type empty;
                                             sros-ext:auto-restart-to-modify;
-                                            description "MAC as client identifier";
+                                            description "MAC address as the client ID";
                                         }
 
                                     }
@@ -1824,7 +1830,7 @@ submodule nokia-conf-router {
                                         leaf interface {
                                             type empty;
                                             sros-ext:auto-restart-to-modify;
-                                            description "Interface name as client identifier";
+                                            description "Interface name as the client ID";
                                         }
 
                                     }
@@ -1835,7 +1841,7 @@ submodule nokia-conf-router {
                                                 length "1..127";
                                             }
                                             sros-ext:auto-restart-to-modify;
-                                            description "Client identifier as an ASCII string";
+                                            description "Client ID as an ASCII string";
                                         }
 
                                     }
@@ -1846,7 +1852,7 @@ submodule nokia-conf-router {
                                                 length "1..256";
                                             }
                                             sros-ext:auto-restart-to-modify;
-                                            description "Client identifier as a hexadecimal string";
+                                            description "Client ID as a hexadecimal string";
                                         }
 
                                     }
@@ -1861,21 +1867,21 @@ submodule nokia-conf-router {
                                     type boolean;
                                     sros-ext:auto-restart-to-modify;
                                     default "false";
-                                    description "DNS server option";
+                                    description "Include the DNS server option";
                                 }
 
                                 leaf router {
                                     type boolean;
                                     sros-ext:auto-restart-to-modify;
                                     default "false";
-                                    description "Router option";
+                                    description "Include the router option";
                                 }
 
                                 leaf static-route {
                                     type boolean;
                                     sros-ext:auto-restart-to-modify;
                                     default "false";
-                                    description "Static route option";
+                                    description "Include the static route option";
                                 }
 
                             } // container request-options
@@ -3560,6 +3566,44 @@ submodule nokia-conf-router {
 
                     } // list secondary
 
+                    container nat {
+                        presence "Enable the nat context";
+                        description "Enable the nat context";
+
+                        leaf cpm-nat-policy {
+                            type leafref {
+                                path "../../../../../service/nat/cpm-nat-policy/name";
+                            }
+                            description "CPM NAT policy association with public IPv4 interface";
+                        }
+
+                        leaf cpm-spf-nat-policy {
+                            type leafref {
+                                path "../../../../../service/nat/cpm-nat-policy/name";
+                            }
+                            description "CPM NAT policy for static port forwards";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // container nat
+
                     container neighbor-discovery {
                         when "not(../../interface-name = 'system') and not(../../flavor = 'pdn')" {
                             description "not allowed in the system interface nor in an interface with flavor pdn";
@@ -4017,6 +4061,15 @@ submodule nokia-conf-router {
                         type boolean;
                         default "true";
                         description "Enable Duplicate Address Detection";
+                    }
+
+                    leaf gre-termination {
+                        when "../../../router-name = 'Base' and ../../flavor = 'regular' and not(../../interface-name = 'system')" {
+                            description "only allowed in regular interfaces in router Base, and not in the system interface";
+                        }
+                        type boolean;
+                        default "false";
+                        description "Enable IPv6 GRE termination on a loopback interface";
                     }
 
                     leaf local-dhcp-server {

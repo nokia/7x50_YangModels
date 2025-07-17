@@ -42,7 +42,7 @@ submodule nokia-conf-dms {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2025-04-23";
+    revision "2025-07-16";
 
     grouping conf-dms-defender-mitigation-system {
         container defender-mitigation-system {
@@ -144,6 +144,7 @@ submodule nokia-conf-dms {
                     }
 
                 } // list esa
+
 
             } // container advanced-countermeasures-group
 
@@ -547,7 +548,7 @@ submodule nokia-conf-dms {
 
                     list source-event-count {
                         key "name";
-                        max-elements 4;
+                        max-elements 16;
                         description "Enter the source-event-count list instance";
 
                         leaf name {
@@ -593,7 +594,7 @@ submodule nokia-conf-dms {
 
                     list source-event-rate {
                         key "name";
-                        max-elements 4;
+                        max-elements 16;
                         description "Enter the source-event-rate list instance";
 
                         leaf name {
@@ -741,7 +742,7 @@ submodule nokia-conf-dms {
 
                     list event-count {
                         key "name";
-                        max-elements 4;
+                        max-elements 16;
                         description "Enter the event-count list instance";
 
                         leaf name {
@@ -781,7 +782,7 @@ submodule nokia-conf-dms {
 
                     list event-rate {
                         key "name";
-                        max-elements 4;
+                        max-elements 16;
                         description "Enter the event-rate list instance";
 
                         leaf name {
@@ -1050,6 +1051,7 @@ submodule nokia-conf-dms {
                             description "Exclude a configuration group at this level";
                         }
 
+
                         container dns-filter {
                             presence "Enable the dns-filter context";
                             description "Enable the dns-filter context";
@@ -1240,6 +1242,71 @@ submodule nokia-conf-dms {
 
                     } // list dns-validate
 
+                    list dns-tracker {
+                        key "dns-tracker-name";
+                        max-elements 2;
+                        description "Enter the dns-tracker list instance";
+
+                        leaf dns-tracker-name {
+                            type types-sros:named-item;
+                            description "DNS tracker name";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf dynamic-block {
+                            type boolean;
+                            default "false";
+                            description "Block the tracked source upon DNS tracker discard";
+                        }
+
+                        leaf inactivity-timeout {
+                            type uint32 {
+                                range "1..3600";
+                            }
+                            units "seconds";
+                            description "Inactivity timeout for DNS over TCP flows";
+                        }
+
+                        leaf start-guard-time {
+                            type uint32 {
+                                range "1..120";
+                            }
+                            units "seconds";
+                            description "Maximum time to receive DNS request after TCP handshake";
+                        }
+
+                        leaf payload-validate {
+                            type leafref {
+                                path "../../dns-validate/name";
+                            }
+                            mandatory true;
+                            description "DNS over TCP packet validator used to analyze payload";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // list dns-tracker
+
 
                     list http-tracker {
                         key "http-tracker-name";
@@ -1346,6 +1413,12 @@ submodule nokia-conf-dms {
                                 path "../../../policer/event-rate/name";
                             }
                             description "PO event-rate policer used for ICMP echo messages";
+                        }
+
+                        leaf track-source {
+                            type boolean;
+                            default "false";
+                            description "Valid ICMP can optionally trigger tracked-source state to be kept.";
                         }
 
                         leaf source-echo-rate-policer {
@@ -1623,6 +1696,7 @@ submodule nokia-conf-dms {
 
                     } // list tls-tracker
 
+
                 } // container protocol-handlers
 
                 container mitigation-rules {
@@ -1680,28 +1754,28 @@ submodule nokia-conf-dms {
 
                             leaf flow-count-policer {
                                 type leafref {
-                                    path "../../../../policer/flow-count/name";
+                                    path "../../../../../protected-object/policer/flow-count/name";
                                 }
                                 description "PO-level flow-count policer to apply to traffic";
                             }
 
                             leaf flow-setup-rate-policer {
                                 type leafref {
-                                    path "../../../../policer/flow-setup-rate/name";
+                                    path "../../../../../protected-object/policer/flow-setup-rate/name";
                                 }
                                 description "PO-level flow setup-rate policer to apply to traffic";
                             }
 
                             leaf source-flow-count-policer {
                                 type leafref {
-                                    path "../../../../policer/source-flow-count/name";
+                                    path "../../../../../protected-object/policer/source-flow-count/name";
                                 }
                                 description "Source flow-count policer to apply to traffic";
                             }
 
                             leaf source-flow-setup-rate-policer {
                                 type leafref {
-                                    path "../../../../policer/source-flow-setup-rate/name";
+                                    path "../../../../../protected-object/policer/source-flow-setup-rate/name";
                                 }
                                 description "Source flow-setup-rate policer to apply to traffic";
                             }
@@ -1716,9 +1790,47 @@ submodule nokia-conf-dms {
                                         value 1;
                                         description "Actively challenge using custom NS redirect";
                                     }
+                                    enum active-force-tcp {
+                                        value 2;
+                                        description "Actively challenge by forcing to use TCP";
+                                    }
+                                    enum active-cookie-ns-redirect {
+                                        value 3;
+                                        description "Actively challenge with NS redirect and cookie exchange";
+                                    }
                                 }
                                 default "none";
                                 description "DNS client authentication for DNS requests";
+                            }
+
+                            leaf http-client-authentication {
+                                type enumeration {
+                                    enum none {
+                                        value 0;
+                                        description "No HTTP authentication";
+                                    }
+                                    enum active-302-redirect {
+                                        value 1;
+                                        description "Actively challenge the HTTP client using a 302 redirect.";
+                                    }
+                                }
+                                default "none";
+                                description "HTTP client authentication for HTTP flows";
+                            }
+
+                            leaf quic-client-authentication {
+                                type enumeration {
+                                    enum none {
+                                        value 0;
+                                        description "Ipipe pseudowire associated with SDP binding";
+                                    }
+                                    enum active-challenge {
+                                        value 1;
+                                        description "Actively challenge the session with a SynAck cookie";
+                                    }
+                                }
+                                default "none";
+                                description "QUIC client authentication for QUIC flows";
                             }
 
                             leaf tcp-client-authentication {
@@ -1735,9 +1847,13 @@ submodule nokia-conf-dms {
                                         value 2;
                                         description "Actively interrupt session with an out of sequence Ack";
                                     }
+                                    enum active-invalid-syn-ack {
+                                        value 3;
+                                        description "Actively interrupt session with a SynAck invalid AckNum";
+                                    }
                                 }
                                 default "none";
-                                description "TCP client authentication for TCP flow creation";
+                                description "TCP client authentication for TCP flows";
                             }
 
                             container protocol-tracker {
@@ -1752,11 +1868,21 @@ submodule nokia-conf-dms {
                                         }
 
                                     }
+                                    case dns {
+
+                                        leaf dns {
+                                            type leafref {
+                                                path "../../../../../../protected-object/protocol-handlers/dns-tracker/dns-tracker-name";
+                                            }
+                                            description "Flow tracker to analyze matching DNS over TCP traffic";
+                                        }
+
+                                    }
                                     case http {
 
                                         leaf http {
                                             type leafref {
-                                                path "../../../../../protocol-handlers/http-tracker/http-tracker-name";
+                                                path "../../../../../../protected-object/protocol-handlers/http-tracker/http-tracker-name";
                                             }
                                             description "Flow tracker used to analyze matching HTTP traffic";
                                         }
@@ -1766,7 +1892,7 @@ submodule nokia-conf-dms {
 
                                         leaf quic {
                                             type leafref {
-                                                path "../../../../../protocol-handlers/quic-tracker/quic-tracker-name";
+                                                path "../../../../../../protected-object/protocol-handlers/quic-tracker/quic-tracker-name";
                                             }
                                             description "Flow tracker used to analyze matching QUIC traffic";
                                         }
@@ -1776,7 +1902,7 @@ submodule nokia-conf-dms {
 
                                         leaf sip {
                                             type leafref {
-                                                path "../../../../../protocol-handlers/sip-tracker/sip-tracker-name";
+                                                path "../../../../../../protected-object/protocol-handlers/sip-tracker/sip-tracker-name";
                                             }
                                             description "Flow tracker used to analyze matching SIP traffic";
                                         }
@@ -1786,7 +1912,7 @@ submodule nokia-conf-dms {
 
                                         leaf tls {
                                             type leafref {
-                                                path "../../../../../protocol-handlers/tls-tracker/tls-tracker-name";
+                                                path "../../../../../../protected-object/protocol-handlers/tls-tracker/tls-tracker-name";
                                             }
                                             description "Flow tracker used to analyze matching TLS traffic";
                                         }
@@ -1803,7 +1929,7 @@ submodule nokia-conf-dms {
 
                                         leaf dns {
                                             type leafref {
-                                                path "../../../../../protocol-handlers/dns-validate/name";
+                                                path "../../../../../../protected-object/protocol-handlers/dns-validate/name";
                                             }
                                             description "DNS protocol packet validator used to analyze traffic";
                                         }
@@ -1813,7 +1939,7 @@ submodule nokia-conf-dms {
 
                                         leaf icmp {
                                             type leafref {
-                                                path "../../../../../protocol-handlers/icmp-validate/name";
+                                                path "../../../../../../protected-object/protocol-handlers/icmp-validate/name";
                                             }
                                             description "ICMP protocol packet validator used to analyze traffic";
                                         }
@@ -1832,7 +1958,7 @@ submodule nokia-conf-dms {
 
                                 leaf operator {
                                     type types-dms:match-operator;
-                                    description "Match criteria for the destination IP address";
+                                    description "Match condition for the IP address";
                                 }
 
                                 choice value {
@@ -1840,7 +1966,7 @@ submodule nokia-conf-dms {
 
                                         leaf prefix {
                                             type types-sros:ip-prefix;
-                                            description "IP prefix to match against the destination IP address";
+                                            description "IP prefix to match against the IP address";
                                         }
 
                                     }
@@ -1848,9 +1974,9 @@ submodule nokia-conf-dms {
 
                                         leaf prefix-list {
                                             type leafref {
-                                                path "../../../../../match-list/ip-prefix-list/ip-prefix-list-name";
+                                                path "../../../../../../protected-object/match-list/ip-prefix-list/ip-prefix-list-name";
                                             }
-                                            description "IP prefix list to match to the destination IP address";
+                                            description "IP prefix list to match to the IP address";
                                         }
 
                                     }
@@ -1862,7 +1988,7 @@ submodule nokia-conf-dms {
 
                                 leaf operator {
                                     type types-dms:match-operator;
-                                    description "Match criteria for the destination port";
+                                    description "Match condition for the port";
                                 }
 
                                 choice value {
@@ -1882,7 +2008,7 @@ submodule nokia-conf-dms {
                                                 range "0..65534";
                                             }
                                             mandatory true;
-                                            description "Lower bound of the range of destination ports";
+                                            description "Lower bound of the port range";
                                         }
 
                                         leaf range-end {
@@ -1890,7 +2016,7 @@ submodule nokia-conf-dms {
                                                 range "1..65535";
                                             }
                                             mandatory true;
-                                            description "Upper bound of the range of destination ports";
+                                            description "Upper bound of the port range";
                                         }
 
                                     }
@@ -1898,9 +2024,9 @@ submodule nokia-conf-dms {
 
                                         leaf port-list {
                                             type leafref {
-                                                path "../../../../../match-list/port-list/port-list-name";
+                                                path "../../../../../../protected-object/match-list/port-list/port-list-name";
                                             }
-                                            description "Port list to match against the destination port";
+                                            description "Port list to match against the port";
                                         }
 
                                     }
@@ -1912,7 +2038,7 @@ submodule nokia-conf-dms {
 
                                 leaf operator {
                                     type types-dms:match-operator;
-                                    description "Match criteria for the IP protocol";
+                                    description "Match condition for the IP protocol";
                                 }
 
                                 leaf value {
@@ -1927,7 +2053,7 @@ submodule nokia-conf-dms {
 
                                 leaf operator {
                                     type types-dms:match-operator;
-                                    description "Match criteria for the source IP address";
+                                    description "Match condition for the source IP address";
                                 }
 
                                 choice value {
@@ -1943,7 +2069,7 @@ submodule nokia-conf-dms {
 
                                         leaf prefix-list {
                                             type leafref {
-                                                path "../../../../../match-list/ip-prefix-list/ip-prefix-list-name";
+                                                path "../../../../../../protected-object/match-list/ip-prefix-list/ip-prefix-list-name";
                                             }
                                             description "IP prefix list to match against the source IP address";
                                         }
@@ -1961,7 +2087,7 @@ submodule nokia-conf-dms {
 
                                         leaf genome-list-set {
                                             type leafref {
-                                                path "../../../../../match-list/genome-list-set/genome-list-set-name";
+                                                path "../../../../../../protected-object/match-list/genome-list-set/genome-list-set-name";
                                             }
                                             description "Genome-list set to match against the source IP address";
                                         }
@@ -1975,7 +2101,7 @@ submodule nokia-conf-dms {
 
                                 leaf operator {
                                     type types-dms:match-operator;
-                                    description "Match criteria for the source port";
+                                    description "Match condition for the port";
                                 }
 
                                 choice value {
@@ -1984,7 +2110,7 @@ submodule nokia-conf-dms {
                                         leaf port-number {
                                             type types-sros:tcp-udp-port;
                                             default "0";
-                                            description "Source port number";
+                                            description "TCP or UDP port number";
                                         }
 
                                     }
@@ -1995,7 +2121,7 @@ submodule nokia-conf-dms {
                                                 range "0..65534";
                                             }
                                             mandatory true;
-                                            description "Lower bound of the source-port range";
+                                            description "Lower bound of the port range";
                                         }
 
                                         leaf range-end {
@@ -2003,7 +2129,7 @@ submodule nokia-conf-dms {
                                                 range "1..65535";
                                             }
                                             mandatory true;
-                                            description "Upper bound of the source-port range";
+                                            description "Upper bound of the port range";
                                         }
 
                                     }
@@ -2011,9 +2137,9 @@ submodule nokia-conf-dms {
 
                                         leaf port-list {
                                             type leafref {
-                                                path "../../../../../match-list/port-list/port-list-name";
+                                                path "../../../../../../protected-object/match-list/port-list/port-list-name";
                                             }
-                                            description "Port list to match against the source port";
+                                            description "Port list to match against the port";
                                         }
 
                                     }
@@ -2023,6 +2149,7 @@ submodule nokia-conf-dms {
                         } // container match
 
                     } // list entry
+
 
                 } // container mitigation-rules
 
