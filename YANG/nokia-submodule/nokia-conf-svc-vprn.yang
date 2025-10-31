@@ -99,7 +99,7 @@ submodule nokia-conf-svc-vprn {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2025-09-03";
+    revision "2025-10-30";
 
     grouping conf-svc-vprn {
         list vprn {
@@ -151,7 +151,7 @@ submodule nokia-conf-svc-vprn {
             }
 
             leaf ecmp {
-                type types-router:ip-ecmp;
+                type types-router:ip-ecmp-128;
                 default "1";
                 description "Maximum equal-cost routes for routing table instance";
             }
@@ -1416,6 +1416,16 @@ submodule nokia-conf-svc-vprn {
                             description "Mode of operation of this NAT address pool";
                         }
 
+                        leaf monitor-oper-group {
+                            when "../type = 'large-scale' or ../type = 'l2-aware'" {
+                                description "pool type must be large-scale or l2-aware";
+                            }
+                            type leafref {
+                                path "../../../../../oper-group/name";
+                            }
+                            description "Monitor operational group associated with a NAT pool";
+                        }
+
                         leaf admin-state {
                             type types-sros:admin-state;
                             default "disable";
@@ -2186,7 +2196,6 @@ submodule nokia-conf-svc-vprn {
                         type leafref {
                             path "../../../../vprn[service-name=current()/../../../service-name]/interface/interface-name";
                         }
-                        mandatory true;
                         description "Interface on which the GTP-U packets terminate";
                     }
 
@@ -7361,6 +7370,12 @@ submodule nokia-conf-svc-vprn {
                                         description "Sub-domain used to attach the BIER provider tunnel";
                                     }
 
+                                    leaf pta-label-in-msb {
+                                        type boolean;
+                                        default "false";
+                                        description "Program BIER service label in the MSB of the PTA field";
+                                    }
+
                                 } // container bier
 
                             }
@@ -8318,6 +8333,13 @@ submodule nokia-conf-svc-vprn {
                         description "EVPN instance ID";
                     }
 
+                    leaf anysec-encryption-group {
+                        type leafref {
+                            path "../../../../../anysec/service-encryption/encryption-group/group-name";
+                        }
+                        description "ANYsec encryption group name";
+                    }
+
                     leaf-list apply-groups {
                         type leafref {
                             path "../../../../../groups/group/name";
@@ -9110,6 +9132,13 @@ submodule nokia-conf-svc-vprn {
                         type boolean;
                         default "false";
                         description "Enables dynamic egress label limit";
+                    }
+
+                    leaf anysec-encryption-group {
+                        type leafref {
+                            path "../../../../../anysec/service-encryption/encryption-group/group-name";
+                        }
+                        description "ANYsec encryption group name";
                     }
 
                     container vrf-target {
@@ -11266,6 +11295,22 @@ submodule nokia-conf-svc-vprn {
 
                 } // container damp-peer-oscillations
 
+                container rapid-update {
+                    description "Enter the rapid-update context";
+
+                    leaf ipv4 {
+                        type boolean;
+                        default "false";
+                        description "Include IPv4 address family routes";
+                    }
+
+                    leaf ipv6 {
+                        type boolean;
+                        default "false";
+                        description "Include IPv6 address family routes";
+                    }
+
+                } // container rapid-update
 
                 container backup-path {
                     description "Enter the backup-path context";
@@ -17143,6 +17188,12 @@ submodule nokia-conf-svc-vprn {
                                 description "Update the source IP address of a DHCP RELEASE message";
                             }
 
+                            leaf allow-forcerenew-without-lease {
+                                type boolean;
+                                default "false";
+                                description "Allow DHCPv4 FORCERENEW messages without lease state";
+                            }
+
                             leaf siaddr-override {
                                 type types-sros:ipv4-unicast-address;
                                 description "DHCP server IP address for address hiding function";
@@ -17420,6 +17471,13 @@ submodule nokia-conf-svc-vprn {
                         sros-ext:immutable;
                         default "ether";
                         description "Type of virtual circuit (VC) associated with the SDP binding";
+                    }
+
+                    leaf anysec-encryption-group {
+                        type leafref {
+                            path "../../../../../anysec/service-encryption/encryption-group/group-name";
+                        }
+                        description "ANYsec encryption group name";
                     }
 
                     leaf-list apply-groups {
@@ -18891,6 +18949,12 @@ submodule nokia-conf-svc-vprn {
                                 }
                                 units "microseconds";
                                 description "SAP egress latency budget";
+                            }
+
+                            leaf sink-excess-bw {
+                                type boolean;
+                                default "false";
+                                description "Use virtual flows to sink excess bandwidth";
                             }
 
                             container sap-egress {
@@ -22085,6 +22149,12 @@ submodule nokia-conf-svc-vprn {
                                 description "Administrative state of DHCPv6 Relay";
                             }
 
+                            leaf allow-reconfigure-without-lease {
+                                type boolean;
+                                default "false";
+                                description "Allow DHCPv6 Reconfigure messages without lease state";
+                            }
+
                             leaf link-address {
                                 type types-sros:ipv6-address;
                                 description "Link address of the DHCPv6 relay messages";
@@ -24518,15 +24588,54 @@ submodule nokia-conf-svc-vprn {
 
                     leaf application {
                         type enumeration {
-                            enum telnet                         { value 1; }
-                            enum ssh                            { value 3; }
-                            enum snmptrap                       { value 6; }
-                            enum ping                           { value 8; }
-                            enum traceroute                     { value 9; }
-                            enum ntp                            { value 12; }
-                            enum cflowd                         { value 13; }
-                            enum ptp                            { value 23; }
-                            enum icmp-error                     { value 29; }
+                            enum telnet {
+                                value 1;
+                                description "Telnet packets";
+                            }
+                            enum ssh {
+                                value 3;
+                                description "SSH packets";
+                            }
+                            enum radius {
+                                value 4;
+                                description "RADIUS packets";
+                            }
+                            enum tacplus {
+                                value 5;
+                                description "TACACS+ packets";
+                            }
+                            enum snmptrap {
+                                value 6;
+                                description "SNMP trap packets";
+                            }
+                            enum syslog {
+                                value 7;
+                                description "Syslog packets";
+                            }
+                            enum ping {
+                                value 8;
+                                description "ICMP Echo Reply messages";
+                            }
+                            enum traceroute {
+                                value 9;
+                                description "Traceroute reply messages";
+                            }
+                            enum ntp {
+                                value 12;
+                                description "NTP packets";
+                            }
+                            enum cflowd {
+                                value 13;
+                                description "Cflowd packets";
+                            }
+                            enum ptp {
+                                value 23;
+                                description "PTP packets";
+                            }
+                            enum icmp-error {
+                                value 29;
+                                description "ICMP error messages";
+                            }
                         }
                         description "Application that uses the source IP address";
                     }
@@ -24578,15 +24687,54 @@ submodule nokia-conf-svc-vprn {
 
                     leaf application {
                         type enumeration {
-                            enum telnet                         { value 14; }
-                            enum snmptrap                       { value 18; }
-                            enum ping                           { value 20; }
-                            enum traceroute                     { value 21; }
-                            enum cflowd                         { value 25; }
-                            enum ntp                            { value 26; }
-                            enum icmp6-error                    { value 30; }
-                            enum ssh                            { value 33; }
-                            enum ptp                            { value 34; }
+                            enum telnet {
+                                value 14;
+                                description "Telnet packets";
+                            }
+                            enum radius {
+                                value 16;
+                                description "RADIUS packets";
+                            }
+                            enum tacplus {
+                                value 17;
+                                description "TACACS+ packets";
+                            }
+                            enum snmptrap {
+                                value 18;
+                                description "SNMP trap packets";
+                            }
+                            enum syslog {
+                                value 19;
+                                description "Syslog packets";
+                            }
+                            enum ping {
+                                value 20;
+                                description "ICMP Echo Reply messages";
+                            }
+                            enum traceroute {
+                                value 21;
+                                description "Traceroute reply messages";
+                            }
+                            enum cflowd {
+                                value 25;
+                                description "Cflowd packets";
+                            }
+                            enum ntp {
+                                value 26;
+                                description "NTP packets";
+                            }
+                            enum icmp6-error {
+                                value 30;
+                                description "ICMP error messages";
+                            }
+                            enum ssh {
+                                value 33;
+                                description "SSH packets";
+                            }
+                            enum ptp {
+                                value 34;
+                                description "PTP packets";
+                            }
                         }
                         description "Application that uses the source IP address";
                     }
@@ -24818,6 +24966,7 @@ submodule nokia-conf-svc-vprn {
                         } // container prefix-list
 
                     } // container blackhole
+
 
                     container grt {
                         presence "Enable the grt context";

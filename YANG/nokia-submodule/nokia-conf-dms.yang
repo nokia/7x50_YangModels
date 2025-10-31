@@ -42,7 +42,7 @@ submodule nokia-conf-dms {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2025-09-03";
+    revision "2025-10-30";
 
     grouping conf-dms-defender-mitigation-system {
         container defender-mitigation-system {
@@ -262,6 +262,7 @@ submodule nokia-conf-dms {
 
             } // container user-list-import
 
+
             list protected-object {
                 key "id";
                 max-elements 250;
@@ -330,6 +331,12 @@ submodule nokia-conf-dms {
                         units "seconds";
                         default "300";
                         description "Duration to block the source after a repeat violation";
+                    }
+
+                    leaf monitor {
+                        type boolean;
+                        default "false";
+                        description "Track discards that would have occurred, but did not";
                     }
 
                 } // container dynamic-block
@@ -1051,6 +1058,30 @@ submodule nokia-conf-dms {
                             description "Exclude a configuration group at this level";
                         }
 
+                        container dns-redirect-target {
+                            description "Enter the dns-redirect-target context";
+
+                            leaf ipv4-server-a {
+                                type types-sros:ip-address;
+                                description "IPv4 address of a DNS server at the PO";
+                            }
+
+                            leaf ipv4-server-b {
+                                type types-sros:ip-address;
+                                description "IPv4 address of a secondary DNS server at the PO";
+                            }
+
+                            leaf ipv6-server-a {
+                                type types-sros:ip-address;
+                                description "IPv6 address of a DNS server at the PO";
+                            }
+
+                            leaf ipv6-server-b {
+                                type types-sros:ip-address;
+                                description "IPv6 address of a secondary DNS server at the PO";
+                            }
+
+                        } // container dns-redirect-target
 
                         container dns-filter {
                             presence "Enable the dns-filter context";
@@ -1178,6 +1209,22 @@ submodule nokia-conf-dms {
                                 container match {
                                     description "Enter the match context";
 
+                                    container query-type {
+                                        description "Enter the query-type context";
+
+                                        list record {
+                                            key "record-type";
+                                            max-elements 32;
+                                            description "Add a list entry for record";
+
+                                            leaf record-type {
+                                                type types-dms:dns-record-type;
+                                                description "DNS record type";
+                                            }
+
+                                        } // list record
+
+                                    } // container query-type
 
                                     container query-name {
                                         description "Enter the query-name context";
@@ -1676,6 +1723,13 @@ submodule nokia-conf-dms {
                             description "Maximum time to send data after the TLS handshake";
                         }
 
+                        leaf tls-client-filter {
+                            type leafref {
+                                path "../../tls-client-filter/tls-client-filter-name";
+                            }
+                            description "TLS client filter used to filter TLS client Hellos";
+                        }
+
                         leaf-list apply-groups {
                             type leafref {
                                 path "../../../../../groups/group/name";
@@ -1696,6 +1750,122 @@ submodule nokia-conf-dms {
 
                     } // list tls-tracker
 
+                    list tls-client-filter {
+                        key "tls-client-filter-name";
+                        max-elements 3;
+                        description "Enter the tls-client-filter list instance";
+
+                        leaf tls-client-filter-name {
+                            type types-sros:named-item;
+                            description "TLS client filter name";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of the TLS client filter";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container default-action {
+                            description "Enter the default-action context";
+
+                            leaf drop {
+                                type boolean;
+                                default "false";
+                                description "Drop traffic not matching any TLS client filter entries";
+                            }
+
+                        } // container default-action
+
+                        list entry {
+                            key "id";
+                            max-elements 8;
+                            description "Enter the entry list instance";
+
+                            leaf id {
+                                type uint32 {
+                                    range "1..8";
+                                }
+                                description "TLS client filter entry ID";
+                            }
+
+                            leaf description {
+                                type types-sros:description;
+                                description "Text description";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                            container action {
+                                description "Enter the action context";
+
+                                leaf drop {
+                                    type boolean;
+                                    default "false";
+                                    description "Drop traffic matching the TLS client filter entry";
+                                }
+
+                            } // container action
+
+                            container match {
+                                description "Enter the match context";
+
+                                list tls-fingerprint-list {
+                                    key "list-name";
+                                    max-elements 2;
+                                    description "Add a list entry for tls-fingerprint-list";
+
+                                    leaf list-name {
+                                        type types-sros:named-item;
+                                        description "TLS fingerprint list name";
+                                    }
+
+                                } // list tls-fingerprint-list
+
+                            } // container match
+
+                        } // list entry
+
+                    } // list tls-client-filter
 
                 } // container protocol-handlers
 
@@ -1723,6 +1893,12 @@ submodule nokia-conf-dms {
                             type types-sros:admin-state;
                             default "disable";
                             description "Administrative state of the PO mitigation-rule entry";
+                        }
+
+                        leaf monitor {
+                            type boolean;
+                            default "false";
+                            description "Track discards that would have occurred, but did not";
                         }
 
                         leaf-list apply-groups {
@@ -2169,6 +2345,12 @@ submodule nokia-conf-dms {
                             type types-dms:pre-filter-action;
                             mandatory true;
                             description "Action to take on traffic matching Genome list source";
+                        }
+
+                        leaf monitor {
+                            type boolean;
+                            default "false";
+                            description "Use monitor mode to track genome-list packet actions";
                         }
 
                         leaf-list apply-groups {

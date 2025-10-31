@@ -34,7 +34,7 @@ submodule nokia-state-router-mpls {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2025-09-03";
+    revision "2025-10-30";
 
     grouping state-router-mpls {
         container mpls {
@@ -347,6 +347,11 @@ submodule nokia-state-router-mpls {
                          users associated with this template.";
                 }
 
+                leaf lsp-container-ref-count {
+                    type yang:counter32;
+                    description "Indicates the number of LSP containers referencing this template.";
+                }
+
                 container auto-bandwidth {
                     description "Enter the auto-bandwidth context";
 
@@ -397,6 +402,18 @@ submodule nokia-state-router-mpls {
                 leaf oper-metric {
                     type uint32;
                     description "Indicates the operational metric for the LSP.";
+                }
+
+                leaf lsp-container {
+                    type types-sros:named-item;
+                    description "Indicates the LSP container that this LSP is a member of.";
+                }
+
+                leaf member-id {
+                    type uint32 {
+                        range "1..64";
+                    }
+                    description "Indicates the member ID of this LSP within the LSP container.";
                 }
 
                 leaf origin-template {
@@ -2108,6 +2125,147 @@ submodule nokia-state-router-mpls {
 
             } // list static-lsp
 
+            list lsp-container {
+                key "container-name";
+                description "Enter the lsp-container list instance";
+
+                leaf container-name {
+                    type types-sros:named-item;
+                    description "LSP container name.";
+                }
+
+                leaf oper-state {
+                    type types-sros:oper-state;
+                    description "The current operational state of the LSP Container.";
+                }
+
+                leaf oper-down-reason {
+                    type enumeration {
+                        enum admin-down                     { value 1; }
+                        enum lsp-name-conflict              { value 2; }
+                        enum no-resources-available         { value 3; }
+                        enum no-lsp-operational             { value 4; }
+                    }
+                    description "The reason due to which the LSP container is operationally down.";
+                }
+
+                leaf member-lsp-count {
+                    type yang:gauge32;
+                    description "The number of member LSPs in the LSP container.";
+                }
+
+                leaf member-lsp-up-count {
+                    type yang:gauge32;
+                    description "The number of member LSPs in the LSP container that are operationally up.";
+                }
+
+                leaf nominal-lsp-count {
+                    type yang:gauge32;
+                    description "The nominal number of member LSPs in the LSP container.";
+                }
+
+                leaf nominal-bandwidth {
+                    type uint32;
+                    units "megabps";
+                    description
+                        "The nominal bandwidth, in mega-bits per second, computed for
+                         each member LSP in the LSP container.";
+                }
+
+                leaf optimization-time-remaining {
+                    type uint32;
+                    units "seconds";
+                    description
+                        "The time remaining, in seconds, till the optimization timer
+                         expires and optimization is started for the LSP container.";
+                }
+
+                leaf ad-hoc-optimization-pending {
+                    type boolean;
+                    description "Indicates whether ad-hoc optimization is pending for the LSP container.";
+                }
+
+                leaf ad-hoc-optimization-event {
+                    type enumeration {
+                        enum lsp-auto-bw-failed             { value 1; }
+                        enum lsp-failed-to-establish        { value 2; }
+                        enum lsp-auto-bw-skipped            { value 3; }
+                    }
+                    description "The ad-hoc optimization event for the LSP container.";
+                }
+
+                container last-optimization {
+                    description "Enter the last-optimization context";
+
+                    leaf start-time {
+                        type yang:date-and-time;
+                        description "The system time when the last optimization started for the LSP container.";
+                    }
+
+                    leaf status {
+                        type enumeration {
+                            enum completed                      { value 1; }
+                            enum failed                         { value 2; }
+                        }
+                        description "The status of the last optimization.";
+                    }
+
+                    leaf reason {
+                        type enumeration {
+                            enum timer-based                    { value 1; }
+                            enum ad-hoc                         { value 2; }
+                            enum config-param-modified          { value 3; }
+                        }
+                        description "The reason for the last optimization.";
+                    }
+
+                } // container last-optimization
+
+                list member-lsp {
+                    key "member-id";
+                    description "Enter the member-lsp list instance";
+
+                    leaf member-id {
+                        type uint32 {
+                            range "1..64";
+                        }
+                        description "Unique ID for the member LSP within the LSP container.";
+                    }
+
+                    leaf lsp-name {
+                        type types-sros:named-item-64;
+                        description "The name of the member LSP.";
+                    }
+
+                    leaf oper-state {
+                        type types-sros:oper-state;
+                        description "The current operational state of the member LSP.";
+                    }
+
+                    leaf tunnel-id {
+                        type uint32;
+                        description "The tunnel ID for the member LSP.";
+                    }
+
+                    leaf oper-bandwidth {
+                        type uint32;
+                        units "megabps";
+                        description
+                            "The operational bandwidth, in mega-bits per second, for
+                             the member LSP.";
+                    }
+
+                    leaf sampled-avg-rate {
+                        type uint32;
+                        units "megabps";
+                        description
+                            "The sampled average rate, in mega-bits per second, for
+                             the member LSP.";
+                    }
+
+                } // list member-lsp
+
+            } // list lsp-container
 
             container forwarding-policies {
                 description "Enter the forwarding-policies context";
@@ -2986,6 +3144,11 @@ submodule nokia-state-router-mpls {
                     leaf originate-one-hop-lsp-count {
                         type yang:gauge32;
                         description "The number of one hop P2P LSPs originating at this virtual router.";
+                    }
+
+                    leaf originate-member-lsp-count {
+                        type yang:gauge32;
+                        description "The number of member P2P LSPs originating at this virtual router.";
                     }
 
                     leaf lsp-up-count {
