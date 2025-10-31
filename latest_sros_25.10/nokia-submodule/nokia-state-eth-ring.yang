@@ -1,0 +1,386 @@
+submodule nokia-state-eth-ring {
+
+    yang-version "1.1";
+
+    belongs-to nokia-state { prefix "state"; }
+
+    import ietf-yang-types                { prefix "yang"; }
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-eth-cfm            { prefix "types-eth-cfm"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-state-eth-cfm;
+
+    sros-ext:sros-major-release "rel25";
+    organization "Nokia";
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+    description
+        "Nokia YANG Data model with operational state for Ethernet rings on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-state-eth-ring YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+    revision "2025-03-12";
+
+    grouping state-eth-ring {
+        list eth-ring {
+            key "ring-index";
+            description "Enter the eth-ring list instance";
+
+            leaf ring-index {
+                type uint32 {
+                    range "1..128";
+                }
+                description "The identifier which uniquely identifies the eth-ring.";
+            }
+
+            leaf aps-tx-pdu {
+                type string {
+                    length "0|8..32";
+                }
+                description "Indicates the contents of the R-APS PDU transmitted on the eth-ring.";
+            }
+
+            leaf defect-status {
+                type bits {
+                    bit d-fop-pm                       { position 0; }
+                }
+                description "Indicates what defects are active on the eth-ring.";
+            }
+
+            leaf oper-node-id {
+                type yang:mac-address;
+                description "Indicates the operational node-id of the eth-ring.";
+            }
+
+            leaf oper-state {
+                type types-sros:oper-state;
+                description "Indicates the current operational status of this eth-ring.";
+            }
+
+            leaf time-to-revert {
+                type uint32;
+                units "seconds";
+                description
+                    "Indicates the remaining tim before the eth-ring can revert to
+                     its original state.";
+            }
+
+            list path {
+                key "path-index";
+                description "Enter the path list instance";
+
+                leaf path-index {
+                    type string {
+                        length "1";
+                    }
+                    description "The identifier which uniquely identifies the eth-ring path.";
+                }
+
+                leaf aps-rx-pdu {
+                    type string {
+                        length "0|8..32";
+                    }
+                    description "Indicates the contents of the R-APS PDU received on the eth-ring path.";
+                }
+
+                leaf forward-state {
+                    type enumeration {
+                        enum unblocked                      { value 0; }
+                        enum blocked                        { value 1; }
+                    }
+                    description
+                        "Indicates whether the eth-ring path blocks the transmission
+                         and reception of traffic on the ring port.";
+                }
+
+                leaf forward-state-last-changed {
+                    type yang:date-and-time;
+                    description "Indicates the last time forward-state last experienced a changed.";
+                }
+
+                leaf oper-state {
+                    type types-sros:oper-state;
+                    description "Indicates the operational state of the eth-ring path.";
+                }
+
+                container eth-cfm {
+                    description "Enter the eth-cfm context";
+
+                    list mep {
+                        key "md-admin-name ma-admin-name mep-id";
+                        description "Enter the mep list instance";
+
+                        leaf md-admin-name {
+                            type leafref {
+                                path "../../../../../eth-cfm/domain/md-admin-name";
+                            }
+                            description "A unique administratively assigned name used to identify a domain.";
+                        }
+
+                        leaf ma-admin-name {
+                            type leafref {
+                                path "../../../../../eth-cfm/domain[md-admin-name=current()/../md-admin-name]/association/ma-admin-name";
+                            }
+                            description "A unique administratively assigned name used to identify an association.";
+                        }
+
+                        leaf mep-id {
+                            type types-eth-cfm:mep-id-type;
+                            description
+                                "A CFM Virtual Maintenance Endpoint
+
+                                 Specifies a local Maintenance association End Point identifier unique
+                                 over a given maintanance association.";
+                        }
+
+                        leaf if-index {
+                            type uint32;
+                            description "Port ID of the MEP.";
+                        }
+
+                        leaf oper-mac-address {
+                            type yang:mac-address;
+                            description "Operational MAC address of the MEP.";
+                        }
+
+                        container grace {
+                            description "Enter the grace context";
+
+                            container transmitted {
+                                description "Enter the transmitted context";
+
+                                leaf grace-notification {
+                                    type enumeration {
+                                        enum no-transmit                    { value 0; }
+                                        enum grace                          { value 1; }
+                                        enum eth-ed                         { value 2; }
+                                    }
+                                    description "Indicates the state of the MEP grace period PDU transmission.";
+                                }
+
+                            } // container transmitted
+
+                            container received {
+                                description "Enter the received context";
+
+                                leaf process-grace-notification {
+                                    type boolean;
+                                    description
+                                        "Indicates whether the local MEP is receiving and processing grace notifications
+                                         from one or more peer MEPs. A value of 'true ' indicates the local MEP is
+                                         receiving and processing grace from at least one peer MEP. A value
+                                         of 'false' indicates that no peer grace notifications are being
+                                         received and processed.";
+                                }
+
+                            } // container received
+
+                        } // container grace
+
+                        container ccm-states {
+                            description "Enter the ccm-states context";
+
+                            leaf transmit-status {
+                                type enumeration {
+                                    enum no-transmit                    { value 0; }
+                                    enum transmit                       { value 1; }
+                                    enum suppressed                     { value 2; }
+                                }
+                                description
+                                    "Indicates the state of the MEP CCM PDU transmission.
+
+                                     Values:
+                                        noTransmit (0) - no CCM PDUs are being transmitted by the MEP
+                                        transmit   (1) - MEP is currently transmitting CCM PDUs
+                                        suppressed (2) - MEP should be transmitting CCM PDUs but is suppressing
+                                                        them due to an internal condition";
+                            }
+
+                            leaf sequence-error {
+                                type yang:counter32;
+                                description "The total number of out-of-sequence CCMs received from all remote MEPs.";
+                            }
+
+                            leaf fng-state {
+                                type types-eth-cfm:fng-state-type;
+                                description "Current state of the MEP Fault Notification Generator State Machine.";
+                            }
+
+                            container transmitted {
+                                description "Enter the transmitted context";
+
+                                leaf count {
+                                    type yang:counter32;
+                                    description "Total number of CCMs transmitted.";
+                                }
+
+                                leaf interface-status {
+                                    type types-eth-cfm:interface-status;
+                                    description
+                                        "Indicates the interface status TLV information included in the most
+                                         recent Connectivity Check Message (CCM) transmission from the local MEP.
+                                         If the local MEP CCM transmissions are not enabled, or if no interface
+                                         status TLV was included in the most recent transmission, then
+                                         ccm-tx-if-status will return a value of is-no-interface-status-tlv (0).";
+                                }
+
+                                leaf port-status {
+                                    type types-eth-cfm:port-status;
+                                    description
+                                        "Indicates the port status TLV information included in the most recent
+                                         Connectivity Check Message (CCM) transmission from the local MEP.
+
+                                         If the local MEP CCM transmissions are not enabled, or if no port
+                                         status TLV was included in the most recent transmission, then
+                                         ccm-tx-port-status will return a value of ps-no-port-state-tlv (0).";
+                                }
+
+                                leaf remote-defect-indicator {
+                                    type boolean;
+                                    description
+                                        "Indicates whether or not the Remote Defect Indication (RDI) bit was set
+                                         on the most recent Connectivity Check Message (CCM) transmission from the
+                                         local MEP.
+
+                                         If the local MEP CCM transmissions are not eanbled, or if the RDI bit
+                                         was not set in the most recent transmission, then ccm-tx-rdi will return
+                                         a value of 'false (2)'.";
+                                }
+
+                            } // container transmitted
+
+                            container received {
+                                description "Enter the received context";
+
+                                leaf highest-priority-defect {
+                                    type types-eth-cfm:highest-priority-defect-type;
+                                    description
+                                        "The highest priority defect that has been present since the
+                                         MEPs Fault Notification Generator State Machine was last in
+                                         the reset state.";
+                                }
+
+                                leaf defect-flags {
+                                    type types-eth-cfm:mep-defect-flags;
+                                    description "A vector of boolean error conditions, any of which may be true.";
+                                }
+
+                                list remote-mep-peer {
+                                    key "remote-mep-id";
+                                    description "Enter the remote-mep-peer list instance";
+
+                                    leaf remote-mep-id {
+                                        type types-eth-cfm:mep-id-type;
+                                        description "The Remote MEP ID within the same Maintenance Association.";
+                                    }
+
+                                    leaf auto-discovered {
+                                        type boolean;
+                                        description
+                                            "Specifies whether or not the remote peer was automatically discovered
+                                             ('true') or not. Auto-discovered remote peers are created by the system
+                                             only, and are of a 'volatile' storage type. Specifying the value of
+                                             'false' will mark an auto-discovered remote peer as permanently configured.";
+                                    }
+
+                                    leaf receiving-ccm {
+                                        type types-eth-cfm:remote-mep-state-type;
+                                        description "The operational CCM receiving state of the remote MEP.";
+                                    }
+
+                                    leaf ccm-status-since {
+                                        type yang:date-and-time;
+                                        description
+                                            "The time at which the Remote MEP
+                                             last entered either the mep-failed or mep-ok state. ";
+                                    }
+
+                                    leaf peer-mac-address {
+                                        type yang:mac-address;
+                                        description "The MAC address of the remote MEP.";
+                                    }
+
+                                    leaf receiving-remote-defect-indicator {
+                                        type boolean;
+                                        description
+                                            "State of the RDI bit in the last received CCM (true for rdi=1), or false
+                                             if none has been received.";
+                                    }
+
+                                    leaf port-status-tlv {
+                                        type types-eth-cfm:port-status;
+                                        description
+                                            "An enumerated value of the Port status TLV received in the
+                                             last CCM from the remote MEP or the default value
+                                             ps-no-port-state-tlv indicating either no CCM has been received,
+                                             or that no port status TLV was received in the last CCM. ";
+                                    }
+
+                                    leaf interface-status-tlv {
+                                        type types-eth-cfm:interface-status;
+                                        description
+                                            "An enumerated value of the Interface status TLV received
+                                             in the last CCM from the remote MEP or the default value
+                                             is-no-interface-status-tlv indicating either no CCM has been
+                                             received, or that no interface status TLV was received in
+                                             the last CCM.";
+                                    }
+
+                                } // list remote-mep-peer
+
+                            } // container received
+
+                        } // container ccm-states
+
+                        container statistics {
+                            description "Enter the statistics context";
+
+                            list opcode {
+                                key "opcode-name";
+                                description "Enter the opcode list instance";
+
+                                leaf opcode-name {
+                                    type types-eth-cfm:statistics-opcode-name;
+                                    description "Integer that defines which CFM PDU Opcode the statictics refer to.";
+                                }
+
+                                leaf transmitted {
+                                    type yang:counter32;
+                                    description "The total number of PDUs transmitted from the node with the specified Opcode.";
+                                }
+
+                                leaf received {
+                                    type yang:counter32;
+                                    description "The total number of PDUs received on the node with the specified Opcode.";
+                                }
+
+                            } // list opcode
+
+                        } // container statistics
+
+                    } // list mep
+
+                } // container eth-cfm
+
+            } // list path
+
+        } // list eth-ring
+
+    } // grouping state-eth-ring
+
+}

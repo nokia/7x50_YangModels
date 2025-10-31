@@ -1,0 +1,1692 @@
+submodule nokia-conf-router-nat {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-nat                { prefix "types-nat"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-filter;
+    include nokia-conf-groups;
+    include nokia-conf-isa;
+    include nokia-conf-policy-options;
+    include nokia-conf-service;
+    include nokia-conf-svc-nat;
+
+    sros-ext:sros-major-release "rel25";
+    organization "Nokia";
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+    description
+        "Nokia YANG Data model to configure Configure NAT on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-router-nat YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+    revision "2025-10-30";
+
+    grouping conf-router-nat {
+        container nat {
+            when "../router-name = 'Base'" {
+                description "router-name must be 'Base'";
+            }
+            presence "Enable the nat context";
+            description "Enable the nat context";
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            leaf-list apply-groups-exclude {
+                type leafref {
+                    path "../../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Exclude a configuration group at this level";
+            }
+
+            container inside {
+                description "Enter the inside context";
+
+                container l2-aware {
+                    description "Enter the l2-aware context";
+
+                    leaf force-unique-ip-addresses {
+                        type boolean;
+                        default "false";
+                        description "Enforce unique IPv4 addresses for L2-aware subscribers";
+                    }
+
+                    list subscribers {
+                        key "prefix";
+                        description "Add a list entry for subscribers";
+
+                        leaf prefix {
+                            type types-sros:ipv4-prefix-with-host-bits;
+                            description "Layer-2 Aware NAT subscriber prefix";
+                        }
+
+                    } // list subscribers
+
+                } // container l2-aware
+
+                container large-scale {
+                    description "Enter the large-scale context";
+
+                    leaf nat-policy {
+                        type leafref {
+                            path "../../../../../service/nat/nat-policy/name";
+                        }
+                        sros-ext:isa-auto-clear-on-modify;
+                        description "NAT policy name for LSN";
+                    }
+
+                    container traffic-identification {
+                        description "Enter the traffic-identification context";
+
+                        leaf source-prefix-only {
+                            type boolean;
+                            default "false";
+                            description "Allow traffic associated with source prefixes only";
+                        }
+
+                    } // container traffic-identification
+
+                    container static-port-forwards {
+                        description "Enter the static-port-forwards context";
+
+                        list spf-nat-policy {
+                            key "nat-policy";
+                            description "Add a list entry for spf-nat-policy";
+
+                            leaf nat-policy {
+                                type leafref {
+                                    path "../../../../../../../service/nat/nat-policy/name";
+                                }
+                                description "NAT policy";
+                            }
+
+                        } // list spf-nat-policy
+
+                    } // container static-port-forwards
+
+                    container nat44 {
+                        description "Enter the nat44 context";
+
+                        leaf max-subscriber-limit {
+                            type types-nat:lsn-max-subscriber-limit;
+                            sros-ext:isa-auto-clear-on-modify;
+                            description "Largest value for all subscriber limits in each deterministic pool";
+                        }
+
+                        leaf-list nat-import {
+                            type leafref {
+                                path "../../../../../../policy-options/policy-statement/name";
+                            }
+                            max-elements 5;
+                            ordered-by user;
+                            description "Import BGP-VPN routes in NAT inside routing context";
+                        }
+
+                        list destination-prefix {
+                            key "ip-prefix-length";
+                            max-elements 6144;
+                            description "Enter the destination-prefix list instance";
+
+                            leaf ip-prefix-length {
+                                type types-sros:ipv4-unicast-prefix;
+                                description "IP prefix for the destination address";
+                            }
+
+                            leaf nat-policy {
+                                type leafref {
+                                    path "../../../../../../../service/nat/nat-policy/name";
+                                }
+                                sros-ext:isa-auto-clear-on-modify;
+                                description "NAT policy";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                        } // list destination-prefix
+
+                        list source-prefix {
+                            key "ip-prefix-length";
+                            description "Enter the source-prefix list instance";
+
+                            leaf ip-prefix-length {
+                                type types-sros:ipv4-unicast-prefix;
+                                description "IPv4 prefix length";
+                            }
+
+                            leaf nat-policy {
+                                type leafref {
+                                    path "../../../../../../../service/nat/nat-policy/name";
+                                }
+                                sros-ext:immutable;
+                                sros-ext:isa-auto-clear-on-modify;
+                                mandatory true;
+                                description "AT policy associated with the source prefix";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                        } // list source-prefix
+
+                        container deterministic {
+                            description "Enter the deterministic context";
+
+                            list address-map {
+                                key "from to nat-policy";
+                                description "Enter the address-map list instance";
+
+                                leaf from {
+                                    type types-sros:ipv4-address;
+                                    description "First IP address of inside IP NAT range";
+                                }
+
+                                leaf to {
+                                    type types-sros:ipv4-address;
+                                    description "Ending IP address of inside IP NAT range";
+                                }
+
+                                leaf nat-policy {
+                                    type leafref {
+                                        path "../../../../../../../../service/nat/nat-policy/name";
+                                    }
+                                    description "NAT policy name for LSN";
+                                }
+
+                                leaf admin-state {
+                                    type types-sros:admin-state;
+                                    default "disable";
+                                    description "Administrative state of address map";
+                                }
+
+                                leaf outside-range {
+                                    type types-sros:ipv4-address;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "First outside IP address in NAT pool";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                leaf-list apply-groups-exclude {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Exclude a configuration group at this level";
+                                }
+
+                            } // list address-map
+
+                            list policy-map {
+                                status obsolete;
+                                key "source-prefix";
+                                description "Enter the policy-map list instance";
+
+                                leaf source-prefix {
+                                    status obsolete;
+                                    type types-sros:ipv4-unicast-prefix;
+                                    description "Source prefix that adds traffic to NAT pool";
+                                }
+
+                                leaf nat-policy {
+                                    status obsolete;
+                                    type leafref {
+                                        path "../../../../../../../../service/nat/nat-policy/name";
+                                    }
+                                    sros-ext:immutable;
+                                    sros-ext:isa-auto-clear-on-modify;
+                                    mandatory true;
+                                    description "NAT policy";
+                                }
+
+                                leaf admin-state {
+                                    status obsolete;
+                                    type types-sros:admin-state;
+                                    default "disable";
+                                    description "Administrative state of the prefix";
+                                }
+
+                                leaf-list apply-groups {
+                                    status obsolete;
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                leaf-list apply-groups-exclude {
+                                    status obsolete;
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Exclude a configuration group at this level";
+                                }
+
+                                list map {
+                                    status obsolete;
+                                    key "from to";
+                                    description "Enter the map list instance";
+
+                                    leaf from {
+                                        status obsolete;
+                                        type types-sros:ipv4-address;
+                                        description "Beginning of the range for IPv4 addresses";
+                                    }
+
+                                    leaf to {
+                                        status obsolete;
+                                        type types-sros:ipv4-address;
+                                        description "End of the range for IPv4 addresses";
+                                    }
+
+                                    leaf first-outside-address {
+                                        status obsolete;
+                                        type types-sros:ipv4-address;
+                                        sros-ext:immutable;
+                                        mandatory true;
+                                        description "Outside IP address mapped to inside IP address range";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        status obsolete;
+                                        type leafref {
+                                            path "../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                    leaf-list apply-groups-exclude {
+                                        status obsolete;
+                                        type leafref {
+                                            path "../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Exclude a configuration group at this level";
+                                    }
+
+                                } // list map
+
+                            } // list policy-map
+
+                            list prefix-map {
+                                key "source-prefix nat-policy";
+                                description "Enter the prefix-map list instance";
+
+                                leaf source-prefix {
+                                    type types-sros:ipv4-unicast-prefix;
+                                    description "Traffic sent from sources within this prefix will be NATed";
+                                }
+
+                                leaf nat-policy {
+                                    type leafref {
+                                        path "../../../../../../../../service/nat/nat-policy/name";
+                                    }
+                                    description "NAT policy";
+                                }
+
+                                leaf admin-state {
+                                    type types-sros:admin-state;
+                                    default "disable";
+                                    description "Administrative state of the prefix";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                leaf-list apply-groups-exclude {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Exclude a configuration group at this level";
+                                }
+
+                                list map {
+                                    key "from to";
+                                    description "Enter the map list instance";
+
+                                    leaf from {
+                                        type types-sros:ipv4-address;
+                                        description "First IP address of inside IP NAT range";
+                                    }
+
+                                    leaf to {
+                                        type types-sros:ipv4-address;
+                                        description "Ending IP address of inside IP NAT range";
+                                    }
+
+                                    leaf first-outside-address {
+                                        type types-sros:ipv4-address;
+                                        sros-ext:immutable;
+                                        mandatory true;
+                                        description "Outside IP address mapped to inside IP address range";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                    leaf-list apply-groups-exclude {
+                                        type leafref {
+                                            path "../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Exclude a configuration group at this level";
+                                    }
+
+                                } // list map
+
+                            } // list prefix-map
+
+                        } // container deterministic
+
+                    } // container nat44
+
+                    container dual-stack-lite {
+                        description "Enter the dual-stack-lite context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of Dual Stack Lite";
+                        }
+
+                        leaf max-subscriber-limit {
+                            type types-nat:lsn-max-subscriber-limit;
+                            sros-ext:isa-auto-clear-on-modify;
+                            description "Largest value for all subscriber limits in each deterministic pool";
+                        }
+
+                        leaf subscriber-prefix-length {
+                            type types-nat:ipv6-subscriber-prefix-length;
+                            sros-ext:auto-restart-to-modify;
+                            sros-ext:isa-auto-clear-on-modify;
+                            description "IPv6 prefix length of the Dual Stack Lite subscribers";
+                        }
+
+                        list endpoint {
+                            key "address";
+                            max-elements 128;
+                            description "Enter the endpoint list instance";
+
+                            leaf address {
+                                type types-sros:ipv6-address;
+                                description "Dual Stack Lite IPv6 address";
+                            }
+
+                            leaf ip-fragmentation {
+                                type types-nat:ip-fragmentation;
+                                description "Fragmentation control of the AFTR originated downstream IPv6 traffic";
+                            }
+
+                            leaf tunnel-mtu {
+                                type uint32 {
+                                    range "464..9212";
+                                }
+                                default "1500";
+                                description "DS-Lite tunnel MTU for this address";
+                            }
+
+                            leaf reassembly {
+                                type boolean;
+                                default "false";
+                                description "Reassembly of IPv6 payload datagrams";
+                            }
+
+                            leaf min-first-fragment-size-rx {
+                                type uint32 {
+                                    range "512..1280";
+                                }
+                                default "1280";
+                                description "Minimum MTU size for upstream packets";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                        } // list endpoint
+
+                        container deterministic {
+                            description "Enter the deterministic context";
+
+                            list address-map {
+                                key "from to nat-policy";
+                                description "Enter the address-map list instance";
+
+                                leaf from {
+                                    type types-sros:ipv6-prefix;
+                                    description "Lower bound of IPv6 address of inside IPv6 NAT range";
+                                }
+
+                                leaf to {
+                                    type types-sros:ipv6-prefix;
+                                    description "Upper bound of IPv6 address of inside IPv6 NAT range";
+                                }
+
+                                leaf nat-policy {
+                                    type leafref {
+                                        path "../../../../../../../../service/nat/nat-policy/name";
+                                    }
+                                    description "NAT policy name for LSN";
+                                }
+
+                                leaf admin-state {
+                                    type types-sros:admin-state;
+                                    default "disable";
+                                    description "Administrative state of address map";
+                                }
+
+                                leaf outside-range {
+                                    type types-sros:ipv4-address;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "First outside IP address in NAT pool";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                leaf-list apply-groups-exclude {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Exclude a configuration group at this level";
+                                }
+
+                            } // list address-map
+
+                            list policy-map {
+                                status obsolete;
+                                key "source-prefix";
+                                description "Enter the policy-map list instance";
+
+                                leaf source-prefix {
+                                    status obsolete;
+                                    type types-sros:ipv6-unicast-prefix;
+                                    description "Source prefix that adds traffic to NAT pool";
+                                }
+
+                                leaf nat-policy {
+                                    status obsolete;
+                                    type leafref {
+                                        path "../../../../../../../../service/nat/nat-policy/name";
+                                    }
+                                    sros-ext:immutable;
+                                    sros-ext:isa-auto-clear-on-modify;
+                                    mandatory true;
+                                    description "NAT policy";
+                                }
+
+                                leaf admin-state {
+                                    status obsolete;
+                                    type types-sros:admin-state;
+                                    default "disable";
+                                    description "Administrative state of the prefix";
+                                }
+
+                                leaf-list apply-groups {
+                                    status obsolete;
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                leaf-list apply-groups-exclude {
+                                    status obsolete;
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    description "Exclude a configuration group at this level";
+                                }
+
+                                list map {
+                                    status obsolete;
+                                    key "from to";
+                                    description "Enter the map list instance";
+
+                                    leaf from {
+                                        status obsolete;
+                                        type types-sros:ipv6-prefix;
+                                        description "Lower bound of IPv6 address of inside IPv6 NAT range";
+                                    }
+
+                                    leaf to {
+                                        status obsolete;
+                                        type types-sros:ipv6-prefix;
+                                        description "Upper bound of IPv6 address of inside IPv6 NAT range";
+                                    }
+
+                                    leaf first-outside-address {
+                                        status obsolete;
+                                        type types-sros:ipv4-address;
+                                        sros-ext:immutable;
+                                        mandatory true;
+                                        description "Outside IP address mapped to inside IP address range";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        status obsolete;
+                                        type leafref {
+                                            path "../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                    leaf-list apply-groups-exclude {
+                                        status obsolete;
+                                        type leafref {
+                                            path "../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Exclude a configuration group at this level";
+                                    }
+
+                                } // list map
+
+                            } // list policy-map
+
+                            list prefix-map {
+                                key "source-prefix nat-policy";
+                                description "Enter the prefix-map list instance";
+
+                                leaf source-prefix {
+                                    type types-sros:ipv6-unicast-prefix;
+                                    description "List containing source IP addresses on the private side";
+                                }
+
+                                leaf nat-policy {
+                                    type leafref {
+                                        path "../../../../../../../../service/nat/nat-policy/name";
+                                    }
+                                    description "NAT policy";
+                                }
+
+                                leaf admin-state {
+                                    type types-sros:admin-state;
+                                    default "disable";
+                                    description "Administrative state of the prefix";
+                                }
+
+                                leaf-list apply-groups {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Apply a configuration group at this level";
+                                }
+
+                                leaf-list apply-groups-exclude {
+                                    type leafref {
+                                        path "../../../../../../../../groups/group/name";
+                                    }
+                                    max-elements 8;
+                                    ordered-by user;
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Exclude a configuration group at this level";
+                                }
+
+                                list map {
+                                    key "from to";
+                                    description "Enter the map list instance";
+
+                                    leaf from {
+                                        type types-sros:ipv6-prefix;
+                                        description "Beginning of the range for IPv6 addresses";
+                                    }
+
+                                    leaf to {
+                                        type types-sros:ipv6-prefix;
+                                        description "End of the range for IPv6 addresses";
+                                    }
+
+                                    leaf first-outside-address {
+                                        type types-sros:ipv4-address;
+                                        sros-ext:immutable;
+                                        mandatory true;
+                                        description "Outside IP address mapped to inside IP address range";
+                                    }
+
+                                    leaf-list apply-groups {
+                                        type leafref {
+                                            path "../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Apply a configuration group at this level";
+                                    }
+
+                                    leaf-list apply-groups-exclude {
+                                        type leafref {
+                                            path "../../../../../../../../../groups/group/name";
+                                        }
+                                        max-elements 8;
+                                        ordered-by user;
+                                        description "Exclude a configuration group at this level";
+                                    }
+
+                                } // list map
+
+                            } // list prefix-map
+
+                        } // container deterministic
+
+                    } // container dual-stack-lite
+
+                    container nat64 {
+                        presence "Enable the nat64 context";
+                        description "Enable the nat64 context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of NAT64";
+                        }
+
+                        leaf drop-zero-ipv4-checksum {
+                            type boolean;
+                            sros-ext:auto-restart-to-modify;
+                            default "false";
+                            description "Drop UDP datagrams with zero IPv4 checksum";
+                        }
+
+                        leaf insert-ipv6-fragment-header {
+                            type boolean;
+                            sros-ext:auto-restart-to-modify;
+                            default "false";
+                            description "Include IPv6 fragment header to indicate that the sender allows fragmentation";
+                        }
+
+                        leaf ip-fragmentation {
+                            type types-nat:ip-fragmentation;
+                            sros-ext:auto-restart-to-modify;
+                            description "Control fragmentation of originated downstream IPv6 traffic";
+                        }
+
+                        leaf ipv6-mtu {
+                            type uint32 {
+                                range "1280..9212";
+                            }
+                            sros-ext:auto-restart-to-modify;
+                            default "1520";
+                            description "Size of the IPv6 downstream packet in NAT64";
+                        }
+
+                        leaf prefix {
+                            type types-sros:ipv6-prefix;
+                            sros-ext:auto-restart-to-modify;
+                            sros-ext:isa-auto-clear-on-modify;
+                            default "64:ff9b::/96";
+                            description "IPv6 prefix to derive the IPv6 address from the IPv4 address";
+                        }
+
+                        leaf subscriber-prefix-length {
+                            type types-nat:ipv6-subscriber-prefix-length;
+                            sros-ext:auto-restart-to-modify;
+                            sros-ext:isa-auto-clear-on-modify;
+                            description "IPv6 prefix length for the NAT64 subscribers";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            sros-ext:auto-restart-to-modify;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            sros-ext:auto-restart-to-modify;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container tos {
+                            sros-ext:auto-restart-to-modify;
+                            description "Enter the tos context";
+
+                            container upstream {
+                                sros-ext:auto-restart-to-modify;
+                                description "Enter the upstream context";
+
+                                leaf set-tos {
+                                    type union {
+                                        type enumeration {
+                                            enum use-ipv6                       { value -1; }
+                                        }
+                                        type uint32 {
+                                            range "0..255";
+                                        }
+                                    }
+                                    sros-ext:auto-restart-to-modify;
+                                    default "use-ipv6";
+                                    description "TOS/DSCP bits in IPv4 frame in the upstream direction";
+                                }
+
+                            } // container upstream
+
+                            container downstream {
+                                sros-ext:auto-restart-to-modify;
+                                description "Enter the downstream context";
+
+                                leaf use-ipv4 {
+                                    type boolean;
+                                    sros-ext:auto-restart-to-modify;
+                                    default "false";
+                                    description "Copy TOS/DSCP bits from the incoming IPv4 frame to the outgoing IPv6 frame";
+                                }
+
+                            } // container downstream
+
+                        } // container tos
+
+
+                    } // container nat64
+
+                    container subscriber-identification {
+                        description "Enter the subscriber-identification context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of subscriber identification";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf drop-unidentified-traffic {
+                            type boolean;
+                            sros-ext:auto-restart-to-modify;
+                            default "false";
+                            description "Drop traffic from unidentified flows";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container attribute {
+                            description "Enter the attribute context";
+
+                            leaf vendor {
+                                type types-nat:nat-subscriber-identification-attr-vendor-id;
+                                sros-ext:auto-restart-to-modify;
+                                default "nokia";
+                                description "The RADIUS Vendor";
+                            }
+
+                            leaf type {
+                                type types-nat:nat-subscriber-identification-attr-type;
+                                sros-ext:auto-restart-to-modify;
+                                default "alc-sub-string";
+                                description "RADIUS attribute used as subscriber identifier";
+                            }
+
+                        } // container attribute
+
+                        container radius-proxy-server {
+                            presence "Enable the radius-proxy-server context";
+                            description "Enable the radius-proxy-server context";
+
+                            leaf router-instance {
+                                type string;
+                                sros-ext:auto-restart-to-modify;
+                                mandatory true;
+                                description "Router instance";
+                            }
+
+                            leaf server {
+                                type types-sros:named-item;
+                                sros-ext:auto-restart-to-modify;
+                                mandatory true;
+                                description "Server name";
+                            }
+
+                        } // container radius-proxy-server
+
+                    } // container subscriber-identification
+
+                    container dnat-only {
+                        description "Enter the dnat-only context";
+
+                        leaf source-prefix-list {
+                            type leafref {
+                                path "../../../../../../service/nat/prefix-list/name";
+                            }
+                            description "NAT prefix list that contains source IP addresses";
+                        }
+
+                    } // container dnat-only
+
+                    container redundancy {
+                        description "Enter the redundancy context";
+
+                        leaf peer {
+                            type types-sros:ipv4-unicast-address;
+                            description "IP address of the NAT redundancy peer for this virtual router instance";
+                        }
+
+                        leaf peer6 {
+                            type types-sros:ipv6-unicast-address;
+                            description "IPv6 address of the NAT redundancy peer for this virtual router instance";
+                        }
+
+                        leaf steering-route {
+                            type types-sros:ipv4-unicast-prefix;
+                            description "IP address and prefix length of the steering route";
+                        }
+
+                    } // container redundancy
+
+                } // container large-scale
+
+            } // container inside
+
+            container outside {
+                description "Enter the outside context";
+
+                leaf mtu {
+                    type uint32 {
+                        range "512..9000";
+                    }
+                    description "MTU for downstream traffic";
+                }
+
+                container filters {
+                    description "Enter the filters context";
+
+                    container downstream {
+                        description "Enter the downstream context";
+
+                        leaf ipv4 {
+                            type leafref {
+                                path "../../../../../../filter/ip-filter/filter-name";
+                            }
+                            description "IPv4 filter policy name";
+                        }
+
+                        leaf ipv6 {
+                            type leafref {
+                                path "../../../../../../filter/ipv6-filter/filter-name";
+                            }
+                            description "IPv6 filter policy name";
+                        }
+
+                    } // container downstream
+
+                    container upstream {
+                        description "Enter the upstream context";
+
+                        leaf ipv4 {
+                            type leafref {
+                                path "../../../../../../filter/ip-filter/filter-name";
+                            }
+                            description "IPv4 filter policy name";
+                        }
+
+                        leaf ipv6 {
+                            type leafref {
+                                path "../../../../../../filter/ipv6-filter/filter-name";
+                            }
+                            description "IPv6 filter policy name";
+                        }
+
+                    } // container upstream
+
+                } // container filters
+
+                container dnat-only {
+                    description "Enter the dnat-only context";
+
+                    leaf route-limit {
+                        type uint32 {
+                            range "1..131072";
+                        }
+                        default "32768";
+                        description "Limit for internal routes for downstream traffic";
+                    }
+
+                } // container dnat-only
+
+                list pool {
+                    key "name";
+                    max-elements 4096;
+                    description "Enter the pool list instance";
+
+                    leaf name {
+                        type types-sros:named-item;
+                        description "NAT pool name";
+                    }
+
+                    leaf type {
+                        type types-nat:pool-type;
+                        sros-ext:immutable;
+                        sros-ext:isa-auto-clear-on-modify;
+                        mandatory true;
+                        description "NAT pool type";
+                    }
+
+                    leaf address-pooling {
+                        type enumeration {
+                            enum paired                         { value 1; }
+                            enum arbitrary                      { value 2; }
+                        }
+                        sros-ext:auto-restart-to-modify;
+                        default "paired";
+                        description "Outside IP address allocation mode for a NAT subscriber";
+                    }
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf icmp-echo-reply {
+                        type boolean;
+                        default "false";
+                        description "Allow NAT pool IP addresses to respond to ICMP PINGs";
+                    }
+
+                    leaf mode {
+                        type types-nat:pool-mode;
+                        sros-ext:auto-restart-to-modify;
+                        sros-ext:isa-auto-clear-on-modify;
+                        description "Mode of operation of this NAT address pool";
+                    }
+
+                    leaf monitor-oper-group {
+                        when "../type = 'large-scale' or ../type = 'l2-aware'" {
+                            description "pool type must be large-scale or l2-aware";
+                        }
+                        type leafref {
+                            path "../../../../../service/oper-group/name";
+                        }
+                        description "Monitor operational group associated with a NAT pool";
+                    }
+
+                    leaf admin-state {
+                        type types-sros:admin-state;
+                        default "disable";
+                        description "Administrative state of the outside routing NAT pool";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    choice isa {
+                        mandatory true;
+                        case nat {
+
+                            leaf nat-group {
+                                type leafref {
+                                    path "../../../../../isa/nat-group/id";
+                                }
+                                sros-ext:immutable;
+                                sros-ext:isa-auto-clear-on-modify;
+                                description "Create a NAT group";
+                            }
+
+                        }
+                        case wlan-gw {
+
+                            leaf wlan-gw-group {
+                                type leafref {
+                                    path "../../../../../isa/wlan-gw-group/id";
+                                }
+                                sros-ext:immutable;
+                                sros-ext:isa-auto-clear-on-modify;
+                                description "Create a WLAN GW group for NAT";
+                            }
+
+                        }
+                    }
+                    container applications {
+                        description "Enter the applications context";
+
+                        leaf agnostic {
+                            when "../../type = 'large-scale'" {
+                                description "type must be large-scale";
+                            }
+                            type boolean;
+                            sros-ext:immutable;
+                            sros-ext:isa-auto-clear-on-modify;
+                            default "false";
+                            description "NAT pool to create in the outside routing context";
+                        }
+
+                        leaf flexible-port-allocation {
+                            when "../../type = 'large-scale'" {
+                                description "type must be large-scale";
+                            }
+                            type boolean;
+                            sros-ext:immutable;
+                            sros-ext:isa-auto-clear-on-modify;
+                            default "false";
+                            description "Allocates individual ports per subscriber in a pool";
+                        }
+
+                        leaf use-interface-ip {
+                            when "../../type = 'large-scale'" {
+                                description "type must be large-scale";
+                            }
+                            type boolean;
+                            sros-ext:immutable;
+                            sros-ext:isa-auto-clear-on-modify;
+                            default "false";
+                            description "Use an IPv4 interface for NAT";
+                        }
+
+                    } // container applications
+
+                    container port-forwarding {
+                        description "Enter the port-forwarding context";
+
+                        leaf dynamic-block-reservation {
+                            when "not(../../type = 'l2-aware')" {
+                                description "type must not be l2-aware";
+                            }
+                            type boolean;
+                            sros-ext:isa-auto-clear-on-modify;
+                            default "false";
+                            description "Reserve dynamic block for subscriber";
+                        }
+
+                        leaf range-start {
+                            type uint16 {
+                                range "0|1|1025..65535";
+                            }
+                            sros-ext:auto-restart-to-modify;
+                            description "Start of the wildcard range for port forwards";
+                        }
+
+                        leaf range-end {
+                            type uint16 {
+                                range "0|1023..65535";
+                            }
+                            sros-ext:auto-restart-to-modify;
+                            sros-ext:isa-auto-clear-on-modify;
+                            description "End of the wildcard range for port forwards";
+                        }
+
+                    } // container port-forwarding
+
+                    container port-reservation {
+                        description "Enter the port-reservation context";
+
+                        choice port-reservation {
+                            default "port-blocks";
+                            case port-blocks {
+
+                                leaf port-blocks {
+                                    type uint16 {
+                                        range "0..64512";
+                                    }
+                                    sros-ext:auto-restart-to-modify;
+                                    sros-ext:isa-auto-clear-on-modify;
+                                    description "Port block size for NAT subscribers";
+                                }
+
+                            }
+                            case ports {
+
+                                leaf ports {
+                                    type uint16 {
+                                        range "0..64512";
+                                    }
+                                    sros-ext:auto-restart-to-modify;
+                                    sros-ext:isa-auto-clear-on-modify;
+                                    description "Size of the port block for NAT subscribers";
+                                }
+
+                            }
+                        }
+                    } // container port-reservation
+
+                    container watermarks {
+                        presence "Enable the watermarks context";
+                        description "Enable the watermarks context";
+
+                        leaf high {
+                            type types-sros:percent;
+                            mandatory true;
+                            description "High watermark percentage";
+                        }
+
+                        leaf low {
+                            type types-sros:percent;
+                            mandatory true;
+                            description "Low watermark percentage";
+                        }
+
+                    } // container watermarks
+
+                    container large-scale {
+                        when "../type = 'large-scale'" {
+                            description "type must be large-scale";
+                        }
+                        description "Enter the large-scale context";
+
+                        leaf subscriber-limit {
+                            type uint32 {
+                                range "1..65535|4294967295";
+                            }
+                            sros-ext:isa-auto-clear-on-modify;
+                            description "Maximum number of subscribers per IP address";
+                        }
+
+                        container redundancy {
+                            description "Enter the redundancy context";
+
+                            choice redundancy {
+                                default "export-monitor-route";
+                                case follow-pool {
+
+                                    container follow {
+                                        description "Enter the follow context";
+
+                                        leaf router-instance {
+                                            type string;
+                                            description "Router instance where the lead pool resides";
+                                        }
+
+                                        leaf name {
+                                            type types-sros:named-item;
+                                            description "Name of the pool where activity is shared";
+                                        }
+
+                                    } // container follow
+
+                                }
+                                case export-monitor-route {
+
+                                    leaf export-route {
+                                        type types-sros:ipv4-unicast-prefix;
+                                        description "Route to export to the peer";
+                                    }
+
+                                    leaf monitor-route {
+                                        type types-sros:ipv4-unicast-prefix;
+                                        description "Monitor the peer route";
+                                    }
+
+                                    leaf admin-state {
+                                        type types-sros:admin-state;
+                                        default "disable";
+                                        description "Administrative state of NAT pool redundancy";
+                                    }
+
+                                }
+                            }
+                        } // container redundancy
+
+                        container use-interface-ip {
+                            when "../../applications/use-interface-ip = 'true'" {
+                                description "application must be use-interface-ip";
+                            }
+                            description "Enter the use-interface-ip context";
+
+                            leaf cpm-reserved-ports {
+                                type uint32 {
+                                    range "0..65535";
+                                }
+                                sros-ext:auto-restart-to-modify;
+                                default "10";
+                                description "Number of ports per protocol reserved for CPM traffic";
+                            }
+
+                        } // container use-interface-ip
+
+                        container flexible-port-allocation {
+                            when "../../applications/flexible-port-allocation = 'true'" {
+                                description "application must be flexible-port-allocation";
+                            }
+                            description "Enter the flexible-port-allocation context";
+
+                            container free-port-limit {
+                                description "Enter the free-port-limit context";
+
+                                leaf tcp {
+                                    type uint32 {
+                                        range "1..10000";
+                                    }
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Limit of free ports for TCP per outside IP address";
+                                }
+
+                                leaf udp {
+                                    type uint32 {
+                                        range "1..10000";
+                                    }
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Limit of free ports for UDP per outside IP address";
+                                }
+
+                                leaf icmp {
+                                    type uint32 {
+                                        range "1..10000";
+                                    }
+                                    sros-ext:auto-restart-to-modify;
+                                    description "Limit of free ports for ICMP per outside IP address";
+                                }
+
+                            } // container free-port-limit
+
+                        } // container flexible-port-allocation
+
+                        container deterministic {
+                            description "Enter the deterministic context";
+
+                            leaf port-reservation {
+                                type types-nat:port-number;
+                                sros-ext:auto-restart-to-modify;
+                                sros-ext:isa-auto-clear-on-modify;
+                                description "Number of ports per deterministic port-block";
+                            }
+
+                            container watermarks {
+                                presence "Enable the watermarks context";
+                                description "Enable the watermarks context";
+
+                                leaf high {
+                                    type types-sros:percent;
+                                    mandatory true;
+                                    description "High watermark percentage";
+                                }
+
+                                leaf low {
+                                    type types-sros:percent;
+                                    mandatory true;
+                                    description "Low watermark percentage";
+                                }
+
+                            } // container watermarks
+
+                        } // container deterministic
+
+                        container default-host {
+                            presence "Enable the default-host context";
+                            description "Enable the default-host context";
+
+                            leaf ip-address {
+                                type types-sros:ipv4-unicast-address;
+                                description "IP address of the default DMZ host";
+                            }
+
+                            leaf inside-router-instance {
+                                type string;
+                                description "Router instance of the DMZ";
+                            }
+
+                            leaf rate-limit {
+                                type int32 {
+                                    range "1..10000";
+                                }
+                                units "megabps";
+                                default "10";
+                                description "Rate limit for unknown traffic sent to default DMZ host";
+                            }
+
+                        } // container default-host
+
+                    } // container large-scale
+
+                    container l2-aware {
+                        when "../type = 'l2-aware'" {
+                            description "type must be l2-aware";
+                        }
+                        description "Enter the l2-aware context";
+
+                        leaf external-assignment {
+                            type boolean;
+                            sros-ext:auto-restart-to-modify;
+                            sros-ext:isa-auto-clear-on-modify;
+                            default "false";
+                            description "External IP address for Layer-2-aware";
+                        }
+
+                        container port-block-extension {
+                            presence "Enable the port-block-extension context";
+                            sros-ext:auto-restart-to-modify;
+                            description "Enable the port-block-extension context";
+
+                            leaf ports {
+                                type uint32 {
+                                    range "10..5000";
+                                }
+                                sros-ext:auto-restart-to-modify;
+                                mandatory true;
+                                description "Number of ports per dynamic port-block";
+                            }
+
+                            leaf subscriber-limit {
+                                type uint32 {
+                                    range "2..2000";
+                                }
+                                sros-ext:auto-restart-to-modify;
+                                mandatory true;
+                                description "Number of L2-Aware NAT subscribers per outside address";
+                            }
+
+                            container subscriber {
+                                description "Enter the subscriber context";
+
+                                container watermarks {
+                                    presence "Enable the watermarks context";
+                                    description "Enable the watermarks context";
+
+                                    leaf high {
+                                        type types-sros:percent;
+                                        mandatory true;
+                                        description "High watermark percentage";
+                                    }
+
+                                    leaf low {
+                                        type types-sros:percent;
+                                        mandatory true;
+                                        description "Low watermark percentage";
+                                    }
+
+                                } // container watermarks
+
+                            } // container subscriber
+
+                            container watermarks {
+                                presence "Enable the watermarks context";
+                                description "Enable the watermarks context";
+
+                                leaf high {
+                                    type types-sros:percent;
+                                    mandatory true;
+                                    description "High watermark percentage";
+                                }
+
+                                leaf low {
+                                    type types-sros:percent;
+                                    mandatory true;
+                                    description "Low watermark percentage";
+                                }
+
+                            } // container watermarks
+
+                        } // container port-block-extension
+
+                        container default-host {
+                            presence "Enable the default-host context";
+                            description "Enable the default-host context";
+
+                            leaf ip-address {
+                                type types-sros:ipv4-unicast-address;
+                                description "IP address of the default DMZ host";
+                            }
+
+                            leaf inside-router-instance {
+                                type string;
+                                description "Router instance of the DMZ";
+                            }
+
+                            leaf rate-limit {
+                                type int32 {
+                                    range "1..10000";
+                                }
+                                units "megabps";
+                                default "10";
+                                description "Rate limit for unknown traffic sent to default DMZ host";
+                            }
+
+                        } // container default-host
+
+                    } // container l2-aware
+
+                    list address-range {
+                        key "start end";
+                        max-elements 4096;
+                        description "Enter the address-range list instance";
+
+                        leaf start {
+                            type types-sros:ipv4-unicast-address;
+                            description "Lower bound of the NAT address range";
+                        }
+
+                        leaf end {
+                            type types-sros:ipv4-unicast-address;
+                            description "Upper bound of the NAT address range";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf drain {
+                            type boolean;
+                            default "false";
+                            description "Start or stop draining this NAT address range";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        list exclude {
+                            when "../../type = 'large-scale'" {
+                                description "pool type must be large-scale";
+                            }
+                            key "start-address end-address";
+                            max-elements 1024;
+                            description "Add a list entry for exclude";
+
+                            leaf start-address {
+                                type types-sros:ipv4-unicast-address;
+                                description "Lower bound of IPv4 address range in NAT pool exclusion";
+                            }
+
+                            leaf end-address {
+                                type types-sros:ipv4-unicast-address;
+                                description "Upper bound of IPv4 address range in NAT pool exclusion";
+                            }
+
+                        } // list exclude
+
+                    } // list address-range
+
+                } // list pool
+
+            } // container outside
+
+            container map {
+                description "Enter the map context";
+
+                list map-domain {
+                    key "domain-name";
+                    description "Add a list entry for map-domain";
+
+                    leaf domain-name {
+                        type leafref {
+                            path "../../../../../service/nat/map-t/domain/name";
+                        }
+                        description "MAP domain template name";
+                    }
+
+                } // list map-domain
+
+            } // container map
+
+        } // container nat
+
+    } // grouping conf-router-nat
+
+}

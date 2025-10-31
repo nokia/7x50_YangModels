@@ -1,0 +1,328 @@
+submodule nokia-conf-pw-port {
+
+    yang-version "1.1";
+
+    belongs-to nokia-conf { prefix "conf"; }
+
+    import nokia-sros-yang-extensions     { prefix "sros-ext"; }
+    import nokia-types-port               { prefix "types-port"; }
+    import nokia-types-services           { prefix "types-services"; }
+    import nokia-types-sros               { prefix "types-sros"; }
+
+    include nokia-conf-groups;
+    include nokia-conf-pxc;
+    include nokia-conf-service;
+    include nokia-conf-svc-epipe;
+    include nokia-conf-svc-sdp;
+
+    sros-ext:sros-major-release "rel25";
+    organization "Nokia";
+    contact
+        "Nokia SR OS Support
+         Web: <http://www.nokia.com>";
+    description
+        "Nokia YANG Data model to configure pseudo-wire-ports on SR OS based routers.
+
+         Copyright 2016 Nokia. All rights reserved. Reproduction of this document
+         is authorized on the condition that the foregoing copyright notice is included.
+
+         This nokia-conf-pw-port YANG module embodies Nokia's proprietary
+         intellectual property. Nokia retains all title and ownership in the
+         specification, including any revisions.
+
+         Nokia grants all interested parties a non-exclusive license to use
+         and distribute an unmodified copy of this specification in connection with
+         management of Nokia products, and without fee, provided this
+         copyright notice and license appear on all copies.
+
+         This specification is supplied `as is', and Nokia makes no warranty,
+         either express or implied, as to the use, operation, condition, or performance
+         of the specification.";
+    revision "2025-10-30";
+
+    grouping conf-pw-port {
+        list pw-port {
+            key "pw-port-id";
+            description "Enter the pw-port list instance";
+
+            leaf pw-port-id {
+                type types-sros:pw-port;
+                description "Pseudowire port ID";
+            }
+
+            leaf description {
+                type types-sros:very-long-description;
+                default "PW Port";
+                description "Text description";
+            }
+
+            leaf encap-type {
+                type enumeration {
+                    enum dot1q                          { value 2; }
+                    enum qinq                           { value 10; }
+                }
+                default "dot1q";
+                description "Encap type of the pseudo-wire port";
+            }
+
+            leaf dot1q-etype {
+                type types-port:etype;
+                default "33024";
+                description "Dot1q Ethertype on the PW port";
+            }
+
+            leaf qinq-etype {
+                type types-port:etype;
+                default "33024";
+                description "QinQ Ethertype encapsulation on the PW port";
+            }
+
+            leaf oper-group {
+                type leafref {
+                    path "../../service/oper-group/name";
+                }
+                description "Operational group ID";
+            }
+
+            leaf-list apply-groups {
+                type leafref {
+                    path "../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Apply a configuration group at this level";
+            }
+
+            leaf-list apply-groups-exclude {
+                type leafref {
+                    path "../../groups/group/name";
+                }
+                max-elements 8;
+                ordered-by user;
+                description "Exclude a configuration group at this level";
+            }
+
+            choice pw-port-object {
+                case sdp {
+
+                    list sdp {
+                        key "sdp-id";
+                        max-elements 1;
+                        description "Enter the sdp list instance";
+
+                        leaf sdp-id {
+                            type leafref {
+                                path "../../../service/sdp/sdp-id";
+                            }
+                            description "SDP ID";
+                        }
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of the pseudowire port";
+                        }
+
+                        leaf vc-id {
+                            type types-services:vc-id;
+                            sros-ext:immutable;
+                            mandatory true;
+                            description "Virtual Circuit ID signaled to the peer";
+                        }
+
+                        leaf vc-type {
+                            type types-services:pw-port-sdp-bind-vc-type;
+                            sros-ext:auto-restart-to-modify;
+                            default "ether";
+                            description "Forwarding mode for the PW-port";
+                        }
+
+                        leaf vlan-vc-tag {
+                            type types-services:vlan-vc-tag;
+                            description "VLAN VC tag";
+                        }
+
+                        leaf monitor-oper-group {
+                            type leafref {
+                                path "../../../service/oper-group/name";
+                            }
+                            description "Name of the operational group to monitor";
+                        }
+
+                        leaf control-word {
+                            type boolean;
+                            default "false";
+                            description "Allow control word bit setting in the label message";
+                        }
+
+                        leaf entropy-label {
+                            type boolean;
+                            default "false";
+                            description "Enable entropy level insertion on the PW port";
+                        }
+
+                        leaf adv-service-mtu {
+                            type int32 {
+                                range "0..9782";
+                            }
+                            units "bytes";
+                            description "Service MTU size to be used";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container egress {
+                            description "Enter the egress context";
+
+                            leaf vc-label {
+                                type types-services:egress-vc-label;
+                                sros-ext:auto-restart-to-modify;
+                                description "Egress VC label representing the PW port";
+                            }
+
+                            container shaper {
+                                description "Enter the shaper context";
+
+                                leaf intermediate-destination-id {
+                                    type types-sros:named-item;
+                                    description "Intermediate destination ID applicable to ESM PW SAPs";
+                                }
+
+                                leaf pw-sap-secondary-shaper {
+                                    type types-sros:named-item;
+                                    description "Secondary shaper applicable to PW SAPs";
+                                }
+
+                                leaf virtual-port {
+                                    type types-sros:named-item;
+                                    description "Virtual port applicable to all PW SAPs";
+                                }
+
+                            } // container shaper
+
+                        } // container egress
+
+                        container ingress {
+                            description "Enter the ingress context";
+
+                            leaf vc-label {
+                                type types-services:ingress-vc-label;
+                                sros-ext:auto-restart-to-modify;
+                                description "Ingress VC label representing the PW-port";
+                            }
+
+                        } // container ingress
+
+                    } // list sdp
+
+                }
+                case epipe {
+
+                    list epipe {
+                        key "service-name";
+                        max-elements 1;
+                        description "Enter the epipe list instance";
+
+                        leaf service-name {
+                            type leafref {
+                                path "../../../service/epipe/service-name";
+                            }
+                            description "Administrative service name";
+                        }
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "enable";
+                            description "Administrative state of the pseudowire port";
+                        }
+
+                        leaf fpe-id {
+                            type leafref {
+                                path "../../../fwd-path-ext/fpe/fpe-id";
+                            }
+                            sros-ext:immutable;
+                            description "Forwarding Path Extension ID";
+                        }
+
+                        leaf monitor-oper-group {
+                            type leafref {
+                                path "../../../service/oper-group/name";
+                            }
+                            description "Name of the operational group to monitor";
+                        }
+
+                        leaf down-on-peer-tldp-pw-status-faults {
+                            type boolean;
+                            default "false";
+                            description "Force PW port to go down for certain PW status bits";
+                        }
+
+                        leaf oper-up-on-mh-standby {
+                            type boolean;
+                            default "false";
+                            description "Sets PW port to operationally up on MH standby";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container egress {
+                            description "Enter the egress context";
+
+                            container shaper {
+                                description "Enter the shaper context";
+
+                                leaf intermediate-destination-id {
+                                    type types-sros:named-item;
+                                    description "Intermediate destination ID for ESM PW SAPs";
+                                }
+
+                                leaf virtual-port {
+                                    type types-sros:named-item;
+                                    description "Virtual port name of the egress shaper";
+                                }
+
+                            } // container shaper
+
+                        } // container egress
+
+                    } // list epipe
+
+                }
+            }
+        } // list pw-port
+
+    } // grouping conf-pw-port
+
+}
