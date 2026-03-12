@@ -13,6 +13,7 @@ module openconfig-if-ip {
   import openconfig-vlan { prefix oc-vlan; }
   import openconfig-yang-types { prefix oc-yang; }
   import openconfig-extensions { prefix oc-ext; }
+  import openconfig-network-instance {prefix oc-ni; }
 
   // meta
   organization "OpenConfig working group";
@@ -44,7 +45,62 @@ module openconfig-if-ip {
     Section 4.c of the IETF Trust's Legal Provisions Relating
     to IETF Documents (http://trustee.ietf.org/license-info).";
 
-  oc-ext:openconfig-version "3.1.0";
+  oc-ext:openconfig-version "3.9.0";
+
+    revision "2025-06-20" {
+    description
+      "Add IPv6 Router Advertisement Options for DNS Configuration (RDNSS) RFC 8106.";
+      reference "3.9.0";
+  }
+
+    revision "2025-06-20" {
+    description
+      "Add model for support of URPF source address validation through network-instance different then one used for destination lookup";
+      reference "3.8.0";
+  }
+
+  revision "2025-05-12" {
+    description
+      "Add model for support of URPF source address verification";
+      reference "3.7.0";
+  }
+
+  revision "2024-05-28" {
+    description
+      "Add gratuitous-arp-accepted for IPv4 and unsolicited-na-accepted for IPv6.";
+    reference "3.6.0";
+  }
+
+  revision "2024-03-13" {
+    description
+      "Update in-pkts and out-pkts descriptions.";
+    reference "3.5.1";
+  }
+
+  revision "2023-08-14" {
+    description
+      "Add multicast counters for IPv4, IPv6.";
+    reference "3.5.0";
+  }
+
+revision "2023-06-30" {
+    description
+      "Deprecate IPv6 router advertisment config suppress leaf and add config
+      mode leaf.";
+    reference "3.4.0";
+  }
+
+  revision "2023-04-12" {
+    description
+      "Add ipv4 address type configuration.";
+    reference "3.3.0";
+  }
+
+  revision "2023-02-06" {
+    description
+      "Add IPv6 link-local configuration.";
+    reference "3.2.0";
+  }
 
   revision "2022-11-09" {
     description
@@ -167,6 +223,40 @@ module openconfig-if-ip {
       "The origin of a neighbor entry.";
   }
 
+  typedef ipv4-address-type {
+    type enumeration {
+      enum PRIMARY {
+        description
+          "The primary address on the interface. There can only be one primary
+          address associated on an interface.";
+      }
+      enum SECONDARY {
+        description
+          "Secondary address on an interface. There can be multiple secondary
+          addresses associated on an interface.";
+      }
+    }
+
+    description
+      "The type of an IPv4 address.";
+  }
+
+  typedef urpf-mode {
+    description
+      "The uRPF modes";
+    type enumeration {
+      enum LOOSE {
+        description "uRFP operates in loose mode. Packet source address
+        must match some route in FIB, but may be recived on any interface";
+      }
+      enum STRICT {
+        description "uRFP operates in strict mode. Packet source address
+        must match some route in FIB, and must be recived on interfacee
+        corresponding to one of next-hops of matched FIB route.";
+      }
+    }
+  }
+
   // grouping statements
 
   grouping ip-common-global-config {
@@ -198,7 +288,8 @@ module openconfig-if-ip {
         type oc-yang:counter64;
         description
           "The total number of IP packets received for the specified
-          address family, including those received in error";
+          address family, including all IP unicast, multicast,
+          broadcast and error packets.";
         reference
           "RFC 4293 - Management Information Base for the
           Internet Protocol (IP)";
@@ -214,6 +305,31 @@ module openconfig-if-ip {
           "RFC 4293 - Management Information Base for the
           Internet Protocol (IP)";
       }
+
+      leaf in-multicast-pkts {
+        type oc-yang:counter64;
+        description
+          "The number of IP packets received for the specified
+          address family that are multicast packets.
+          Discontinuities in the value of this counter can occur
+          at re-initialization of the management system, and at
+          other times as indicated by the value of
+          'last-clear'.";
+        reference
+          "RFC 4293: Management Information Base for the Internet
+          Protocol (IP) - ipSystemStatsHCInMcastPkts";
+      }
+
+      leaf in-multicast-octets {
+        type oc-yang:counter64;
+        description
+          "The total number of octets received in input IP
+           multicast packets for the specified address
+           family, including those received in error.";
+        reference
+          "RFC 4293: Management Information Base for the Internet
+          Protocol (IP) - ipSystemStatsHCInMcastOctets";
+        }
 
       leaf in-error-pkts {
         // TODO: this counter combines several error conditions --
@@ -273,7 +389,8 @@ module openconfig-if-ip {
           specified address family that the device supplied
           to the lower layers for transmission.  This includes
           packets generated locally and those forwarded by the
-          device.";
+          device as well as unicast, multicast and broadcast
+          packets.";
         reference
           "RFC 4293 - Management Information Base for the
           Internet Protocol (IP)";
@@ -285,6 +402,32 @@ module openconfig-if-ip {
           "The total number of octets in IP packets for the
           specified address family that the device
           supplied to the lower layers for transmission.  This
+          includes packets generated locally and those forwarded by
+          the device.";
+        reference
+          "RFC 4293 - Management Information Base for the
+          Internet Protocol (IP)";
+      }
+
+      leaf out-multicast-pkts {
+        type oc-yang:counter64;
+        description
+          "The total number of IP multicast packets transmitted.
+
+          Discontinuities in the value of this counter can occur
+          at re-initialization of the management system, and at
+          other times as indicated by the value of
+          'last-clear'.";
+        reference
+          "RFC 4293 - Management Information Base for the
+          Internet Protocol (IP)
+            - ipSystemStatsHCOutMcastPkts";
+      }
+
+      leaf out-multicast-octets {
+        type oc-yang:counter64;
+        description
+          "The total number of IP multicast octets transmitted.  This
           includes packets generated locally and those forwarded by
           the device.";
         reference
@@ -339,6 +482,20 @@ module openconfig-if-ip {
           "RFC 4293 - Management Information Base for the
           Internet Protocol (IP)";
       }
+
+      leaf urpf-drop-pkts {
+        type oc-yang:counter64;
+        description
+          "This counter counts packet discarded as result of Unicast
+          Reverse Path Forwarding verification.";
+      }
+
+      leaf urpf-drop-bytes {
+        type oc-yang:counter64;
+        description
+          "This counter counts bytes/octets discarded as result of
+          Unicast Reverse Path Forwarding verification.";
+      }
     }
 
   }
@@ -378,13 +535,21 @@ module openconfig-if-ip {
        "RFC 791: Internet Protocol";
     }
 
+   leaf gratuitous-arp-accepted {
+     type boolean;
+     description
+        "When set to true, gratuitous ARPs will be accepted and
+        the ARP table will be updated.";
+     reference
+      "RFC 826: An Ethernet Address Resolution Protocol";
+    }
+
     uses ip-common-global-config;
 
 
   }
 
   grouping ipv4-address-config {
-
     description
       "Per IPv4 adresss configuration data for the
       interface.";
@@ -401,6 +566,16 @@ module openconfig-if-ip {
       }
       description
        "The length of the subnet prefix.";
+    }
+
+    leaf type {
+      type ipv4-address-type;
+      default PRIMARY;
+      description
+        "Specifies the explicit type of the IPv4 address being assigned
+        to the interface. By default, addresses are assumed to be a primary address.
+        Where secondary addresses is to be configured, this leaf should be set
+        to SECONDARY.";
     }
   }
 
@@ -494,6 +669,30 @@ module openconfig-if-ip {
         "RFC 4862: IPv6 Stateless Address Autoconfiguration";
     }
 
+    leaf learn-unsolicited {
+      type enumeration {
+        enum NONE {
+          value 0;
+        }
+        enum GLOBAL {
+          value 1;
+        }
+        enum LINK_LOCAL {
+          value 2;
+        }
+        enum BOTH {
+          value 3;
+        }
+      }
+      default "NONE";
+      description
+        "Sets if neighbors should be learned from unsolicited neighbor
+        advertisements for global or link local addresses or both.";
+      reference
+        "RFC 9131: Routers Creating Cache Entries upon
+        Receiving Unsolicited Neighbor Advertisements";
+    }
+
     uses ip-common-global-config;
   }
 
@@ -514,6 +713,17 @@ module openconfig-if-ip {
       description
         "The length of the subnet prefix.";
     }
+
+    leaf type {
+      type oc-inet:ipv6-address-type;
+      default GLOBAL_UNICAST;
+      description
+        "Specifies the explicit type of the IPv6 address being assigned
+        to the interface. By default, addresses are assumed to be
+        global unicast.  Where a link-local address is to be explicitly
+        configured, this leaf should be set to LINK_LOCAL.";
+    }
+
   }
 
   grouping ipv6-address-state {
@@ -889,6 +1099,15 @@ module openconfig-if-ip {
     description
       "Configuration parameters for IPv6 router advertisements.";
 
+    leaf enable {
+      type boolean;
+      default true;
+      description
+        "If set to false, all IPv6 router advertisement functions are
+        disabled.  The local system will not transmit router advertisement
+        messages and will not respond to router solicitation messages.";
+    }
+
     leaf interval {
       type uint32;
       units seconds;
@@ -907,11 +1126,33 @@ module openconfig-if-ip {
     }
 
     leaf suppress {
+      status deprecated;
       type boolean;
       default false;
       description
         "When set to true, router advertisement neighbor discovery
         messages are not transmitted on this interface.";
+    }
+
+    leaf mode {
+      type enumeration {
+        enum ALL {
+          description
+            "The system will transmit unsolicited router advertisement
+            messages and respond to router solicitation requests.";
+        }
+        enum DISABLE_UNSOLICITED_RA {
+          description
+            "Unsolicted router advertisement messages are not transmitted on
+            this interface.  Responses to router solicitation messages will
+            be transmitted.";
+        }
+      }
+      default "ALL";
+      description
+        "Mode controls which set of behaviors the local system should perform
+        to support IPv6 router advertisements.";
+      reference "RFC4861: Neighbor Discovery for IP version 6 (IPv6)";
     }
 
     leaf managed {
@@ -989,9 +1230,86 @@ module openconfig-if-ip {
       description
         "When set to true, the prefix is marked as being on link by setting the
         L-bit for the prefix within a router advertisement.";
+
       reference "RFC4861: Neighbor Discovery for IPv6, section 4.6.1";
     }
   }
+
+  grouping ipv6-dns-server-config {
+    description
+      "IPv6 DNS server advertisement interface configuration data.";
+
+    leaf ip-address {
+      type oc-inet:ipv6-address;
+      description
+        "IPv6 DNS server address to be advertised within the router
+        advertisement message.";
+    }
+
+    leaf lifetime {
+      type uint32;
+      units seconds;
+      description
+        "The maximum time in seconds (relative to the time the packet is
+        received) over which these RDNSS addresses MAY be used for name
+        resolution.
+
+        The value of Lifetime SHOULD by default be at least
+        3 * MaxRtrAdvInterval, where MaxRtrAdvInterval is the maximum RA
+        interval as defined in [RFC4861].  A value of all one bits
+        (0xffffffff) represents infinity.  A value of zero means that the
+        RDNSS addresses MUST no longer be used.";
+
+      reference "RFC 8106, Section 5.1";
+    }
+  }
+
+  grouping ipv6-dns-server-top {
+    description
+      "Top-level grouping for IPv6 Router Advertisement Options for DNS Configuration (RDNSS)
+      configuration.";
+
+    reference "RFC 8106";
+
+    container dns-servers {
+      description
+        "Top-level container for the list of IPv6 DNS servers configured to be
+        advertised on the interface.";
+
+      list dns-server {
+        key "ip-address";
+
+        description
+          "List of DNS servers that are to be advertised on the interface
+          (RDNSS). The list is keyed by the IPv6 address of the DNS server.";
+
+        leaf ip-address {
+          type leafref {
+            path "../config/ip-address";
+          }
+          description
+            "Reference to the DNS server IPv6 address for the list of DNS
+            servers.";
+        }
+
+        container config {
+          description
+            "Configuration data for the IPv6 DNS server advertisement.";
+
+          uses ipv6-dns-server-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data for the IPv6 DNS server advertisement.";
+
+          uses ipv6-dns-server-config;
+        }
+      }
+    }
+  }
+
 
   grouping ipv4-proxy-arp-config {
     description
@@ -1029,6 +1347,63 @@ module openconfig-if-ip {
         whereas with the ALL value, all requests, regardless of their
         target address are replied to.";
       reference "RFC1027: Using ARP to Implement Transparent Subnet Gateways";
+    }
+  }
+
+  grouping urpf-config {
+    description
+        "Grouping configuration coniguration of URPF";
+    reference
+      "RFC2827: Network Ingress Filtering: Defeating Denial of
+      Service Attacks which employ IP Source Address Spoofing
+      RFC3704: Ingress Filtering for Multihomed Networks";
+    leaf enabled {
+      type boolean;
+      default false;
+      description
+        "Turns ON/OFF packet's source address verification against content of
+        FIB. This is one of anti-spoofing protection techniques.";
+    }
+    leaf mode {
+      type urpf-mode;
+      description
+        "The URPF in STRICT mode requires the ingress packet source address
+        to have a longest prefix match (LPM) for a route in the forwarding table
+        with a next-hop of the interface the packet was received on.
+        The URPF in LOOSE mode requires the ingress packet source address to
+        LPM a route in the forwarding table, but may have any next-hop.";
+    }
+    leaf allow-default-route {
+      type boolean;
+      description
+      "If set to false, and the packet's source address LPMs to the
+      default route (0.0.0.0/0 or ::/0) then the URPF check fails and the
+      packet is discarded.";
+    }
+    leaf allow-drop-next-hop {
+      type boolean;
+      description
+        "If set to false, and the packet's source address LPMs to a route
+        with DROP as the next-hop, then the URPF check fails and the packet
+        is discarded.";
+    }
+    leaf allow-feasible-path {
+      type boolean;
+      description
+        "The routing system may select subset of all learned paths.  For example,
+        BGP without multi-path enabled will install only one of many possible ECMP
+        paths into the FIB or ECMP multipath limits may select only a subset of all
+        available paths. If set to true, the URPF check passes if the source address
+        LPMs to any path in the RIB, even if it is not selected for forwarding in the
+        FIB.";
+    }
+    leaf lookup-network-instance {
+      type oc-ni:network-instance-ref;
+      description
+        "If populated, this leaf provides the name of the network instance
+        used to look up a packet's source address. When this leaf is
+        omitted and uRPF is enabled, the packet's source address is looked
+        up in the network-instance in which this interface is a member of.";
     }
   }
 
@@ -1158,6 +1533,29 @@ module openconfig-if-ip {
         uses ipv4-global-config;
         uses ip-common-counters-state;
       }
+
+      container urpf {
+
+        description
+          "URPF container.";
+
+        container config {
+
+          description
+            "URPF configuration container.";
+
+          uses urpf-config;
+        }
+        container state {
+
+          description
+            "URPF states container.";
+
+          config false;
+
+          uses urpf-config;
+        }
+      }
     }
   }
 
@@ -1272,6 +1670,8 @@ module openconfig-if-ip {
             }
           }
         }
+
+        uses ipv6-dns-server-top;
       }
 
       container neighbors {
@@ -1326,6 +1726,22 @@ module openconfig-if-ip {
         uses ipv6-global-config;
         uses ip-common-counters-state;
 
+      }
+
+      container urpf {
+        description
+          "URPF container";
+        container config {
+          description
+            "Container for URPF configuration";
+          uses urpf-config;
+        }
+        container state {
+          description
+            "Container for URPF states";
+          config false;
+          uses urpf-config;
+        }
       }
     }
   }

@@ -43,7 +43,7 @@ submodule nokia-conf-svc-vpls {
     include nokia-conf-system;
     include nokia-conf-system-security;
 
-    sros-ext:sros-major-release "rel25";
+    sros-ext:sros-major-release "rel26";
     organization "Nokia";
     contact
         "Nokia SR OS Support
@@ -66,7 +66,7 @@ submodule nokia-conf-svc-vpls {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2026-02-11";
+    revision "2026-03-11";
 
     grouping conf-svc-vpls {
         list vpls {
@@ -3325,6 +3325,8 @@ submodule nokia-conf-svc-vpls {
 
                 } // container routes
 
+
+
                 container mac-duplication {
                     description "Enter the mac-duplication context";
 
@@ -3451,6 +3453,7 @@ submodule nokia-conf-svc-vpls {
                     } // list range
 
                 } // container isid-route-target
+
 
                 list segment-routing-v6 {
                     when "not(../../pbb-type = 'b-vpls') and not(../../pbb-type = 'i-vpls') and ../../m-vpls = 'false' and ../../etree = 'false'" {
@@ -4168,7 +4171,7 @@ submodule nokia-conf-svc-vpls {
 
                     leaf protected-src-mac-violation-action {
                         type types-services:sdp-protected-src-mac-violation-action;
-                        description "Action when a relearn request for a protected MAC is received on the SDP";
+                        description "Action taken after a relearn request for protected MAC";
                     }
 
                 } // container fdb
@@ -4305,7 +4308,7 @@ submodule nokia-conf-svc-vpls {
 
                         leaf protected-src-mac-violation-action {
                             type types-services:sap-protected-src-mac-violation-action;
-                            description "Action to take whenever a relearn request for a protected MAC is received";
+                            description "Action taken after a relearn request for protected MAC";
                         }
 
                         leaf discard-unprotected-dest-mac {
@@ -4654,7 +4657,7 @@ submodule nokia-conf-svc-vpls {
                         enum qinq-c-tag-c-tag               { value 2; }
                         enum qinq-s-tag-c-tag               { value 3; }
                     }
-                    description "VC forwarding action";
+                    description "VLAN tag processing action";
                 }
 
                 leaf app-profile {
@@ -5284,7 +5287,7 @@ submodule nokia-conf-svc-vpls {
 
                     leaf protected-src-mac-violation-action {
                         type types-services:sdp-protected-src-mac-violation-action;
-                        description "Action when a relearn request for a protected MAC is received on the SDP";
+                        description "Action taken after a relearn request for protected MAC";
                     }
 
                     container mac-learning {
@@ -6443,7 +6446,7 @@ submodule nokia-conf-svc-vpls {
                         enum qinq-c-tag-c-tag               { value 2; }
                         enum qinq-s-tag-c-tag               { value 3; }
                     }
-                    description "VC forwarding action";
+                    description "VLAN tag processing action";
                 }
 
                 leaf etree-root-leaf-tag {
@@ -6828,7 +6831,7 @@ submodule nokia-conf-svc-vpls {
 
                     leaf protected-src-mac-violation-action {
                         type types-services:sdp-protected-src-mac-violation-action;
-                        description "Action to take whenever a relearn request for a protected MAC is received";
+                        description "Action taken after a relearn request for protected MAC";
                     }
 
                 } // container fdb
@@ -6869,6 +6872,7 @@ submodule nokia-conf-svc-vpls {
                     }
 
                 } // container dhcp
+
 
                 container igmp-snooping {
                     when "not(../../pbb-type = 'b-vpls') and not(../../m-vpls = 'true')" {
@@ -8665,12 +8669,12 @@ submodule nokia-conf-svc-vpls {
                                     type int32 {
                                         range "0..4094";
                                     }
-                                    description "Outer ingress VLAN translation for two service delimiting VLAN values";
+                                    description "Outer S-tag value for ingress QinQ VLAN translation";
                                 }
 
                                 leaf c-tag {
                                     type types-services:qinq-vlan-translation-ctag;
-                                    description "Inner ingress vlan translation for two service delimiting vlan values";
+                                    description "Inner C-tag value for ingress QinQ VLAN translation";
                                 }
 
                             }
@@ -8702,24 +8706,11 @@ submodule nokia-conf-svc-vpls {
                     container aggregate-policer {
                         description "Enter the aggregate-policer context";
 
-                        leaf rate {
-                            type types-qos:aggr-policer-rate;
-                            units "kilobps";
-                            default "max";
-                            description "Aggregate policer rate";
-                        }
-
                         leaf burst {
                             status obsolete;
                             type types-qos:aggr-policer-burst;
                             default "default";
                             description "Aggregate policer burst";
-                        }
-
-                        leaf cir {
-                            type types-qos:aggr-policer-cir;
-                            units "kilobps";
-                            description "Aggregate policer CIR";
                         }
 
                         leaf cbs {
@@ -8749,6 +8740,50 @@ submodule nokia-conf-svc-vpls {
                             description "Policer algorithm type";
                         }
 
+                        choice rate-or-percent-rate {
+                            default "rate";
+                            case rate {
+
+                                leaf rate {
+                                    type types-qos:aggr-policer-rate;
+                                    units "kilobps";
+                                    default "max";
+                                    description "Aggregate policer rate";
+                                }
+
+                                leaf cir {
+                                    type types-qos:aggr-policer-cir;
+                                    units "kilobps";
+                                    description "Aggregate policer CIR";
+                                }
+
+                            }
+                            case percent-rate {
+
+                                container percent-rate {
+                                    description "Enter the percent-rate context";
+
+                                    leaf pir {
+                                        type decimal64 {
+                                            range "0.01..100.00";
+                                            fraction-digits 2;
+                                        }
+                                        description "Administrative PIR percent";
+                                    }
+
+                                    leaf cir {
+                                        type decimal64 {
+                                            range "0.00..100.00";
+                                            fraction-digits 2;
+                                        }
+                                        default "100.00";
+                                        description "Administrative CIR percent";
+                                    }
+
+                                } // container percent-rate
+
+                            }
+                        }
                     } // container aggregate-policer
 
                 } // container ingress
@@ -10556,7 +10591,7 @@ submodule nokia-conf-svc-vpls {
 
                     leaf protected-src-mac-violation-action {
                         type types-services:sap-protected-src-mac-violation-action;
-                        description "Action to take whenever a relearn request for a protected MAC is received";
+                        description "Action taken after a relearn request for protected MAC";
                     }
 
                     leaf discard-unprotected-dest-mac {
@@ -10722,6 +10757,153 @@ submodule nokia-conf-svc-vpls {
 
                 } // container l2tpv3-session
 
+                container pppoe {
+                    description "Enter the pppoe context";
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container intermediate-agent {
+                        description "Enter the intermediate-agent context";
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of the PPPoE Intermediate Agent";
+                        }
+
+                        leaf mtu {
+                            type uint32 {
+                                range "0|512..9000";
+                            }
+                            description "PPPoE Intermediate Agent MTU";
+                        }
+
+                        container bbf-vendor-specific-tag {
+                            description "Enter the bbf-vendor-specific-tag context";
+
+                            container other-sub-tags {
+                                description "Enter the other-sub-tags context";
+
+                                leaf action {
+                                    type enumeration {
+                                        enum keep                           { value 1; }
+                                        enum remove                         { value 2; }
+                                    }
+                                    default "remove";
+                                    description "Action on sub tags excluding Circuit ID and Remote ID";
+                                }
+
+                            } // container other-sub-tags
+
+                            container circuit-id {
+                                description "Enter the circuit-id context";
+
+                                leaf action {
+                                    type enumeration {
+                                        enum keep                           { value 1; }
+                                        enum remove                         { value 2; }
+                                        enum merge                          { value 3; }
+                                        enum replace                        { value 4; }
+                                    }
+                                    default "replace";
+                                    description "Circuit ID sub-tag action";
+                                }
+
+                                container value {
+                                    description "Enter the value context";
+
+                                    choice circuit-id {
+                                        default "ascii-string";
+                                        case ascii-string {
+
+                                            leaf ascii-string {
+                                                type types-sros:string-not-all-spaces {
+                                                    length "1..63";
+                                                }
+                                                description "User-defined ASCII string";
+                                            }
+
+                                        }
+                                        case hex-string {
+
+                                            leaf hex-string {
+                                                type types-sros:hex-string {
+                                                    length "1..128";
+                                                }
+                                                description "User-defined hexadecimal string";
+                                            }
+
+                                        }
+                                    }
+                                } // container value
+
+                            } // container circuit-id
+
+                            container remote-id {
+                                description "Enter the remote-id context";
+
+                                leaf action {
+                                    type enumeration {
+                                        enum keep                           { value 1; }
+                                        enum remove                         { value 2; }
+                                        enum merge                          { value 3; }
+                                        enum replace                        { value 4; }
+                                    }
+                                    default "replace";
+                                    description "Remote ID sub tag action";
+                                }
+
+                                container value {
+                                    description "Enter the value context";
+
+                                    choice remote-id {
+                                        default "ascii-string";
+                                        case ascii-string {
+
+                                            leaf ascii-string {
+                                                type types-sros:string-not-all-spaces {
+                                                    length "1..63";
+                                                }
+                                                description "User-defined ASCII string";
+                                            }
+
+                                        }
+                                        case hex-string {
+
+                                            leaf hex-string {
+                                                type types-sros:hex-string {
+                                                    length "1..128";
+                                                }
+                                                description "User-defined hexadecimal string";
+                                            }
+
+                                        }
+                                    }
+                                } // container value
+
+                            } // container remote-id
+
+                        } // container bbf-vendor-specific-tag
+
+                    } // container intermediate-agent
+
+                } // container pppoe
 
                 container spb {
                     presence "Enable the spb context";
@@ -12013,6 +12195,7 @@ submodule nokia-conf-svc-vpls {
                     } // list range
 
                 } // container managed-vlan-list
+
 
                 container pbb {
                     when "../../pbb-type = 'b-vpls'" {

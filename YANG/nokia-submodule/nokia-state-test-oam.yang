@@ -12,7 +12,7 @@ submodule nokia-state-test-oam {
     include nokia-state-router;
     include nokia-state-testoam-service-activation-testhead;
 
-    sros-ext:sros-major-release "rel25";
+    sros-ext:sros-major-release "rel26";
     organization "Nokia";
     contact
         "Nokia SR OS Support
@@ -35,7 +35,7 @@ submodule nokia-state-test-oam {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2026-02-11";
+    revision "2026-03-11";
 
     grouping state-test-oam {
         container test-oam {
@@ -93,7 +93,7 @@ submodule nokia-state-test-oam {
                                 enum invalid-interface-type         { value 7; }
                                 enum same-source-ip-dest-ip         { value 8; }
                             }
-                            description "Reason (if any) for the failure to transmit the test's most recent packet";
+                            description "Reason for the failure (if any) to transmit the test's most recent packet";
                         }
 
                         leaf oper-source-address {
@@ -122,11 +122,13 @@ submodule nokia-state-test-oam {
                         }
 
                         container stamp {
+                            status obsolete;
                             description "Enter the stamp context";
 
                             leaf session-id {
+                                status obsolete;
                                 type uint32;
-                                description "Auto-generated STAMP session ID";
+                                description "Obsolete. Replaced by /state/test-oam/lag-ip-measurement/router/interface/lag/port/stamp-session-id";
                             }
 
                         } // container stamp
@@ -164,7 +166,14 @@ submodule nokia-state-test-oam {
                                         enum unexpected-error               { value 2; }
                                         enum port-down                      { value 3; }
                                     }
-                                    description "Reason (if any) for the failure to transmit the test's most recent packet";
+                                    description "Reason for the failure (if any) to transmit the test's most recent packet";
+                                }
+
+                                leaf stamp-session-id {
+                                    type uint32 {
+                                        range "0..65535";
+                                    }
+                                    description "Auto-generated session-ID assigned to the STAMP session";
                                 }
 
                                 leaf sender-micro-session-id {
@@ -396,7 +405,7 @@ submodule nokia-state-test-oam {
 
                         leaf oper-source-address {
                             type types-sros:ip-address;
-                            description "Source IP address from which TWAMP packets are being sent";
+                            description "Source IP address of transmitted link measurement packets";
                         }
 
                         leaf source-auto-assigned {
@@ -406,7 +415,7 @@ submodule nokia-state-test-oam {
 
                         leaf oper-destination-address {
                             type types-sros:ip-address;
-                            description "Destination IP address to which TWAMP packets are being sent";
+                            description "Destination IP address of transmitted link measurement packets";
                         }
 
                         leaf destination-auto-assigned {
@@ -425,7 +434,7 @@ submodule nokia-state-test-oam {
                                 bit template-admin-down            { position 1; }
                                 bit udp-port-unavailable           { position 2; }
                                 bit internal-error                 { position 3; }
-                                bit reserved4                      { position 4; }
+                                bit interface-not-lag              { position 4; }
                             }
                             description "Reason(s) why this interface's link measurement is operationally down";
                         }
@@ -491,19 +500,332 @@ submodule nokia-state-test-oam {
                         }
 
                         leaf in-use-source-udp-port {
-                            type uint32;
+                            type uint32 {
+                                range "0..65535";
+                            }
                             description "Source UDP port in use for the session";
                         }
 
                         leaf in-use-destination-udp-port {
-                            type uint32;
+                            type uint32 {
+                                range "0..65535";
+                            }
                             description "Destination UDP port in use for the session";
                         }
 
                         leaf stamp-session-id {
                             type uint32;
-                            description "Auto-generated session-ID assigned to the session";
+                            description "Auto-generated session-ID assigned to the STAMP session";
                         }
+
+                        leaf lag-micro-session-count {
+                            type yang:counter32;
+                            description "Number of delay measurement sessions running on LAG member ports";
+                        }
+
+                        leaf measurement-source {
+                            type types-sros:named-item-or-empty;
+                            description "Port that triggered the most recent Threshold Crossing Alert (TCA) for the link measurement test";
+                        }
+
+                        container lag-micro-sessions {
+                            description "Enter the lag-micro-sessions context";
+
+                            list lag {
+                                key "lag-name";
+                                description "Enter the lag list instance";
+
+                                leaf lag-name {
+                                    type leafref {
+                                        path "../../../../../../../lag/lag-name";
+                                    }
+                                    description "Name of the tested LAG";
+                                }
+
+                                list port {
+                                    key "port-id";
+                                    description "Enter the port list instance";
+
+                                    leaf port-id {
+                                        type leafref {
+                                            path "../../../../../../../../lag[lag-name=current()/../../lag-name]/port/port-id";
+                                        }
+                                        description "Port name of a LAG member";
+                                    }
+
+                                    leaf sample-newest-index {
+                                        type uint32;
+                                        description "Index of the newest sample window for this port";
+                                    }
+
+                                    leaf detectable-tx-error {
+                                        type enumeration {
+                                            enum none                           { value 1; }
+                                            enum unexpected-error               { value 2; }
+                                            enum port-down                      { value 3; }
+                                        }
+                                        description "Reason for the failure (if any) to transmit the test's most recent packet";
+                                    }
+
+                                    leaf stamp-session-id {
+                                        type uint32 {
+                                            range "0..65535";
+                                        }
+                                        description "Auto-generated session-ID assigned to the STAMP session";
+                                    }
+
+                                    leaf sender-micro-session-id {
+                                        type uint32 {
+                                            range "0..65535";
+                                        }
+                                        description "Local-node identifier for the tested LAG member port";
+                                    }
+
+                                    leaf reflector-micro-session-id {
+                                        type uint32 {
+                                            range "0..65535";
+                                        }
+                                        description "Remote-node identifier for the tested LAG member port";
+                                    }
+
+                                    leaf reflector-micro-session-id-change-count {
+                                        type yang:counter32;
+                                        description "Number of changes to reflector-micro-session-id during the life of the test";
+                                    }
+
+                                    leaf aggregate-newest-index {
+                                        type uint32;
+                                        description "Index of the newest aggregate sample window for this port";
+                                    }
+
+                                    container frame-discard-errors {
+                                        description "Enter the frame-discard-errors context";
+
+                                        leaf sender-micro-session-id-mismatch {
+                                            type yang:counter32;
+                                            units "frames";
+                                            description "Number of frames discarded because of a mismatch in the Sender Micro Session-ID field";
+                                        }
+
+                                        leaf sender-micro-session-id-zero {
+                                            type yang:counter32;
+                                            units "frames";
+                                            description "Number of frames discarded because the Sender Micro Session-ID field is zero";
+                                        }
+
+                                        leaf reflector-micro-session-id-zero {
+                                            type yang:counter32;
+                                            units "frames";
+                                            description "Number of frames discarded because the Reflector Micro Session-ID field is zero";
+                                        }
+
+                                    } // container frame-discard-errors
+
+                                    container statistics {
+                                        description "Enter the statistics context";
+
+                                        container aggregate-sample-window {
+                                            description "Enter the aggregate-sample-window context";
+
+                                            list index {
+                                                key "index";
+                                                description "Enter the index list instance";
+
+                                                leaf index {
+                                                    type uint32 {
+                                                        range "1..4294967295";
+                                                    }
+                                                    description "Index of an aggregate sample window";
+                                                }
+
+                                                leaf end-timestamp {
+                                                    type yang:date-and-time;
+                                                    description "Timestamp when this aggregate sample window closed";
+                                                }
+
+                                                leaf end-timestamp-utc {
+                                                    status obsolete;
+                                                    type yang:date-and-time;
+                                                    description "Obsolete; replaced by end-timestamp.";
+                                                }
+
+                                                leaf window-state {
+                                                    type enumeration {
+                                                        enum completed                      { value 1; }
+                                                        enum in-progress                    { value 2; }
+                                                        enum sw-reported                    { value 3; }
+                                                        enum asw-reported                   { value 4; }
+                                                        enum terminated                     { value 5; }
+                                                    }
+                                                    description "Operational state of this aggregate sample window";
+                                                }
+
+                                                leaf sample-window-count {
+                                                    type uint32;
+                                                    description
+                                                        "Number of sample windows that have completed and met their integrity
+                                                         value within this aggregate sample window";
+                                                }
+
+                                                leaf min {
+                                                    type uint32;
+                                                    units "microseconds";
+                                                    description
+                                                        "Minimum delay measurement reported to the aggregate sample window (by the
+                                                         sample windows that have been open during its lifetime)";
+                                                }
+
+                                                leaf max {
+                                                    type uint32;
+                                                    units "microseconds";
+                                                    description
+                                                        "Maximum delay measurement reported to the aggregate sample window (by the
+                                                         sample windows that have been open during its lifetime)";
+                                                }
+
+                                                leaf avg {
+                                                    type uint32;
+                                                    units "microseconds";
+                                                    description
+                                                        "Average delay measurement reported to the aggregate sample window (by the
+                                                         sample windows that have been open during its lifetime)";
+                                                }
+
+                                                leaf integrity {
+                                                    type boolean;
+                                                    description
+                                                        "True when a sufficient percentage of this aggregate sample window's
+                                                         sample windows met their configured integrity target";
+                                                }
+
+                                                leaf result {
+                                                    type uint32;
+                                                    units "microseconds";
+                                                    description "Delay that was being evaluated for report when this aggregate sample window was open";
+                                                }
+
+                                            } // list index
+
+                                        } // container aggregate-sample-window
+
+                                        container sample-window {
+                                            description "Enter the sample-window context";
+
+                                            list index {
+                                                key "index";
+                                                description "Enter the index list instance";
+
+                                                leaf index {
+                                                    type uint32 {
+                                                        range "1..4294967295";
+                                                    }
+                                                    description "Sample window index";
+                                                }
+
+                                                leaf end-timestamp {
+                                                    type yang:date-and-time;
+                                                    description "Timestamp when this sample window closed";
+                                                }
+
+                                                leaf end-timestamp-utc {
+                                                    status obsolete;
+                                                    type yang:date-and-time;
+                                                    description "Obsolete; replaced by end-timestamp.";
+                                                }
+
+                                                leaf window-state {
+                                                    type enumeration {
+                                                        enum completed                      { value 1; }
+                                                        enum in-progress                    { value 2; }
+                                                        enum sw-reported                    { value 3; }
+                                                        enum terminated                     { value 4; }
+                                                    }
+                                                    description "Operational state of this sample window";
+                                                }
+
+                                                leaf sent {
+                                                    type uint32;
+                                                    description "Number of request packets sent for this sample window";
+                                                }
+
+                                                leaf received {
+                                                    type uint32;
+                                                    description "Number of response packets received for this sample window";
+                                                }
+
+                                                leaf min {
+                                                    type uint32;
+                                                    units "microseconds";
+                                                    description "Minimum of the series of delay measurements that occurred during this sample window";
+                                                }
+
+                                                leaf max {
+                                                    type uint32;
+                                                    units "microseconds";
+                                                    description "Maximum of the series of delay measurements that occurred during this sample window";
+                                                }
+
+                                                leaf avg {
+                                                    type uint32;
+                                                    units "microseconds";
+                                                    description "Average of the series of delay measurements that occurred during this sample window";
+                                                }
+
+                                                leaf errors {
+                                                    type yang:counter32;
+                                                    description "Number of erroneous delay measurements that occurred during this sample window";
+                                                }
+
+                                                leaf integrity {
+                                                    type boolean;
+                                                    description
+                                                        "True when the percentage of successful request-response pairs
+                                                         meets this sample window's configured window integrity target";
+                                                }
+
+                                                leaf result {
+                                                    type uint32;
+                                                    units "microseconds";
+                                                    description "Delay that was being evaluated for report when this sample window was open";
+                                                }
+
+                                                leaf stamp-u-flag {
+                                                    type uint32;
+                                                    description
+                                                        "Count of packets in this sample window with the U (Unrecognized) bit set
+                                                         in the flags field of the TLV";
+                                                }
+
+                                                leaf stamp-m-flag {
+                                                    type uint32;
+                                                    description
+                                                        "Count of packets in this sample window with the M (Malformed) bit set in
+                                                         the flags field of the TLV";
+                                                }
+
+                                                leaf zero-or-negative-delay-packets {
+                                                    type uint32;
+                                                    description
+                                                        "Count of packets that have a zero or negative computed delay that
+                                                         arrived during this sample window";
+                                                }
+
+                                                leaf duplicate-packets {
+                                                    type uint32;
+                                                    description "Count of duplicate packets that arrived during this sample window";
+                                                }
+
+                                            } // list index
+
+                                        } // container sample-window
+
+                                    } // container statistics
+
+                                } // list port
+
+                            } // list lag
+
+                        } // container lag-micro-sessions
 
                         container statistics {
                             description "Enter the statistics context";
@@ -528,9 +850,9 @@ submodule nokia-state-test-oam {
                                     }
 
                                     leaf end-timestamp-utc {
-                                        status deprecated;
+                                        status obsolete;
                                         type yang:date-and-time;
-                                        description "Timestamp when this aggregate sample window closed.  Deprecated; replaced by end-timestamp.";
+                                        description "Obsolete; replaced by end-timestamp.";
                                     }
 
                                     leaf window-state {
@@ -612,9 +934,9 @@ submodule nokia-state-test-oam {
                                     }
 
                                     leaf end-timestamp-utc {
-                                        status deprecated;
+                                        status obsolete;
                                         type yang:date-and-time;
-                                        description "Timestamp when this sample window closed.  Deprecated; replaced by end-timestamp.";
+                                        description "Obsolete; replaced by end-timestamp.";
                                     }
 
                                     leaf window-state {
@@ -629,12 +951,12 @@ submodule nokia-state-test-oam {
 
                                     leaf sent {
                                         type uint32;
-                                        description "Number of TWAMP packets that have been sent for this sample window";
+                                        description "Number of request packets sent for this sample window";
                                     }
 
                                     leaf received {
                                         type uint32;
-                                        description "Number of TWAMP packets that have been received for this sample window";
+                                        description "Number of response packets received for this sample window";
                                     }
 
                                     leaf min {
@@ -690,13 +1012,13 @@ submodule nokia-state-test-oam {
                                     leaf zero-or-negative-delay-packets {
                                         type uint32;
                                         description
-                                            "Count of packets that have a zero or negative computed delay that have
+                                            "Count of packets that have a zero or negative computed delay that
                                              arrived during this sample window";
                                     }
 
                                     leaf duplicate-packets {
                                         type uint32;
-                                        description "Count of duplicate packets that have arrived during this sample window";
+                                        description "Count of duplicate packets that arrived during this sample window";
                                     }
 
                                 } // list index

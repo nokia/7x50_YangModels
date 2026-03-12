@@ -8,6 +8,8 @@ submodule nokia-state-port-ethernet {
     import nokia-sros-yang-extensions     { prefix "sros-ext"; }
     import nokia-types-eth-cfm            { prefix "types-eth-cfm"; }
     import nokia-types-port               { prefix "types-port"; }
+    import nokia-types-ptp                { prefix "types-ptp"; }
+    import nokia-types-qos                { prefix "types-qos"; }
     import nokia-types-sros               { prefix "types-sros"; }
 
     include nokia-state-eth-cfm;
@@ -18,7 +20,7 @@ submodule nokia-state-port-ethernet {
     include nokia-state-port-eth-lldp;
     include nokia-state-port-eth-network;
 
-    sros-ext:sros-major-release "rel25";
+    sros-ext:sros-major-release "rel26";
     organization "Nokia";
     contact
         "Nokia SR OS Support
@@ -41,7 +43,7 @@ submodule nokia-state-port-ethernet {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2025-10-30";
+    revision "2026-03-11";
 
     grouping state-port-ethernet {
         container ethernet {
@@ -634,6 +636,44 @@ submodule nokia-state-port-ethernet {
 
             } // container eth-cfm
 
+            container ingress {
+                description "Enter the ingress context";
+
+                container pre-classifier {
+                    description "Enter the pre-classifier context";
+
+                    list policer {
+                        key "policer-id";
+                        description "Enter the policer list instance";
+
+                        leaf policer-id {
+                            type types-qos:pre-classifier-policer-id;
+                            description "Pre-Classifier policy Policer identifier.";
+                        }
+
+                        leaf last-cleared-time {
+                            type yang:date-and-time;
+                            description
+                                "Indicates the time, since system startup, when the counters in
+                                 IF-MIB::ifTable were last cleared.";
+                        }
+
+                        leaf offered-packets {
+                            type yang:counter64;
+                            description "Indicates the number of offered packets by the pre-classifier policer on this port.";
+                        }
+
+                        leaf discarded-packets {
+                            type yang:counter64;
+                            description "Indicates the number of discarded packets by the pre-classifier policer on this port.";
+                        }
+
+                    } // list policer
+
+                } // container pre-classifier
+
+            } // container ingress
+
             container elmi {
                 description "Enter the elmi context";
 
@@ -800,28 +840,7 @@ submodule nokia-state-port-ethernet {
                 description "Enter the ssm context";
 
                 leaf received-quality-level {
-                    type enumeration {
-                        enum unknown                        { value 0; }
-                        enum prs                            { value 1; }
-                        enum stu                            { value 2; }
-                        enum st2                            { value 3; }
-                        enum tnc                            { value 4; }
-                        enum st3e                           { value 5; }
-                        enum st3                            { value 6; }
-                        enum smc                            { value 7; }
-                        enum st4                            { value 8; }
-                        enum dus                            { value 9; }
-                        enum prc                            { value 10; }
-                        enum ssua                           { value 11; }
-                        enum ssub                           { value 12; }
-                        enum sec                            { value 13; }
-                        enum dnu                            { value 14; }
-                        enum inv                            { value 15; }
-                        enum pno                            { value 16; }
-                        enum eec1                           { value 17; }
-                        enum eec2                           { value 18; }
-                        enum failed                         { value 19; }
-                    }
+                    type types-port:ssm-quality-level;
                     description "Indicates the quality level of received SSM messages.";
                 }
 
@@ -838,31 +857,59 @@ submodule nokia-state-port-ethernet {
                 }
 
                 leaf transmitted-quality-level {
-                    type enumeration {
-                        enum reserved0                      { value 0; }
-                        enum prs                            { value 1; }
-                        enum stu                            { value 2; }
-                        enum st2                            { value 3; }
-                        enum tnc                            { value 4; }
-                        enum st3e                           { value 5; }
-                        enum reserved6                      { value 6; }
-                        enum smc                            { value 7; }
-                        enum reserved8                      { value 8; }
-                        enum dus                            { value 9; }
-                        enum prc                            { value 10; }
-                        enum ssua                           { value 11; }
-                        enum ssub                           { value 12; }
-                        enum reserved13                     { value 13; }
-                        enum dnu                            { value 14; }
-                        enum reserved15                     { value 15; }
-                        enum pno                            { value 16; }
-                        enum eec1                           { value 17; }
-                        enum eec2                           { value 18; }
-                        enum reserved19                     { value 19; }
-                    }
+                    type types-port:ssm-quality-level;
                     description "Indicates the quality level of transmitted SSM messages.";
                 }
 
+                container rx-extended-ql-tlv {
+                    description "Enter the rx-extended-ql-tlv context";
+
+                    leaf received-essm {
+                        type boolean;
+                        description
+                            "Indicates if an enhanced SSM code was received in the Ethernet
+                             Synchronization Messaging Channel of the Ethernet port.";
+                    }
+
+                    leaf received-essm-code {
+                        type uint8 {
+                            range "0..255";
+                        }
+                        description
+                            "If present, the value of the Enhanced SSM code field of the extended
+                             QL TLV received in the ESMC message.";
+                    }
+
+                    leaf origin-clock-identity {
+                        type types-ptp:clock-identity-type;
+                        description "If present, the clock identity of the source of the originator of the extened Ql TLV.";
+                    }
+
+                    leaf mixed-eec-eeec {
+                        type boolean;
+                        description "If present, indicates if the chain has a mixture of EEC and eEEC.";
+                    }
+
+                    leaf partial-chain {
+                        type boolean;
+                        description "If present, indicates if the TLV was generated in the middle of the clock chain.";
+                    }
+
+                    leaf num-eeec {
+                        type uint8 {
+                            range "0..255";
+                        }
+                        description "If present, number of cascaded eEECs from the nearest SSU/PRC/ePRC.";
+                    }
+
+                    leaf num-eec {
+                        type uint8 {
+                            range "0..255";
+                        }
+                        description "If present, number of cascaded EECs from the nearest SSU/PRC/ePRC.";
+                    }
+
+                } // container rx-extended-ql-tlv
 
             } // container ssm
 

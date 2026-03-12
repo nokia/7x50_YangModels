@@ -67,7 +67,7 @@ submodule nokia-conf-router {
     include nokia-conf-test-oam;
     include nokia-conf-vrrp;
 
-    sros-ext:sros-major-release "rel25";
+    sros-ext:sros-major-release "rel26";
     organization "Nokia";
     contact
         "Nokia SR OS Support
@@ -90,7 +90,7 @@ submodule nokia-conf-router {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2026-02-11";
+    revision "2026-03-11";
 
     grouping conf-router {
         list router {
@@ -613,6 +613,64 @@ submodule nokia-conf-router {
                 } // container redirect-vprn
 
             } // container dns
+
+            container evpn-neighbor-synchronization {
+                presence "Enable the evpn-neighbor-synchronization context";
+                description "Enable the evpn-neighbor-synchronization context";
+
+                leaf admin-state {
+                    type types-sros:admin-state;
+                    default "disable";
+                    description "Administrative state of EVPN synchronization";
+                }
+
+                leaf route-distinguisher {
+                    type types-services:vpn-route-distinguisher;
+                    sros-ext:auto-restart-to-modify;
+                    description "Route distinguisher used for synchronization";
+                }
+
+                leaf evi-route-target {
+                    type types-services:evi-route-target;
+                    sros-ext:auto-restart-to-modify;
+                    description "EVI route target to use for EVPN neighbor synchronization";
+                }
+
+                leaf route-tag {
+                    type int32 {
+                        range "1..255";
+                    }
+                    sros-ext:auto-restart-to-modify;
+                    description "BGP route tag for MAC/IP routes synchronization";
+                }
+
+                leaf retention-timer {
+                    type uint32 {
+                        range "1..65535";
+                    }
+                    units "seconds";
+                    description "Time that an EVPN ARP or ND entry is retained";
+                }
+
+                leaf-list apply-groups {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Apply a configuration group at this level";
+                }
+
+                leaf-list apply-groups-exclude {
+                    type leafref {
+                        path "../../../groups/group/name";
+                    }
+                    max-elements 8;
+                    ordered-by user;
+                    description "Exclude a configuration group at this level";
+                }
+
+            } // container evpn-neighbor-synchronization
 
             container aggregates {
                 when "../router-name = 'Base'" {
@@ -1267,9 +1325,7 @@ submodule nokia-conf-router {
                 }
 
                 leaf gre-termination {
-                    when "../../router-name = 'Base' and ../flavor = 'regular' and not(../interface-name = 'system')" {
-                        description "only allowed in regular interfaces in router Base, and not in the system interface";
-                    }
+                    status obsolete;
                     type boolean;
                     default "false";
                     description "Terminate GRE packets on primary subnet of interface";
@@ -2209,13 +2265,6 @@ submodule nokia-conf-router {
                                         sros-ext:auto-restart-to-modify;
                                         description "Enable the dynamic context";
 
-                                        leaf auto-establish {
-                                            type boolean;
-                                            sros-ext:auto-restart-to-modify;
-                                            default "false";
-                                            description "Attempt to establish a phase 1 exchange automatically";
-                                        }
-
                                         leaf ike-policy {
                                             type leafref {
                                                 path "../../../../../../../ipsec/ike-policy/id";
@@ -2231,6 +2280,13 @@ submodule nokia-conf-router {
                                             max-elements 4;
                                             sros-ext:auto-restart-to-modify;
                                             description "IPsec transform IDs used by the dynamic key";
+                                        }
+
+                                        leaf auto-establish {
+                                            type boolean;
+                                            sros-ext:auto-restart-to-modify;
+                                            default "false";
+                                            description "Attempt to establish a phase 1 exchange automatically";
                                         }
 
                                         leaf pre-shared-key {
@@ -2344,6 +2400,7 @@ submodule nokia-conf-router {
                                             }
 
                                         } // container ppk
+
 
                                     } // container dynamic
 
@@ -2920,6 +2977,7 @@ submodule nokia-conf-router {
 
                 } // container eth-cfm
 
+
                 container ipv4 {
                     when "not(../../router-name = 'management')" {
                         description "not allowed in the management router";
@@ -2959,6 +3017,15 @@ submodule nokia-conf-router {
                         }
                         type types-router:qos-route-lookup;
                         description "IP address for QoS route lookup for ingress IP packets";
+                    }
+
+                    leaf gre-termination {
+                        when "../../../router-name = 'Base' and ../../flavor = 'regular' and not(../../interface-name = 'system')" {
+                            description "only allowed in regular interfaces in router Base, and not in the system interface";
+                        }
+                        type boolean;
+                        default "false";
+                        description "Configure GRE termination in the virtual router for the primary subnet of this interface.";
                     }
 
                     leaf ip-helper-address {
@@ -3477,6 +3544,22 @@ submodule nokia-conf-router {
                             description "SRRP instance whose state is tracked on this IP address";
                         }
 
+                        leaf tag {
+                            when "../../../../router-name = 'Base' and ../../../flavor = 'regular'" {
+                                description "only allowed in regular interfaces in router Base";
+                            }
+                            type union {
+                                type uint32 {
+                                    range "1..4294967295";
+                                }
+                                type enumeration {
+                                    enum no-tag                         { value 0; }
+                                }
+                            }
+                            default "no-tag";
+                            description "Route tag to be matched by BGP export policy rules";
+                        }
+
                         leaf gre-termination {
                             when "../../../../router-name = 'Base' and ../../../flavor = 'regular' and not(../../../interface-name = 'system')" {
                                 description "only allowed in regular interfaces in router Base, and not in the system interface";
@@ -3549,6 +3632,22 @@ submodule nokia-conf-router {
                                 range "1..4294967295";
                             }
                             description "SRRP instance whose state is tracked on this IP address";
+                        }
+
+                        leaf tag {
+                            when "../../../../router-name = 'Base' and ../../../flavor = 'regular'" {
+                                description "only allowed in regular interfaces in router Base";
+                            }
+                            type union {
+                                type uint32 {
+                                    range "1..4294967295";
+                                }
+                                type enumeration {
+                                    enum no-tag                         { value 0; }
+                                }
+                            }
+                            default "no-tag";
+                            description "Route tag to be matched by BGP export policy rules";
                         }
 
                         leaf-list apply-groups {
@@ -3723,9 +3822,22 @@ submodule nokia-conf-router {
 
                                 leaf route-type {
                                     type enumeration {
-                                        enum static                         { value 1; }
-                                        enum dynamic                        { value 2; }
-                                        enum evpn                           { value 3; }
+                                        enum static {
+                                            value 1;
+                                            description "Host routes created from EVPN ARP or ND entries";
+                                        }
+                                        enum dynamic {
+                                            value 2;
+                                            description "Host routes created from dynamic ARP or ND entries";
+                                        }
+                                        enum evpn {
+                                            value 3;
+                                            description "Host routes created from EVPN entries";
+                                        }
+                                        enum evpn-local-es {
+                                            value 4;
+                                            description "Host routes created from EVPN local ES entries";
+                                        }
                                     }
                                     description "Type of ARP or ND entries that generate host routes";
                                 }
@@ -4364,6 +4476,19 @@ submodule nokia-conf-router {
                             description "SRRP ID whose state is tracked on this IP address";
                         }
 
+                        leaf tag {
+                            type union {
+                                type uint32 {
+                                    range "1..4294967295";
+                                }
+                                type enumeration {
+                                    enum no-tag                         { value 0; }
+                                }
+                            }
+                            default "no-tag";
+                            description "Route tag to be matched by BGP export policy rules";
+                        }
+
                         leaf-list apply-groups {
                             type leafref {
                                 path "../../../../../groups/group/name";
@@ -4434,9 +4559,22 @@ submodule nokia-conf-router {
 
                                 leaf route-type {
                                     type enumeration {
-                                        enum static                         { value 1; }
-                                        enum dynamic                        { value 2; }
-                                        enum evpn                           { value 3; }
+                                        enum static {
+                                            value 1;
+                                            description "Host routes created from EVPN ARP or ND entries";
+                                        }
+                                        enum dynamic {
+                                            value 2;
+                                            description "Host routes created from dynamic ARP or ND entries";
+                                        }
+                                        enum evpn {
+                                            value 3;
+                                            description "Host routes created from EVPN entries";
+                                        }
+                                        enum evpn-local-es {
+                                            value 4;
+                                            description "Host routes created from EVPN local ES entries";
+                                        }
                                     }
                                     description "Type of ARP or ND entries that generate host routes";
                                 }
@@ -4889,6 +5027,7 @@ submodule nokia-conf-router {
                             description "Enter the dynamic context";
 
                             leaf measurement-template {
+                                status obsolete;
                                 type leafref {
                                     path "../../../../../../test-oam/link-measurement/measurement-template/template-name";
                                 }
@@ -4906,6 +5045,24 @@ submodule nokia-conf-router {
                                 }
 
                             } // container lag-ip-measurement
+
+                            container link-measurement {
+                                description "Enter the link-measurement context";
+
+                                leaf lag-micro-sessions {
+                                    type boolean;
+                                    default "false";
+                                    description "Use LAG micro sessions on this interface";
+                                }
+
+                                leaf link-measurement-template {
+                                    type leafref {
+                                        path "../../../../../../../test-oam/link-measurement/measurement-template/template-name";
+                                    }
+                                    description "Link measurement template name";
+                                }
+
+                            } // container link-measurement
 
                             container twamp-light {
                                 description "Enter the twamp-light context";

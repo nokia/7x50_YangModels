@@ -8,7 +8,7 @@ submodule nokia-state-anysec {
     import nokia-sros-yang-extensions     { prefix "sros-ext"; }
     import nokia-types-sros               { prefix "types-sros"; }
 
-    sros-ext:sros-major-release "rel25";
+    sros-ext:sros-major-release "rel26";
     organization "Nokia";
     contact
         "Nokia SR OS Support
@@ -31,7 +31,7 @@ submodule nokia-state-anysec {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2025-10-30";
+    revision "2026-03-11";
 
     grouping state-anysec {
         container anysec {
@@ -42,19 +42,914 @@ submodule nokia-state-anysec {
                 description "MKA UDP port operation state";
             }
 
+            container mpls {
+                description "Enter the mpls context";
+
+                container security-termination-policies {
+                    description "Enter the security-termination-policies context";
+
+                    list policy {
+                        key "policy-name";
+                        description "Enter the policy list instance";
+
+                        leaf policy-name {
+                            type types-sros:named-item;
+                            description "ANYsec security termination policy name";
+                        }
+
+                        leaf terminating-label {
+                            type types-sros:mpls-label-full-range;
+                            description "Terminating label";
+                        }
+
+                    } // list policy
+
+                } // container security-termination-policies
+
+                container tunnel-encryption {
+                    description "Enter the tunnel-encryption context";
+
+                    list encryption-group {
+                        key "group-name";
+                        description "Enter the encryption-group list instance";
+
+                        leaf group-name {
+                            type types-sros:named-item;
+                            description "ANYsec encryption group name";
+                        }
+
+                        leaf group-id {
+                            type uint32;
+                            description "Encryption group ID";
+                        }
+
+                        list peer {
+                            key "peer-ip-address";
+                            description "Enter the peer list instance";
+
+                            leaf peer-ip-address {
+                                type types-sros:ip-unicast-address;
+                                description "Peer IP address";
+                            }
+
+                            leaf tunnel-id {
+                                type types-sros:tunnel-id;
+                                description "Peer tunnel ID";
+                            }
+
+                            leaf encryption-label {
+                                type types-sros:mpls-label-full-range;
+                                description "The label uniquely identifying packets sent from this peer";
+                            }
+
+                            leaf last-inconsistent-rx-sci {
+                                type binary {
+                                    length "8";
+                                }
+                                description "The last inconsistent Rx SCI received from this peer";
+                            }
+
+                            leaf oper-state {
+                                type types-sros:oper-state;
+                                description "Peer operational state";
+                            }
+
+                            leaf oper-down-reason {
+                                type enumeration {
+                                    enum none                           { value 0; }
+                                    enum peer-admin-down                { value 1; }
+                                    enum encrypt-group-admin-down       { value 2; }
+                                    enum term-policy-admin-down         { value 3; }
+                                    enum ca-admin-down                  { value 4; }
+                                    enum mka-down                       { value 5; }
+                                    enum inconsistent-rx-sci            { value 6; }
+                                    enum missing-rx-tunnel              { value 7; }
+                                    enum missing-tx-tunnel              { value 8; }
+                                }
+                                description "Peer operational state down reason";
+                            }
+
+                            container rx-sc {
+                                description "Enter the rx-sc context";
+
+                                leaf rx-sci {
+                                    type binary {
+                                        length "8";
+                                    }
+                                    description "Indicates the SCI for identifying the receiving SC.";
+                                }
+
+                                leaf not-valid-packets {
+                                    type yang:counter64;
+                                    units "packets";
+                                    description "Indicates the number of not valid packets received by this SC.";
+                                }
+
+                                leaf delayed-packets {
+                                    type yang:counter64;
+                                    units "packets";
+                                    description
+                                        "Indicates the number of received packets with the condition that the PN of the
+                                         packets is lower than the lower bound of the replay protection PN.";
+                                }
+
+                                leaf unchecked-packets {
+                                    type yang:counter64;
+                                    units "packets";
+                                    description
+                                        "Indicates the number of packets that have failed the integrity check on this
+                                         SC.";
+                                }
+
+                                leaf ok-packets {
+                                    type yang:counter64;
+                                    units "packets";
+                                    description "Indicates the number of OK packets received by this SC.";
+                                }
+
+                                leaf octets-decrypted {
+                                    type yang:counter64;
+                                    units "octets";
+                                    description
+                                        "Indicates the number of octets of plain text recovered from received packets
+                                         that were integrity protected and encrypted.";
+                                }
+
+                            } // container rx-sc
+
+                            container tx-sc {
+                                description "Enter the tx-sc context";
+
+                                leaf tx-sci {
+                                    type binary {
+                                        length "8";
+                                    }
+                                    description
+                                        "Indicates the Secure Channel Identifier (SCI) information for transmitting
+                                         ANYsec MACsec frames. This is the same value as
+                                         /state/anysec/tunnel-encryption/encryption-group/peer/mka/outbound-sci";
+                                }
+
+                                leaf encrypted-packets {
+                                    type yang:counter64;
+                                    units "packets";
+                                    description
+                                        "Indicates the number of integrity protected and encrypted packets for this
+                                         transmitting SC.";
+                                }
+
+                                leaf octets-encrypted {
+                                    type yang:counter64;
+                                    units "octets";
+                                    description
+                                        "Indicates the number of plain text octets that are integrity protected and
+                                         encrypted on the transmitting SC.";
+                                }
+
+                            } // container tx-sc
+
+                            list mka {
+                                key "ckn";
+                                description "Enter the mka list instance";
+
+                                leaf ckn {
+                                    type binary {
+                                        length "1..32";
+                                    }
+                                    description "Indicates CKN information for the MKA instance.";
+                                }
+
+                                leaf member-id {
+                                    type binary {
+                                        length "12";
+                                    }
+                                    description "Indicates the Member Identifier (MI) for the MKA instance.";
+                                }
+
+                                leaf outbound-sci {
+                                    type binary {
+                                        length "8";
+                                    }
+                                    description
+                                        "Indicates the Secure Channel Identifier (SCI) information for transmitting
+                                         ANYsec MACsec frames.";
+                                }
+
+                                leaf message-count {
+                                    type uint32;
+                                    description "Indicates the current count of MKA messages that is attached to MKA PDUs.";
+                                }
+
+                                leaf key-number {
+                                    type uint32;
+                                    description
+                                        "Indicates the number of the currently assigned CAK. When a new CAK is
+                                         generated, this number is incremented.";
+                                }
+
+                                leaf key-server {
+                                    type boolean;
+                                    description
+                                        "Indicates whether this server is the highest priority server in the peer
+                                         group.";
+                                }
+
+                                leaf latest-sak-an {
+                                    type uint32;
+                                    description
+                                        "Indicates the Association Number (AN) of the latest Secure Association Key
+                                         (SAK). This number is concatenated with an SCI to identify a Secure
+                                         Association (SA).";
+                                }
+
+                                leaf previous-sak-an {
+                                    type uint32;
+                                    description
+                                        "Indicates the AN of the previous SAK. This number is concatenated with an SCI
+                                         to identify an SA.";
+                                }
+
+                                leaf latest-sak-ki {
+                                    type binary {
+                                        length "16";
+                                    }
+                                    description
+                                        "Indicates the Key Identifier (KI) of the latest SAK. This number is derived
+                                         from the MI of the key server and the key number.";
+                                }
+
+                                leaf previous-sak-ki {
+                                    type binary {
+                                        length "16";
+                                    }
+                                    description
+                                        "Indicates the KI of the previous SAK. This number is derived from the MI of
+                                         the key server and the key number.";
+                                }
+
+                                leaf peers-removed {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of peers removed from the live/potential peer list due to
+                                         not receiving an MKPDU within the MKA Live Time (6.0 sec).";
+                                }
+
+                                leaf ckn-not-found {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received with a CKN that does not match the CA
+                                         configured for the port.";
+                                }
+
+                                leaf new-live-peer {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of validated peers that have been added to the live peer
+                                         list.";
+                                }
+
+                                leaf sak-generated {
+                                    type yang:counter64;
+                                    description "Indicates the number of SAKs generated by this MKA instance.";
+                                }
+
+                                leaf sak-installed-transmitting {
+                                    type yang:counter64;
+                                    description "Indicates the number of SAKs installed for transmitting.";
+                                }
+
+                                leaf sak-installed-receiving {
+                                    type yang:counter64;
+                                    description "Indicates the number of SAKs installed for receiving.";
+                                }
+
+                                leaf pdu-too-small {
+                                    type yang:counter64;
+                                    description "Indicates the number of MKPDUs received that are less than 32 octets.";
+                                }
+
+                                leaf pdu-too-big {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received where the EAPOL header indicates a
+                                         size larger than the received packet.";
+                                }
+
+                                leaf pdu-not-quad-size {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received with a size that is not a multiple of
+                                         4 octets.";
+                                }
+
+                                leaf pdu-invalid-number {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received out of order as indicated by the
+                                         Message Number.";
+                                }
+
+                                leaf parameter-size-invalid {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received which contain a parameter set body
+                                         length that exceeds the remaining length of the MKPDU.";
+                                }
+
+                                leaf liveness-check-fail {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received which contain an MN that is not
+                                         acceptably recent.";
+                                }
+
+                                leaf parameter-not-quad-size {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received which contain a parameter set that is
+                                         not a multiple of 4 octets.";
+                                }
+
+                                leaf unsupported-algorithm-agility {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received which contain an unsupported Algorithm
+                                         Agility value.";
+                                }
+
+                                leaf invalid-ckn-length {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received which contain a CAK name that exceeds
+                                         the maximum CAK name length.";
+                                }
+
+                                leaf icv-check-failed {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received which contain an ICV value that does
+                                         not authenticate.";
+                                }
+
+                                leaf peer-same-mi {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received which contain a peerlist with an MI
+                                         entry which conflicts with the local MI.";
+                                }
+
+                                leaf sak-non-live-peer {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of SAKs received from a peer that is not a member of the
+                                         Live Peers List.";
+                                }
+
+                                leaf sak-no-key-server {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of SAKs received from an MKA participant that has not
+                                         been designated as the Key Server.";
+                                }
+
+                                leaf sak-decrypt-fail {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of AES Key Wrap SAK decryption failures that have
+                                         occurred.";
+                                }
+
+                                leaf sak-encrypt-fail {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of AES Key Wrap SAK encryption failures that have
+                                         occurred.";
+                                }
+
+                                leaf key-number-invalid {
+                                    type yang:counter64;
+                                    description "Indicates the number of SAKs received with an invalid Key Number.";
+                                }
+
+                                leaf sak-install-fail {
+                                    type yang:counter64;
+                                    description "Indicates the number of SecY SAK installation failures that have occurred.";
+                                }
+
+                                leaf cak-info-missing {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of times internal CAK data is not available for the
+                                         generation of the SAK.";
+                                }
+
+                                leaf max-peers-set-zero {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of SecY SAK installations that have failed due to the max
+                                         peer entry being set to 0.";
+                                }
+
+                                leaf oper-state {
+                                    type types-sros:oper-state;
+                                    description "Indicates the operational state of the MKA participant.";
+                                }
+
+                                leaf oper-offset {
+                                    type uint32 {
+                                        range "0|30|50";
+                                    }
+                                    units "octets";
+                                    description
+                                        "Indicates the operational encryption offset used for the datapath PDUs when
+                                         all parties in the CA have the SAK. This value is specified by the key
+                                         server.";
+                                }
+
+                                leaf oper-cipher {
+                                    type enumeration {
+                                        enum gcm-aes-128                    { value 1; }
+                                        enum gcm-aes-256                    { value 2; }
+                                        enum gcm-aes-xpn-128                { value 3; }
+                                        enum gcm-aes-xpn-256                { value 4; }
+                                    }
+                                    description
+                                        "Indicates the operational encryption algorithm used for datapath PDUs when all
+                                         parties in the CA have the SAK. This value is specified by the key server.";
+                                }
+
+                                leaf latest-sak-lpn {
+                                    type yang:counter64;
+                                    description "Indicates Lowest Acceptable Packet Number of the latest SAK.";
+                                }
+
+                                leaf previous-sak-lpn {
+                                    type yang:counter64;
+                                    description "Indicates Lowest Acceptable Packet Number of the previous SAK.";
+                                }
+
+                                leaf invalid-header {
+                                    type yang:counter64;
+                                    description "Indicates the number of MKPDUs received with an invalid MKA header.";
+                                }
+
+                            } // list mka
+
+                        } // list peer
+
+                    } // list encryption-group
+
+                } // container tunnel-encryption
+
+                container service-encryption {
+                    description "Enter the service-encryption context";
+
+                    list encryption-group {
+                        key "group-name";
+                        description "Enter the encryption-group list instance";
+
+                        leaf group-name {
+                            type types-sros:named-item;
+                            description "ANYsec encryption group name";
+                        }
+
+                        leaf group-id {
+                            type uint32;
+                            description "Encryption group ID";
+                        }
+
+                        list peer {
+                            key "peer-ip-address";
+                            description "Enter the peer list instance";
+
+                            leaf peer-ip-address {
+                                type types-sros:ip-unicast-address;
+                                description "Peer IP address";
+                            }
+
+                            leaf encryption-label {
+                                type types-sros:mpls-label-full-range;
+                                description "The label uniquely identifying packets sent from this peer";
+                            }
+
+                            leaf last-inconsistent-rx-sci {
+                                type binary {
+                                    length "8";
+                                }
+                                description "The last inconsistent Rx SCI received from this peer";
+                            }
+
+                            leaf oper-state {
+                                type types-sros:oper-state;
+                                description "Peer operational state";
+                            }
+
+                            leaf oper-down-reason {
+                                type enumeration {
+                                    enum none                           { value 0; }
+                                    enum peer-admin-down                { value 1; }
+                                    enum encrypt-group-admin-down       { value 2; }
+                                    enum term-policy-admin-down         { value 3; }
+                                    enum ca-admin-down                  { value 4; }
+                                    enum mka-down                       { value 5; }
+                                    enum inconsistent-rx-sci            { value 6; }
+                                    enum missing-rx-tunnel              { value 7; }
+                                    enum missing-tx-tunnel              { value 8; }
+                                }
+                                description "Peer operational state down reason";
+                            }
+
+                            container rx-sc {
+                                description "Enter the rx-sc context";
+
+                                leaf rx-sci {
+                                    type binary {
+                                        length "8";
+                                    }
+                                    description "Indicates the SCI for identifying the receiving SC.";
+                                }
+
+                                leaf not-valid-packets {
+                                    type yang:counter64;
+                                    units "packets";
+                                    description "Indicates the number of not valid packets received by this SC.";
+                                }
+
+                                leaf delayed-packets {
+                                    type yang:counter64;
+                                    units "packets";
+                                    description
+                                        "Indicates the number of received packets with the condition that the PN of the
+                                         packets is lower than the lower bound of the replay protection PN.";
+                                }
+
+                                leaf unchecked-packets {
+                                    type yang:counter64;
+                                    units "packets";
+                                    description
+                                        "Indicates the number of packets that have failed the integrity check on this
+                                         SC.";
+                                }
+
+                                leaf ok-packets {
+                                    type yang:counter64;
+                                    units "packets";
+                                    description "Indicates the number of OK packets received by this SC.";
+                                }
+
+                                leaf octets-decrypted {
+                                    type yang:counter64;
+                                    units "octets";
+                                    description
+                                        "Indicates the number of octets of plain text recovered from received packets
+                                         that were integrity protected and encrypted.";
+                                }
+
+                            } // container rx-sc
+
+                            container tx-sc {
+                                description "Enter the tx-sc context";
+
+                                leaf tx-sci {
+                                    type binary {
+                                        length "8";
+                                    }
+                                    description
+                                        "Indicates the Secure Channel Identifier (SCI) information for transmitting
+                                         ANYsec MACsec frames. This is the same value as
+                                         /state/anysec/tunnel-encryption/encryption-group/peer/mka/outbound-sci";
+                                }
+
+                                leaf encrypted-packets {
+                                    type yang:counter64;
+                                    units "packets";
+                                    description
+                                        "Indicates the number of integrity protected and encrypted packets for this
+                                         transmitting SC.";
+                                }
+
+                                leaf octets-encrypted {
+                                    type yang:counter64;
+                                    units "octets";
+                                    description
+                                        "Indicates the number of plain text octets that are integrity protected and
+                                         encrypted on the transmitting SC.";
+                                }
+
+                            } // container tx-sc
+
+                            list mka {
+                                key "ckn";
+                                description "Enter the mka list instance";
+
+                                leaf ckn {
+                                    type binary {
+                                        length "1..32";
+                                    }
+                                    description "Indicates CKN information for the MKA instance.";
+                                }
+
+                                leaf member-id {
+                                    type binary {
+                                        length "12";
+                                    }
+                                    description "Indicates the Member Identifier (MI) for the MKA instance.";
+                                }
+
+                                leaf outbound-sci {
+                                    type binary {
+                                        length "8";
+                                    }
+                                    description
+                                        "Indicates the Secure Channel Identifier (SCI) information for transmitting
+                                         ANYsec MACsec frames.";
+                                }
+
+                                leaf message-count {
+                                    type uint32;
+                                    description "Indicates the current count of MKA messages that is attached to MKA PDUs.";
+                                }
+
+                                leaf key-number {
+                                    type uint32;
+                                    description
+                                        "Indicates the number of the currently assigned CAK. When a new CAK is
+                                         generated, this number is incremented.";
+                                }
+
+                                leaf key-server {
+                                    type boolean;
+                                    description
+                                        "Indicates whether this server is the highest priority server in the peer
+                                         group.";
+                                }
+
+                                leaf latest-sak-an {
+                                    type uint32;
+                                    description
+                                        "Indicates the Association Number (AN) of the latest Secure Association Key
+                                         (SAK). This number is concatenated with an SCI to identify a Secure
+                                         Association (SA).";
+                                }
+
+                                leaf previous-sak-an {
+                                    type uint32;
+                                    description
+                                        "Indicates the AN of the previous SAK. This number is concatenated with an SCI
+                                         to identify an SA.";
+                                }
+
+                                leaf latest-sak-ki {
+                                    type binary {
+                                        length "16";
+                                    }
+                                    description
+                                        "Indicates the Key Identifier (KI) of the latest SAK. This number is derived
+                                         from the MI of the key server and the key number.";
+                                }
+
+                                leaf previous-sak-ki {
+                                    type binary {
+                                        length "16";
+                                    }
+                                    description
+                                        "Indicates the KI of the previous SAK. This number is derived from the MI of
+                                         the key server and the key number.";
+                                }
+
+                                leaf peers-removed {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of peers removed from the live/potential peer list due to
+                                         not receiving an MKPDU within the MKA Live Time (6.0 sec).";
+                                }
+
+                                leaf ckn-not-found {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received with a CKN that does not match the CA
+                                         configured for the port.";
+                                }
+
+                                leaf new-live-peer {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of validated peers that have been added to the live peer
+                                         list.";
+                                }
+
+                                leaf sak-generated {
+                                    type yang:counter64;
+                                    description "Indicates the number of SAKs generated by this MKA instance.";
+                                }
+
+                                leaf sak-installed-transmitting {
+                                    type yang:counter64;
+                                    description "Indicates the number of SAKs installed for transmitting.";
+                                }
+
+                                leaf sak-installed-receiving {
+                                    type yang:counter64;
+                                    description "Indicates the number of SAKs installed for receiving.";
+                                }
+
+                                leaf pdu-too-small {
+                                    type yang:counter64;
+                                    description "Indicates the number of MKPDUs received that are less than 32 octets.";
+                                }
+
+                                leaf pdu-too-big {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received where the EAPOL header indicates a
+                                         size larger than the received packet.";
+                                }
+
+                                leaf pdu-not-quad-size {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received with a size that is not a multiple of
+                                         4 octets.";
+                                }
+
+                                leaf pdu-invalid-number {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received out of order as indicated by the
+                                         Message Number.";
+                                }
+
+                                leaf parameter-size-invalid {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received which contain a parameter set body
+                                         length that exceeds the remaining length of the MKPDU.";
+                                }
+
+                                leaf liveness-check-fail {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received which contain an MN that is not
+                                         acceptably recent.";
+                                }
+
+                                leaf parameter-not-quad-size {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received which contain a parameter set that is
+                                         not a multiple of 4 octets.";
+                                }
+
+                                leaf unsupported-algorithm-agility {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received which contain an unsupported Algorithm
+                                         Agility value.";
+                                }
+
+                                leaf invalid-ckn-length {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received which contain a CAK name that exceeds
+                                         the maximum CAK name length.";
+                                }
+
+                                leaf icv-check-failed {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received which contain an ICV value that does
+                                         not authenticate.";
+                                }
+
+                                leaf peer-same-mi {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of MKPDUs received which contain a peerlist with an MI
+                                         entry which conflicts with the local MI.";
+                                }
+
+                                leaf sak-non-live-peer {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of SAKs received from a peer that is not a member of the
+                                         Live Peers List.";
+                                }
+
+                                leaf sak-no-key-server {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of SAKs received from an MKA participant that has not
+                                         been designated as the Key Server.";
+                                }
+
+                                leaf sak-decrypt-fail {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of AES Key Wrap SAK decryption failures that have
+                                         occurred.";
+                                }
+
+                                leaf sak-encrypt-fail {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of AES Key Wrap SAK encryption failures that have
+                                         occurred.";
+                                }
+
+                                leaf key-number-invalid {
+                                    type yang:counter64;
+                                    description "Indicates the number of SAKs received with an invalid Key Number.";
+                                }
+
+                                leaf sak-install-fail {
+                                    type yang:counter64;
+                                    description "Indicates the number of SecY SAK installation failures that have occurred.";
+                                }
+
+                                leaf cak-info-missing {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of times internal CAK data is not available for the
+                                         generation of the SAK.";
+                                }
+
+                                leaf max-peers-set-zero {
+                                    type yang:counter64;
+                                    description
+                                        "Indicates the number of SecY SAK installations that have failed due to the max
+                                         peer entry being set to 0.";
+                                }
+
+                                leaf oper-state {
+                                    type types-sros:oper-state;
+                                    description "Indicates the operational state of the MKA participant.";
+                                }
+
+                                leaf oper-offset {
+                                    type uint32 {
+                                        range "0|30|50";
+                                    }
+                                    units "octets";
+                                    description
+                                        "Indicates the operational encryption offset used for the datapath PDUs when
+                                         all parties in the CA have the SAK. This value is specified by the key
+                                         server.";
+                                }
+
+                                leaf oper-cipher {
+                                    type enumeration {
+                                        enum gcm-aes-128                    { value 1; }
+                                        enum gcm-aes-256                    { value 2; }
+                                        enum gcm-aes-xpn-128                { value 3; }
+                                        enum gcm-aes-xpn-256                { value 4; }
+                                    }
+                                    description
+                                        "Indicates the operational encryption algorithm used for datapath PDUs when all
+                                         parties in the CA have the SAK. This value is specified by the key server.";
+                                }
+
+                                leaf latest-sak-lpn {
+                                    type yang:counter64;
+                                    description "Indicates Lowest Acceptable Packet Number of the latest SAK.";
+                                }
+
+                                leaf previous-sak-lpn {
+                                    type yang:counter64;
+                                    description "Indicates Lowest Acceptable Packet Number of the previous SAK.";
+                                }
+
+                                leaf invalid-header {
+                                    type yang:counter64;
+                                    description "Indicates the number of MKPDUs received with an invalid MKA header.";
+                                }
+
+                            } // list mka
+
+                        } // list peer
+
+                    } // list encryption-group
+
+                } // container service-encryption
+
+            } // container mpls
+
             container security-termination-policies {
+                status obsolete;
                 description "Enter the security-termination-policies context";
 
                 list policy {
+                    status obsolete;
                     key "policy-name";
                     description "Enter the policy list instance";
 
                     leaf policy-name {
+                        status obsolete;
                         type types-sros:named-item;
                         description "ANYsec security termination policy name";
                     }
 
                     leaf terminating-label {
+                        status obsolete;
                         type types-sros:mpls-label-full-range;
                         description "Terminating label";
                     }
@@ -64,6 +959,7 @@ submodule nokia-state-anysec {
             } // container security-termination-policies
 
             container tunnel-encryption {
+                status obsolete;
                 description "Enter the tunnel-encryption context";
 
                 list security-termination-policy {
@@ -86,39 +982,47 @@ submodule nokia-state-anysec {
                 } // list security-termination-policy
 
                 list encryption-group {
+                    status obsolete;
                     key "group-name";
                     description "Enter the encryption-group list instance";
 
                     leaf group-name {
+                        status obsolete;
                         type types-sros:named-item;
                         description "ANYsec encryption group name";
                     }
 
                     leaf group-id {
+                        status obsolete;
                         type uint32;
                         description "Encryption group ID";
                     }
 
                     list peer {
+                        status obsolete;
                         key "peer-ip-address";
                         description "Enter the peer list instance";
 
                         leaf peer-ip-address {
+                            status obsolete;
                             type types-sros:ip-unicast-address;
                             description "Peer IP address";
                         }
 
                         leaf tunnel-id {
+                            status obsolete;
                             type types-sros:tunnel-id;
                             description "Peer tunnel ID";
                         }
 
                         leaf encryption-label {
+                            status obsolete;
                             type types-sros:mpls-label-full-range;
                             description "The label uniquely identifying packets sent from this peer";
                         }
 
                         leaf last-inconsistent-rx-sci {
+                            status obsolete;
                             type binary {
                                 length "8";
                             }
@@ -126,11 +1030,13 @@ submodule nokia-state-anysec {
                         }
 
                         leaf oper-state {
+                            status obsolete;
                             type types-sros:oper-state;
                             description "Peer operational state";
                         }
 
                         leaf oper-down-reason {
+                            status obsolete;
                             type enumeration {
                                 enum none                           { value 0; }
                                 enum peer-admin-down                { value 1; }
@@ -146,9 +1052,11 @@ submodule nokia-state-anysec {
                         }
 
                         container rx-sc {
+                            status obsolete;
                             description "Enter the rx-sc context";
 
                             leaf rx-sci {
+                                status obsolete;
                                 type binary {
                                     length "8";
                                 }
@@ -156,12 +1064,14 @@ submodule nokia-state-anysec {
                             }
 
                             leaf not-valid-packets {
+                                status obsolete;
                                 type yang:counter64;
                                 units "packets";
                                 description "Indicates the number of not valid packets received by this SC.";
                             }
 
                             leaf delayed-packets {
+                                status obsolete;
                                 type yang:counter64;
                                 units "packets";
                                 description
@@ -170,6 +1080,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf unchecked-packets {
+                                status obsolete;
                                 type yang:counter64;
                                 units "packets";
                                 description
@@ -178,12 +1089,14 @@ submodule nokia-state-anysec {
                             }
 
                             leaf ok-packets {
+                                status obsolete;
                                 type yang:counter64;
                                 units "packets";
                                 description "Indicates the number of OK packets received by this SC.";
                             }
 
                             leaf octets-decrypted {
+                                status obsolete;
                                 type yang:counter64;
                                 units "octets";
                                 description
@@ -194,9 +1107,11 @@ submodule nokia-state-anysec {
                         } // container rx-sc
 
                         container tx-sc {
+                            status obsolete;
                             description "Enter the tx-sc context";
 
                             leaf tx-sci {
+                                status obsolete;
                                 type binary {
                                     length "8";
                                 }
@@ -207,6 +1122,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf encrypted-packets {
+                                status obsolete;
                                 type yang:counter64;
                                 units "packets";
                                 description
@@ -215,6 +1131,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf octets-encrypted {
+                                status obsolete;
                                 type yang:counter64;
                                 units "octets";
                                 description
@@ -225,10 +1142,12 @@ submodule nokia-state-anysec {
                         } // container tx-sc
 
                         list mka {
+                            status obsolete;
                             key "ckn";
                             description "Enter the mka list instance";
 
                             leaf ckn {
+                                status obsolete;
                                 type binary {
                                     length "1..32";
                                 }
@@ -236,6 +1155,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf member-id {
+                                status obsolete;
                                 type binary {
                                     length "12";
                                 }
@@ -243,6 +1163,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf outbound-sci {
+                                status obsolete;
                                 type binary {
                                     length "8";
                                 }
@@ -252,11 +1173,13 @@ submodule nokia-state-anysec {
                             }
 
                             leaf message-count {
+                                status obsolete;
                                 type uint32;
                                 description "Indicates the current count of MKA messages that is attached to MKA PDUs.";
                             }
 
                             leaf key-number {
+                                status obsolete;
                                 type uint32;
                                 description
                                     "Indicates the number of the currently assigned CAK. When a new CAK is
@@ -264,6 +1187,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf key-server {
+                                status obsolete;
                                 type boolean;
                                 description
                                     "Indicates whether this server is the highest priority server in the peer
@@ -271,6 +1195,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf latest-sak-an {
+                                status obsolete;
                                 type uint32;
                                 description
                                     "Indicates the Association Number (AN) of the latest Secure Association Key
@@ -279,6 +1204,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf previous-sak-an {
+                                status obsolete;
                                 type uint32;
                                 description
                                     "Indicates the AN of the previous SAK. This number is concatenated with an SCI
@@ -286,6 +1212,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf latest-sak-ki {
+                                status obsolete;
                                 type binary {
                                     length "16";
                                 }
@@ -295,6 +1222,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf previous-sak-ki {
+                                status obsolete;
                                 type binary {
                                     length "16";
                                 }
@@ -304,6 +1232,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf peers-removed {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of peers removed from the live/potential peer list due to
@@ -311,6 +1240,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf ckn-not-found {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received with a CKN that does not match the CA
@@ -318,6 +1248,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf new-live-peer {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of validated peers that have been added to the live peer
@@ -325,26 +1256,31 @@ submodule nokia-state-anysec {
                             }
 
                             leaf sak-generated {
+                                status obsolete;
                                 type yang:counter64;
                                 description "Indicates the number of SAKs generated by this MKA instance.";
                             }
 
                             leaf sak-installed-transmitting {
+                                status obsolete;
                                 type yang:counter64;
                                 description "Indicates the number of SAKs installed for transmitting.";
                             }
 
                             leaf sak-installed-receiving {
+                                status obsolete;
                                 type yang:counter64;
                                 description "Indicates the number of SAKs installed for receiving.";
                             }
 
                             leaf pdu-too-small {
+                                status obsolete;
                                 type yang:counter64;
                                 description "Indicates the number of MKPDUs received that are less than 32 octets.";
                             }
 
                             leaf pdu-too-big {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received where the EAPOL header indicates a
@@ -352,6 +1288,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf pdu-not-quad-size {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received with a size that is not a multiple of
@@ -359,6 +1296,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf pdu-invalid-number {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received out of order as indicated by the
@@ -366,6 +1304,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf parameter-size-invalid {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received which contain a parameter set body
@@ -373,6 +1312,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf liveness-check-fail {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received which contain an MN that is not
@@ -380,6 +1320,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf parameter-not-quad-size {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received which contain a parameter set that is
@@ -387,6 +1328,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf unsupported-algorithm-agility {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received which contain an unsupported Algorithm
@@ -394,6 +1336,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf invalid-ckn-length {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received which contain a CAK name that exceeds
@@ -401,6 +1344,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf icv-check-failed {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received which contain an ICV value that does
@@ -408,6 +1352,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf peer-same-mi {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received which contain a peerlist with an MI
@@ -415,6 +1360,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf sak-non-live-peer {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of SAKs received from a peer that is not a member of the
@@ -422,6 +1368,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf sak-no-key-server {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of SAKs received from an MKA participant that has not
@@ -429,6 +1376,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf sak-decrypt-fail {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of AES Key Wrap SAK decryption failures that have
@@ -436,6 +1384,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf sak-encrypt-fail {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of AES Key Wrap SAK encryption failures that have
@@ -443,16 +1392,19 @@ submodule nokia-state-anysec {
                             }
 
                             leaf key-number-invalid {
+                                status obsolete;
                                 type yang:counter64;
                                 description "Indicates the number of SAKs received with an invalid Key Number.";
                             }
 
                             leaf sak-install-fail {
+                                status obsolete;
                                 type yang:counter64;
                                 description "Indicates the number of SecY SAK installation failures that have occurred.";
                             }
 
                             leaf cak-info-missing {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of times internal CAK data is not available for the
@@ -460,6 +1412,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf max-peers-set-zero {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of SecY SAK installations that have failed due to the max
@@ -467,11 +1420,13 @@ submodule nokia-state-anysec {
                             }
 
                             leaf oper-state {
+                                status obsolete;
                                 type types-sros:oper-state;
                                 description "Indicates the operational state of the MKA participant.";
                             }
 
                             leaf oper-offset {
+                                status obsolete;
                                 type uint32 {
                                     range "0|30|50";
                                 }
@@ -483,6 +1438,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf oper-cipher {
+                                status obsolete;
                                 type enumeration {
                                     enum gcm-aes-128                    { value 1; }
                                     enum gcm-aes-256                    { value 2; }
@@ -495,16 +1451,19 @@ submodule nokia-state-anysec {
                             }
 
                             leaf latest-sak-lpn {
+                                status obsolete;
                                 type yang:counter64;
                                 description "Indicates Lowest Acceptable Packet Number of the latest SAK.";
                             }
 
                             leaf previous-sak-lpn {
+                                status obsolete;
                                 type yang:counter64;
                                 description "Indicates Lowest Acceptable Packet Number of the previous SAK.";
                             }
 
                             leaf invalid-header {
+                                status obsolete;
                                 type yang:counter64;
                                 description "Indicates the number of MKPDUs received with an invalid MKA header.";
                             }
@@ -518,37 +1477,45 @@ submodule nokia-state-anysec {
             } // container tunnel-encryption
 
             container service-encryption {
+                status obsolete;
                 description "Enter the service-encryption context";
 
                 list encryption-group {
+                    status obsolete;
                     key "group-name";
                     description "Enter the encryption-group list instance";
 
                     leaf group-name {
+                        status obsolete;
                         type types-sros:named-item;
                         description "ANYsec encryption group name";
                     }
 
                     leaf group-id {
+                        status obsolete;
                         type uint32;
                         description "Encryption group ID";
                     }
 
                     list peer {
+                        status obsolete;
                         key "peer-ip-address";
                         description "Enter the peer list instance";
 
                         leaf peer-ip-address {
+                            status obsolete;
                             type types-sros:ip-unicast-address;
                             description "Peer IP address";
                         }
 
                         leaf encryption-label {
+                            status obsolete;
                             type types-sros:mpls-label-full-range;
                             description "The label uniquely identifying packets sent from this peer";
                         }
 
                         leaf last-inconsistent-rx-sci {
+                            status obsolete;
                             type binary {
                                 length "8";
                             }
@@ -556,11 +1523,13 @@ submodule nokia-state-anysec {
                         }
 
                         leaf oper-state {
+                            status obsolete;
                             type types-sros:oper-state;
                             description "Peer operational state";
                         }
 
                         leaf oper-down-reason {
+                            status obsolete;
                             type enumeration {
                                 enum none                           { value 0; }
                                 enum peer-admin-down                { value 1; }
@@ -576,9 +1545,11 @@ submodule nokia-state-anysec {
                         }
 
                         container rx-sc {
+                            status obsolete;
                             description "Enter the rx-sc context";
 
                             leaf rx-sci {
+                                status obsolete;
                                 type binary {
                                     length "8";
                                 }
@@ -586,12 +1557,14 @@ submodule nokia-state-anysec {
                             }
 
                             leaf not-valid-packets {
+                                status obsolete;
                                 type yang:counter64;
                                 units "packets";
                                 description "Indicates the number of not valid packets received by this SC.";
                             }
 
                             leaf delayed-packets {
+                                status obsolete;
                                 type yang:counter64;
                                 units "packets";
                                 description
@@ -600,6 +1573,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf unchecked-packets {
+                                status obsolete;
                                 type yang:counter64;
                                 units "packets";
                                 description
@@ -608,12 +1582,14 @@ submodule nokia-state-anysec {
                             }
 
                             leaf ok-packets {
+                                status obsolete;
                                 type yang:counter64;
                                 units "packets";
                                 description "Indicates the number of OK packets received by this SC.";
                             }
 
                             leaf octets-decrypted {
+                                status obsolete;
                                 type yang:counter64;
                                 units "octets";
                                 description
@@ -624,9 +1600,11 @@ submodule nokia-state-anysec {
                         } // container rx-sc
 
                         container tx-sc {
+                            status obsolete;
                             description "Enter the tx-sc context";
 
                             leaf tx-sci {
+                                status obsolete;
                                 type binary {
                                     length "8";
                                 }
@@ -637,6 +1615,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf encrypted-packets {
+                                status obsolete;
                                 type yang:counter64;
                                 units "packets";
                                 description
@@ -645,6 +1624,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf octets-encrypted {
+                                status obsolete;
                                 type yang:counter64;
                                 units "octets";
                                 description
@@ -655,10 +1635,12 @@ submodule nokia-state-anysec {
                         } // container tx-sc
 
                         list mka {
+                            status obsolete;
                             key "ckn";
                             description "Enter the mka list instance";
 
                             leaf ckn {
+                                status obsolete;
                                 type binary {
                                     length "1..32";
                                 }
@@ -666,6 +1648,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf member-id {
+                                status obsolete;
                                 type binary {
                                     length "12";
                                 }
@@ -673,6 +1656,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf outbound-sci {
+                                status obsolete;
                                 type binary {
                                     length "8";
                                 }
@@ -682,11 +1666,13 @@ submodule nokia-state-anysec {
                             }
 
                             leaf message-count {
+                                status obsolete;
                                 type uint32;
                                 description "Indicates the current count of MKA messages that is attached to MKA PDUs.";
                             }
 
                             leaf key-number {
+                                status obsolete;
                                 type uint32;
                                 description
                                     "Indicates the number of the currently assigned CAK. When a new CAK is
@@ -694,6 +1680,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf key-server {
+                                status obsolete;
                                 type boolean;
                                 description
                                     "Indicates whether this server is the highest priority server in the peer
@@ -701,6 +1688,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf latest-sak-an {
+                                status obsolete;
                                 type uint32;
                                 description
                                     "Indicates the Association Number (AN) of the latest Secure Association Key
@@ -709,6 +1697,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf previous-sak-an {
+                                status obsolete;
                                 type uint32;
                                 description
                                     "Indicates the AN of the previous SAK. This number is concatenated with an SCI
@@ -716,6 +1705,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf latest-sak-ki {
+                                status obsolete;
                                 type binary {
                                     length "16";
                                 }
@@ -725,6 +1715,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf previous-sak-ki {
+                                status obsolete;
                                 type binary {
                                     length "16";
                                 }
@@ -734,6 +1725,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf peers-removed {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of peers removed from the live/potential peer list due to
@@ -741,6 +1733,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf ckn-not-found {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received with a CKN that does not match the CA
@@ -748,6 +1741,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf new-live-peer {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of validated peers that have been added to the live peer
@@ -755,26 +1749,31 @@ submodule nokia-state-anysec {
                             }
 
                             leaf sak-generated {
+                                status obsolete;
                                 type yang:counter64;
                                 description "Indicates the number of SAKs generated by this MKA instance.";
                             }
 
                             leaf sak-installed-transmitting {
+                                status obsolete;
                                 type yang:counter64;
                                 description "Indicates the number of SAKs installed for transmitting.";
                             }
 
                             leaf sak-installed-receiving {
+                                status obsolete;
                                 type yang:counter64;
                                 description "Indicates the number of SAKs installed for receiving.";
                             }
 
                             leaf pdu-too-small {
+                                status obsolete;
                                 type yang:counter64;
                                 description "Indicates the number of MKPDUs received that are less than 32 octets.";
                             }
 
                             leaf pdu-too-big {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received where the EAPOL header indicates a
@@ -782,6 +1781,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf pdu-not-quad-size {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received with a size that is not a multiple of
@@ -789,6 +1789,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf pdu-invalid-number {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received out of order as indicated by the
@@ -796,6 +1797,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf parameter-size-invalid {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received which contain a parameter set body
@@ -803,6 +1805,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf liveness-check-fail {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received which contain an MN that is not
@@ -810,6 +1813,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf parameter-not-quad-size {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received which contain a parameter set that is
@@ -817,6 +1821,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf unsupported-algorithm-agility {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received which contain an unsupported Algorithm
@@ -824,6 +1829,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf invalid-ckn-length {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received which contain a CAK name that exceeds
@@ -831,6 +1837,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf icv-check-failed {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received which contain an ICV value that does
@@ -838,6 +1845,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf peer-same-mi {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of MKPDUs received which contain a peerlist with an MI
@@ -845,6 +1853,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf sak-non-live-peer {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of SAKs received from a peer that is not a member of the
@@ -852,6 +1861,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf sak-no-key-server {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of SAKs received from an MKA participant that has not
@@ -859,6 +1869,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf sak-decrypt-fail {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of AES Key Wrap SAK decryption failures that have
@@ -866,6 +1877,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf sak-encrypt-fail {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of AES Key Wrap SAK encryption failures that have
@@ -873,16 +1885,19 @@ submodule nokia-state-anysec {
                             }
 
                             leaf key-number-invalid {
+                                status obsolete;
                                 type yang:counter64;
                                 description "Indicates the number of SAKs received with an invalid Key Number.";
                             }
 
                             leaf sak-install-fail {
+                                status obsolete;
                                 type yang:counter64;
                                 description "Indicates the number of SecY SAK installation failures that have occurred.";
                             }
 
                             leaf cak-info-missing {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of times internal CAK data is not available for the
@@ -890,6 +1905,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf max-peers-set-zero {
+                                status obsolete;
                                 type yang:counter64;
                                 description
                                     "Indicates the number of SecY SAK installations that have failed due to the max
@@ -897,11 +1913,13 @@ submodule nokia-state-anysec {
                             }
 
                             leaf oper-state {
+                                status obsolete;
                                 type types-sros:oper-state;
                                 description "Indicates the operational state of the MKA participant.";
                             }
 
                             leaf oper-offset {
+                                status obsolete;
                                 type uint32 {
                                     range "0|30|50";
                                 }
@@ -913,6 +1931,7 @@ submodule nokia-state-anysec {
                             }
 
                             leaf oper-cipher {
+                                status obsolete;
                                 type enumeration {
                                     enum gcm-aes-128                    { value 1; }
                                     enum gcm-aes-256                    { value 2; }
@@ -925,16 +1944,19 @@ submodule nokia-state-anysec {
                             }
 
                             leaf latest-sak-lpn {
+                                status obsolete;
                                 type yang:counter64;
                                 description "Indicates Lowest Acceptable Packet Number of the latest SAK.";
                             }
 
                             leaf previous-sak-lpn {
+                                status obsolete;
                                 type yang:counter64;
                                 description "Indicates Lowest Acceptable Packet Number of the previous SAK.";
                             }
 
                             leaf invalid-header {
+                                status obsolete;
                                 type yang:counter64;
                                 description "Indicates the number of MKPDUs received with an invalid MKA header.";
                             }

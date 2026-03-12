@@ -19,7 +19,7 @@ submodule nokia-conf-dms {
     include nokia-conf-system-security;
     include nokia-conf-system-security-tls;
 
-    sros-ext:sros-major-release "rel25";
+    sros-ext:sros-major-release "rel26";
     organization "Nokia";
     contact
         "Nokia SR OS Support
@@ -42,11 +42,16 @@ submodule nokia-conf-dms {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2026-02-11";
+    revision "2026-03-11";
 
     grouping conf-dms-defender-mitigation-system {
         container defender-mitigation-system {
             description "Enter the defender-mitigation-system context";
+
+            leaf deployment-model {
+                type types-dms:dms-deployment-model;
+                description "Network deployment model";
+            }
 
             leaf-list apply-groups {
                 type leafref {
@@ -287,6 +292,13 @@ submodule nokia-conf-dms {
                     description "Maximum number of tracked flows for the PO";
                 }
 
+                leaf tracked-session-limit {
+                    type uint32 {
+                        range "1..4294967295";
+                    }
+                    description "Maximum number of inbound tracked sessions";
+                }
+
                 leaf tracked-source-limit {
                     type uint32 {
                         range "1..4294967295";
@@ -341,8 +353,25 @@ submodule nokia-conf-dms {
 
                 } // container dynamic-block
 
+                container outbound {
+                    description "Enter the outbound context";
+
+                    leaf tracked-source-limit {
+                        type uint32 {
+                            range "1..4294967295";
+                        }
+                        description "Maximum number of outbound tracked sources";
+                    }
+
+                } // container outbound
+
                 container traffic {
                     description "Enter the traffic context";
+
+                    leaf vlan {
+                        type types-sros:vlan-id;
+                        description "VLAN number for inline deployment model";
+                    }
 
                     container routed {
                         description "Enter the routed context";
@@ -379,6 +408,17 @@ submodule nokia-conf-dms {
 
                     } // container routed
 
+                    container bridged {
+                        description "Enter the bridged context";
+
+                        leaf vpls-instance {
+                            type leafref {
+                                path "../../../../../service/vpls/service-name";
+                            }
+                            description "VPLS instance ID or name";
+                        }
+
+                    } // container bridged
 
                 } // container traffic
 
@@ -922,6 +962,21 @@ submodule nokia-conf-dms {
                 container protocol-handlers {
                     description "Enter the protocol-handlers context";
 
+                    leaf ip-fragment-control {
+                        type enumeration {
+                            enum discard {
+                                value 0;
+                                description "Drop all IPv4 fragments";
+                            }
+                            enum permit {
+                                value 1;
+                                description "Allow IPv4 fragments to pass for further processing";
+                            }
+                        }
+                        default "discard";
+                        description "Processing behavior for IPv4 fragments";
+                    }
+
                     container udp {
                         description "Enter the udp context";
 
@@ -938,6 +993,11 @@ submodule nokia-conf-dms {
 
                     container tcp {
                         description "Enter the tcp context";
+
+                        leaf ack-tolerance {
+                            type types-dms:protocol-tolerance;
+                            description "Tolerance for invalid TCP ACK";
+                        }
 
                         leaf dynamic-block {
                             type boolean;
@@ -997,6 +1057,7 @@ submodule nokia-conf-dms {
                         }
 
                     } // container other
+
 
                     list dns-validate {
                         key "name";
@@ -1414,6 +1475,11 @@ submodule nokia-conf-dms {
                             description "Source event-rate policer used for HTTP requests";
                         }
 
+                        leaf tolerance {
+                            type types-dms:protocol-tolerance;
+                            description "Tolerance for unsupported HTTP protocols";
+                        }
+
                         leaf-list apply-groups {
                             type leafref {
                                 path "../../../../../groups/group/name";
@@ -1728,6 +1794,11 @@ submodule nokia-conf-dms {
                                 path "../../tls-client-filter/tls-client-filter-name";
                             }
                             description "TLS client filter used to filter TLS client Hellos";
+                        }
+
+                        leaf tolerance {
+                            type types-dms:protocol-tolerance;
+                            description "Tolerance for unsupported TLS protocols";
                         }
 
                         leaf-list apply-groups {

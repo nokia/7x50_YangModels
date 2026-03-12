@@ -37,13 +37,14 @@ submodule nokia-state-svc-vprn {
     include nokia-state-svc-vprn-ospf;
     include nokia-state-svc-vprn-ospf3;
     include nokia-state-svc-vprn-radius;
+    include nokia-state-svc-vprn-rib-api;
     include nokia-state-svc-vprn-rip;
     include nokia-state-svc-vprn-ripng;
     include nokia-state-svc-vprn-sub-if;
     include nokia-state-svc-vprn-twamp-light;
     include nokia-state-svc-vprn-vdo-if;
 
-    sros-ext:sros-major-release "rel25";
+    sros-ext:sros-major-release "rel26";
     organization "Nokia";
     contact
         "Nokia SR OS Support
@@ -66,7 +67,7 @@ submodule nokia-state-svc-vprn {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2026-02-11";
+    revision "2026-03-11";
 
     grouping state-svc-vprn {
         list vprn {
@@ -136,6 +137,7 @@ submodule nokia-state-svc-vprn {
                 description "Enter the nat context";
 
                 leaf outside-dnat-only-routes-counter {
+                    status obsolete;
                     type yang:gauge32;
                     description
                         "the actual number of routes used to direct
@@ -957,12 +959,154 @@ submodule nokia-state-svc-vprn {
 
                         } // container nat64
 
+                        container nat66 {
+                            description "Enter the nat66 context";
+
+                            list subscriber {
+                                key "id nat-policy";
+                                description "Enter the subscriber list instance";
+
+                                leaf id {
+                                    type uint32;
+                                    description "Identifier of this subscriber";
+                                }
+
+                                leaf nat-policy {
+                                    type types-sros:named-item;
+                                    description "NAT Policy associated with this subscriber";
+                                }
+
+                                leaf name {
+                                    type types-sros:named-item;
+                                    description
+                                        "Subscriber's identification string.
+
+                                         A string enclosed by square brackets [] indicates an automatically system-generated name";
+                                }
+
+                                leaf type {
+                                    type types-nat:sub-type;
+                                    description "Type of this subscriber";
+                                }
+
+                                leaf inside-ip-prefix {
+                                    type types-sros:ip-prefix;
+                                    description "Inside IP prefix";
+                                }
+
+                                leaf nat-group {
+                                    type uint8;
+                                    description "Identifier of the NAT Integrated Service Adaptor group";
+                                }
+
+                                leaf group-member {
+                                    type types-nat:bb-group-member;
+                                    description "Identifier of the NAT group member";
+                                }
+
+                                container statistics {
+                                    description "Enter the statistics context";
+
+                                    container protocol {
+                                        description "Enter the protocol context";
+
+                                        container icmp {
+                                            description "Enter the icmp context";
+
+                                            leaf port-usage {
+                                                type types-sros:percent;
+                                                description "ICMP port usage of this NAT subscriber and policy";
+                                            }
+
+                                            leaf port-usage-high {
+                                                type boolean;
+                                                description "ICMP port usage has reached configured limit";
+                                            }
+
+                                        } // container icmp
+
+                                        container tcp {
+                                            description "Enter the tcp context";
+
+                                            leaf port-usage {
+                                                type types-sros:percent;
+                                                description "TCP port usage of this NAT subscriber and policy";
+                                            }
+
+                                            leaf port-usage-high {
+                                                type boolean;
+                                                description "TCP port usage has reached configured limit";
+                                            }
+
+                                        } // container tcp
+
+                                        container udp {
+                                            description "Enter the udp context";
+
+                                            leaf port-usage {
+                                                type types-sros:percent;
+                                                description "UDP port usage of this NAT subscriber and policy";
+                                            }
+
+                                            leaf port-usage-high {
+                                                type boolean;
+                                                description "UDP port usage has reached configured limit";
+                                            }
+
+                                        } // container udp
+
+                                    } // container protocol
+
+                                    container sessions {
+                                        description "Enter the sessions context";
+
+                                        leaf usage {
+                                            type types-sros:percent;
+                                            description "Session usage of this NAT subscriber and policy";
+                                        }
+
+                                        leaf usage-high {
+                                            type boolean;
+                                            description "Session usage has reached configured limit";
+                                        }
+
+                                        leaf active {
+                                            type uint32;
+                                            description "Number of active sessions of this NAT subscriber and policy";
+                                        }
+
+                                        leaf reserved {
+                                            type uint32;
+                                            description "Number of active prioritized sessions of this subscriber and policy";
+                                        }
+
+                                        leaf peak {
+                                            type uint32;
+                                            description "Maximum number of sessions that were active together up to this point in time";
+                                        }
+
+                                    } // container sessions
+
+                                } // container statistics
+
+                            } // list subscriber
+
+                        } // container nat66
+
                     } // container large-scale
 
                 } // container inside
 
                 container outside {
                     description "Enter the outside context";
+
+                    leaf routes-counter {
+                        type yang:gauge32;
+                        description
+                            "the actual number of routes used to direct
+                             downstream traffic from this outside virtual router instance
+                             to a NAT ISA card in Destination NAT and Firewall operations";
+                    }
 
                     list pool {
                         key "name";
@@ -18481,6 +18625,7 @@ submodule nokia-state-svc-vprn {
                                     enum dynamic                        { value 2; }
                                     enum managed                        { value 100; }
                                     enum evpn                           { value 101; }
+                                    enum evpn-local-es                  { value 102; }
                                 }
                                 description "The type of mapping.";
                             }
@@ -18524,6 +18669,7 @@ submodule nokia-state-svc-vprn {
                                     enum dynamic                        { value 2; }
                                     enum managed                        { value 100; }
                                     enum evpn                           { value 101; }
+                                    enum evpn-local-es                  { value 102; }
                                 }
                                 description "The type of mapping.";
                             }
@@ -19210,6 +19356,8 @@ submodule nokia-state-svc-vprn {
                             bit vccv-bfd-down                  { position 32; }
                             bit stitching-svc-pw-fault         { position 33; }
                             bit out-of-anysec-resource         { position 34; }
+                            bit anysec-service-and-tunnel-config-conflict { position 35; }
+                            bit anysec-group-or-peer-oper-down { position 36; }
                         }
                         description
                             "This object indicates all the conditions that affect the
@@ -27664,6 +27812,7 @@ submodule nokia-state-svc-vprn {
                                     enum dynamic                        { value 2; }
                                     enum managed                        { value 100; }
                                     enum evpn                           { value 101; }
+                                    enum evpn-local-es                  { value 102; }
                                 }
                                 description "The type of mapping.";
                             }
@@ -28821,6 +28970,7 @@ submodule nokia-state-svc-vprn {
                                     enum dynamic                        { value 2; }
                                     enum managed                        { value 100; }
                                     enum evpn                           { value 101; }
+                                    enum evpn-local-es                  { value 102; }
                                 }
                                 description "The type of mapping.";
                             }
@@ -29026,6 +29176,8 @@ submodule nokia-state-svc-vprn {
                             bit vccv-bfd-down                  { position 32; }
                             bit stitching-svc-pw-fault         { position 33; }
                             bit out-of-anysec-resource         { position 34; }
+                            bit anysec-service-and-tunnel-config-conflict { position 35; }
+                            bit anysec-group-or-peer-oper-down { position 36; }
                         }
                         description
                             "This object indicates all the conditions that affect the
@@ -30431,6 +30583,8 @@ submodule nokia-state-svc-vprn {
                         bit vccv-bfd-down                  { position 32; }
                         bit stitching-svc-pw-fault         { position 33; }
                         bit out-of-anysec-resource         { position 34; }
+                        bit anysec-service-and-tunnel-config-conflict { position 35; }
+                        bit anysec-group-or-peer-oper-down { position 36; }
                     }
                     description
                         "This object indicates all the conditions that affect the
@@ -30685,6 +30839,64 @@ submodule nokia-state-svc-vprn {
 
                     } // container blackhole
 
+                    container follow {
+                        description "Enter the follow context";
+
+                        leaf last-enabled-time {
+                            type types-sros:date-time;
+                            description
+                                "Indicates the time when 'status' was last set to active
+                                 to allow IP forwarding on this static route entry.";
+                        }
+
+                        leaf status {
+                            type enumeration {
+                                enum active                         { value 1; }
+                                enum inactive                       { value 2; }
+                            }
+                            description "Indicates whether or not this route entry is active in the system.";
+                        }
+
+                        leaf egress-interface-index {
+                            type int32 {
+                                range "0..max";
+                            }
+                            description
+                                "Indicates the outgoing interface index for this route as computed by the
+                                 static-route module.";
+                        }
+
+                        leaf creation-origin {
+                            type types-sros:creation-origin;
+                            description "Indicates the mechanism used to create this entry.";
+                        }
+
+                        leaf dynamic-bgp-next-hop {
+                            type types-sros:ip-address;
+                            description
+                                "This is the next-hop of the BGP prefix that matches the static-route prefix in
+                                 a blackhole static-route. The static-route is programmed in the route-table
+                                 with this next-hop, if present.";
+                        }
+
+                        leaf hold-time-left {
+                            type uint32;
+                            description
+                                "If a static-route hold timer is configured and this is non-zero, it indicates
+                                 the static-route is being held from becoming active and is the remaining time
+                                 in seconds for static route to become active.";
+                        }
+
+                        leaf backup-status {
+                            type enumeration {
+                                enum inactive                       { value 1; }
+                                enum active-as-backup               { value 2; }
+                                enum active-as-primary              { value 3; }
+                            }
+                            description "Indicates the backup route status of the static route entry.";
+                        }
+
+                    } // container follow
 
                     container grt {
                         description "Enter the grt context";
@@ -32162,6 +32374,7 @@ submodule nokia-state-svc-vprn {
                             leaf flags {
                                 type bits {
                                     bit sticky-flag                    { position 0; }
+                                    bit follow-resolution              { position 1; }
                                 }
                                 description
                                     "Bit flags that indicate different properties of this route.
@@ -33044,6 +33257,7 @@ submodule nokia-state-svc-vprn {
                             leaf flags {
                                 type bits {
                                     bit sticky-flag                    { position 0; }
+                                    bit follow-resolution              { position 1; }
                                 }
                                 description
                                     "Bit flags that indicate different properties of this route.
@@ -33557,6 +33771,7 @@ submodule nokia-state-svc-vprn {
                             leaf flags {
                                 type bits {
                                     bit sticky-flag                    { position 0; }
+                                    bit follow-resolution              { position 1; }
                                 }
                                 description
                                     "Bit flags that indicate different properties of this route.
@@ -34026,6 +34241,7 @@ submodule nokia-state-svc-vprn {
                             leaf flags {
                                 type bits {
                                     bit sticky-flag                    { position 0; }
+                                    bit follow-resolution              { position 1; }
                                 }
                                 description
                                     "Bit flags that indicate different properties of this route.
@@ -35126,6 +35342,112 @@ submodule nokia-state-svc-vprn {
 
             } // container subscriber-management
 
+            list ip-transport {
+                key "ipt-id";
+                description "Enter the ip-transport list instance";
+
+                leaf ipt-id {
+                    type types-sros:port;
+                    description "IP Transport identifier.";
+                }
+
+                leaf num-remote-hosts {
+                    type uint32;
+                    description "Number of remote hosts under this IP transport.";
+                }
+
+                leaf oper-state {
+                    type types-sros:oper-state;
+                    description "Indicates the current operational status of this IP transport.";
+                }
+
+                leaf oper-state-last-changed {
+                    type yang:date-and-time;
+                    description
+                        "Indicates the date and time when the operational status of
+                         the IP transport changed state.";
+                }
+
+                leaf oper-flags {
+                    type bits {
+                        bit ipt-admin-down                 { position 0; }
+                        bit svc-admin-down                 { position 1; }
+                        bit port-oper-down                 { position 2; }
+                        bit no-if-address                  { position 3; }
+                        bit if-oper-down                   { position 4; }
+                        bit port-num-in-use                { position 5; }
+                        bit port-num-reserved              { position 6; }
+                    }
+                    description
+                        "Indicates the conditions which currently effect operational status
+                         of this IP transport.
+
+                         The bit values are:
+                            ipt-admin-down     (0) - IP Transport is administratively down
+                            svc-admin-down     (1) - Service is administratively down
+                            port-oper-down     (2) - Port is operationally down
+                            no-if-address      (3) - no interface address within the virtual
+                                                     router matches local-host/ip-address
+                            if-oper-down       (4) - matching interface is operationally down
+                            port-num-in-use    (5) - port number already in use in system
+                            port-num-reserved  (6) - port number detected as reserved by system";
+                }
+
+                list remote-host {
+                    key "remote-host-id";
+                    description "Enter the remote-host list instance";
+
+                    leaf remote-host-id {
+                        type uint32 {
+                            range "1..2147483647";
+                        }
+                        description "remote host identifer";
+                    }
+
+                    leaf session-state {
+                        type enumeration {
+                            enum invalid                        { value 0; }
+                            enum ready                          { value 1; }
+                            enum connecting                     { value 2; }
+                            enum connected                      { value 3; }
+                        }
+                        description "Indicates the session state of this remote host.";
+                    }
+
+                    leaf session-up-time {
+                        type uint32;
+                        units "seconds";
+                        description
+                            "Indicates the time elapsed in seconds when the session-state changed
+                             to connected.";
+                    }
+
+                    leaf last-connection-information {
+                        type string {
+                            length "0..32";
+                        }
+                        description "Indicates contextual information about the last connection.";
+                    }
+
+                    leaf check-tcp-result {
+                        type enumeration {
+                            enum unknown                        { value 1; }
+                            enum pass                           { value 2; }
+                            enum fail                           { value 3; }
+                        }
+                        description "Indicates the result of the check-tcp test.";
+                    }
+
+                    leaf check-tcp-information {
+                        type string {
+                            length "0..32";
+                        }
+                        description "Indicates extra information for the result of the check-tcp test.";
+                    }
+
+                } // list remote-host
+
+            } // list ip-transport
 
             uses state-svc-vprn-dhcp-server;
             uses state-svc-vprn-isis;
@@ -35133,6 +35455,7 @@ submodule nokia-state-svc-vprn {
             uses state-svc-vprn-ospf;
             uses state-svc-vprn-ospf3;
             uses state-svc-vprn-radius;
+            uses state-svc-vprn-rib-api;
             uses state-svc-vprn-rip;
             uses state-svc-vprn-ripng;
             uses state-svc-vprn-sub-if-subscriber-interface;
