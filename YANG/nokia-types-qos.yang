@@ -31,7 +31,7 @@ module nokia-types-qos {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2026-03-11";
+    revision "2026-07-08";
 
     typedef bytes {
         type int32;
@@ -57,7 +57,7 @@ module nokia-types-qos {
         type string {
             length "1..32";
             pattern "(be|l2|af|l1|h2|ef|h1|nc)(\\.[a-zA-Z0-9\\s\\p{P}]{1,29})?" {
-                error-message "Invalid Forwarding Class (FC) name";
+                error-message "'sap-ingress-fc-name' must be one of be|l2|af|l1|h2|ef|h1|nc with optional .sub-name (e.g. be or ef.my-sub)";
             }
         }
         description
@@ -72,7 +72,7 @@ module nokia-types-qos {
         type string {
             length "1..64";
             pattern "(.*\\S.*)|()" {
-                error-message "The given string must not be all spaces.";
+                error-message "'qos-policy-name' must contain at least one non-space character";
             }
         }
         description "The policy name assigned to this QoS policy.";
@@ -82,7 +82,7 @@ module nokia-types-qos {
         type string {
             length "1..64";
             pattern "(.*\\S.*)|()" {
-                error-message "The given string must not be all spaces.";
+                error-message "'fp-resource-policy-name' must contain at least one non-space character";
             }
         }
         description "The policy name assigned to this QoS policy.";
@@ -92,7 +92,7 @@ module nokia-types-qos {
         type string {
             length "1..64";
             pattern "(.*\\S.*)|()" {
-                error-message "The given string must not be all spaces.";
+                error-message "'network-policy-name' must contain at least one non-space character";
             }
         }
         description "The policy name assigned to this QoS policy.";
@@ -112,18 +112,18 @@ module nokia-types-qos {
         description
             "The identification number of QoS policy. Any value greater than 65535
              indicates the policy was created by the system.
-                         
+
              The format is:
                 +--------------------------------+
                 |<----C-----><-B><------A------->|
                 +--------------------------------+
                 31                               0
-                         
+
              where:
               A (16 bits) is the base policy identifier.
               B (4 bits) is the 'policy type'.
               C (12 bits) is the auxiliary identifier.
-                         
+
              When policy type = 0 (0000b), the acceptable range for base policy
                                           identifier is 1..65535. This is the user
                                           configured values.
@@ -143,8 +143,14 @@ module nokia-types-qos {
 
     typedef item-scope {
         type enumeration {
-            enum exclusive                      { value 1; }
-            enum template                       { value 2; }
+            enum exclusive {
+                value 1;
+                description "Allow policy to be assigned to only one port";
+            }
+            enum template {
+                value 2;
+                description "Allow policy to be assigned to multiple ports";
+            }
         }
         description
             "Determines some aspects of an item's behavior regarding creation and use,
@@ -236,9 +242,9 @@ module nokia-types-qos {
         }
         description
             "Specifies the priority that this queue should be assigned by the hardware
-             level schedulers. 
-                         
-             This attribute is associated with the queue at the time of creation and 
+             level schedulers.
+
+             This attribute is associated with the queue at the time of creation and
              cannot be modified thereafter.";
     }
 
@@ -844,6 +850,14 @@ module nokia-types-qos {
         description "Committed Information Rate for an ISA policer";
     }
 
+    typedef isa-policer-burst-size {
+        type kilobytes {
+            range "0..131071";
+        }
+        units "kilobytes";
+        description "Burst size for an ISA policer";
+    }
+
     typedef burst-limit-override {
         type union {
             type bytes {
@@ -866,7 +880,7 @@ module nokia-types-qos {
     typedef burst-size-override {
         type union {
             type kilobytes {
-                range "0..1048576";
+                range "0..2097151";
             }
             type enumeration {
                 enum auto                           { value -1; }
@@ -1720,7 +1734,7 @@ module nokia-types-qos {
     typedef vlan-qos-burst-limit {
         type union {
             type kilobytes {
-                range "2|8";
+                range "2|8|10";
             }
             type enumeration {
                 enum auto                           { value -1; }
@@ -1766,10 +1780,33 @@ module nokia-types-qos {
         description "The policer identifier for pre-classifier policy policer.";
     }
 
-    typedef pre-classifier-policer-pir-rate-maximum {
+    typedef pre-classifier-policer-burst-percent {
+        type int32 {
+            range "0..100";
+        }
+        default "100";
+        description
+            "The percentage of policer buffer.
+             The value of 'default' means that the actual value is derived
+             from the corresponding buffer policy's default value.";
+    }
+
+    typedef queue-burst-size-ovr {
+        type union {
+            type bytes {
+                range "0..2147482624";
+            }
+            type enumeration {
+                enum auto                           { value -1; }
+            }
+        }
+        description "The amount of buffer space (in bytes) assigned to a queue.";
+    }
+
+    typedef port-queue-plcy-pir-rate-maximum {
         type union {
             type int64 {
-                range "1..2500000000";
+                range "1..800000000";
             }
             type enumeration {
                 enum max                            { value -1; }
@@ -1778,20 +1815,27 @@ module nokia-types-qos {
         description "The PIR rate to be used in kbps.";
     }
 
-    typedef pre-classifier-policer-burst-percent {
+    typedef port-queue-plcy-cir-rate-maximum {
         type union {
-            type int32 {
-                range "0..100";
+            type int64 {
+                range "0..800000000";
             }
             type enumeration {
-                enum auto                           { value -1; }
+                enum max {
+                    value -1;
+                    description "Maximum possible rate based on the hardware";
+                }
             }
         }
-        default "auto";
-        description
-            "The percentage of policer buffer.
-             The value of 'default' means that the actual value is derived
-             from the corresponding buffer policy's default value.";
+        description "The CIR rate to be used in kbps.";
+    }
+
+    typedef sap-policer-mode {
+        type enumeration {
+            enum default                        { value 0; }
+            enum l4s                            { value 1; }
+        }
+        description "Specifies the operational mode of the policer.";
     }
 
 }

@@ -42,7 +42,7 @@ submodule nokia-conf-dms {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2026-05-27";
+    revision "2026-07-08";
 
     grouping conf-dms-defender-mitigation-system {
         container defender-mitigation-system {
@@ -1058,6 +1058,153 @@ submodule nokia-conf-dms {
 
                     } // container other
 
+                    list dns-auto-protect {
+                        key "name";
+                        max-elements 4;
+                        description "Enter the dns-auto-protect list instance";
+
+                        leaf name {
+                            type types-sros:named-item;
+                            description "Name of the DNS auto-protect instance";
+                        }
+
+                        leaf admin-state {
+                            type types-sros:admin-state;
+                            default "disable";
+                            description "Administrative state of the DNS auto-protect";
+                        }
+
+                        leaf description {
+                            type types-sros:description;
+                            description "Text description";
+                        }
+
+                        leaf-list error-responses {
+                            type types-dms:dns-error-response-status-codes;
+                            max-elements 11;
+                            description "List of DNS status responses to consider as errors";
+                        }
+
+                        leaf protect-start-rate {
+                            type union {
+                                type int32 {
+                                    range "1..100000";
+                                }
+                                type enumeration {
+                                    enum max                            { value -1; }
+                                }
+                            }
+                            units "packets per second";
+                            default "max";
+                            description "Error response rate threshold to enter protect state";
+                        }
+
+                        leaf protect-end-rate {
+                            type int32 {
+                                range "0..100000";
+                            }
+                            units "packets per second";
+                            default "0";
+                            description "Error and discard rate below which to end protect state";
+                        }
+
+                        leaf protect-end-debounce {
+                            type uint32 {
+                                range "10..3600";
+                            }
+                            units "seconds";
+                            default "30";
+                            description "Time below error rate thresholdto end protect state";
+                        }
+
+                        leaf protect-leak-rate {
+                            type int32 {
+                                range "0..100000";
+                            }
+                            units "packets per second";
+                            default "0";
+                            description "Rate to leak requests that would otherwise be discarded";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                        container domain-name-cache {
+                            description "Enter the domain-name-cache context";
+
+                            leaf size {
+                                type enumeration {
+                                    enum standard {
+                                        value 1;
+                                        description "4000 entries";
+                                    }
+                                    enum extended {
+                                        value 2;
+                                        description "64000 entries";
+                                    }
+                                }
+                                sros-ext:immutable;
+                                description "Domain name cache size";
+                            }
+
+                            leaf timeout {
+                                type uint32 {
+                                    range "1..10080";
+                                }
+                                units "minutes";
+                                default "1440";
+                                description "Time to maintain domain name entries in the cache";
+                            }
+
+                            leaf cache-success-responses {
+                                type boolean;
+                                default "false";
+                                description "Cache the domain name from successful DNS responses";
+                            }
+
+                            container protect {
+                                description "Enter the protect context";
+
+                                leaf filter-requests {
+                                    type enumeration {
+                                        enum none {
+                                            value 0;
+                                            description "Allow all DNS requests regardless of presence in cache";
+                                        }
+                                        enum strict {
+                                            value 1;
+                                            description "Discard if the domain name is not present in the cache";
+                                        }
+                                        enum leaky-rate {
+                                            value 2;
+                                            description "Leak requests at a configured rate, discard otherwise";
+                                        }
+                                    }
+                                    default "none";
+                                    description "Filtering behavior based on domain name cache presence";
+                                }
+
+                            } // container protect
+
+                        } // container domain-name-cache
+
+
+                    } // list dns-auto-protect
 
                     list dns-validate {
                         key "name";
@@ -1220,6 +1367,13 @@ submodule nokia-conf-dms {
 
                                 container action {
                                     description "Enter the action context";
+
+                                    leaf dns-auto-protect {
+                                        type leafref {
+                                            path "../../../../../dns-auto-protect/name";
+                                        }
+                                        description "DNS auto-protect instance to use for the DNS filter";
+                                    }
 
                                     leaf drop {
                                         type boolean;
@@ -1392,7 +1546,7 @@ submodule nokia-conf-dms {
                                 path "../../dns-validate/name";
                             }
                             mandatory true;
-                            description "DNS over TCP packet validator used to analyze payload";
+                            description "DNS over TCP/UDP packet validator to analyze payload";
                         }
 
                         leaf-list apply-groups {
@@ -1412,6 +1566,19 @@ submodule nokia-conf-dms {
                             ordered-by user;
                             description "Exclude a configuration group at this level";
                         }
+
+                        container udp {
+                            description "Enter the udp context";
+
+                            leaf inactivity-timeout {
+                                type uint32 {
+                                    range "1..3600";
+                                }
+                                units "seconds";
+                                description "Specifies the time that a DNS over UDP flow context will be maintained in the absence of packet activity before forcing the flow to close and freeing the DNS flow resource. If not configured, the more general UDP inactivity timeout applies to the DNS over UDP traffic.";
+                            }
+
+                        } // container udp
 
                     } // list dns-tracker
 

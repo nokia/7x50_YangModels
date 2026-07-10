@@ -66,7 +66,7 @@ submodule nokia-conf-svc-vpls {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2026-05-27";
+    revision "2026-07-08";
 
     grouping conf-svc-vpls {
         list vpls {
@@ -975,6 +975,27 @@ submodule nokia-conf-svc-vpls {
 
                 } // container restrict-non-configured-ip-address
 
+                container evpn-local-es {
+                    description "Enter the evpn-local-es context";
+
+                    leaf advertise {
+                        type boolean;
+                        sros-ext:auto-restart-to-modify;
+                        default "false";
+                        description "Advertise EVPN local ES entries";
+                    }
+
+                    leaf retention-timer {
+                        type uint32 {
+                            range "0|30..65535";
+                        }
+                        units "seconds";
+                        default "0";
+                        description "Retention timer for EVPN local ES entries";
+                    }
+
+                } // container evpn-local-es
+
                 container flood {
                     description "Enter the flood context";
 
@@ -1285,6 +1306,27 @@ submodule nokia-conf-svc-vpls {
                     }
 
                 } // container restrict-non-configured-ip-address
+
+                container evpn-local-es {
+                    description "Enter the evpn-local-es context";
+
+                    leaf advertise {
+                        type boolean;
+                        sros-ext:auto-restart-to-modify;
+                        default "false";
+                        description "Advertise EVPN local ES entries";
+                    }
+
+                    leaf retention-timer {
+                        type uint32 {
+                            range "0|30..65535";
+                        }
+                        units "seconds";
+                        default "0";
+                        description "Retention timer for EVPN local ES entries";
+                    }
+
+                } // container evpn-local-es
 
                 container flood {
                     description "Enter the flood context";
@@ -2616,7 +2658,9 @@ submodule nokia-conf-svc-vpls {
 
                         leaf range {
                             type string {
-                                pattern "((([1-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))(\\.\\.(([1-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4])))?)";
+                                pattern "((([1-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))(\\.\\.(([1-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4])))?)" {
+                                    error-message "'range' must be Q-tag or low..high VLAN range";
+                                }
                             }
                             description "Range of VLANs associated with the M-VPLS SAP";
                         }
@@ -3325,7 +3369,46 @@ submodule nokia-conf-svc-vpls {
 
                 } // container routes
 
+                container dhcp {
+                    description "Enter the dhcp context";
 
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf snoop {
+                        type boolean;
+                        default "false";
+                        description "Enable DHCP snooping on EVPN destinations";
+                    }
+
+                } // container dhcp
+
+                container dhcp6 {
+                    description "Enter the dhcp6 context";
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    container ldra {
+                        presence "Enable the ldra context";
+                        description "Enable the ldra context";
+
+                        leaf interface-type {
+                            type enumeration {
+                                enum client-facing                  { value 1; }
+                                enum network-facing                 { value 2; }
+                            }
+                            mandatory true;
+                            description "LDRA interface type";
+                        }
+
+                    } // container ldra
+
+                } // container dhcp6
 
                 container mac-duplication {
                     description "Enter the mac-duplication context";
@@ -3454,6 +3537,17 @@ submodule nokia-conf-svc-vpls {
 
                 } // container isid-route-target
 
+                container per-pe-etree-leaf {
+                    presence "Enable the per-pe-etree-leaf context";
+                    description "Enable the per-pe-etree-leaf context";
+
+                    leaf blackhole-non-local-leaf-macs {
+                        type boolean;
+                        default "false";
+                        description "Blackhole non-local leaf MAC addresses";
+                    }
+
+                } // container per-pe-etree-leaf
 
                 list segment-routing-v6 {
                     when "not(../../pbb-type = 'b-vpls') and not(../../pbb-type = 'i-vpls') and ../../m-vpls = 'false' and ../../etree = 'false'" {
@@ -5460,6 +5554,57 @@ submodule nokia-conf-svc-vpls {
 
                 } // container dhcp
 
+                container dhcp6 {
+                    when "not(../../pbb-type)" {
+                        description "VPLS PBB type must be 'none'";
+                    }
+                    description "DHCP6 parameters.";
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Textual description for this DHCP6 config";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container ldra {
+                        presence "Enable the ldra context";
+                        description "Enable the ldra context";
+
+                        leaf interface-type {
+                            type enumeration {
+                                enum client-facing {
+                                    value 1;
+                                    description "Untrusted client-facing interface";
+                                }
+                                enum network-facing {
+                                    value 2;
+                                    description "Network-facing interface";
+                                }
+                            }
+                            mandatory true;
+                            description "LDRA interface type";
+                        }
+
+                    } // container ldra
+
+                } // container dhcp6
 
                 container igmp-snooping {
                     when "not(../../pbb-type = 'b-vpls') and not(../../m-vpls = 'true')" {
@@ -6891,6 +7036,57 @@ submodule nokia-conf-svc-vpls {
 
                 } // container dhcp
 
+                container dhcp6 {
+                    when "not(../../pbb-type)" {
+                        description "VPLS PBB type must be 'none'";
+                    }
+                    description "Enter the dhcp6 context";
+
+                    leaf description {
+                        type types-sros:description;
+                        description "Text description";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                    container ldra {
+                        presence "Enable the ldra context";
+                        description "Enable the ldra context";
+
+                        leaf interface-type {
+                            type enumeration {
+                                enum client-facing {
+                                    value 1;
+                                    description "Untrusted client-facing interface";
+                                }
+                                enum network-facing {
+                                    value 2;
+                                    description "Network-facing interface";
+                                }
+                            }
+                            mandatory true;
+                            description "LDRA interface type";
+                        }
+
+                    } // container ldra
+
+                } // container dhcp6
 
                 container igmp-snooping {
                     when "not(../../pbb-type = 'b-vpls') and not(../../m-vpls = 'true')" {
@@ -8171,7 +8367,7 @@ submodule nokia-conf-svc-vpls {
                                     leaf cbs {
                                         type union {
                                             type uint32 {
-                                                range "0..1048576";
+                                                range "0..2097151";
                                             }
                                             type enumeration {
                                                 enum auto                           { value -1; }
@@ -8184,7 +8380,7 @@ submodule nokia-conf-svc-vpls {
                                     leaf mbs {
                                         type union {
                                             type types-qos:bytes {
-                                                range "0..1073741824";
+                                                range "0..2147482624";
                                             }
                                             type enumeration {
                                                 enum auto                           { value -1; }
@@ -8929,6 +9125,12 @@ submodule nokia-conf-svc-vpls {
                             description "Use virtual flows to sink excess bandwidth";
                         }
 
+                        leaf low-rate {
+                            type boolean;
+                            default "false";
+                            description "Use low-rate scheduling";
+                        }
+
                         container sap-egress {
                             description "Enter the sap-egress context";
 
@@ -8998,7 +9200,7 @@ submodule nokia-conf-svc-vpls {
                                     leaf cbs {
                                         type union {
                                             type uint32 {
-                                                range "0..1048576";
+                                                range "0..2097151";
                                             }
                                             type enumeration {
                                                 enum auto                           { value -1; }
@@ -9011,7 +9213,7 @@ submodule nokia-conf-svc-vpls {
                                     leaf mbs {
                                         type union {
                                             type types-qos:bytes {
-                                                range "0..1073741824";
+                                                range "0..2147482624";
                                             }
                                             type enumeration {
                                                 enum auto                           { value -1; }
@@ -12206,7 +12408,9 @@ submodule nokia-conf-svc-vpls {
 
                         leaf vlan-range {
                             type string {
-                                pattern "((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))(\\.\\.(([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4])))?)|(default-sap)";
+                                pattern "((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))(\\.\\.(([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4])))?)|(default-sap)" {
+                                    error-message "'vlan-range' must be Q-tag range, default-sap, or .. range form";
+                                }
                             }
                             description "Range of VLANs associated with the M-VPLS SAP";
                         }
@@ -12215,6 +12419,73 @@ submodule nokia-conf-svc-vpls {
 
                 } // container managed-vlan-list
 
+                container ethernet {
+                    description "Enter the ethernet context";
+
+                    container loopback-mode {
+                        presence "Enable the loopback-mode context";
+                        description "Enable the loopback-mode context";
+
+                        leaf mode {
+                            type enumeration {
+                                enum line {
+                                    value 0;
+                                    description "Loop frames back to the remote router";
+                                }
+                                enum internal {
+                                    value 1;
+                                    description "Loop local router frames back to the framer";
+                                }
+                            }
+                            sros-ext:immutable;
+                            default "line";
+                            description "Loopback mode for the associated port or channel";
+                        }
+
+                        leaf mac-swap {
+                            type boolean;
+                            default "false";
+                            description "Enable MAC address swapping";
+                        }
+
+                        leaf mac-address {
+                            type yang:mac-address;
+                            description "MAC address to swap";
+                        }
+
+                        leaf all {
+                            type boolean;
+                            default "false";
+                            description "Apply loopback mode to all addresses";
+                        }
+
+                        leaf ip-swap {
+                            type boolean;
+                            default "false";
+                            description "Enable IP address swapping";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // container loopback-mode
+
+                } // container ethernet
 
                 container pbb {
                     when "../../pbb-type = 'b-vpls'" {

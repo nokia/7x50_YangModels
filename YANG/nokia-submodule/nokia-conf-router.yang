@@ -90,7 +90,7 @@ submodule nokia-conf-router {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2026-05-27";
+    revision "2026-07-08";
 
     grouping conf-router {
         list router {
@@ -101,7 +101,7 @@ submodule nokia-conf-router {
             leaf router-name {
                 type types-sros:named-item-64 {
                     pattern ".{1,32}" {
-                        error-message "vRtrName needs to be extended to 64 to support this name";
+                        error-message "'router-instance' must be 1 to 32 characters";
                     }
                 }
                 description "Administrative router name";
@@ -432,7 +432,7 @@ submodule nokia-conf-router {
                         type string {
                             length "1..80";
                             pattern "([a-zA-Z0-9]+-+)*([a-zA-Z0-9]+\\.([a-zA-Z0-9]+-+)*)*[a-zA-Z0-9]+" {
-                                error-message "wrong format of apn name";
+                                error-message "'apn' must match APN format (e.g. internet.mnc123.mcc456.gprs)";
                             }
                         }
                         description "Network identifier part of the APN for the uplink";
@@ -1434,6 +1434,12 @@ submodule nokia-conf-router {
                             description "Use virtual flows to sink excess bandwidth";
                         }
 
+                        leaf low-rate {
+                            type boolean;
+                            default "false";
+                            description "Use low-rate scheduling";
+                        }
+
                         leaf-list apply-groups {
                             type leafref {
                                 path "../../../../../groups/group/name";
@@ -2020,7 +2026,7 @@ submodule nokia-conf-router {
                         leaf name {
                             type types-sros:named-item {
                                 pattern "[a-zA-Z]+.*" {
-                                    error-message "IPSec tunnel name cannot start with a number";
+                                    error-message "'name' must not start with a number (e.g. tunnel-1)";
                                 }
                             }
                             description "IPsec tunnel name";
@@ -2289,9 +2295,16 @@ submodule nokia-conf-router {
                                             description "Attempt to establish a phase 1 exchange automatically";
                                         }
 
+                                        leaf auto-establish-sustain {
+                                            type boolean;
+                                            sros-ext:auto-restart-to-modify;
+                                            default "false";
+                                            description "Sustain the automatic establishment";
+                                        }
+
                                         leaf pre-shared-key {
                                             type types-sros:encrypted-leaf {
-                                                length "1..115";
+                                                length "1..166";
                                             }
                                             sros-ext:auto-restart-to-modify;
                                             description "Pre-shared key for authentication";
@@ -2401,6 +2414,30 @@ submodule nokia-conf-router {
 
                                         } // container ppk
 
+                                        container reverse-route-injection {
+                                            presence "Enable the reverse-route-injection context";
+                                            sros-ext:auto-restart-to-modify;
+                                            description "Enable the reverse-route-injection context";
+
+                                            leaf metric {
+                                                type uint32 {
+                                                    range "0..65535";
+                                                }
+                                                sros-ext:auto-restart-to-modify;
+                                                default "0";
+                                                description "The metric to be used for reverse route injection";
+                                            }
+
+                                            leaf preference {
+                                                type uint32 {
+                                                    range "0..255";
+                                                }
+                                                sros-ext:auto-restart-to-modify;
+                                                default "0";
+                                                description "The preference to be used for reverse route injection";
+                                            }
+
+                                        } // container reverse-route-injection
 
                                     } // container dynamic
 
@@ -2977,6 +3014,51 @@ submodule nokia-conf-router {
 
                 } // container eth-cfm
 
+                container ethernet {
+                    description "Enter the ethernet context";
+
+                    container loopback-mode {
+                        presence "Enable the loopback-mode context";
+                        description "Enable the loopback-mode context";
+
+                        leaf mode {
+                            type enumeration {
+                                enum line {
+                                    value 0;
+                                    description "Loop frames back to the remote router";
+                                }
+                            }
+                            default "line";
+                            description "Loopback mode for the associated port or channel";
+                        }
+
+                        leaf mac-swap {
+                            type boolean;
+                            default "false";
+                            description "Enable MAC address swapping";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // container loopback-mode
+
+                } // container ethernet
 
                 container ipv4 {
                     when "not(../../router-name = 'management')" {
@@ -3944,7 +4026,7 @@ submodule nokia-conf-router {
 
                         leaf authentication-key {
                             type types-sros:encrypted-leaf {
-                                length "1..38";
+                                length "1..94";
                             }
                             description "Password for simple text authentication";
                         }

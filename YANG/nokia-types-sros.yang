@@ -32,19 +32,21 @@ module nokia-types-sros {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2026-03-11";
+    revision "2026-07-08";
 
     typedef string-not-all-spaces {
         type string {
             pattern "(.*\\S.*)|()" {
-                error-message "The given string must not be all spaces.";
+                error-message "'string-not-all-spaces' must contain at least one non-space character";
             }
         }
     }
 
     typedef ieee-address {
         type string {
-            pattern "([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5})|([0-9a-fA-F]{2}(-[0-9a-fA-F]{2}){5})";
+            pattern "([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5})|([0-9a-fA-F]{2}(-[0-9a-fA-F]{2}){5})" {
+                error-message "'ieee-address' must be 6 hex byte pairs with ':' or '-' (e.g. 00:11:22:33:44:55)";
+            }
         }
         description "The ieee-address type represents an IEEE 802 MAC address.";
     }
@@ -179,7 +181,7 @@ module nokia-types-sros {
     typedef hex-string {
         type string {
             pattern "0x[a-fA-F0-9]+" {
-                error-message "The value has to be in hex-string format with prefix '0x'.";
+                error-message "'hex-string' must be hexadecimal with prefix 0x (e.g. 0x1a2b)";
             }
         }
         description "A string containing only hexadecimal characters with prefix '0x'";
@@ -196,6 +198,7 @@ module nokia-types-sros {
                <clear text password>
                <encrypted password> hash
                <encrypted password> hash2
+               <encrypted password> hash3
                <encrypted password> custom
 
              Input is accepted in clear text or encrypted formats. Some examples include:
@@ -203,6 +206,7 @@ module nokia-types-sros {
                my-secret-key-value-in-clear-text
                041t1ZLCi1aNcsCFfuXzNcxsaFqo7gYK2k9W1/CxzrDuFpGHciA9W2iuwRFr19pC hash
                g5ZC+XrkjBR/VZcLujUQSfXheGWw6/XyKp8uok+DMyEx9HE6pjgEY0tP7vdv4QD21A== hash2
+               qz3ZeWKSSynD8BRHx2fdzxNhu/QqEwygE8cIXoYI6dZsZEO5UJhug4y4EhwX4KPXasWKxDWHqa6U hash3
 
              The output format (for a get/read or generation of configuration files) is
              controlled by configuration and can be set to always return encrypted values.";
@@ -210,8 +214,8 @@ module nokia-types-sros {
 
     typedef encrypted-leaf-hex {
         type encrypted-leaf {
-            pattern "0x[a-fA-F0-9]+|.{1,369}( hash| hash2| custom)" {
-                error-message "The clear text has to be in hex-string format with prefix '0x'.";
+            pattern "0x[a-fA-F0-9]+|.{1,416}( hash| hash2| hash3| custom)" {
+                error-message "'encrypted-leaf-hex' must have clear text in hex with prefix 0x or end with hash/hash2/hash3/custom";
             }
         }
         description
@@ -221,13 +225,40 @@ module nokia-types-sros {
 
     typedef encrypted-leaf-hex-without-prefix {
         type encrypted-leaf {
-            pattern "[a-fA-F0-9]+|.{1,369}( hash| hash2| custom)" {
-                error-message "The clear text has to be in hex-string format without prefix '0x'.";
+            pattern "[a-fA-F0-9]+|.{1,416}( hash| hash2| hash3| custom)" {
+                error-message "'encrypted-leaf-hex-without-prefix' must have clear text in hex without 0x or end with hash/hash2/hash3/custom";
             }
         }
         description
             "Extension of type 'encrypted-leaf' allowing only hexadecimal characters without
              prefix '0x'.";
+    }
+
+    typedef static-encrypted-state-leaf {
+        type string;
+        description
+            "The static-encrypted-state-leaf type is used for operational
+             state data that is output in an encrypted format.";
+    }
+
+    typedef bof-static-encrypted-leaf {
+        type string;
+        description
+            "The bof-static-encrypted-leaf type is used to store bof
+             configuration data that requires encryption to keep the value secret.
+
+             The value of this type matches one of the forms:
+
+                 <clear text password>
+                 <encrypted password> hash2
+
+             Input is accepted in clear text or encrypted formats. Some examples include:
+
+                 my-secret-key-value-in-clear-text
+                 g5ZC+XrkjBR/VZcLujUQSfXheGWw6/XyKp8uok+DMyEx9HE6pjgEY0tP7vdv4QD21A== hash2
+
+             The output format for a get/read or generation of the BOF configuration
+             file is always encrypted.";
     }
 
     typedef li-static-encrypted-leaf {
@@ -240,21 +271,22 @@ module nokia-types-sros {
 
                  <clear text password>
                  <encrypted password> hash2
+                 <encrypted password> hash3
 
-             Input is accepted in clear text or hash2 encrypted formats. Some examples
-             include:
+             Input is accepted in clear text or encrypted formats. Some examples include:
 
                  my-secret-key-value-in-clear-text
                  g5ZC+XrkjBR/VZcLujUQSfXheGWw6/XyKp8uok+DMyEx9HE6pjgEY0tP7vdv4QD21A== hash2
+                 qz3ZeWKSSynD8BRHx2fdzxNhu/QqEwygE8cIXoYI6dZsZEO5UJhug4y4EhwX4KPXasWKxDWHqa6U hash3
 
              The output format (for a get/read or generation of configuration files) is
-             always the hash2 form.";
+             always encrypted.";
     }
 
     typedef li-static-encrypted-leaf-hex {
         type li-static-encrypted-leaf {
-            pattern "0x[a-fA-F0-9]+|.{1,369}( hash2)" {
-                error-message "The clear text has to be in hex-string format with prefix '0x'.";
+            pattern "0x[a-fA-F0-9]+|.{1,416}( hash2| hash3)" {
+                error-message "'li-static-encrypted-leaf-hex' must have clear text in hex with prefix 0x or end with hash2/hash3";
             }
         }
         description
@@ -434,8 +466,12 @@ module nokia-types-sros {
 
     typedef ipv4-address {
         type inet:ipv4-address-no-zone {
-            pattern "[0-9\\.]*";
-            pattern "(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\\p{N}\\p{L}]+)?";
+            pattern "[0-9\\.]*" {
+                error-message "'ipv4-address' must use only digits and dots (no %zone)";
+            }
+            pattern "(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])" {
+                error-message "'ipv4-address' must be a.b.c.d with each octet 0-255 (no zone-id)";
+            }
         }
         description "An IPv4 address.";
     }
@@ -502,7 +538,9 @@ module nokia-types-sros {
 
     typedef ipv4-multicast-address {
         type ipv4-address {
-            pattern "((22[4-9]|23[0-9])\\.)(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){2}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\\p{N}\\p{L}]+)?";
+            pattern "((22[4-9]|23[0-9])\\.)(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){2}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\\p{N}\\p{L}]+)?" {
+                error-message "'ipv4-multicast-address' must be in 224.0.0.0-239.255.255.255 range with valid dotted-quad form";
+            }
         }
         description "A multicast IPv4 address.";
     }
@@ -577,15 +615,21 @@ module nokia-types-sros {
 
     typedef ipv4-prefix-with-host-bits {
         type string {
-            pattern "(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])/(([0-9])|([1-2][0-9])|(3[0-2]))";
+            pattern "(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])/(([0-9])|([1-2][0-9])|(3[0-2]))" {
+                error-message "'ipv4-prefix-with-host-bits' must be a.b.c.d/prefix with prefix length 0..32";
+            }
         }
         description "An IPv4 prefix, possibly with non-zero host bits in the address.";
     }
 
     typedef ipv6-prefix-with-host-bits {
         type string {
-            pattern "((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))(/(([0-9])|([0-9]{2})|(1[0-1][0-9])|(12[0-8])))";
-            pattern "(([^:]+:){6}(([^:]+:[^:]+)|(.*\\..*)))|((([^:]+:)*[^:]+)?::(([^:]+:)*[^:]+)?)(/.+)";
+            pattern "((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))(/(([0-9])|([0-9]{2})|(1[0-1][0-9])|(12[0-8])))" {
+                error-message "'ipv6-prefix-with-host-bits' must be IPv6 address/prefix with length 0..128";
+            }
+            pattern "(([^:]+:){6}(([^:]+:[^:]+)|(.*\\..*)))|((([^:]+:)*[^:]+)?::(([^:]+:)*[^:]+)?)(/.+)" {
+                error-message "'ipv6-prefix-with-host-bits' must be IPv6 address/prefix with length 0..128";
+            }
         }
         description "An IPv6 prefix, possibly with non-zero host bits in the address.";
     }
@@ -600,15 +644,21 @@ module nokia-types-sros {
 
     typedef ipv4-address-and-mask {
         type string {
-            pattern "(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]) (([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])";
+            pattern "(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]) (([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])" {
+                error-message "'ipv4-address-and-mask' must be two IPv4 dotted addresses separated by a space";
+            }
         }
         description "An IPv4 address and mask.";
     }
 
     typedef ipv6-address-and-mask {
         type string {
-            pattern "((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9]))) ((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))";
-            pattern "((([^:]+:){6}(([^:]+:[^:]+)|(.*\\..*)))|((([^:]+:)*[^:]+)?::(([^:]+:)*[^:]+)?)) ((([^:]+:){6}(([^:]+:[^:]+)|(.*\\..*)))|((([^:]+:)*[^:]+)?::(([^:]+:)*[^:]+)?))";
+            pattern "((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9]))) ((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))" {
+                error-message "'ipv6-address-and-mask' must be two IPv6 addresses separated by a space";
+            }
+            pattern "((([^:]+:){6}(([^:]+:[^:]+)|(.*\\..*)))|((([^:]+:)*[^:]+)?::(([^:]+:)*[^:]+)?)) ((([^:]+:){6}(([^:]+:[^:]+)|(.*\\..*)))|((([^:]+:)*[^:]+)?::(([^:]+:)*[^:]+)?))" {
+                error-message "'ipv6-address-and-mask' must be two IPv6 addresses separated by a space";
+            }
         }
         description "An IPv6 address and mask.";
     }
@@ -628,15 +678,21 @@ module nokia-types-sros {
 
     typedef ipv4-address-with-zone {
         type string {
-            pattern "(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%(([\\p{N}\\p{L}]+)|(\\p{L}.*)|(_tmnx_.*)))?";
+            pattern "(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%(([\\p{N}\\p{L}]+)|(\\p{L}.*)|(_tmnx_.*)))?" {
+                error-message "'ipv4-address-with-zone' must be a.b.c.d with optional %zone-id";
+            }
         }
         description "An IPv4 address which may include a zone identifier.";
     }
 
     typedef ipv6-address-with-zone {
         type string {
-            pattern "((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))(%(([\\p{N}\\p{L}]+)|(\\p{L}.*)|(_tmnx_.*)))?";
-            pattern "(([^:]+:){6}(([^:]+:[^:]+)|(.*\\..*)))|((([^:]+:)*[^:]+)?::(([^:]+:)*[^:]+)?)(%.+)?";
+            pattern "((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))(%(([\\p{N}\\p{L}]+)|(\\p{L}.*)|(_tmnx_.*)))?" {
+                error-message "'ipv6-address-with-zone' must be valid IPv6 with optional %zone-id";
+            }
+            pattern "(([^:]+:){6}(([^:]+:[^:]+)|(.*\\..*)))|((([^:]+:)*[^:]+)?::(([^:]+:)*[^:]+)?)(%.+)?" {
+                error-message "'ipv6-address-with-zone' must be valid IPv6 with optional %zone-id";
+            }
         }
         description "An IPv6 address which may include a zone identifier.";
     }
@@ -786,6 +842,26 @@ module nokia-types-sros {
         type cflash-and-url;
     }
 
+    typedef ts-url-or-sftp-512 {
+        type string {
+            length "1..512";
+        }
+        description
+            "URL specifies a url in the following format:
+             local-url    - [<cflash-id>/][<file-path>]
+             remote-url   - [{ftp://|tftp://}<login>:<pswd>@<remote-locn>/][<file-path>] 180 chars max
+             remote-locn  - [ <hostname> | <ipv4-address> | <ipv6-address> ]
+             ipv4-address - a.b.c.d
+             ipv6-address - x:x:x:x:x:x:x:x[-interface]
+                            x:x:x:x:x:x:d.d.d.d[-interface]
+                            x - [0..FFFF]H
+                            d - [0..255]D
+                            interface - 32 chars max, for link
+                            local addresses
+             cflash-id    - [cf1-4:]|[[cf1-4]-[A-D:]]
+             sftp         - sftp://[<login>:<pswd>@<remote-locn>/][<file-path>] 512 chars max";
+    }
+
     typedef ts-url-string {
         type union {
             type ts-sat-url;
@@ -795,7 +871,7 @@ module nokia-types-sros {
             type string {
                 length "1..180";
                 pattern "(.*\\S.*)|()" {
-                    error-message "The given string must not be all spaces.";
+                    error-message "'ts-url-string' must contain at least one non-space character";
                 }
             }
         }
@@ -832,7 +908,7 @@ module nokia-types-sros {
         type string {
             length "1..200";
             pattern "(\\\\|/).*" {
-                error-message "The given path is not absolute.";
+                error-message "'path-to-file-absolute' must start with / or \\ (absolute path)";
             }
         }
         description "A string representing an absolute path to a file.";
@@ -842,10 +918,10 @@ module nokia-types-sros {
         type string {
             length "1..180";
             pattern "[^\\\\/]+" {
-                error-message "The given string does not represent a filename.";
+                error-message "'filename' must not contain / or \\\\ (no path separators)";
             }
             pattern "(.*\\S.*)|()" {
-                error-message "The given string must not be all spaces.";
+                error-message "'filename' must not be all spaces";
             }
         }
         description "A string representing the name of a file.";
@@ -855,10 +931,10 @@ module nokia-types-sros {
         type string {
             length "1..255";
             pattern "[^\\\\/]+" {
-                error-message "The given string does not represent a filename.";
+                error-message "'filename-255' must not contain / or \\\\ (no path separators)";
             }
             pattern "(.*\\S.*)|()" {
-                error-message "The given string must not be all spaces.";
+                error-message "'filename-255' must not be all spaces";
             }
         }
         description "A string representing the name of a file.";
@@ -868,7 +944,7 @@ module nokia-types-sros {
         type string {
             length "1..200";
             pattern "sat:.*" {
-                error-message "The given string is not a valid sat URL.";
+                error-message "'sat-url' must start with sat: (e.g. sat:path/to/file)";
             }
         }
         description "A string representing a sat URL.";
@@ -878,7 +954,7 @@ module nokia-types-sros {
         type string {
             length "1..200";
             pattern "cf[1-4]-[A-Da-d]:" {
-                error-message "The given string is not a valid cflash URL.";
+                error-message "'thresholds-cflash-url' must be cf1-4 with slot A-D (e.g. cf1-A:)";
             }
         }
         description "Compact flash drive on the CPM for rmon thresholds.";
@@ -888,10 +964,10 @@ module nokia-types-sros {
         type string {
             length "1..200";
             pattern "cf[1-4](-[A-Da-d])?:.*" {
-                error-message "The given string is not a valid cflash URL.";
+                error-message "'cflash-url' must start with cf1-4, optional slot A-D, then path (e.g. cf1:/path or cf1-A:/path)";
             }
             pattern ".*:([\\\\]?[a-zA-Z0-9._\\-\\s]{1,99})(\\\\[a-zA-Z0-9._\\-\\s]{1,99})*" {
-                error-message "Filename must be at most 99 characters long";
+                error-message "'cflash-url' must have each path segment at most 99 characters";
             }
         }
         description "A string representing a cflash URL.";
@@ -901,7 +977,7 @@ module nokia-types-sros {
         type string {
             length "4..6";
             pattern "cf[1-4](-[A-Da-d])?:" {
-                error-message "The given string is not a valid cflash ID.";
+                error-message "'cflash-id' must be cf1-4: or cf1-4-A-D: (e.g. cf1: or cf2-B:)";
             }
         }
         description "A string representing a cflash ID.";
@@ -911,7 +987,7 @@ module nokia-types-sros {
         type string {
             length "1..200";
             pattern "cf[1-4]:.*" {
-                error-message "The given string is not a valid cflash URL.";
+                error-message "'cflash-without-slot-url' must be cf1-4: followed by path (e.g. cf1:/path)";
             }
         }
         description "A string representing a cflash URL.";
@@ -921,7 +997,7 @@ module nokia-types-sros {
         type string {
             length "1..180";
             pattern "sat:.*" {
-                error-message "The given string is not a valid sat URL.";
+                error-message "'ts-sat-url' must start with sat: (e.g. sat:path/to/file)";
             }
         }
         description "A string representing a sat URL.";
@@ -931,10 +1007,10 @@ module nokia-types-sros {
         type string {
             length "1..199";
             pattern "(ftp|tftp):(\\\\|/){2}.*(\\\\|/).*" {
-                error-message "The given string is not a valid FTP/TFTP URL.";
+                error-message "'ftp-tftp-url' must be ftp:// or tftp:// with host and path (e.g. ftp://user:pass@hostname.domain/path/file)";
             }
             pattern "(ftp|tftp):(\\\\|/){2}([^:@?/]*:[^:@?/]*@)?((\\w|(\\w(\\w|\\.\\w|-\\w|[%]\\w)*))\\.\\w(\\w|-\\w|[%]\\w)*)((\\\\|/)[^;?]*)?" {
-                error-message "The given string is not a valid FTP URL.";
+                error-message "'ftp-tftp-url' must have valid hostname and optional path after scheme";
             }
         }
         description "A string representing an FTP/TFTP URL.";
@@ -944,10 +1020,10 @@ module nokia-types-sros {
         type string {
             length "1..180";
             pattern "[^ <>{}|^\"`]*" {
-                error-message "The given string is not a valid URI.";
+                error-message "'ftp-url' must not contain illegal characters";
             }
             pattern "(ftp):(\\\\|/){2}([^:@?/]*:[^:@?/]*@)?((\\w|(\\w(\\w|\\.\\w|-\\w|[%]\\w)*))\\.\\w(\\w|-\\w|[%]\\w)*)((\\\\|/)[^;?]*)?" {
-                error-message "The given string is not a valid FTP URL.";
+                error-message "'ftp-url' must be ftp:// with optional user:pass@, hostname and path (e.g. ftp://user:pass@hostname.domain/path/file)";
             }
         }
         description "A string representing an FTP URL.";
@@ -957,10 +1033,10 @@ module nokia-types-sros {
         type string {
             length "1..180";
             pattern "[^ <>{}|^\"`]*" {
-                error-message "The given string is not a valid URI.";
+                error-message "'scp-url' must not contain < > { } | ^ or space or quote or backtick";
             }
             pattern "(scp):(\\\\|/){2}([^:@?/]*:[^:@?/]*@)?((\\w|(\\w(\\w|\\.\\w|-\\w|[%]\\w)*))\\.\\w(\\w|-\\w|[%]\\w)*)((\\\\|/)[^;?]*)?" {
-                error-message "The given string is not a valid SCP URL.";
+                error-message "'scp-url' must be scp:// with optional user:pass@, hostname and path (e.g. scp://user:pass@hostname.domain/path/file)";
             }
         }
         description "A string representing an SCP URL.";
@@ -968,12 +1044,12 @@ module nokia-types-sros {
 
     typedef sftp-url {
         type string {
-            length "1..180";
+            length "1..512";
             pattern "[^ <>{}|^\"`]*" {
-                error-message "The given string is not a valid URI.";
+                error-message "'sftp-url' must not contain illegal characters";
             }
-            pattern "(sftp):(\\\\|/){2}([^:@?/]*:[^:@?/]*@)?((\\w|(\\w(\\w|\\.\\w|-\\w|[%]\\w)*))\\.\\w(\\w|-\\w|[%]\\w)*)((\\\\|/)[^;?]*)?" {
-                error-message "The given string is not a valid SFTP URL.";
+            pattern "(sftp):(\\\\|/){2}([^:@?/]*:[^:@?/]*@)?((\\d{1,3}\\.){3}\\d{1,3}|(\\[[^\\]]+\\])|(\\w[\\w%-]*)(\\.(\\w[\\w%-]*))*)((\\\\|/)[^;?]*)?" {
+                error-message "'sftp-url' must be sftp:// with optional user:pass@, hostname and path (e.g. sftp://user:pass@hostname.domain/path/file)";
             }
         }
         description "A string representing an SFTP URL.";
@@ -983,7 +1059,7 @@ module nokia-types-sros {
         type string {
             length "1..180";
             pattern "[hH][tT][tT][pP]:[\\\\/]{2}([^@]*@)?((\\[[^\\]]+\\])|([^\\\\/:])+)(:([0-9]{1,4}|[0-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))?([\\\\/].*)?" {
-                error-message "The given string is not a valid HTTP URL.";
+                error-message "'http-url-loose' must be http:// with host and optional port and path (e.g. http://hostname.domain/path)";
             }
         }
         description
@@ -995,7 +1071,7 @@ module nokia-types-sros {
         type string {
             length "1..180";
             pattern "[hH][tT][tT][pP][sS]?:[\\\\/]{2}([^@]*@)?((\\[[^\\]]+\\])|([^\\\\/:])+)(:([0-9]{1,4}|[0-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))?([\\\\/].*)?" {
-                error-message "The given string is not a valid HTTP(S) URL.";
+                error-message "'http-or-https-url-loose' must be http:// or https:// with host and optional port and path (e.g. https://hostname.domain/path)";
             }
         }
         description "A string representing an HTTP(S) URL that is loosely defined.";
@@ -1004,7 +1080,7 @@ module nokia-types-sros {
     typedef http-url-path-loose {
         type http-url-loose {
             pattern "\\w[\\w+-.]*:[\\\\/]{2}[^\\\\/]+[\\\\/].*" {
-                error-message "The given string is not a valid HTTP URL or is missing a path component.";
+                error-message "'http-url-path-loose' must include path after host (e.g. http://host/path)";
             }
         }
         description
@@ -1017,7 +1093,7 @@ module nokia-types-sros {
         type string {
             length "1..180";
             pattern "([hH][tT][tT][pP]:[\\\\/]{2})?([^@]*@)?((\\[[^\\]]+\\])|([^\\\\/:])+)(:([0-9]{1,4}|[0-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))?([\\\\/].*)?" {
-                error-message "The given string is not a valid HTTP URL.";
+                error-message "'http-optional-url-loose' must be http:// or host-only, with optional port and path (e.g. http://hostname.domain/path)";
             }
         }
         description
@@ -1167,7 +1243,7 @@ module nokia-types-sros {
         type string {
             length "1..27";
             pattern "lag-.+" {
-                error-message "The lag-name must be entered as lag-(<1..800>|<1..23 chars>)";
+                error-message "'lag-interface' must be lag- followed by number 1-800 or up to 23 chars (e.g. lag-1 or lag-my-lag)";
             }
         }
         description "The unique name identifying a LAG interface.";
@@ -1187,7 +1263,7 @@ module nokia-types-sros {
         type string {
             length "1..255";
             pattern "(.*\\S.*)" {
-                error-message "The given string must not be all spaces.";
+                error-message "'regular-expression-not-all-spaces' must contain at least one non-space character";
             }
         }
         description "A regular expression string.";
@@ -1235,7 +1311,9 @@ module nokia-types-sros {
     typedef vlan-encap {
         type string {
             length "1..11";
-            pattern "(([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|(([1-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))\\.((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|\\*)";
+            pattern "(([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|(([1-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))\\.((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|\\*)" {
+                error-message "'vlan-encap' must be Q-tag or dot1q form (0-4094 or 1-4094.0-4094 or *)";
+            }
         }
         description "An encap formatted string.";
     }
@@ -1243,7 +1321,9 @@ module nokia-types-sros {
     typedef eth-tunnel-path-tag {
         type string {
             length "1..9";
-            pattern "(([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4])|\\*)|((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|\\*)\\.((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|\\*)";
+            pattern "(([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4])|\\*)|((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|\\*)\\.((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|\\*)" {
+                error-message "'eth-tunnel-path-tag' must match Q-tag or dot1q encap rules for tunnel path";
+            }
         }
         description "Ethernet tunnel path tag formatted string.";
     }
@@ -1251,7 +1331,9 @@ module nokia-types-sros {
     typedef ext-vlan-encap {
         type string {
             length "1..11";
-            pattern "((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|\\*)|(([1-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))\\.((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|\\*)|0\\.\\*";
+            pattern "((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|\\*)|(([1-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))\\.((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|\\*)|0\\.\\*" {
+                error-message "'ext-vlan-encap' must match extended VLAN encap or 0.*";
+            }
         }
         description "An encap formatted string.";
     }
@@ -1259,7 +1341,9 @@ module nokia-types-sros {
     typedef atm-or-vlan-encap {
         type string {
             length "1..11";
-            pattern "((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-5]))|\\*)/(((1|2|[5-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))|\\*)|(([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|\\*)\\.((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|\\*)";
+            pattern "((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-5]))|\\*)/(((1|2|[5-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))|\\*)|(([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|\\*)\\.((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|\\*)" {
+                error-message "'atm-or-vlan-encap' must be ATM VPI/VCI or VLAN encap format";
+            }
         }
         description "An encap formatted string.";
     }
@@ -1267,7 +1351,9 @@ module nokia-types-sros {
     typedef single-vlan-encap {
         type string {
             length "1..11";
-            pattern "((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|\\*)";
+            pattern "((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|\\*)" {
+                error-message "'single-vlan-encap' must be Q-tag or *";
+            }
         }
         description "An encap formatted string.";
     }
@@ -1275,7 +1361,9 @@ module nokia-types-sros {
     typedef double-vlan-encap {
         type string {
             length "1..11";
-            pattern "((([1-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|\\*)\\.((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|\\*)";
+            pattern "((([1-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|\\*)\\.((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|\\*)" {
+                error-message "'double-vlan-encap' must be inner.outer Q-tag or * form";
+            }
         }
         description "An encap formatted string.";
     }
@@ -1283,7 +1371,9 @@ module nokia-types-sros {
     typedef one-or-two-vlan-tags {
         type string {
             length "1..9";
-            pattern "(([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))\\.(([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4])))";
+            pattern "(([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))|((([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4]))\\.(([0-9]|[1-9][0-9]{1,2}|[1-3][0-9]{3}|40[0-8][0-9]|409[0-4])))" {
+                error-message "'one-or-two-vlan-tags' must be one Q-tag or inner.outer pair";
+            }
         }
         description "An encap formatted string.";
     }
@@ -1691,7 +1781,7 @@ module nokia-types-sros {
         type enumeration {
             enum be {
                 value 0;
-                description "Best effort";
+                description "Best Effort";
             }
             enum l2 {
                 value 1;
@@ -1699,7 +1789,7 @@ module nokia-types-sros {
             }
             enum af {
                 value 2;
-                description "Assured forwarding (assured)";
+                description "Assured Forwarding (assured)";
             }
             enum l1 {
                 value 3;
@@ -1711,7 +1801,7 @@ module nokia-types-sros {
             }
             enum ef {
                 value 5;
-                description "Expedited forwarding (high priority)";
+                description "Expedited Forwarding (high priority)";
             }
             enum h1 {
                 value 6;
@@ -1719,7 +1809,7 @@ module nokia-types-sros {
             }
             enum nc {
                 value 7;
-                description "Network control (high priority)";
+                description "Network Control (high priority)";
             }
         }
         description "Specifies different Forwarding Classes (FC).";
@@ -1757,7 +1847,7 @@ module nokia-types-sros {
         type string {
             length "1..64";
             pattern "(.*\\S.*)|()" {
-                error-message "The given string must not be all spaces.";
+                error-message "'policy-community-name' must not be all spaces";
             }
         }
         description "Specifies community name.";
@@ -1899,7 +1989,7 @@ module nokia-types-sros {
              The maximum supported range can be [0..524287] or [0..1048575]
              depending on the platform.
 
-             The available Prefix SID range is restricted by the configured 
+             The available Prefix SID range is restricted by the configured
              MPLS SR label range.";
     }
 
@@ -2056,7 +2146,9 @@ module nokia-types-sros {
 
     typedef datastore-name {
         type string {
-            pattern "candidate|running";
+            pattern "candidate|running" {
+                error-message "'datastore-name' must be candidate or running";
+            }
         }
         description "The name of the datastore.";
     }
@@ -2091,8 +2183,10 @@ module nokia-types-sros {
 
     typedef big-integer {
         type string {
-            length "0..55";
-            pattern "[0-9]+";
+            length "1..55";
+            pattern "[0-9]+" {
+                error-message "'big-integer' must be decimal digits only (1..55 digits)";
+            }
         }
         description "big-integer";
     }
@@ -2145,7 +2239,7 @@ module nokia-types-sros {
         type string {
             length "1..255";
             pattern "(.{1,64})|(.*[\\[].*)" {
-                error-message "Policy name too long or expression not valid";
+                error-message "'vrf-policy' must be at most 64 characters or a valid expression containing [";
             }
         }
         description "Virtual Routing and Forwarding policy";
@@ -2155,7 +2249,7 @@ module nokia-types-sros {
         type string {
             length "1..255";
             pattern ".*[\\[].*" {
-                error-message "expression not valid.";
+                error-message "'policy-expr-string' must contain [ for a bracketed policy name in a routing policy logical expression (e.g. [policyA])";
             }
         }
         description "Routing policy expression";
@@ -2191,7 +2285,7 @@ module nokia-types-sros {
         }
         description
             "Route resolution options. The options are as follows:
-                          
+
              route-table: only resolve to an IPv6 route in RTM. If none is found, then resolution
              will fail.
 
@@ -2258,15 +2352,15 @@ module nokia-types-sros {
         }
         description
             "ATTR_SET import options. The options are as follows:
-                          
-             -ignore    (1): instructs BGP to ignore ATTR_SET in VPN-IP routes when 
-                     importing them into this specific VPRN; the ATTR_SET attribute 
+
+             -ignore    (1): instructs BGP to ignore ATTR_SET in VPN-IP routes when
+                     importing them into this specific VPRN; the ATTR_SET attribute
                      is transmitted unchanged to the CE (default for backwards compatibility).
-             -accept    (2): instructs BGP to process ATTR_SET in VPN-IP routes when importing them 
-                     into this specific VPRN; as part of the normal processing, the ATTR_SET 
+             -accept    (2): instructs BGP to process ATTR_SET in VPN-IP routes when importing them
+                     into this specific VPRN; as part of the normal processing, the ATTR_SET
                      attribute is removed before the route is advertised to CEs.
-             -drop      (3): instructs BGP to ignore ATTR_SET in VPN-IP routes when importing them 
-                     into this specific VPRN; the ATTR_SET attribute is removed before 
+             -drop      (3): instructs BGP to ignore ATTR_SET in VPN-IP routes when importing them
+                     into this specific VPRN; the ATTR_SET attribute is removed before
                      the route is advertised to CEs";
     }
 

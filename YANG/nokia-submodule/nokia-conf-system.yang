@@ -10,6 +10,7 @@ submodule nokia-conf-system {
     import nokia-types-l2tp               { prefix "types-l2tp"; }
     import nokia-types-operation          { prefix "types-operation"; }
     import nokia-types-qos                { prefix "types-qos"; }
+    import nokia-types-security           { prefix "types-security"; }
     import nokia-types-sros               { prefix "types-sros"; }
     import nokia-types-system             { prefix "types-system"; }
 
@@ -25,6 +26,7 @@ submodule nokia-conf-system {
     include nokia-conf-system-script-control;
     include nokia-conf-system-security;
     include nokia-conf-system-security-tls;
+    include nokia-conf-system-security-user-parameters;
     include nokia-conf-system-telemetry;
     include nokia-conf-system-time;
 
@@ -51,7 +53,7 @@ submodule nokia-conf-system {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2026-05-27";
+    revision "2026-07-08";
 
     grouping conf-system {
         container system {
@@ -809,6 +811,17 @@ submodule nokia-conf-system {
                             }
 
                         } // container sap-shared-policer
+
+                        container ethernet-storm-control {
+                            description "Enter the ethernet-storm-control context";
+
+                            leaf admin-state {
+                                type types-sros:admin-state;
+                                default "disable";
+                                description "Administrative state of Ethernet storm control";
+                            }
+
+                        } // container ethernet-storm-control
 
                     } // container qos
 
@@ -2572,6 +2585,7 @@ submodule nokia-conf-system {
                                     enum dual-mode-16k-bank-4           { value 4; }
                                     enum dual-mode-16k-bank-5           { value 5; }
                                     enum dual-mode-16k-bank-6           { value 6; }
+                                    enum dual-mode-4k-bank-1            { value 7; }
                                 }
                                 description "Bank name";
                             }
@@ -2599,7 +2613,7 @@ submodule nokia-conf-system {
 
                                 leaf group {
                                     type int32 {
-                                        range "1..3";
+                                        range "1..5";
                                     }
                                     description "Group associated to a bank";
                                 }
@@ -2625,7 +2639,7 @@ submodule nokia-conf-system {
 
                                 leaf group-id {
                                     type uint32 {
-                                        range "1..3";
+                                        range "1..5";
                                     }
                                     description "Application group ID";
                                 }
@@ -2667,6 +2681,7 @@ submodule nokia-conf-system {
                                                 enum aggregate-policers             { value 8; }
                                                 enum shared-policers                { value 9; }
                                                 enum filter-shared-policers         { value 11; }
+                                                enum storm-control                  { value 12; }
                                             }
                                             description "FC policer type";
                                         }
@@ -2713,6 +2728,7 @@ submodule nokia-conf-system {
                                                 enum shared-policers                { value 9; }
                                                 enum fc-policers                    { value 10; }
                                                 enum filter-shared-policers         { value 11; }
+                                                enum egress-filter                  { value 13; }
                                             }
                                             description "FC policer type";
                                         }
@@ -3057,6 +3073,27 @@ submodule nokia-conf-system {
 
                         } // container virtual-flow
 
+                        container low-rate {
+                            description "Enter the low-rate context";
+
+                            leaf four-queue-scale {
+                                type uint32 {
+                                    range "0..1536";
+                                }
+                                default "0";
+                                description "Number of resources to allocate to 4-queue VLAN QoS";
+                            }
+
+                            leaf eight-queue-scale {
+                                type uint32 {
+                                    range "0..832";
+                                }
+                                default "0";
+                                description "Number of resources to allocate to 8-queue VLAN QoS";
+                            }
+
+                        } // container low-rate
+
                     } // container vlan-qos
 
                     container load-balancing {
@@ -3329,11 +3366,11 @@ submodule nokia-conf-system {
                         type enumeration {
                             enum latest {
                                 value 0;
-                                description "Latest supported version";
+                                description "Latest version 0.8.0";
                             }
                             enum v070 {
                                 value 1;
-                                description "gNMI version 0.7.0";
+                                description "Version 0.7.0";
                             }
                         }
                         default "latest";
@@ -3385,7 +3422,6 @@ submodule nokia-conf-system {
                     } // container system
 
                 } // container gnoi
-
 
                 container md-cli {
                     status obsolete;
@@ -3722,7 +3758,7 @@ submodule nokia-conf-system {
                                         type string {
                                             length "1..64";
                                             pattern "[_0-9A-Z]+" {
-                                                error-message "must only contain uppercase letters, digits or underscores";
+                                                error-message "'custom-type' must contain only uppercase letters, digits or underscores";
                                             }
                                         }
                                         description "Custom string for target type";
@@ -4471,7 +4507,6 @@ submodule nokia-conf-system {
                             type uint32 {
                                 range "22|830|1024..49151";
                             }
-                            default "830";
                             description "Port on which NETCONF server listens for connections";
                         }
 
@@ -4489,6 +4524,22 @@ submodule nokia-conf-system {
                             }
                             units "minutes";
                             description "NETCONF idle timeout for sessions";
+                        }
+
+                        leaf transport {
+                            type types-system:netconf-transport;
+                            default "ssh";
+                            description "Transport type";
+                        }
+
+                        leaf tls-server-profile {
+                            when "../transport = 'tls'" {
+                                description "tls-server-profile is only allowed when listen transport type is 'tls'";
+                            }
+                            type leafref {
+                                path "../../../../security/tls/server-tls-profile/server-profile-name";
+                            }
+                            description "TLS server profile used for NETCONF listen sessions";
                         }
 
                     } // container listen
@@ -4525,7 +4576,6 @@ submodule nokia-conf-system {
 
                             leaf remote-port {
                                 type types-sros:tcp-udp-port-non-zero;
-                                default "4334";
                                 description "Port that the NETCONF client is listening on";
                             }
 
@@ -4567,6 +4617,16 @@ submodule nokia-conf-system {
                                 description "NETCONF idle timeout for sessions";
                             }
 
+                            leaf tls-server-profile {
+                                when "../transport = 'tls'" {
+                                    description "tls-server-profile is only allowed when call-home transport type is 'tls'";
+                                }
+                                type leafref {
+                                    path "../../../../../security/tls/server-tls-profile/server-profile-name";
+                                }
+                                description "TLS server profile used for NETCONF call-home sessions";
+                            }
+
                             leaf-list apply-groups {
                                 type leafref {
                                     path "../../../../../../groups/group/name";
@@ -4594,7 +4654,7 @@ submodule nokia-conf-system {
                                 type string {
                                     length "1..16";
                                     pattern "[_0-9a-zA-Z]+" {
-                                        error-message "must only contain letters, digits or underscores";
+                                        error-message "'device-label' must contain only letters, digits or underscores";
                                     }
                                 }
                                 description "Device label";
@@ -4639,6 +4699,96 @@ submodule nokia-conf-system {
                         } // container device-labels
 
                     } // container call-home
+
+                    container tls-client-identity {
+                        description "Enter the tls-client-identity context";
+
+                        list client {
+                            key "id";
+                            max-elements 16;
+                            description "Enter the client list instance";
+
+                            leaf id {
+                                type uint32 {
+                                    range "1..max";
+                                }
+                                description "Client ID";
+                            }
+
+                            leaf fingerprint {
+                                type types-security:key-fingerprint-sha256;
+                                mandatory true;
+                                description "Certificate fingerprint";
+                            }
+
+                            leaf map-type {
+                                type types-system:netconf-tls-map-type;
+                                mandatory true;
+                                description "Mapping method for TLS certificate to username";
+                            }
+
+                            leaf user-name {
+                                when "../map-type = 'specified'" {
+                                    description "user-name is only allowed when map-type is 'specified'";
+                                }
+                                type leafref {
+                                    path "../../../../../security/user-params/local-user/user/user-name";
+                                }
+                                mandatory true;
+                                description "Username for the provided fingerprint";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                        } // list client
+
+                        container default-client {
+                            description "Enter the default-client context";
+
+                            leaf user-name {
+                                type leafref {
+                                    path "../../../../../security/user-params/local-user/user/user-name";
+                                }
+                                description "Default username to use when no fingerprint matches";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                        } // container default-client
+
+                    } // container tls-client-identity
 
                 } // container netconf
 

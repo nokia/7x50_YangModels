@@ -36,7 +36,7 @@ submodule nokia-conf-macsec {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2026-05-27";
+    revision "2026-07-08";
 
     grouping conf-macsec {
         container macsec {
@@ -172,6 +172,16 @@ submodule nokia-conf-macsec {
                     description "Key server priority used by the MKA protocol";
                 }
 
+                leaf psk-type {
+                    type enumeration {
+                        enum static                         { value 1; }
+                        enum auto-gen                       { value 2; }
+                    }
+                    sros-ext:auto-restart-to-modify;
+                    default "static";
+                    description "Type of PSK to apply.";
+                }
+
                 leaf-list apply-groups {
                     type leafref {
                         path "../../../groups/group/name";
@@ -278,7 +288,7 @@ submodule nokia-conf-macsec {
 
                         leaf cak {
                             type types-sros:encrypted-leaf-hex-without-prefix {
-                                length "1..71";
+                                length "1..126";
                             }
                             description "Connectivity association key (CAK) for the PSK";
                         }
@@ -310,6 +320,54 @@ submodule nokia-conf-macsec {
 
                 } // container static-cak
 
+                container auto-gen-psk {
+                    description "Enter the auto-gen-psk context";
+
+                    leaf cak-name-prefix {
+                        type string {
+                            length "2..40";
+                            pattern "(([0-9a-fA-F])([0-9a-fA-F])){1,20}" {
+                                error-message "'cak-name-prefix' must be even-length hex up to 40 characters (e.g. 0a1b2c)";
+                            }
+                        }
+                        description "Prefix string to include in the CKN";
+                    }
+
+                    leaf generate-interval {
+                        type uint32 {
+                            range "10..65000";
+                        }
+                        units "minutes";
+                        default "1440";
+                        description "Interval to auto generate and distribute PSK.";
+                    }
+
+                    leaf recovery-keychain {
+                        type leafref {
+                            path "../../../../system/security/keychains/keychain/keychain-name";
+                        }
+                        description "Name of keychain to recover auto generate PSK";
+                    }
+
+                    leaf-list apply-groups {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Apply a configuration group at this level";
+                    }
+
+                    leaf-list apply-groups-exclude {
+                        type leafref {
+                            path "../../../../groups/group/name";
+                        }
+                        max-elements 8;
+                        ordered-by user;
+                        description "Exclude a configuration group at this level";
+                    }
+
+                } // container auto-gen-psk
 
             } // list connectivity-association
 

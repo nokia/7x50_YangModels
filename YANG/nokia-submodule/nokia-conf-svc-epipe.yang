@@ -4,6 +4,7 @@ submodule nokia-conf-svc-epipe {
 
     belongs-to nokia-conf { prefix "conf"; }
 
+    import ietf-yang-types                { prefix "yang"; }
     import nokia-sros-yang-extensions     { prefix "sros-ext"; }
     import nokia-types-eth-cfm            { prefix "types-eth-cfm"; }
     import nokia-types-qos                { prefix "types-qos"; }
@@ -54,7 +55,7 @@ submodule nokia-conf-svc-epipe {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2026-05-27";
+    revision "2026-07-08";
 
     grouping conf-svc-epipe {
         list epipe {
@@ -1958,7 +1959,7 @@ submodule nokia-conf-svc-epipe {
                                     leaf cbs {
                                         type union {
                                             type uint32 {
-                                                range "0..1048576";
+                                                range "0..2097151";
                                             }
                                             type enumeration {
                                                 enum auto                           { value -1; }
@@ -1971,7 +1972,7 @@ submodule nokia-conf-svc-epipe {
                                     leaf mbs {
                                         type union {
                                             type types-qos:bytes {
-                                                range "0..1073741824";
+                                                range "0..2147482624";
                                             }
                                             type enumeration {
                                                 enum auto                           { value -1; }
@@ -2708,6 +2709,12 @@ submodule nokia-conf-svc-epipe {
                             description "Use virtual flows to sink excess bandwidth";
                         }
 
+                        leaf low-rate {
+                            type boolean;
+                            default "false";
+                            description "Use low-rate scheduling";
+                        }
+
                         container sap-egress {
                             description "Enter the sap-egress context";
 
@@ -2777,7 +2784,7 @@ submodule nokia-conf-svc-epipe {
                                     leaf cbs {
                                         type union {
                                             type uint32 {
-                                                range "0..1048576";
+                                                range "0..2097151";
                                             }
                                             type enumeration {
                                                 enum auto                           { value -1; }
@@ -2790,7 +2797,7 @@ submodule nokia-conf-svc-epipe {
                                     leaf mbs {
                                         type union {
                                             type types-qos:bytes {
-                                                range "0..1073741824";
+                                                range "0..2147482624";
                                             }
                                             type enumeration {
                                                 enum auto                           { value -1; }
@@ -3532,6 +3539,13 @@ submodule nokia-conf-svc-epipe {
                     presence "Enable the qtag-normalization context";
                     description "Enable the qtag-normalization context";
 
+                    leaf rfc9744-encoding {
+                        type boolean;
+                        sros-ext:immutable;
+                        default "false";
+                        description "Encode the S-tag in compliance with RFC 9744";
+                    }
+
                     choice q-tag {
                         case single-tag {
 
@@ -4148,6 +4162,68 @@ submodule nokia-conf-svc-epipe {
 
                     } // container llf
 
+                    container loopback-mode {
+                        presence "Enable the loopback-mode context";
+                        description "Enable the loopback-mode context";
+
+                        leaf mode {
+                            type enumeration {
+                                enum line {
+                                    value 0;
+                                    description "Loop frames back to the remote router";
+                                }
+                                enum internal {
+                                    value 1;
+                                    description "Loop local router frames back to the framer";
+                                }
+                            }
+                            sros-ext:immutable;
+                            default "line";
+                            description "Loopback mode for the associated port or channel";
+                        }
+
+                        leaf mac-swap {
+                            type boolean;
+                            default "false";
+                            description "Enable MAC address swapping";
+                        }
+
+                        leaf mac-address {
+                            type yang:mac-address;
+                            description "MAC address to swap";
+                        }
+
+                        leaf all {
+                            type boolean;
+                            default "false";
+                            description "Apply loopback mode to all addresses";
+                        }
+
+                        leaf ip-swap {
+                            type boolean;
+                            default "false";
+                            description "Enable IP address swapping";
+                        }
+
+                        leaf-list apply-groups {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Apply a configuration group at this level";
+                        }
+
+                        leaf-list apply-groups-exclude {
+                            type leafref {
+                                path "../../../../../../groups/group/name";
+                            }
+                            max-elements 8;
+                            ordered-by user;
+                            description "Exclude a configuration group at this level";
+                        }
+
+                    } // container loopback-mode
 
                 } // container ethernet
 
@@ -4226,6 +4302,12 @@ submodule nokia-conf-svc-epipe {
                 leaf evi {
                     type types-services:evi;
                     description "EVPN ID";
+                }
+
+                leaf ignore-mtu-mismatch {
+                    type boolean;
+                    default "false";
+                    description "Bgp-Evpn ignore MTU mismatch.";
                 }
 
                 leaf-list apply-groups {

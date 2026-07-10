@@ -69,7 +69,7 @@ submodule nokia-conf-svc-ies {
          This specification is supplied `as is', and Nokia makes no warranty,
          either express or implied, as to the use, operation, condition, or performance
          of the specification.";
-    revision "2026-05-27";
+    revision "2026-07-08";
 
     grouping conf-svc-ies {
         list ies {
@@ -446,6 +446,7 @@ submodule nokia-conf-svc-ies {
                     } // container primary
 
                 } // container ipv4
+
 
             } // list aa-interface
 
@@ -1304,7 +1305,7 @@ submodule nokia-conf-svc-ies {
                         leaf name {
                             type types-sros:named-item {
                                 pattern "[a-zA-Z]+.*" {
-                                    error-message "IPSec tunnel name cannot start with a number";
+                                    error-message "'name' must not start with a number (e.g. tunnel-1)";
                                 }
                             }
                             description "IPsec tunnel name";
@@ -1573,9 +1574,16 @@ submodule nokia-conf-svc-ies {
                                             description "Attempt to establish a phase 1 exchange automatically";
                                         }
 
+                                        leaf auto-establish-sustain {
+                                            type boolean;
+                                            sros-ext:auto-restart-to-modify;
+                                            default "false";
+                                            description "Sustain the automatic establishment";
+                                        }
+
                                         leaf pre-shared-key {
                                             type types-sros:encrypted-leaf {
-                                                length "1..115";
+                                                length "1..166";
                                             }
                                             sros-ext:auto-restart-to-modify;
                                             description "Pre-shared key for authentication";
@@ -1685,6 +1693,30 @@ submodule nokia-conf-svc-ies {
 
                                         } // container ppk
 
+                                        container reverse-route-injection {
+                                            presence "Enable the reverse-route-injection context";
+                                            sros-ext:auto-restart-to-modify;
+                                            description "Enable the reverse-route-injection context";
+
+                                            leaf metric {
+                                                type uint32 {
+                                                    range "0..65535";
+                                                }
+                                                sros-ext:auto-restart-to-modify;
+                                                default "0";
+                                                description "The metric to be used for reverse route injection";
+                                            }
+
+                                            leaf preference {
+                                                type uint32 {
+                                                    range "0..255";
+                                                }
+                                                sros-ext:auto-restart-to-modify;
+                                                default "0";
+                                                description "The preference to be used for reverse route injection";
+                                            }
+
+                                        } // container reverse-route-injection
 
                                     } // container dynamic
 
@@ -2803,7 +2835,7 @@ submodule nokia-conf-svc-ies {
                                         leaf cbs {
                                             type union {
                                                 type uint32 {
-                                                    range "0..1048576";
+                                                    range "0..2097151";
                                                 }
                                                 type enumeration {
                                                     enum auto                           { value -1; }
@@ -2816,7 +2848,7 @@ submodule nokia-conf-svc-ies {
                                         leaf mbs {
                                             type union {
                                                 type types-qos:bytes {
-                                                    range "0..1073741824";
+                                                    range "0..2147482624";
                                                 }
                                                 type enumeration {
                                                     enum auto                           { value -1; }
@@ -3501,6 +3533,12 @@ submodule nokia-conf-svc-ies {
                                 description "Use virtual flows to sink excess bandwidth";
                             }
 
+                            leaf low-rate {
+                                type boolean;
+                                default "false";
+                                description "Use low-rate scheduling";
+                            }
+
                             container sap-egress {
                                 description "Enter the sap-egress context";
 
@@ -3570,7 +3608,7 @@ submodule nokia-conf-svc-ies {
                                         leaf cbs {
                                             type union {
                                                 type uint32 {
-                                                    range "0..1048576";
+                                                    range "0..2097151";
                                                 }
                                                 type enumeration {
                                                     enum auto                           { value -1; }
@@ -3583,7 +3621,7 @@ submodule nokia-conf-svc-ies {
                                         leaf mbs {
                                             type union {
                                                 type types-qos:bytes {
-                                                    range "0..1073741824";
+                                                    range "0..2147482624";
                                                 }
                                                 type enumeration {
                                                     enum auto                           { value -1; }
@@ -4621,6 +4659,56 @@ submodule nokia-conf-svc-ies {
 
                     } // container eth-cfm
 
+                    container ethernet {
+                        description "Enter the ethernet context";
+
+                        container loopback-mode {
+                            presence "Enable the loopback-mode context";
+                            description "Enable the loopback-mode context";
+
+                            leaf mode {
+                                type enumeration {
+                                    enum line {
+                                        value 0;
+                                        description "Loop frames back to the remote router";
+                                    }
+                                    enum internal {
+                                        value 1;
+                                        description "Loop local router frames back to the framer";
+                                    }
+                                }
+                                sros-ext:immutable;
+                                default "line";
+                                description "Loopback mode for the associated port or channel";
+                            }
+
+                            leaf mac-swap {
+                                type boolean;
+                                default "false";
+                                description "Enable MAC address swapping";
+                            }
+
+                            leaf-list apply-groups {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Apply a configuration group at this level";
+                            }
+
+                            leaf-list apply-groups-exclude {
+                                type leafref {
+                                    path "../../../../../../../groups/group/name";
+                                }
+                                max-elements 8;
+                                ordered-by user;
+                                description "Exclude a configuration group at this level";
+                            }
+
+                        } // container loopback-mode
+
+                    } // container ethernet
 
                     list ip-tunnel {
                         key "tunnel-name";
@@ -4945,7 +5033,7 @@ submodule nokia-conf-svc-ies {
 
                         leaf pre-shared-key {
                             type types-sros:encrypted-leaf {
-                                length "1..115";
+                                length "1..166";
                             }
                             description "Pre-shared key for the IPsec gateway";
                         }
@@ -6838,7 +6926,7 @@ submodule nokia-conf-svc-ies {
 
                         leaf authentication-key {
                             type types-sros:encrypted-leaf {
-                                length "1..38";
+                                length "1..94";
                             }
                             description "Password for simple text authentication";
                         }
